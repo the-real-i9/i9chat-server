@@ -1,12 +1,11 @@
 package authroutes
 
 import (
-	"fmt"
+	authcontrollers "controllers/auth"
 
 	"github.com/gofiber/fiber/v2"
 )
 
 func Init(router fiber.Router) {
-	// fmt.Println(router)
-	fmt.Println("Hey, this is authRoute")
+	router.Post("/signin", authcontrollers.Signin)
 }
