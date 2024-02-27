@@ -7,5 +7,6 @@ import (
 )
 
 func Init(router fiber.Router) {
-	fmt.Println(router)
+	// fmt.Println(router)
+	fmt.Println("Hey, this is authRoute")
 }
