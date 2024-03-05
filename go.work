@@ -6,9 +6,9 @@ use (
   ./routes/userRoutes
   ./controllers/authControllers
   ./controllers/userControllers
-  ./models/userModel
-  ./models/dmChatModel
-  ./models/groupChatModel
+  ./models/user
+  ./models/dmChat
+  ./models/groupChat
   ./services/appServices
   ./services/authServices
   ./services/userServices
