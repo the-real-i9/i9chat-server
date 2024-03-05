@@ -7,5 +7,5 @@ import (
 )
 
 func Init(router fiber.Router) {
-	router.Post("/signin", authcontrollers.Signin)
+	router.Post("/signup/request_new_account", authcontrollers.RequestNewAccount)
 }

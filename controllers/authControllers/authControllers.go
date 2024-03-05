@@ -4,14 +4,14 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	authservices "services/auth"
 
 	"github.com/gofiber/fiber/v2"
 )
 
-func Signin(c *fiber.Ctx) error {
+func RequestNewAccount(c *fiber.Ctx) error {
 	var p struct {
-		Email    string `json:"email"`
-		Password string `json:"password"`
+		Email string `json:"email"`
 	}
 
 	if err := c.BodyParser(&p); err != nil {
@@ -19,7 +19,10 @@ func Signin(c *fiber.Ctx) error {
 		return err
 	}
 
-	fmt.Printf("{ email: %s, password: %s }\n", p.Email, p.Password)
+	_, _, err := authservices.RequestNewAccount(p.Email)
+	if err != nil {
+		return fmt.Errorf("%s", err)
+	}
 
 	return c.SendStatus(http.StatusOK)
 }

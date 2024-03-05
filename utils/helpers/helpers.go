@@ -7,7 +7,7 @@ import (
 	"strings"
 )
 
-func LoadConfig() error {
+func LoadEnv() error {
 	dotenv, err := os.Open(".env")
 	if err != nil {
 		return err
