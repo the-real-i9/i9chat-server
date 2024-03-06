@@ -1,2 +1,2 @@
 alias air='$GOPATH/bin/air'
-alias i9chat='$GOPATH/bin/i9chat'
+alias i9chat='go build -o $GOPATH/bin/i9chat'
