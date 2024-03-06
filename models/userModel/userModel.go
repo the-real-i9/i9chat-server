@@ -1,41 +1,73 @@
 package usermodel
 
 import (
-	"utils/mytypes"
+	"database/sql"
+	"time"
+	"utils/helpers"
 )
 
 type User struct {
-	Id              int            `json:"user_id"`
-	Username        string         `json:"username"`
-	Password        string         `json:"password"`
-	Email           string         `json:"email"`
-	Profile_picture string         `json:"profile_picture"`
-	Presence        string         `json:"presence"`
-	Last_seen       mytypes.PgTime `json:"last_seen"`
+	Id              int
+	Username        string
+	Password        string
+	Email           string
+	Profile_picture string
+	Presence        string
+	Last_seen       sql.NullTime
+	Created_at      time.Time `json:"-"`
+	Deleted         bool      `json:"-"`
 }
 
-func NewUser(username string, password string, email string, profile_picture string) (*User, error) {
-	// create a new user with RETURNING data
-	var newUser User
+func UpdateUser(id int, fieldValuePair [][]string) (*User, error) {
+	user, err := helpers.QueryRow[User]("SELECT * FROM edit_user($1, $2)", id, fieldValuePair)
+	if err != nil {
+		return nil, err
+	}
 
-	// UnMarshal the data into newUser
-	return &newUser, nil
+	return user, nil
 }
 
-func GetUserById(id int) (*User, error) {
+func NewUser(email string, username string, password string) (*User, error) {
+	user, err := helpers.QueryRow[User]("SELECT * FROM create_user($1, $2, $3)", email, username, password)
+	if err != nil {
+		return nil, err
+	}
 
-	var user User
-
-	// find user by id
-	// UnMarshalJSON into user and return it
-	return &user, nil
+	return user, nil
 }
 
-func GetUserByEmail(email string) (*User, error) {
+func GetUser(uniqueId string) (*User, error) {
+	user, err := helpers.QueryRow[User]("SELECT * FROM get_user($1)", uniqueId)
+	if err != nil {
+		return nil, err
+	}
 
-	var user User
+	return user, nil
+}
 
-	// find user by email
-	// UnMarshalJSON into user and return it
-	return &user, nil
+func UserExists(emailOrUsername string) (bool, error) {
+	type exist_t struct {
+		Exist bool
+	}
+
+	row, err := helpers.QueryRow[exist_t]("SELECT exist FROM account_exists($1)", emailOrUsername)
+	if err != nil {
+		return false, err
+	}
+
+	return row.Exist, nil
+}
+
+type user_pres struct {
+	Presence  string       `db:"out_presence"`
+	Last_seen sql.NullTime `db:"out_last_seen"`
+}
+
+func SwitchUserPresence(userid int) (*user_pres, error) {
+	row, err := helpers.QueryRow[user_pres]("SELECT * FROM switch_user_presence($1)", userid)
+	if err != nil {
+		return nil, err
+	}
+
+	return row, nil
 }
