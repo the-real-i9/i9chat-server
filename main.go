@@ -17,13 +17,14 @@ func main() {
 
 	app.Route("/api/auth", authroutes.Init)
 	// app.Route("/api/user", userroutes.Init)
-	/* data, err := usermodel.UpdateUser(2, [][]string{{"password", "fhunmytor17"}})
+	/* user := usermodel.User{Id: 2}
+	data, err := user.Edit([][]string{{"prece", "fhunmytor17"}})
 	if err != nil {
 		log.Println(err)
 	}
 	json_data, _ := json.MarshalIndent(data, "", " ")
 	os.Stdout.Write(json_data) */
-	/* exist, err := usermodel.UserExists("i9X")
+	/* exist, err := usermodel.UserExists("i9")
 	if err != nil {
 		log.Println(err)
 	}

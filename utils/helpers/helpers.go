@@ -39,7 +39,7 @@ func GetDBPool() (*pgxpool.Pool, error) {
 	return pool, err
 }
 
-func QueryRow[T any](sql string, params ...any) (*T, error) {
+func QueryInstance[T any](sql string, params ...any) (*T, error) {
 	pool, err := GetDBPool()
 	if err != nil {
 		return nil, err
@@ -55,7 +55,7 @@ func QueryRow[T any](sql string, params ...any) (*T, error) {
 	return data, nil
 }
 
-func QueryRows[T any](sql string, params ...any) ([]*T, error) {
+func QueryInstances[T any](sql string, params ...any) ([]*T, error) {
 	pool, err := GetDBPool()
 	if err != nil {
 		return nil, err
@@ -69,4 +69,68 @@ func QueryRows[T any](sql string, params ...any) ([]*T, error) {
 	}
 
 	return data, nil
+}
+
+func QueryRowField[T any](sql string, params ...any) (*T, error) {
+	pool, err := GetDBPool()
+	if err != nil {
+		return nil, err
+	}
+
+	rows, _ := pool.Query(context.Background(), sql, params...)
+
+	res, err := pgx.CollectOneRow(rows, pgx.RowToAddrOf[T])
+	if err != nil {
+		return nil, err
+	}
+
+	return res, err
+}
+
+func QueryRowsField[T any](sql string, params ...any) ([]*T, error) {
+	pool, err := GetDBPool()
+	if err != nil {
+		return nil, err
+	}
+
+	rows, _ := pool.Query(context.Background(), sql, params...)
+
+	res, err := pgx.CollectRows(rows, pgx.RowToAddrOf[T])
+	if err != nil {
+		return nil, err
+	}
+
+	return res, nil
+}
+
+func QueryRowFields(sql string, params ...any) (map[string]any, error) {
+	pool, err := GetDBPool()
+	if err != nil {
+		return nil, err
+	}
+
+	rows, _ := pool.Query(context.Background(), sql, params...)
+
+	res, err := pgx.CollectOneRow(rows, pgx.RowToMap)
+	if err != nil {
+		return nil, err
+	}
+
+	return res, nil
+}
+
+func QueryRowsFields(sql string, params ...any) ([]map[string]any, error) {
+	pool, err := GetDBPool()
+	if err != nil {
+		return nil, err
+	}
+
+	rows, _ := pool.Query(context.Background(), sql, params...)
+
+	res, err := pgx.CollectRows(rows, pgx.RowToMap)
+	if err != nil {
+		return nil, err
+	}
+
+	return res, nil
 }

@@ -6,12 +6,12 @@ use (
   ./routes/userRoutes
   ./controllers/authControllers
   ./controllers/userControllers
+  ./services/userService
+  ./services/chatService
   ./models/userModel
-  ./models/dmChatModel
-  ./models/groupChatModel
+  ./models/chatModel
   ./services/appServices
   ./services/authServices
-  ./services/userServices
   ./utils/helpers
   ./utils/mytypes
 )

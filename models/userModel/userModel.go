@@ -1,25 +1,12 @@
 package usermodel
 
 import (
-	"database/sql"
 	"time"
 	"utils/helpers"
 )
 
-type User struct {
-	Id              int
-	Username        string
-	Password        string
-	Email           string
-	Profile_picture string
-	Presence        string
-	Last_seen       sql.NullTime
-	Created_at      time.Time `json:"-"`
-	Deleted         bool      `json:"-"`
-}
-
-func UpdateUser(id int, fieldValuePair [][]string) (*User, error) {
-	user, err := helpers.QueryRow[User]("SELECT * FROM edit_user($1, $2)", id, fieldValuePair)
+func CreateUser(email string, username string, password string) (map[string]any, error) {
+	user, err := helpers.QueryRowFields("SELECT * FROM create_user($1, $2, $3)", email, username, password)
 	if err != nil {
 		return nil, err
 	}
@@ -27,8 +14,8 @@ func UpdateUser(id int, fieldValuePair [][]string) (*User, error) {
 	return user, nil
 }
 
-func NewUser(email string, username string, password string) (*User, error) {
-	user, err := helpers.QueryRow[User]("SELECT * FROM create_user($1, $2, $3)", email, username, password)
+func QueryUser(uniqueId string) (map[string]any, error) {
+	user, err := helpers.QueryRowFields("SELECT * FROM get_user($1)", uniqueId)
 	if err != nil {
 		return nil, err
 	}
@@ -36,38 +23,33 @@ func NewUser(email string, username string, password string) (*User, error) {
 	return user, nil
 }
 
-func GetUser(uniqueId string) (*User, error) {
-	user, err := helpers.QueryRow[User]("SELECT * FROM get_user($1)", uniqueId)
-	if err != nil {
-		return nil, err
-	}
-
-	return user, nil
-}
-
-func UserExists(emailOrUsername string) (bool, error) {
-	type exist_t struct {
-		Exist bool
-	}
-
-	row, err := helpers.QueryRow[exist_t]("SELECT exist FROM account_exists($1)", emailOrUsername)
+func AccountExists(emailOrUsername string) (bool, error) {
+	exist, err := helpers.QueryRowField[bool]("SELECT exist FROM account_exists($1)", emailOrUsername)
 	if err != nil {
 		return false, err
 	}
 
-	return row.Exist, nil
+	return *exist, nil
 }
 
-type user_pres struct {
-	Presence  string       `db:"out_presence"`
-	Last_seen sql.NullTime `db:"out_last_seen"`
+type User struct {
+	Id int
 }
 
-func SwitchUserPresence(userid int) (*user_pres, error) {
-	row, err := helpers.QueryRow[user_pres]("SELECT * FROM switch_user_presence($1)", userid)
+func (user User) Edit(fieldValuePair [][]string) (map[string]any, error) {
+	res, err := helpers.QueryRowFields("SELECT * FROM edit_user($1, $2)", user.Id, fieldValuePair)
 	if err != nil {
 		return nil, err
 	}
 
-	return row, nil
+	return res, nil
+}
+
+func (user User) SwitchPresence(presence string, last_seen time.Time) error {
+	_, err := helpers.QueryRowFields(`SELECT switch_user_presence($1, $2, $3)`, user.Id, presence, last_seen)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
