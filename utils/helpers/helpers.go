@@ -40,7 +40,7 @@ func LoadEnv() error {
 	return nil
 }
 
-func GenerateJwtToken(userData map[string]any) string {
+func JwtSign(userData map[string]any) string {
 	header := map[string]string{"alg": "HS256", "typ": "JWT"}
 	byteHeader, _ := json.Marshal(header)
 	encodedHeader := base64.RawURLEncoding.EncodeToString(byteHeader)
@@ -49,8 +49,8 @@ func GenerateJwtToken(userData map[string]any) string {
 		"data": userData,
 		"jwtClaims": map[string]any{
 			"issuer": "i9chat",
-			"iat":    time.Now().UnixMilli(),
-			"exp":    time.Now().Add(1 * time.Hour).UnixMilli(),
+			"iat":    time.Now(),
+			"exp":    time.Now().Add(24 * time.Hour),
 		},
 	}
 
@@ -68,6 +68,48 @@ func GenerateJwtToken(userData map[string]any) string {
 	json.Unmarshal(sig, &signature)
 
 	return fmt.Sprintf("%s.%s.%s", encodedHeader, encodedPayload, signature)
+}
+
+func JwtParse(jwtToken string) (map[string]any, error) {
+	jwtParts := strings.Split(jwtToken, ".")
+
+	var (
+		encodedHeader  = jwtParts[0]
+		encodedPayload = jwtParts[1]
+		signature      = jwtParts[2]
+	)
+
+	h := hmac.New(sha256.New, []byte(os.Getenv("JWT_SECRET")))
+
+	h.Write([]byte(encodedHeader + "." + encodedPayload))
+
+	expSig, _ := json.Marshal(h.Sum(nil))
+
+	var expectedSignature string
+
+	json.Unmarshal(expSig, &expectedSignature)
+
+	tokenValid := hmac.Equal([]byte(signature), []byte(expectedSignature))
+	if !tokenValid {
+		return nil, fmt.Errorf("%s", "invalid jwt")
+	}
+
+	decPay, _ := base64.RawURLEncoding.DecodeString(encodedPayload)
+
+	var decodedPayload struct {
+		Data      map[string]any
+		JwtClaims struct {
+			Exp time.Time
+		}
+	}
+
+	json.Unmarshal(decPay, &decodedPayload)
+
+	if decodedPayload.JwtClaims.Exp.Before(time.Now()) {
+		return nil, fmt.Errorf("%s", "jwt expired")
+	}
+
+	return decodedPayload.Data, nil
 }
 
 func GetDBPool() (*pgxpool.Pool, error) {

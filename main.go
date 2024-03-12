@@ -26,9 +26,5 @@ func main() {
 
 	app.Route("/api/auth", authroutes.Init)
 
-	/* jwtToken := helpers.GenerateJwtToken(map[string]any{"email": "oluwarinolasam@gmail.com"})
-
-	fmt.Println(jwtToken) */
-
 	log.Fatalln(app.Listen("localhost:8080"))
 }
