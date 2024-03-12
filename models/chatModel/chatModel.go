@@ -1,38 +1,21 @@
 package chatmodel
 
-func QueryChats(clientId int) {
+import "utils/helpers"
 
+func GetMyChats(clientId int) ([]*map[string]any, error) {
+	myChats, err := helpers.QueryRowsField[map[string]any]("SELECT chat FROM get_my_chats($1)", clientId)
+	if err != nil {
+		return nil, err
+	}
+
+	return myChats, nil
 }
 
 type Chat interface {
-	CreateMessage()
-	QueryChatHistory()
+	SendMessage()
+	GetChatHistory()
 }
 
-type DMChat struct {
-	Id int
-}
-
-func CreateDMChat() {
-}
-
-func (dmc DMChat) CreateMessage() {
-}
-
-func (dmc DMChat) QueryChatHistory() {
-}
-
-type GroupChat struct {
-	Id int
-}
-
-func CreateGroupChat() {
-}
-
-func (gpc GroupChat) CreateMessage() {
-
-}
-
-func (gpc GroupChat) QueryChatHistory() {
-
+type Message interface {
+	React()
 }

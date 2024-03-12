@@ -5,8 +5,8 @@ import (
 	"utils/helpers"
 )
 
-func CreateUser(email string, username string, password string) (map[string]any, error) {
-	user, err := helpers.QueryRowFields("SELECT * FROM create_user($1, $2, $3)", email, username, password)
+func NewUser(email string, username string, password string, geolocation string) (map[string]any, error) {
+	user, err := helpers.QueryRowFields("SELECT * FROM new_user($1, $2, $34, $)", email, username, password, geolocation)
 	if err != nil {
 		return nil, err
 	}
@@ -14,7 +14,7 @@ func CreateUser(email string, username string, password string) (map[string]any,
 	return user, nil
 }
 
-func QueryUser(uniqueId string) (map[string]any, error) {
+func GetUser(uniqueId string) (map[string]any, error) {
 	user, err := helpers.QueryRowFields("SELECT * FROM get_user($1)", uniqueId)
 	if err != nil {
 		return nil, err
@@ -32,21 +32,50 @@ func AccountExists(emailOrUsername string) (bool, error) {
 	return *exist, nil
 }
 
+func FindNearbyUsers(clientId int, liveLocation string) ([]map[string]any, error) {
+	nearbyUsers, err := helpers.QueryRowsFields("SELECT * FROM find_nearby_users($1, $2)", clientId, liveLocation)
+	if err != nil {
+		return nil, err
+	}
+
+	return nearbyUsers, nil
+}
+
+func SearchUser(clientId int, searchQuery string) ([]map[string]any, error) {
+	matchUsers, err := helpers.QueryRowsFields("SELECT * FROM search_user($1, $2)", clientId, searchQuery)
+	if err != nil {
+		return nil, err
+	}
+
+	return matchUsers, nil
+}
+
 type User struct {
 	Id int
 }
 
 func (user User) Edit(fieldValuePair [][]string) (map[string]any, error) {
-	res, err := helpers.QueryRowFields("SELECT * FROM edit_user($1, $2)", user.Id, fieldValuePair)
+	updatedUser, err := helpers.QueryRowFields("SELECT * FROM edit_user($1, $2)", user.Id, fieldValuePair)
 	if err != nil {
 		return nil, err
 	}
 
-	return res, nil
+	return updatedUser, nil
 }
 
 func (user User) SwitchPresence(presence string, last_seen time.Time) error {
-	_, err := helpers.QueryRowFields(`SELECT switch_user_presence($1, $2, $3)`, user.Id, presence, last_seen)
+	// go helpers.QueryRowField[bool](`SELECT switch_user_presence($1, $2, $3)`, user.Id, presence, last_seen)
+	_, err := helpers.QueryRowField[bool](`SELECT switch_user_presence($1, $2, $3)`, user.Id, presence, last_seen)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (user User) UpdateLocation(newGeolocation string) error {
+	// go helpers.QueryRowField[bool](`SELECT update_user_location($1, $2, $3)`, user.Id, geolocation)
+	_, err := helpers.QueryRowField[bool](`SELECT update_user_location($1, $2, $3)`, user.Id, newGeolocation)
 	if err != nil {
 		return err
 	}
