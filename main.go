@@ -5,6 +5,7 @@ import (
 	authroutes "routes/auth"
 	"utils/helpers"
 
+	"github.com/gofiber/contrib/websocket"
 	"github.com/gofiber/fiber/v2"
 )
 
@@ -15,20 +16,19 @@ func main() {
 
 	app := fiber.New(fiber.Config{DisableStartupMessage: true})
 
+	app.Use("/", func(c *fiber.Ctx) error {
+		if websocket.IsWebSocketUpgrade(c) {
+			return c.Next()
+		}
+
+		return fiber.ErrUpgradeRequired
+	})
+
 	app.Route("/api/auth", authroutes.Init)
-	// app.Route("/api/user", userroutes.Init)
-	/* user := usermodel.User{Id: 2}
-	data, err := user.Edit([][]string{{"prece", "fhunmytor17"}})
-	if err != nil {
-		log.Println(err)
-	}
-	json_data, _ := json.MarshalIndent(data, "", " ")
-	os.Stdout.Write(json_data) */
-	/* exist, err := usermodel.UserExists("i9")
-	if err != nil {
-		log.Println(err)
-	}
-	log.Println(exist) */
+
+	/* jwtToken := helpers.GenerateJwtToken(map[string]any{"email": "oluwarinolasam@gmail.com"})
+
+	fmt.Println(jwtToken) */
 
 	log.Fatalln(app.Listen("localhost:8080"))
 }

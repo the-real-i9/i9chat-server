@@ -3,9 +3,15 @@ package helpers
 import (
 	"bufio"
 	"context"
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/base64"
+	"encoding/json"
+	"fmt"
 	"log"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -32,6 +38,36 @@ func LoadEnv() error {
 	}
 
 	return nil
+}
+
+func GenerateJwtToken(userData map[string]any) string {
+	header := map[string]string{"alg": "HS256", "typ": "JWT"}
+	byteHeader, _ := json.Marshal(header)
+	encodedHeader := base64.RawURLEncoding.EncodeToString(byteHeader)
+
+	payload := map[string]any{
+		"data": userData,
+		"jwtClaims": map[string]any{
+			"issuer": "i9chat",
+			"iat":    time.Now().UnixMilli(),
+			"exp":    time.Now().Add(1 * time.Hour).UnixMilli(),
+		},
+	}
+
+	bytePayload, _ := json.Marshal(payload)
+	encodedPayload := base64.RawURLEncoding.EncodeToString(bytePayload)
+
+	h := hmac.New(sha256.New, []byte(os.Getenv("JWT_SECRET")))
+
+	h.Write([]byte(encodedHeader + "." + encodedPayload))
+
+	sig, _ := json.Marshal(h.Sum(nil))
+
+	var signature string
+
+	json.Unmarshal(sig, &signature)
+
+	return fmt.Sprintf("%s.%s.%s", encodedHeader, encodedPayload, signature)
 }
 
 func GetDBPool() (*pgxpool.Pool, error) {

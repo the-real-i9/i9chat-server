@@ -3,26 +3,37 @@ package authcontrollers
 import (
 	"fmt"
 	"log"
-	"net/http"
 	authservices "services/auth"
 
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/contrib/websocket"
 )
 
-func RequestNewAccount(c *fiber.Ctx) error {
-	var p struct {
-		Email string `json:"email"`
-	}
+var RequestNewAccount = websocket.New(func(c *websocket.Conn) {
+	for {
+		var p struct {
+			Email string `json:"email"`
+		}
 
-	if err := c.BodyParser(&p); err != nil {
-		log.Println(err)
-		return err
-	}
+		r_err := c.ReadJSON(&p)
+		if r_err != nil {
+			log.Println(r_err)
+			break
+		}
 
-	_, _, err := authservices.RequestNewAccount(p.Email)
-	if err != nil {
-		return fmt.Errorf("%s", err)
-	}
+		fmt.Println(p.Email)
+		jwtToken, s_err := authservices.RequestNewAccount(p.Email)
+		if s_err != nil {
+			w_err := c.WriteJSON(map[string]any{"code": 400, "error": s_err})
+			if w_err != nil {
+				log.Println(w_err)
+			}
+			break
+		}
 
-	return c.SendStatus(http.StatusOK)
-}
+		w_err := c.WriteJSON(map[string]any{"code": 200, "email-verf-jwt": jwtToken})
+		if w_err != nil {
+			log.Println(w_err)
+			break
+		}
+	}
+})

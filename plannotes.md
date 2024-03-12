@@ -1,5 +1,4 @@
 # Progress
-- Write and test queries in models (stored functions)
 - Define all service methods
 - Implement webSocket routes, their corresponding middlewares, controllers and services
 
