@@ -3,10 +3,11 @@ package authservices
 import (
 	"fmt"
 	"math/rand"
-	appmodel "model/app"
 	"os"
-	appservices "services/app"
 	"time"
+
+	"model/appmodel"
+	"services/appservices"
 	"utils/helpers"
 )
 

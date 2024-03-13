@@ -1,7 +1,7 @@
 package authroutes
 
 import (
-	authcontrollers "controllers/auth"
+	"controllers/authcontrollers"
 	"i9chat/middlewares"
 
 	"github.com/gofiber/fiber/v2"

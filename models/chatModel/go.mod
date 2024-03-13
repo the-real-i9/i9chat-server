@@ -1,3 +1,3 @@
-module model/chat
+module model/chatmodel
 
 go 1.22.0

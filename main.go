@@ -2,7 +2,7 @@ package main
 
 import (
 	"log"
-	authroutes "routes/auth"
+	"routes/authroutes"
 	"utils/helpers"
 
 	"github.com/gofiber/contrib/websocket"

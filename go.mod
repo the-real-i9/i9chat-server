@@ -1,4 +1,4 @@
-module main/i9chat
+module i9chat/main
 
 go 1.22.0
 

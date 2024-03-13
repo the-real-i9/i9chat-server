@@ -3,7 +3,7 @@ package authcontrollers
 import (
 	"fmt"
 	"log"
-	authservices "services/auth"
+	"services/authservices"
 
 	"github.com/gofiber/contrib/websocket"
 )
