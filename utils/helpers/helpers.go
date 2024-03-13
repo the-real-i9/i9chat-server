@@ -40,7 +40,7 @@ func LoadEnv() error {
 	return nil
 }
 
-func JwtSign(userData map[string]any) string {
+func JwtSign(userData map[string]any, secret string, expiresIn time.Duration) string {
 	header := map[string]string{"alg": "HS256", "typ": "JWT"}
 	byteHeader, _ := json.Marshal(header)
 	encodedHeader := base64.RawURLEncoding.EncodeToString(byteHeader)
@@ -50,14 +50,14 @@ func JwtSign(userData map[string]any) string {
 		"jwtClaims": map[string]any{
 			"issuer": "i9chat",
 			"iat":    time.Now(),
-			"exp":    time.Now().Add(24 * time.Hour),
+			"exp":    time.Now().Add(expiresIn),
 		},
 	}
 
 	bytePayload, _ := json.Marshal(payload)
 	encodedPayload := base64.RawURLEncoding.EncodeToString(bytePayload)
 
-	h := hmac.New(sha256.New, []byte(os.Getenv("JWT_SECRET")))
+	h := hmac.New(sha256.New, []byte(secret))
 
 	h.Write([]byte(encodedHeader + "." + encodedPayload))
 
@@ -70,7 +70,7 @@ func JwtSign(userData map[string]any) string {
 	return fmt.Sprintf("%s.%s.%s", encodedHeader, encodedPayload, signature)
 }
 
-func JwtParse(jwtToken string) (map[string]any, error) {
+func JwtParse(jwtToken string, secret string) (map[string]any, error) {
 	jwtParts := strings.Split(jwtToken, ".")
 
 	var (
@@ -79,7 +79,7 @@ func JwtParse(jwtToken string) (map[string]any, error) {
 		signature      = jwtParts[2]
 	)
 
-	h := hmac.New(sha256.New, []byte(os.Getenv("JWT_SECRET")))
+	h := hmac.New(sha256.New, []byte(secret))
 
 	h.Write([]byte(encodedHeader + "." + encodedPayload))
 

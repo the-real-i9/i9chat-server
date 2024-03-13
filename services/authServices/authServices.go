@@ -9,7 +9,7 @@ func RequestNewAccount(email string) (jwtToken string, err error) {
 
 	// generate a JWT token that holds the "email" data
 
-	// store the email, verfCode, and verfCodeExpiration in an ongoing_registration table
+	// store the email(varchar), verfCode(int), and vefified(bool) in an ongoing_registration table
 
 	// return the jwtToken
 
