@@ -40,7 +40,7 @@ func LoadEnv() error {
 	return nil
 }
 
-func JwtSign(userData map[string]any, secret string, expiresIn time.Duration) string {
+func JwtSign(userData map[string]any, secret string, expires time.Time) string {
 	header := map[string]string{"alg": "HS256", "typ": "JWT"}
 	byteHeader, _ := json.Marshal(header)
 	encodedHeader := base64.RawURLEncoding.EncodeToString(byteHeader)
@@ -50,7 +50,7 @@ func JwtSign(userData map[string]any, secret string, expiresIn time.Duration) st
 		"jwtClaims": map[string]any{
 			"issuer": "i9chat",
 			"iat":    time.Now(),
-			"exp":    time.Now().Add(expiresIn),
+			"exp":    expires,
 		},
 	}
 

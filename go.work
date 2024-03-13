@@ -10,8 +10,10 @@ use (
   ./services/chatService
   ./models/userModel
   ./models/chatModel
+  ./models/appModel
   ./services/appServices
   ./services/authServices
   ./utils/helpers
   ./utils/mytypes
+  ./middlewares
 )

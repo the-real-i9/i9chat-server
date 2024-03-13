@@ -23,15 +23,6 @@ func GetUser(uniqueId string) (map[string]any, error) {
 	return user, nil
 }
 
-func AccountExists(emailOrUsername string) (bool, error) {
-	exist, err := helpers.QueryRowField[bool]("SELECT exist FROM account_exists($1)", emailOrUsername)
-	if err != nil {
-		return false, err
-	}
-
-	return *exist, nil
-}
-
 func FindNearbyUsers(clientId int, liveLocation string) ([]map[string]any, error) {
 	nearbyUsers, err := helpers.QueryRowsFields("SELECT * FROM find_nearby_users($1, $2)", clientId, liveLocation)
 	if err != nil {

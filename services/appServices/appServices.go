@@ -2,11 +2,12 @@ package appservices
 
 import (
 	"fmt"
+	"log"
 	"net/smtp"
 	"os"
 )
 
-func SendMail(email string, subject string, body string) {
+func SendMail(email string, subject string, body string) error {
 	to := []string{email}
 	from := os.Getenv("MAILING_EMAIL")
 
@@ -14,5 +15,11 @@ func SendMail(email string, subject string, body string) {
 
 	msg := []byte(fmt.Sprintf("To: %s\r\nSubject: i9chat - %s\r\n\r\n%s\r\n", email, subject, body))
 
-	smtp.SendMail("smtp.gmail.com:465", auth, from, to, msg)
+	err := smtp.SendMail("smtp.gmail.com:465", auth, from, to, msg)
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+
+	return nil
 }

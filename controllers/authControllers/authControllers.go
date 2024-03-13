@@ -30,10 +30,18 @@ var RequestNewAccount = websocket.New(func(c *websocket.Conn) {
 			break
 		}
 
-		w_err := c.WriteJSON(map[string]any{"code": 200, "email-verf-jwt": jwtToken})
+		w_err := c.WriteJSON(map[string]any{"code": 200, "signup_session_jwt": jwtToken})
 		if w_err != nil {
 			log.Println(w_err)
 			break
 		}
 	}
+})
+
+var VerifyEmail = websocket.New(func(c *websocket.Conn) {
+
+})
+
+var RegisterUser = websocket.New(func(c *websocket.Conn) {
+
 })
