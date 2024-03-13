@@ -1,25 +1,29 @@
 package appservices
 
 import (
+	"crypto/tls"
 	"fmt"
 	"log"
-	"net/smtp"
 	"os"
+
+	"gopkg.in/gomail.v2"
 )
 
-func SendMail(email string, subject string, body string) error {
-	to := []string{email}
-	from := os.Getenv("MAILING_EMAIL")
+func SendMail(email string, subject string, body string) {
 
-	auth := smtp.PlainAuth("", from, os.Getenv("MAILING_PASSWORD"), "smtp.gmail.com")
+	user := os.Getenv("MAILING_EMAIL")
+	pass := os.Getenv("MAILING_PASSWORD")
 
-	msg := []byte(fmt.Sprintf("To: %s\r\nSubject: i9chat - %s\r\n\r\n%s\r\n", email, subject, body))
+	m := gomail.NewMessage()
+	m.SetHeader("From", user)
+	m.SetHeader("To", email)
+	m.SetHeader("Subject", fmt.Sprintf("i9chat - %s", subject))
+	m.SetBody("text/html", body)
 
-	err := smtp.SendMail("smtp.gmail.com:465", auth, from, to, msg)
-	if err != nil {
+	d := gomail.NewDialer("smtp.gmail.com", 465, user, pass)
+	d.TLSConfig = &tls.Config{InsecureSkipVerify: true}
+
+	if err := d.DialAndSend(m); err != nil {
 		log.Println(err)
-		return err
 	}
-
-	return nil
 }

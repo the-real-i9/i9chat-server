@@ -1,7 +1,6 @@
 package authcontrollers
 
 import (
-	"fmt"
 	"log"
 	"services/authservices"
 
@@ -20,17 +19,17 @@ var RequestNewAccount = websocket.New(func(c *websocket.Conn) {
 			break
 		}
 
-		fmt.Println(p.Email)
-		jwtToken, s_err := authservices.RequestNewAccount(p.Email)
-		if s_err != nil {
-			w_err := c.WriteJSON(map[string]any{"code": 400, "error": s_err})
-			if w_err != nil {
-				log.Println(w_err)
-			}
-			break
+		jwtToken, app_err := authservices.RequestNewAccount(p.Email)
+
+		var w_err error
+
+		if app_err != nil {
+			log.Println(app_err)
+			w_err = c.WriteJSON(map[string]any{"code": 400, "error": app_err.Error()})
+		} else {
+			w_err = c.WriteJSON(map[string]any{"code": 200, "signup_session_jwt": jwtToken})
 		}
 
-		w_err := c.WriteJSON(map[string]any{"code": 200, "signup_session_jwt": jwtToken})
 		if w_err != nil {
 			log.Println(w_err)
 			break

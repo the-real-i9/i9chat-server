@@ -26,5 +26,5 @@ func main() {
 
 	app.Route("/api/auth", authroutes.Init)
 
-	log.Fatalln(app.Listen("localhost:8080"))
+	log.Fatalln(app.Listen("localhost:8000"))
 }

@@ -49,7 +49,7 @@ func JwtSign(userData map[string]any, secret string, expires time.Time) string {
 		"data": userData,
 		"jwtClaims": map[string]any{
 			"issuer": "i9chat",
-			"iat":    time.Now(),
+			"iat":    time.Now().UTC(),
 			"exp":    expires,
 		},
 	}
