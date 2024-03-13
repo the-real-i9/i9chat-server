@@ -2,22 +2,31 @@ package middlewares
 
 import (
 	"fmt"
+	"os"
+	"utils/helpers"
 
+	"github.com/gofiber/contrib/websocket"
 	"github.com/gofiber/fiber/v2"
 )
 
-func CheckAccountRequested(c *fiber.Ctx) error {
-	ber := c.Get("Authorization")
+func CheckAccountRequested(c *websocket.Conn) (map[string]any, error) {
+	token := c.Headers("Authorization")
 
-	// If no token, reply: "No ongoing signup session. You might want to check if you've attached the required signup session token in the Authorization header.
+	if token == "" {
+		return nil, fmt.Errorf("signup error: no ongoing signup session. you must first submit your email and attach the autorization token sent")
+	}
 
-	// If token is incorrect, reply: "Invalid signup session token"
+	sessionData, err := helpers.JwtParse(token, os.Getenv("SIGNUP_JWT_SECRET"))
+	if err != nil {
+		if err.Error() == "authentication error: invalid jwt" {
+			return nil, fmt.Errorf("signup error: invalid signup session token")
+		}
+		if err.Error() == "authentication error: jwt expired" {
+			return nil, fmt.Errorf("signup error: signup session expired")
+		}
+	}
 
-	// If token is expired, reply: "Signup session expired"
-
-	fmt.Println(ber)
-
-	return c.SendStatus(200)
+	return sessionData, nil
 }
 
 func CheckEmailVerified(c *fiber.Ctx) error {

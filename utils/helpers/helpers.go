@@ -91,7 +91,7 @@ func JwtParse(jwtToken string, secret string) (map[string]any, error) {
 
 	tokenValid := hmac.Equal([]byte(signature), []byte(expectedSignature))
 	if !tokenValid {
-		return nil, fmt.Errorf("%s", "invalid jwt")
+		return nil, fmt.Errorf("%s", "authentication error: invalid jwt")
 	}
 
 	decPay, _ := base64.RawURLEncoding.DecodeString(encodedPayload)
@@ -106,7 +106,7 @@ func JwtParse(jwtToken string, secret string) (map[string]any, error) {
 	json.Unmarshal(decPay, &decodedPayload)
 
 	if decodedPayload.JwtClaims.Exp.Before(time.Now()) {
-		return nil, fmt.Errorf("%s", "jwt expired")
+		return nil, fmt.Errorf("%s", "authentication error: jwt expired")
 	}
 
 	return decodedPayload.Data, nil
@@ -211,4 +211,10 @@ func QueryRowsFields(sql string, params ...any) ([]map[string]any, error) {
 	}
 
 	return res, nil
+}
+
+func MapToStruct(mapData map[string]any, structData any) {
+	bt, _ := json.Marshal(mapData)
+
+	json.Unmarshal(bt, structData)
 }
