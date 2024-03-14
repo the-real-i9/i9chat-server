@@ -4,8 +4,10 @@ import (
 	"fmt"
 	"i9chat/middlewares"
 	"log"
+	"services/appservices"
 	"services/authservices"
-	"utils/helpers"
+	"services/userservice"
+	"utils/mytypes"
 
 	"github.com/gofiber/contrib/websocket"
 )
@@ -61,12 +63,7 @@ var VerifyEmail = websocket.New(func(c *websocket.Conn) {
 			break
 		}
 
-		var sessionData struct {
-			SessionId string
-			Email     string
-		}
-
-		helpers.MapToStruct(sessData, &sessionData)
+		sessionData := sessData.(mytypes.SignupSessionData)
 
 		app_err := authservices.VerifyEmail(sessionData.SessionId, body.Code, sessionData.Email)
 
@@ -86,5 +83,46 @@ var VerifyEmail = websocket.New(func(c *websocket.Conn) {
 })
 
 var RegisterUser = websocket.New(func(c *websocket.Conn) {
+	for {
+		var body struct {
+			Username    string `json:"username"`
+			Password    string `json:"password"`
+			Geolocation string `json:"geolocation"`
+		}
 
+		r_err := c.ReadJSON(&body)
+		if r_err != nil {
+			log.Println(r_err)
+			break
+		}
+
+		sessData, mid_err := middlewares.CheckEmailVerified(c)
+
+		if mid_err != nil {
+			if w_err := c.WriteJSON(map[string]any{"code": 400, "error": mid_err.Error()}); w_err != nil {
+				log.Println(w_err)
+				break
+			}
+			break
+		}
+
+		sessionData := sessData.(mytypes.SignupSessionData)
+
+		userData, jwtToken, app_err := userservice.NewUser(sessionData.Email, body.Username, body.Password, body.Geolocation)
+
+		var w_err error
+
+		if app_err != nil {
+			w_err = c.WriteJSON(map[string]any{"code": 400, "error": app_err.Error()})
+		} else {
+			w_err = c.WriteJSON(map[string]any{"code": 200, "msg": "Signup success!", "user": userData, "jwtToken": jwtToken})
+		}
+
+		appservices.EndSignupSession(sessionData.SessionId)
+
+		if w_err != nil {
+			log.Println(w_err)
+			break
+		}
+	}
 })

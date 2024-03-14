@@ -4,6 +4,7 @@ import (
 	"crypto/tls"
 	"fmt"
 	"log"
+	"model/appmodel"
 	"os"
 
 	"gopkg.in/gomail.v2"
@@ -26,4 +27,8 @@ func SendMail(email string, subject string, body string) {
 	if err := d.DialAndSend(m); err != nil {
 		log.Println(err)
 	}
+}
+
+func EndSignupSession(sessionId string) {
+	appmodel.EndSignupSession(sessionId)
 }
