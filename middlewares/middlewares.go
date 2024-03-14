@@ -4,8 +4,9 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"utils/appglobals"
+	"utils/apptypes"
 	"utils/helpers"
-	"utils/mytypes"
 
 	"github.com/gofiber/contrib/websocket"
 )
@@ -19,15 +20,15 @@ func CheckAccountRequested(c *websocket.Conn) (any, error) {
 
 	sessData, err := helpers.JwtVerify(token, os.Getenv("SIGNUP_JWT_SECRET"))
 	if err != nil {
-		if err.Error() == "authentication error: invalid jwt" {
+		if err.Error() == "authorization error: invalid jwt" {
 			return nil, fmt.Errorf("signup error: invalid signup session token")
 		}
-		if err.Error() == "authentication error: jwt expired" {
+		if err.Error() == "authorization error: jwt expired" {
 			return nil, fmt.Errorf("signup error: signup session expired")
 		}
 	}
 
-	var sessionData mytypes.SignupSessionData
+	var sessionData apptypes.SignupSessionData
 
 	helpers.MapToStruct(sessData, &sessionData)
 
@@ -51,14 +52,14 @@ func CheckEmailVerified(c *websocket.Conn) (any, error) {
 		}
 	}
 
-	var sessionData mytypes.SignupSessionData
+	var sessionData apptypes.SignupSessionData
 
 	helpers.MapToStruct(sessData, &sessionData)
 
 	isVerified, err := helpers.QueryRowField[bool]("SELECT is_verified FROM signup_session_email_verified($1)", sessionData.SessionId)
 	if err != nil {
-		log.Println(err)
-		return nil, err
+		log.Println(fmt.Errorf("middlewares: CheckEmailVerified: isVerified: db error: %s", err))
+		return nil, appglobals.ErrInternalServerError
 	}
 
 	if !*isVerified {

@@ -11,19 +11,17 @@ import (
 	"model/appmodel"
 	"model/usermodel"
 	"services/appservices"
+	"utils/appglobals"
 	"utils/helpers"
 
 	"golang.org/x/crypto/bcrypt"
 )
 
-var ErrInternalServerError = errors.New("500: Internal Server error")
-
 func RequestNewAccount(email string) (string, error) {
 	// check if email already exists. if yes, send error
 	accExists, err := appmodel.AccountExists(email)
 	if err != nil {
-		log.Println(err)
-		return "", ErrInternalServerError
+		return "", err
 	}
 
 	if accExists {
@@ -41,8 +39,7 @@ func RequestNewAccount(email string) (string, error) {
 	// get back the id as session_id
 	sessionId, err := appmodel.NewSignupSession(email, verfCode)
 	if err != nil {
-		log.Println(fmt.Errorf("new signup session error: %s", err))
-		return "", ErrInternalServerError
+		return "", err
 	}
 
 	// generate a 30min. JWT token that holds the session_id
@@ -71,13 +68,12 @@ func RegisterUser(sessionId string, email string, username string, password stri
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
 		log.Println(fmt.Errorf("auth service: register user: %s", err))
-		return nil, "", ErrInternalServerError
+		return nil, "", appglobals.ErrInternalServerError
 	}
 
 	userData, err := usermodel.NewUser(email, username, string(hashedPassword), geolocation)
 	if err != nil {
-		log.Println(err)
-		return nil, "", ErrInternalServerError
+		return nil, "", err
 	}
 
 	var user struct {
@@ -101,13 +97,17 @@ func RegisterUser(sessionId string, email string, username string, password stri
 func Signin(emailOrUsername string, password string) (map[string]any, string, error) {
 	userData, err := usermodel.GetUser(emailOrUsername)
 	if err != nil {
+		return nil, "", err
+	}
+
+	if userData == nil {
 		return nil, "", fmt.Errorf("signin error: incorrect email/username or password")
 	}
 
 	hashedPassword, err := helpers.QueryRowField[string]("SELECT password FROM get_user_password($1)", emailOrUsername)
 	if err != nil {
-		log.Println(err)
-		return nil, "", ErrInternalServerError
+		log.Println(fmt.Errorf("authServices.go: Signin: hashed Password: get_user_password db error: %s", err))
+		return nil, "", appglobals.ErrInternalServerError
 	}
 
 	pwd_err := bcrypt.CompareHashAndPassword([]byte(*hashedPassword), []byte(password))
@@ -115,8 +115,8 @@ func Signin(emailOrUsername string, password string) (map[string]any, string, er
 		if errors.Is(pwd_err, bcrypt.ErrMismatchedHashAndPassword) {
 			return nil, "", fmt.Errorf("signin error: incorrect email/username or password")
 		} else {
-			log.Println(err)
-			return nil, "", ErrInternalServerError
+			log.Println(fmt.Errorf("authServices.go: Signin: %s", err))
+			return nil, "", appglobals.ErrInternalServerError
 		}
 	}
 

@@ -7,11 +7,13 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"os"
 	"strings"
 	"time"
+	"utils/appglobals"
 
 	"github.com/gofiber/contrib/websocket"
 	"github.com/gofiber/fiber/v2"
@@ -193,6 +195,9 @@ func QueryRowFields(sql string, params ...any) (map[string]any, error) {
 
 	res, err := pgx.CollectOneRow(rows, pgx.RowToMap)
 	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, nil
+		}
 		return nil, err
 	}
 
@@ -226,7 +231,7 @@ func WSHandlerProtected(handler func(*websocket.Conn), config ...websocket.Confi
 		jwtToken := c.Headers("Authorization")
 
 		if jwtToken == "" {
-			w_err := c.WriteJSON(map[string]any{"code": fiber.StatusUnauthorized, "error": "Unauthorized. Authorization token required."})
+			w_err := c.WriteJSON(AppError(fiber.StatusUnauthorized, fmt.Errorf("authorization error: authorization token required")))
 			if w_err != nil {
 				return
 			}
@@ -235,7 +240,7 @@ func WSHandlerProtected(handler func(*websocket.Conn), config ...websocket.Confi
 
 		userData, err := JwtVerify(jwtToken, os.Getenv("AUTH_JWT_TOKEN"))
 		if err != nil {
-			w_err := c.WriteJSON(map[string]any{"code": fiber.StatusUnprocessableEntity, "error": err.Error()})
+			w_err := c.WriteJSON(AppError(fiber.StatusUnprocessableEntity, err))
 			if w_err != nil {
 				return
 			}
@@ -246,4 +251,12 @@ func WSHandlerProtected(handler func(*websocket.Conn), config ...websocket.Confi
 
 		handler(c)
 	}, config...)
+}
+
+func AppError(code int, err error) map[string]any {
+	if errors.Is(err, appglobals.ErrInternalServerError) {
+		return map[string]any{"code": 500, "error": appglobals.ErrInternalServerError.Error()}
+	}
+
+	return map[string]any{"code": code, "error": err.Error()}
 }
