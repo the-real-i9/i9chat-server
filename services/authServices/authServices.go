@@ -45,7 +45,7 @@ func RequestNewAccount(email string) (string, error) {
 	return jwtToken, nil
 }
 
-func VerifyEmail(sessionId string, inputVerfCode int) error {
+func VerifyEmail(sessionId string, inputVerfCode int, email string) error {
 	isSuccess, err := appmodel.VerifyEmail(sessionId, inputVerfCode)
 	if err != nil {
 		return err
@@ -54,6 +54,8 @@ func VerifyEmail(sessionId string, inputVerfCode int) error {
 	if !isSuccess {
 		return fmt.Errorf("email verification error: incorrect verification code")
 	}
+
+	go appservices.SendMail(email, "Email Verification Success", fmt.Sprintf("Your email %s has been verified!", email))
 
 	return nil
 }

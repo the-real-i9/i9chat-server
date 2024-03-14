@@ -68,7 +68,7 @@ var VerifyEmail = websocket.New(func(c *websocket.Conn) {
 
 		helpers.MapToStruct(sessData, &sessionData)
 
-		app_err := authservices.VerifyEmail(sessionData.SessionId, body.Code)
+		app_err := authservices.VerifyEmail(sessionData.SessionId, body.Code, sessionData.Email)
 
 		var w_err error
 
