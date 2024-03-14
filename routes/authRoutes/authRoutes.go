@@ -12,4 +12,6 @@ func Init(router fiber.Router) {
 	router.Get("/signup/verify_email", authcontrollers.VerifyEmail)
 
 	router.Get("/signup/register_user", authcontrollers.RegisterUser)
+
+	router.Get("/signin", authcontrollers.Signin)
 }

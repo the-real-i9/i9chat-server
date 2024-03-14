@@ -13,6 +13,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/gofiber/contrib/websocket"
+	"github.com/gofiber/fiber/v2"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -70,7 +72,7 @@ func JwtSign(userData map[string]any, secret string, expires time.Time) string {
 	return fmt.Sprintf("%s.%s.%s", encodedHeader, encodedPayload, signature)
 }
 
-func JwtParse(jwtToken string, secret string) (map[string]any, error) {
+func JwtVerify(jwtToken string, secret string) (map[string]any, error) {
 	jwtParts := strings.Split(jwtToken, ".")
 
 	var (
@@ -91,7 +93,7 @@ func JwtParse(jwtToken string, secret string) (map[string]any, error) {
 
 	tokenValid := hmac.Equal([]byte(signature), []byte(expectedSignature))
 	if !tokenValid {
-		return nil, fmt.Errorf("%s", "authentication error: invalid jwt")
+		return nil, fmt.Errorf("%s", "authorization error: invalid jwt")
 	}
 
 	decPay, _ := base64.RawURLEncoding.DecodeString(encodedPayload)
@@ -106,7 +108,7 @@ func JwtParse(jwtToken string, secret string) (map[string]any, error) {
 	json.Unmarshal(decPay, &decodedPayload)
 
 	if decodedPayload.JwtClaims.Exp.Before(time.Now()) {
-		return nil, fmt.Errorf("%s", "authentication error: jwt expired")
+		return nil, fmt.Errorf("%s", "authorization error: jwt expired")
 	}
 
 	return decodedPayload.Data, nil
@@ -217,4 +219,31 @@ func MapToStruct(mapData map[string]any, structData any) {
 	bt, _ := json.Marshal(mapData)
 
 	json.Unmarshal(bt, structData)
+}
+
+func WSHandlerProtected(handler func(*websocket.Conn), config ...websocket.Config) func(*fiber.Ctx) error {
+	return websocket.New(func(c *websocket.Conn) {
+		jwtToken := c.Headers("Authorization")
+
+		if jwtToken == "" {
+			w_err := c.WriteJSON(map[string]any{"code": fiber.StatusUnauthorized, "error": "Unauthorized. Authorization token required."})
+			if w_err != nil {
+				return
+			}
+			return
+		}
+
+		userData, err := JwtVerify(jwtToken, os.Getenv("AUTH_JWT_TOKEN"))
+		if err != nil {
+			w_err := c.WriteJSON(map[string]any{"code": fiber.StatusUnprocessableEntity, "error": err.Error()})
+			if w_err != nil {
+				return
+			}
+			return
+		}
+
+		c.Locals("auth", userData)
+
+		handler(c)
+	}, config...)
 }

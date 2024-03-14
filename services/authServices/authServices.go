@@ -1,6 +1,7 @@
 package authservices
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"math/rand"
@@ -8,16 +9,21 @@ import (
 	"time"
 
 	"model/appmodel"
+	"model/usermodel"
 	"services/appservices"
 	"utils/helpers"
+
+	"golang.org/x/crypto/bcrypt"
 )
+
+var ErrInternalServerError = errors.New("500: Internal Server error")
 
 func RequestNewAccount(email string) (string, error) {
 	// check if email already exists. if yes, send error
 	accExists, err := appmodel.AccountExists(email)
 	if err != nil {
 		log.Println(err)
-		return "", err
+		return "", ErrInternalServerError
 	}
 
 	if accExists {
@@ -35,7 +41,8 @@ func RequestNewAccount(email string) (string, error) {
 	// get back the id as session_id
 	sessionId, err := appmodel.NewSignupSession(email, verfCode)
 	if err != nil {
-		return "", fmt.Errorf("new signup session error: %s", err)
+		log.Println(fmt.Errorf("new signup session error: %s", err))
+		return "", ErrInternalServerError
 	}
 
 	// generate a 30min. JWT token that holds the session_id
@@ -58,4 +65,72 @@ func VerifyEmail(sessionId string, inputVerfCode int, email string) error {
 	go appservices.SendMail(email, "Email Verification Success", fmt.Sprintf("Your email %s has been verified!", email))
 
 	return nil
+}
+
+func RegisterUser(sessionId string, email string, username string, password string, geolocation string) (map[string]any, string, error) {
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		log.Println(fmt.Errorf("auth service: register user: %s", err))
+		return nil, "", ErrInternalServerError
+	}
+
+	userData, err := usermodel.NewUser(email, username, string(hashedPassword), geolocation)
+	if err != nil {
+		log.Println(err)
+		return nil, "", ErrInternalServerError
+	}
+
+	var user struct {
+		Id       int
+		Username string
+	}
+
+	helpers.MapToStruct(userData, &user)
+
+	// sign a jwt token
+	jwtToken := helpers.JwtSign(map[string]any{
+		"userId":   user.Id,
+		"username": user.Username,
+	}, os.Getenv("AUTH_JWT_SECRET"), time.Now().UTC().Add(365*24*time.Hour)) // 1 year
+
+	appmodel.EndSignupSession(sessionId)
+
+	return userData, jwtToken, nil
+}
+
+func Signin(emailOrUsername string, password string) (map[string]any, string, error) {
+	userData, err := usermodel.GetUser(emailOrUsername)
+	if err != nil {
+		return nil, "", fmt.Errorf("signin error: incorrect email/username or password")
+	}
+
+	hashedPassword, err := helpers.QueryRowField[string]("SELECT password FROM get_user_password($1)", emailOrUsername)
+	if err != nil {
+		log.Println(err)
+		return nil, "", ErrInternalServerError
+	}
+
+	pwd_err := bcrypt.CompareHashAndPassword([]byte(*hashedPassword), []byte(password))
+	if pwd_err != nil {
+		if errors.Is(pwd_err, bcrypt.ErrMismatchedHashAndPassword) {
+			return nil, "", fmt.Errorf("signin error: incorrect email/username or password")
+		} else {
+			log.Println(err)
+			return nil, "", ErrInternalServerError
+		}
+	}
+
+	var user struct {
+		Id       int
+		Username string
+	}
+
+	helpers.MapToStruct(userData, &user)
+
+	jwtToken := helpers.JwtSign(map[string]any{
+		"userId":   user.Id,
+		"username": user.Username,
+	}, os.Getenv("AUTH_JWT_SECRET"), time.Now().UTC().Add(365*24*time.Hour))
+
+	return userData, jwtToken, nil
 }

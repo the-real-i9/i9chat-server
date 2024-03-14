@@ -123,3 +123,33 @@ var RegisterUser = websocket.New(func(c *websocket.Conn) {
 		}
 	}
 })
+
+var Signin = websocket.New(func(c *websocket.Conn) {
+	for {
+		var body struct {
+			EmailOrUsername string `json:"emailOrUsername"`
+			Password        string `json:"password"`
+		}
+
+		r_err := c.ReadJSON(&body)
+		if r_err != nil {
+			log.Println(r_err)
+			break
+		}
+
+		userData, jwtToken, app_err := authservices.Signin(body.EmailOrUsername, body.Password)
+
+		var w_err error
+
+		if app_err != nil {
+			w_err = c.WriteJSON(map[string]any{"code": fiber.StatusUnprocessableEntity, "error": app_err.Error()})
+		} else {
+			w_err = c.WriteJSON(map[string]any{"code": fiber.StatusOK, "msg": "Signin success!", "user": userData, "jwtToken": jwtToken})
+		}
+
+		if w_err != nil {
+			log.Println(w_err)
+			break
+		}
+	}
+})
