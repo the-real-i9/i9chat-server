@@ -1,6 +1,7 @@
 package usermodel
 
 import (
+	"fmt"
 	"time"
 	"utils/helpers"
 )
@@ -8,7 +9,7 @@ import (
 func NewUser(email string, username string, password string, geolocation string) (map[string]any, error) {
 	user, err := helpers.QueryRowFields("SELECT * FROM new_user($1, $2, $34, $)", email, username, password, geolocation)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("user model: new user: %s", err)
 	}
 
 	return user, nil

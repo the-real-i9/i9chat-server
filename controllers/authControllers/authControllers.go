@@ -4,12 +4,11 @@ import (
 	"fmt"
 	"i9chat/middlewares"
 	"log"
-	"services/appservices"
 	"services/authservices"
-	"services/userservice"
 	"utils/mytypes"
 
 	"github.com/gofiber/contrib/websocket"
+	"github.com/gofiber/fiber/v2"
 )
 
 var RequestNewAccount = websocket.New(func(c *websocket.Conn) {
@@ -29,9 +28,9 @@ var RequestNewAccount = websocket.New(func(c *websocket.Conn) {
 		jwtToken, app_err := authservices.RequestNewAccount(body.Email)
 
 		if app_err != nil {
-			w_err = c.WriteJSON(map[string]any{"code": 400, "error": app_err.Error()})
+			w_err = c.WriteJSON(map[string]any{"code": fiber.StatusUnprocessableEntity, "error": app_err.Error()})
 		} else {
-			w_err = c.WriteJSON(map[string]any{"code": 200, "signup_session_jwt": jwtToken})
+			w_err = c.WriteJSON(map[string]any{"code": fiber.StatusOK, "signup_session_jwt": jwtToken})
 		}
 
 		if w_err != nil {
@@ -42,6 +41,16 @@ var RequestNewAccount = websocket.New(func(c *websocket.Conn) {
 })
 
 var VerifyEmail = websocket.New(func(c *websocket.Conn) {
+	sessData, mid_err := middlewares.CheckAccountRequested(c)
+
+	if mid_err != nil {
+		if w_err := c.WriteJSON(map[string]any{"code": fiber.StatusUnprocessableEntity, "error": mid_err.Error()}); w_err != nil {
+			log.Println(w_err)
+			return
+		}
+		return
+	}
+
 	for {
 		var body struct {
 			Code int `json:"code"`
@@ -53,16 +62,6 @@ var VerifyEmail = websocket.New(func(c *websocket.Conn) {
 			break
 		}
 
-		sessData, mid_err := middlewares.CheckAccountRequested(c)
-
-		if mid_err != nil {
-			if w_err := c.WriteJSON(map[string]any{"code": 400, "error": mid_err.Error()}); w_err != nil {
-				log.Println(w_err)
-				break
-			}
-			break
-		}
-
 		sessionData := sessData.(mytypes.SignupSessionData)
 
 		app_err := authservices.VerifyEmail(sessionData.SessionId, body.Code, sessionData.Email)
@@ -70,9 +69,9 @@ var VerifyEmail = websocket.New(func(c *websocket.Conn) {
 		var w_err error
 
 		if app_err != nil {
-			w_err = c.WriteJSON(map[string]any{"code": 400, "error": app_err.Error()})
+			w_err = c.WriteJSON(map[string]any{"code": fiber.StatusUnprocessableEntity, "error": app_err.Error()})
 		} else {
-			w_err = c.WriteJSON(map[string]any{"code": 200, "msg": fmt.Sprintf("Your email '%s' has been verified!", sessionData.Email)})
+			w_err = c.WriteJSON(map[string]any{"code": fiber.StatusOK, "msg": fmt.Sprintf("Your email '%s' has been verified!", sessionData.Email)})
 		}
 
 		if w_err != nil {
@@ -83,6 +82,16 @@ var VerifyEmail = websocket.New(func(c *websocket.Conn) {
 })
 
 var RegisterUser = websocket.New(func(c *websocket.Conn) {
+	sessData, mid_err := middlewares.CheckEmailVerified(c)
+
+	if mid_err != nil {
+		if w_err := c.WriteJSON(map[string]any{"code": fiber.StatusUnprocessableEntity, "error": mid_err.Error()}); w_err != nil {
+			log.Println(w_err)
+			return
+		}
+		return
+	}
+
 	for {
 		var body struct {
 			Username    string `json:"username"`
@@ -96,29 +105,17 @@ var RegisterUser = websocket.New(func(c *websocket.Conn) {
 			break
 		}
 
-		sessData, mid_err := middlewares.CheckEmailVerified(c)
-
-		if mid_err != nil {
-			if w_err := c.WriteJSON(map[string]any{"code": 400, "error": mid_err.Error()}); w_err != nil {
-				log.Println(w_err)
-				break
-			}
-			break
-		}
-
 		sessionData := sessData.(mytypes.SignupSessionData)
 
-		userData, jwtToken, app_err := userservice.NewUser(sessionData.Email, body.Username, body.Password, body.Geolocation)
+		userData, jwtToken, app_err := authservices.RegisterUser(sessionData.SessionId, sessionData.Email, body.Username, body.Password, body.Geolocation)
 
 		var w_err error
 
 		if app_err != nil {
-			w_err = c.WriteJSON(map[string]any{"code": 400, "error": app_err.Error()})
+			w_err = c.WriteJSON(map[string]any{"code": fiber.StatusUnprocessableEntity, "error": app_err.Error()})
 		} else {
-			w_err = c.WriteJSON(map[string]any{"code": 200, "msg": "Signup success!", "user": userData, "jwtToken": jwtToken})
+			w_err = c.WriteJSON(map[string]any{"code": fiber.StatusOK, "msg": "Signup success!", "user": userData, "jwtToken": jwtToken})
 		}
-
-		appservices.EndSignupSession(sessionData.SessionId)
 
 		if w_err != nil {
 			log.Println(w_err)
