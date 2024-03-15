@@ -48,6 +48,16 @@ func SearchUser(clientId int, searchQuery string) ([]map[string]any, error) {
 	return matchUsers, nil
 }
 
+func GetMyChats(clientId int) ([]*map[string]any, error) {
+	myChats, err := helpers.QueryRowsField[map[string]any]("SELECT chat FROM get_my_chats($1)", clientId)
+	if err != nil {
+		log.Println(fmt.Errorf("userModel.go: GetMyChats: %s", err))
+		return nil, appglobals.ErrInternalServerError
+	}
+
+	return myChats, nil
+}
+
 type User struct {
 	Id int
 }

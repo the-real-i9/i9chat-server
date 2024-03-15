@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"routes/authroutes"
+	"routes/userroutes"
 	"utils/helpers"
 
 	"github.com/gofiber/contrib/websocket"
@@ -25,6 +26,8 @@ func main() {
 	})
 
 	app.Route("/api/auth", authroutes.Init)
+
+	app.Route("/api/app/user", userroutes.Init)
 
 	log.Fatalln(app.Listen("localhost:8000"))
 }
