@@ -7,4 +7,5 @@ type Chat interface {
 
 type Message interface {
 	React()
+	UpdateDeliveryStatus()
 }
