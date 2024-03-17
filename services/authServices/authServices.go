@@ -43,7 +43,7 @@ func RequestNewAccount(email string) (string, error) {
 	}
 
 	// generate a 30min. JWT token that holds the session_id
-	jwtToken := helpers.JwtSign(map[string]any{"sessionId": sessionId, "email": email}, os.Getenv("SIGNUP_JWT_SECRET"), expires)
+	jwtToken := helpers.JwtSign(map[string]any{"sessionId": sessionId, "email": email}, os.Getenv("SIGNUP_SESSION_JWT_SECRET"), expires)
 
 	// return the jwtToken
 	return jwtToken, nil

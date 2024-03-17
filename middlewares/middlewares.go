@@ -18,7 +18,7 @@ func CheckAccountRequested(c *websocket.Conn) (any, error) {
 		return nil, fmt.Errorf("signup error: no ongoing signup session. you must first submit your email and attach the autorization token sent")
 	}
 
-	sessData, err := helpers.JwtVerify(token, os.Getenv("SIGNUP_JWT_SECRET"))
+	sessData, err := helpers.JwtVerify(token, os.Getenv("SIGNUP_SESSION_JWT_SECRET"))
 	if err != nil {
 		if err.Error() == "authorization error: invalid jwt" {
 			return nil, fmt.Errorf("signup error: invalid signup session token")
@@ -42,7 +42,7 @@ func CheckEmailVerified(c *websocket.Conn) (any, error) {
 		return nil, fmt.Errorf("signup error: no ongoing signup session. you must first submit your email and attach the autorization token sent")
 	}
 
-	sessData, err := helpers.JwtVerify(token, os.Getenv("SIGNUP_JWT_SECRET"))
+	sessData, err := helpers.JwtVerify(token, os.Getenv("SIGNUP_SESSION_JWT_SECRET"))
 	if err != nil {
 		if err.Error() == "authorization error: invalid jwt" {
 			return nil, fmt.Errorf("signup error: invalid signup session token")
