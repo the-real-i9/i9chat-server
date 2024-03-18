@@ -17,19 +17,15 @@ var GetMyChats = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 
 	helpers.MapToStruct(c.Locals("auth").(map[string]any), &user)
 
-	// immediately after connection, fetch chat updates
 	myChats, app_err := userservice.GetMyChats(user.UserId)
 
+	var w_err error
 	if app_err != nil {
-		w_err := c.WriteJSON(helpers.AppError(500, app_err))
-		if w_err != nil {
-			log.Println(w_err)
-			return
-		}
-		return
+		w_err = c.WriteJSON(helpers.AppError(500, app_err))
+	} else {
+		w_err = c.WriteJSON(map[string]any{"my_chats": myChats})
 	}
 
-	w_err := c.WriteJSON(map[string]any{"my_chats": myChats})
 	if w_err != nil {
 		log.Println(w_err)
 		return

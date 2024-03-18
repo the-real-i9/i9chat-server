@@ -1,5 +1,7 @@
 package chatservice
 
+import "model/chatmodel"
+
 func NewDMChat() {
 }
 
@@ -11,8 +13,9 @@ func (dmc DMChat) SendMessage() {
 
 }
 
-func (dmc DMChat) GetChatHistory() {
-
+func (dmc DMChat) GetChatHistory(offset int) ([]*map[string]any, error) {
+	dmChat := chatmodel.DMChat{Id: dmc.Id}
+	return dmChat.GetChatHistory(offset)
 }
 
 type DMMessage struct {
