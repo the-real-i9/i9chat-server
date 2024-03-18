@@ -2,8 +2,6 @@ package appglobals
 
 import (
 	"errors"
-	"fmt"
-	"strings"
 )
 
 var ErrInternalServerError = errors.New("internal server error: check logger")
@@ -36,16 +34,9 @@ func UnsubscribeFromNewDMChatMessageUpdate(key string) {
 	delete(newDMChatMessageObserver, key)
 }
 
-func SendNewDMChatMessageUpdate(chatId int, skipUserId int, data map[string]any) { // call in a new goroutine
-	for key, mailbox := range newDMChatMessageObserver {
-		if !strings.Contains(key, fmt.Sprintf("dmchat-%d", chatId)) ||
-			strings.Contains(key, fmt.Sprintf("user-%d", skipUserId)) {
-			continue
-		}
-
-		go func(mailbox chan<- map[string]any) {
-			mailbox <- data
-		}(mailbox)
+func SendNewDMChatMessageUpdate(key string, data map[string]any) { // call in a new goroutine
+	if mailbox, found := newDMChatMessageObserver[key]; found {
+		mailbox <- data
 	}
 }
 
@@ -60,15 +51,8 @@ func UnsubscribeFromNewGroupChatMessageUpdate(key string) {
 	delete(newGroupChatMessageObserver, key)
 }
 
-func SendNewGroupChatMessageUpdate(chatId int, skipUserId int, data map[string]any) { // call in a new goroutine
-	for key, mailbox := range newGroupChatMessageObserver {
-		if !strings.Contains(key, fmt.Sprintf("groupchat-%d", chatId)) ||
-			strings.Contains(key, fmt.Sprintf("user-%d", skipUserId)) {
-			continue
-		}
-
-		go func(mailbox chan<- map[string]any) {
-			mailbox <- data
-		}(mailbox)
+func SendNewGroupChatMessageUpdate(key string, data map[string]any) { // call in a new goroutine
+	if mailbox, found := newGroupChatMessageObserver[key]; found {
+		mailbox <- data
 	}
 }

@@ -20,10 +20,12 @@ func NewGroupChat(name string, description string, picture string, creator [2]st
 
 	helpers.MapToStruct(data, &respData)
 
-	for _, newMember := range initUsers[1:] { // the first user is the creator, hence, they're excluded
-		newMemberId := newMember[0]
-		go appglobals.SendNewChatUpdate(fmt.Sprintf("user-%s", newMemberId), respData.Nmrd)
-	}
+	go func() {
+		for _, newMember := range initUsers[1:] { // the first user is the creator, hence, they're excluded
+			newMemberId := newMember[0]
+			go appglobals.SendNewChatUpdate(fmt.Sprintf("user-%s", newMemberId), respData.Nmrd)
+		}
+	}()
 
 	return respData.Crd, nil
 }
@@ -34,8 +36,9 @@ type GroupChat struct {
 
 func (gpc GroupChat) SendMessage(senderId int, msgContent map[string]any) (map[string]any, error) {
 	var respData struct {
-		Srd map[string]any // sender_resp_data AS srd
-		Mrd map[string]any // members_resp_data AS mrd
+		Srd       map[string]any // sender_resp_data AS srd
+		Mrd       map[string]any // members_resp_data AS mrd
+		MemberIds []int
 	}
 
 	groupChat := chatmodel.GroupChat{Id: gpc.Id}
@@ -47,7 +50,12 @@ func (gpc GroupChat) SendMessage(senderId int, msgContent map[string]any) (map[s
 
 	helpers.MapToStruct(data, &respData)
 
-	go appglobals.SendNewGroupChatMessageUpdate(gpc.Id, senderId, respData.Mrd)
+	go func() {
+		for _, mId := range respData.MemberIds {
+			memberId := mId
+			go appglobals.SendNewGroupChatMessageUpdate(fmt.Sprintf("user-%d--groupchat-%d", memberId, gpc.Id), respData.Mrd)
+		}
+	}()
 
 	return respData.Srd, nil
 }

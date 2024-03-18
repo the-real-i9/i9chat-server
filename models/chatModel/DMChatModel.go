@@ -22,7 +22,7 @@ type DMChat struct {
 }
 
 func (dmc DMChat) SendMessage(senderId int, msgContent map[string]any) (map[string]any, error) {
-	data, err := helpers.QueryRowFields("SELECT sender_resp_data AS srd, receiver_resp_data AS rrd FROM send_dm_chat_message($1, $2, $3)", dmc.Id, senderId, msgContent)
+	data, err := helpers.QueryRowFields("SELECT sender_resp_data AS srd, receiver_resp_data AS rrd, receiver_id AS receiverId FROM send_dm_chat_message($1, $2, $3)", dmc.Id, senderId, msgContent)
 	if err != nil {
 		log.Println(fmt.Errorf("DMChatModel.go: DMChat_SendMessage: %s", err))
 		return nil, appglobals.ErrInternalServerError
@@ -48,6 +48,7 @@ func (dmc DMChat) GetChatHistory(offset int) ([]*map[string]any, error) {
 type DMChatMessage struct {
 	Id       int
 	DMChatId int
+	SenderId int
 }
 
 func (dmcm DMChatMessage) UpdateDeliveryStatus(receiverId int, status string) error {

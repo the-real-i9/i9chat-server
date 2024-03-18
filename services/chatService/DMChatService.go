@@ -31,8 +31,9 @@ type DMChat struct {
 
 func (dmc DMChat) SendMessage(senderId int, msgContent map[string]any) (map[string]any, error) {
 	var respData struct {
-		Srd map[string]any // sender_resp_data AS srd
-		Rrd map[string]any // receiver_resp_data AS rrd
+		Srd        map[string]any // sender_resp_data AS srd
+		Rrd        map[string]any // receiver_resp_data AS rrd
+		ReceiverId int
 	}
 
 	dmChat := chatmodel.DMChat{Id: dmc.Id}
@@ -44,7 +45,7 @@ func (dmc DMChat) SendMessage(senderId int, msgContent map[string]any) (map[stri
 
 	helpers.MapToStruct(data, &respData)
 
-	go appglobals.SendNewDMChatMessageUpdate(dmc.Id, senderId, respData.Rrd)
+	go appglobals.SendNewDMChatMessageUpdate(fmt.Sprintf("user-%d--dmchat-%d", respData.ReceiverId, dmc.Id), respData.Rrd)
 
 	return respData.Srd, nil
 }

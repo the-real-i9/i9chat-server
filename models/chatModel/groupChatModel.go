@@ -119,7 +119,7 @@ func (gpc GroupChat) RemoveUserFromAdmins(admin [2]string, user [2]string) error
 }
 
 func (gpc GroupChat) SendMessage(senderId int, msgContent map[string]any) (map[string]any, error) {
-	data, err := helpers.QueryRowFields("SELECT sender_resp_data AS srd, members_resp_data AS mrd FROM send_dm_chat_message($1, $2, $3)", gpc.Id, senderId, msgContent)
+	data, err := helpers.QueryRowFields("SELECT sender_resp_data AS srd, members_resp_data AS mrd, member_ids AS memberIds FROM send_dm_chat_message($1, $2, $3)", gpc.Id, senderId, msgContent)
 	if err != nil {
 		log.Println(fmt.Errorf("groupChatModel.go: GroupChat_SendMessage: %s", err))
 		return nil, appglobals.ErrInternalServerError
@@ -143,8 +143,9 @@ func (gpc GroupChat) GetChatHistory(offset int) ([]*map[string]any, error) {
 }
 
 type GroupChatMessage struct {
-	GroupChatId int
 	Id          int
+	GroupChatId int
+	SenderId    int
 }
 
 func (gpcm GroupChatMessage) UpdateDeliveryStatus(receiverId int, status string) (string, error) {
