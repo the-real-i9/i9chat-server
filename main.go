@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"routes/authroutes"
+	"routes/chatroutes"
 	"routes/userroutes"
 	"utils/helpers"
 
@@ -28,6 +29,10 @@ func main() {
 	app.Route("/api/auth", authroutes.Init)
 
 	app.Route("/api/app/user", userroutes.Init)
+
+	app.Route("/api/app/chat", chatroutes.Init)
+	app.Route("/api/app/dm_chat", chatroutes.InitDMChat)
+	app.Route("/api/app/group_chat", chatroutes.InitGroupChat)
 
 	log.Fatalln(app.Listen("localhost:8000"))
 }

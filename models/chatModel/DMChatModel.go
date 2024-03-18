@@ -8,20 +8,30 @@ import (
 )
 
 func NewDMChat(initiatorId int, partnerId int, initMsgContent map[string]any) (map[string]any, error) {
-	data, err := helpers.QueryRowFields("SELECT new_dm_chat_id, init_msg_id FROM new_dm_chat($1, $2, $3)", initiatorId, partnerId, initMsgContent)
+	var respData struct {
+		Ird map[string]any
+		Prd map[string]any
+	}
+
+	data, err := helpers.QueryRowFields("SELECT initiator_resp_data AS ird, partner_resp_data AS prd FROM new_dm_chat($1, $2, $3)", initiatorId, partnerId, initMsgContent)
 	if err != nil {
 		log.Println(fmt.Errorf("DMChatModel.go: NewDMChat: %s", err))
 		return nil, appglobals.ErrInternalServerError
 	}
-	return data, nil
+
+	helpers.MapToStruct(data, &respData)
+
+	go appglobals.SendNewChatUpdate(fmt.Sprintf("user-%d", partnerId), respData.Prd)
+
+	return respData.Ird, nil
 }
 
 type DMChat struct {
 	Id int
 }
 
-func (dmc DMChat) SendMessage(senderId int, msgContent map[string]any) (int, error) {
-	msgId, err := helpers.QueryRowField[int]("SELECT msg_id FROM send_dm_chat_message($1, $2, $3)", dmc.Id, senderId, msgContent)
+func (dmc DMChat) SendMessage(dmChatId int, senderId int, msgContent map[string]any) (int, error) {
+	msgId, err := helpers.QueryRowField[int]("SELECT msg_id FROM send_dm_chat_message($1, $2, $3)", dmChatId, senderId, msgContent)
 	if err != nil {
 		log.Println(fmt.Errorf("DMChatModel.go: DMChat_SendMessage: %s", err))
 		return 0, appglobals.ErrInternalServerError
@@ -30,8 +40,12 @@ func (dmc DMChat) SendMessage(senderId int, msgContent map[string]any) (int, err
 	return *msgId, nil
 }
 
-func (dmc DMChat) GetChatHistory() ([]*map[string]any, error) {
-	messages, err := helpers.QueryRowsField[map[string]any]("SELECT message FROM get_dm_chat_history($1)", dmc.Id)
+func (dmc DMChat) GetChatHistory(offset int) ([]*map[string]any, error) {
+	messages, err := helpers.QueryRowsField[map[string]any](`
+	SELECT message FROM (
+		SELECT message, created_at FROM get_dm_chat_history($1) 
+		LIMIT 50 OFFSET $2
+	) ORDER BY created_at ASC`, dmc.Id, offset)
 	if err != nil {
 		log.Println(fmt.Errorf("DMChatModel.go: DMChat_GetChatHistory: %s", err))
 		return nil, appglobals.ErrInternalServerError

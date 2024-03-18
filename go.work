@@ -4,8 +4,10 @@ use (
   .
   ./routes/authRoutes
   ./routes/userRoutes
+  ./routes/chatRoutes
   ./controllers/authControllers
   ./controllers/userControllers
+  ./controllers/chatControllers
   ./services/userService
   ./services/chatService
   ./models/userModel
