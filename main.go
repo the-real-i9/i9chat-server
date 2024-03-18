@@ -30,7 +30,6 @@ func main() {
 
 	app.Route("/api/app/user", userroutes.Init)
 
-	app.Route("/api/app/chat", chatroutes.Init)
 	app.Route("/api/app/dm_chat", chatroutes.InitDMChat)
 	app.Route("/api/app/group_chat", chatroutes.InitGroupChat)
 
