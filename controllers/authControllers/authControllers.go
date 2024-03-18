@@ -13,11 +13,11 @@ import (
 )
 
 var RequestNewAccount = websocket.New(func(c *websocket.Conn) {
-	for {
-		var body struct {
-			Email string `json:"email"`
-		}
+	var body struct {
+		Email string `json:"email"`
+	}
 
+	for {
 		r_err := c.ReadJSON(&body)
 		if r_err != nil {
 			log.Println(r_err)
@@ -52,11 +52,11 @@ var VerifyEmail = websocket.New(func(c *websocket.Conn) {
 		return
 	}
 
-	for {
-		var body struct {
-			Code int `json:"code"`
-		}
+	var body struct {
+		Code int `json:"code"`
+	}
 
+	for {
 		r_err := c.ReadJSON(&body)
 		if r_err != nil {
 			log.Println(r_err)
@@ -93,13 +93,13 @@ var RegisterUser = websocket.New(func(c *websocket.Conn) {
 		return
 	}
 
-	for {
-		var body struct {
-			Username    string `json:"username"`
-			Password    string `json:"password"`
-			Geolocation string `json:"geolocation"`
-		}
+	var body struct {
+		Username    string `json:"username"`
+		Password    string `json:"password"`
+		Geolocation string `json:"geolocation"`
+	}
 
+	for {
 		r_err := c.ReadJSON(&body)
 		if r_err != nil {
 			log.Println(r_err)
@@ -126,12 +126,12 @@ var RegisterUser = websocket.New(func(c *websocket.Conn) {
 })
 
 var Signin = websocket.New(func(c *websocket.Conn) {
-	for {
-		var body struct {
-			EmailOrUsername string `json:"emailOrUsername"`
-			Password        string `json:"password"`
-		}
+	var body struct {
+		EmailOrUsername string `json:"emailOrUsername"`
+		Password        string `json:"password"`
+	}
 
+	for {
 		r_err := c.ReadJSON(&body)
 		if r_err != nil {
 			log.Println(r_err)
