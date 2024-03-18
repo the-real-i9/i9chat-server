@@ -28,9 +28,7 @@ var GetGroupChatHistory = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 		return
 	}
 
-	groupChat := chatservice.GroupChat{Id: body.GroupChatId}
-
-	groupChatHistory, app_err := groupChat.GetChatHistory(body.Offset)
+	groupChatHistory, app_err := chatservice.GroupChat{Id: body.GroupChatId}.GetChatHistory(body.Offset)
 
 	var w_err error
 	if app_err != nil {
@@ -65,7 +63,9 @@ var ListenForNewGroupChatMessage = helpers.WSHandlerProtected(func(c *websocket.
 
 	mailboxKey := fmt.Sprintf("user-%d--groupchat-%d", user.UserId, body.ChatId)
 
-	appglobals.SubscribeToNewGroupChatMessageUpdate(mailboxKey, myMailbox)
+	ngcmo := appglobals.NewGroupChatMessageObserver{}
+
+	ngcmo.Subscribe(mailboxKey, myMailbox)
 
 	go func() {
 		c.ReadMessage()
@@ -79,11 +79,11 @@ var ListenForNewGroupChatMessage = helpers.WSHandlerProtected(func(c *websocket.
 			w_err := c.WriteJSON(map[string]any{"new_message": data})
 			if w_err != nil {
 				log.Println(w_err)
-				appglobals.UnsubscribeFromNewGroupChatMessageUpdate(mailboxKey)
+				ngcmo.Unubscribe(mailboxKey)
 				return
 			}
 		case <-closeMailBox:
-			appglobals.UnsubscribeFromNewGroupChatMessageUpdate(mailboxKey)
+			ngcmo.Unubscribe(mailboxKey)
 			return
 		}
 	}

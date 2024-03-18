@@ -23,7 +23,7 @@ func NewGroupChat(name string, description string, picture string, creator [2]st
 	go func() {
 		for _, newMember := range initUsers[1:] { // the first user is the creator, hence, they're excluded
 			newMemberId := newMember[0]
-			go appglobals.SendNewChatUpdate(fmt.Sprintf("user-%s", newMemberId), respData.Nmrd)
+			go appglobals.NewChatObserver{}.Send(fmt.Sprintf("user-%s", newMemberId), respData.Nmrd)
 		}
 	}()
 
@@ -41,9 +41,7 @@ func (gpc GroupChat) SendMessage(senderId int, msgContent map[string]any) (map[s
 		MemberIds []int
 	}
 
-	groupChat := chatmodel.GroupChat{Id: gpc.Id}
-
-	data, err := groupChat.SendMessage(senderId, msgContent)
+	data, err := chatmodel.GroupChat{Id: gpc.Id}.SendMessage(senderId, msgContent)
 	if err != nil {
 		return nil, err
 	}
@@ -53,7 +51,7 @@ func (gpc GroupChat) SendMessage(senderId int, msgContent map[string]any) (map[s
 	go func() {
 		for _, mId := range respData.MemberIds {
 			memberId := mId
-			go appglobals.SendNewGroupChatMessageUpdate(fmt.Sprintf("user-%d--groupchat-%d", memberId, gpc.Id), respData.Mrd)
+			go appglobals.NewGroupChatMessageObserver{}.Send(fmt.Sprintf("user-%d--groupchat-%d", memberId, gpc.Id), respData.Mrd)
 		}
 	}()
 
@@ -61,8 +59,7 @@ func (gpc GroupChat) SendMessage(senderId int, msgContent map[string]any) (map[s
 }
 
 func (gpc GroupChat) GetChatHistory(offset int) ([]*map[string]any, error) {
-	groupChat := chatmodel.GroupChat{Id: gpc.Id}
-	return groupChat.GetChatHistory(offset)
+	return chatmodel.GroupChat{Id: gpc.Id}.GetChatHistory(offset)
 }
 
 type GroupMessage struct {

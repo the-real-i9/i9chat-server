@@ -47,7 +47,9 @@ var ListenForNewChat = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 
 	// subscribe to receiving chat updates
 	// myMailbox is passed by reference to an observer keeping several mailboxes wanting to receive updates
-	appglobals.SubscribeToNewChatUpdate(mailboxKey, myMailbox)
+	nco := appglobals.NewChatObserver{}
+
+	nco.Subscribe(mailboxKey, myMailbox)
 
 	go func() {
 		// a strategy to close the mailbox and, in turn, the websocket connection
@@ -66,11 +68,11 @@ var ListenForNewChat = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 			w_err := c.WriteJSON(map[string]any{"new_chat": data})
 			if w_err != nil {
 				log.Println(w_err)
-				appglobals.UnsubscribeFromNewChatUpdate(mailboxKey)
+				nco.Unsubscribe(mailboxKey)
 				return
 			}
 		case <-closeMailBox:
-			appglobals.UnsubscribeFromNewChatUpdate(mailboxKey)
+			nco.Unsubscribe(mailboxKey)
 			return
 		}
 	}

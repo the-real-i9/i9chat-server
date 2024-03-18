@@ -28,9 +28,7 @@ var GetDMChatHistory = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 		return
 	}
 
-	dmChat := chatservice.DMChat{Id: body.DmChatId}
-
-	dmChatHistory, app_err := dmChat.GetChatHistory(body.Offset)
+	dmChatHistory, app_err := chatservice.DMChat{Id: body.DmChatId}.GetChatHistory(body.Offset)
 
 	var w_err error
 	if app_err != nil {
@@ -65,7 +63,9 @@ var ListenForNewDMChatMessage = helpers.WSHandlerProtected(func(c *websocket.Con
 
 	mailboxKey := fmt.Sprintf("user-%d--dmchat-%d", user.UserId, body.ChatId)
 
-	appglobals.SubscribeToNewDMChatMessageUpdate(mailboxKey, myMailbox)
+	ndcmo := appglobals.NewDMChatMessageObserver{}
+
+	ndcmo.Subscribe(mailboxKey, myMailbox)
 
 	go func() {
 		c.ReadMessage()
@@ -79,11 +79,11 @@ var ListenForNewDMChatMessage = helpers.WSHandlerProtected(func(c *websocket.Con
 			w_err := c.WriteJSON(map[string]any{"new_message": data})
 			if w_err != nil {
 				log.Println(w_err)
-				appglobals.UnsubscribeFromNewDMChatMessageUpdate(mailboxKey)
+				ndcmo.Unsubscribe(mailboxKey)
 				return
 			}
 		case <-closeMailBox:
-			appglobals.UnsubscribeFromNewDMChatMessageUpdate(mailboxKey)
+			ndcmo.Unsubscribe(mailboxKey)
 			return
 		}
 	}
@@ -106,8 +106,7 @@ var SendDMChatMessage = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 			return
 		}
 
-		dmChat := chatservice.DMChat{Id: body.DmChatId}
-		data, app_err := dmChat.SendMessage(user.UserId, body.MsgContent)
+		data, app_err := chatservice.DMChat{Id: body.DmChatId}.SendMessage(user.UserId, body.MsgContent)
 
 		var w_err error
 		if app_err != nil {

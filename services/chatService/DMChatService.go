@@ -20,7 +20,7 @@ func NewDMChat(initiatorId int, partnerId int, initMsgContent map[string]any) (m
 
 	helpers.MapToStruct(data, &respData)
 
-	go appglobals.SendNewChatUpdate(fmt.Sprintf("user-%d", partnerId), respData.Prd)
+	go appglobals.NewChatObserver{}.Send(fmt.Sprintf("user-%d", partnerId), respData.Prd)
 
 	return respData.Ird, nil
 }
@@ -36,23 +36,20 @@ func (dmc DMChat) SendMessage(senderId int, msgContent map[string]any) (map[stri
 		ReceiverId int
 	}
 
-	dmChat := chatmodel.DMChat{Id: dmc.Id}
-
-	data, err := dmChat.SendMessage(senderId, msgContent)
+	data, err := chatmodel.DMChat{Id: dmc.Id}.SendMessage(senderId, msgContent)
 	if err != nil {
 		return nil, err
 	}
 
 	helpers.MapToStruct(data, &respData)
 
-	go appglobals.SendNewDMChatMessageUpdate(fmt.Sprintf("user-%d--dmchat-%d", respData.ReceiverId, dmc.Id), respData.Rrd)
+	go appglobals.NewDMChatMessageObserver{}.Send(fmt.Sprintf("user-%d--dmchat-%d", respData.ReceiverId, dmc.Id), respData.Rrd)
 
 	return respData.Srd, nil
 }
 
 func (dmc DMChat) GetChatHistory(offset int) ([]*map[string]any, error) {
-	dmChat := chatmodel.DMChat{Id: dmc.Id}
-	return dmChat.GetChatHistory(offset)
+	return chatmodel.DMChat{Id: dmc.Id}.GetChatHistory(offset)
 }
 
 type DMMessage struct {
