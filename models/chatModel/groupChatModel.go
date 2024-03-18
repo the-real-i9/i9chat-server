@@ -7,14 +7,14 @@ import (
 	"utils/helpers"
 )
 
-func NewGroupChat(name string, description string, creator [2]string, initUsers [][2]string) (int, error) {
-	newGroupChatId, err := helpers.QueryRowField[int]("SELECT new_group_chat_id FROM new_group_chat($1, $2, $3, $4)", name, description, creator, initUsers)
+func NewGroupChat(name string, description string, picture string, creator [2]string, initUsers [][2]string) (map[string]any, error) {
+	data, err := helpers.QueryRowFields("SELECT creator_resp_data AS crd, new_members_resp_data AS nmrd FROM new_group_chat($1, $2, $3, $4, $5)", name, description, picture, creator, initUsers)
 	if err != nil {
 		log.Println(fmt.Errorf("groupChatModel.go: NewGroupChat: %s", err))
-		return 0, appglobals.ErrInternalServerError
+		return nil, appglobals.ErrInternalServerError
 	}
 
-	return *newGroupChatId, nil
+	return data, nil
 }
 
 type GroupChat struct {
@@ -118,18 +118,22 @@ func (gpc GroupChat) RemoveUserFromAdmins(admin [2]string, user [2]string) error
 	return nil
 }
 
-func (gpc GroupChat) SendMessage(senderId int, msgContent map[string]any) (int, error) {
-	msgId, err := helpers.QueryRowField[int]("SELECT msg_id FROM send_group_chat_message($1, $2, $3)", gpc.Id, senderId, msgContent)
+func (gpc GroupChat) SendMessage(senderId int, msgContent map[string]any) (map[string]any, error) {
+	data, err := helpers.QueryRowFields("SELECT sender_resp_data AS srd, members_resp_data AS mrd FROM send_dm_chat_message($1, $2, $3)", gpc.Id, senderId, msgContent)
 	if err != nil {
 		log.Println(fmt.Errorf("groupChatModel.go: GroupChat_SendMessage: %s", err))
-		return 0, appglobals.ErrInternalServerError
+		return nil, appglobals.ErrInternalServerError
 	}
 
-	return *msgId, nil
+	return data, nil
 }
 
-func (gpc GroupChat) GetChatHistory() ([]*map[string]any, error) {
-	history, err := helpers.QueryRowsField[map[string]any]("SELECT history_item FROM get_group_chat_history($1)", gpc.Id)
+func (gpc GroupChat) GetChatHistory(offset int) ([]*map[string]any, error) {
+	history, err := helpers.QueryRowsField[map[string]any](`
+	SELECT history_item FROM (
+		SELECT history_item, time_created FROM get_group_chat_history($1)
+		LIMIT 50 OFFSET $2
+	) ORDER BY time_created ASC`, gpc.Id, offset)
 	if err != nil {
 		log.Println(fmt.Errorf("groupChatModel.go: GroupChat_GetChatHistory: %s", err))
 		return nil, appglobals.ErrInternalServerError

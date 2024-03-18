@@ -8,36 +8,27 @@ import (
 )
 
 func NewDMChat(initiatorId int, partnerId int, initMsgContent map[string]any) (map[string]any, error) {
-	var respData struct {
-		Ird map[string]any
-		Prd map[string]any
-	}
-
 	data, err := helpers.QueryRowFields("SELECT initiator_resp_data AS ird, partner_resp_data AS prd FROM new_dm_chat($1, $2, $3)", initiatorId, partnerId, initMsgContent)
 	if err != nil {
 		log.Println(fmt.Errorf("DMChatModel.go: NewDMChat: %s", err))
 		return nil, appglobals.ErrInternalServerError
 	}
 
-	helpers.MapToStruct(data, &respData)
-
-	go appglobals.SendNewChatUpdate(fmt.Sprintf("user-%d", partnerId), respData.Prd)
-
-	return respData.Ird, nil
+	return data, nil
 }
 
 type DMChat struct {
 	Id int
 }
 
-func (dmc DMChat) SendMessage(dmChatId int, senderId int, msgContent map[string]any) (int, error) {
-	msgId, err := helpers.QueryRowField[int]("SELECT msg_id FROM send_dm_chat_message($1, $2, $3)", dmChatId, senderId, msgContent)
+func (dmc DMChat) SendMessage(senderId int, msgContent map[string]any) (map[string]any, error) {
+	data, err := helpers.QueryRowFields("SELECT sender_resp_data AS srd, receiver_resp_data AS rrd FROM send_dm_chat_message($1, $2, $3)", dmc.Id, senderId, msgContent)
 	if err != nil {
 		log.Println(fmt.Errorf("DMChatModel.go: DMChat_SendMessage: %s", err))
-		return 0, appglobals.ErrInternalServerError
+		return nil, appglobals.ErrInternalServerError
 	}
 
-	return *msgId, nil
+	return data, nil
 }
 
 func (dmc DMChat) GetChatHistory(offset int) ([]*map[string]any, error) {
