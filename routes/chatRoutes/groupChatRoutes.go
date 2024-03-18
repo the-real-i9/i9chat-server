@@ -8,4 +8,6 @@ import (
 
 func InitGroupChat(router fiber.Router) {
 	router.Get("/chat_history", chatcontrollers.GetGroupChatHistory)
+	router.Get("/new_messsage", chatcontrollers.ListenForNewGroupChatMessage)
+	router.Get("/send_message")
 }
