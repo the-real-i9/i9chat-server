@@ -8,4 +8,5 @@ import (
 
 func Init(router fiber.Router) {
 	router.Get("/my_chats", usercontrollers.GetMyChats)
+	router.Get("/new_chat", usercontrollers.ListenForNewChat)
 }
