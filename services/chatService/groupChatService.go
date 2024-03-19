@@ -2,21 +2,22 @@ package chatservice
 
 import (
 	"fmt"
+	"log"
 	"model/chatmodel"
 	"time"
 	"utils/appglobals"
 	"utils/helpers"
 )
 
-func NewGroupChat(name string, description string, picture string, creator [2]string, initUsers [][2]string) (map[string]any, error) {
+func NewGroupChat(name string, description string, picture []byte, creator []string, initUsers [][]string) (map[string]any, error) {
+	data, err := chatmodel.NewGroupChat(name, description, "", creator, initUsers)
+	if err != nil {
+		return nil, err
+	}
+
 	var respData struct {
 		Crd  map[string]any
 		Nmrd map[string]any
-	}
-
-	data, err := chatmodel.NewGroupChat(name, description, picture, creator, initUsers)
-	if err != nil {
-		return nil, err
 	}
 
 	helpers.MapToStruct(data, &respData)
@@ -26,6 +27,25 @@ func NewGroupChat(name string, description string, picture string, creator [2]st
 			newMemberId := newMember[0]
 			go appglobals.ChatObserver{}.Send(fmt.Sprintf("user-%s", newMemberId), respData.Nmrd, "new")
 		}
+	}()
+
+	go func() {
+		if len(picture) < 1 {
+			return
+		}
+		// upload picture and get back url
+		groupChatId := respData.Crd["new_group_chat_id"].(int)
+
+		picPath := fmt.Sprintf("chat_pictures/group_chat_%d_pic.jpg", groupChatId)
+
+		picUrl, err := helpers.UploadFile(picPath, picture)
+
+		if err != nil {
+			log.Println(err)
+			return
+		}
+
+		helpers.QueryRowField[bool]("UPDATE group_chat SET picture = $1 WHERE id = $2 RETURNING true", picUrl, groupChatId)
 	}()
 
 	return respData.Crd, nil

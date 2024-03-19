@@ -266,3 +266,18 @@ func AppError(code int, err error) map[string]any {
 
 	return map[string]any{"code": code, "error": err.Error()}
 }
+
+func UploadFile(filePath string, data []byte) (string, error) {
+	fileUrl := fmt.Sprintf("https://storage.cloud.google.com/i9chat-bucket/%s", filePath)
+
+	stWriter := appglobals.GCSClient.Bucket("i9chat-bucket").Object(filePath).NewWriter(context.Background())
+
+	stWriter.Write(data)
+
+	err := stWriter.Close()
+	if err != nil {
+		return "", err
+	}
+
+	return fileUrl, nil
+}
