@@ -8,6 +8,6 @@ import (
 
 func InitDMChat(router fiber.Router) {
 	router.Get("/chat_history", chatcontrollers.GetDMChatHistory)
-	router.Get("/new_messsage", chatcontrollers.ListenForNewDMChatMessage)
+	router.Get("/watch_messsage", chatcontrollers.WatchDMChatMessage)
 	router.Get("/send_message", chatcontrollers.SendDMChatMessage)
 }

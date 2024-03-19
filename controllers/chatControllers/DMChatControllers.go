@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"services/chatservice"
+	"time"
 	"utils/appglobals"
 	"utils/apptypes"
 	"utils/helpers"
@@ -43,13 +44,15 @@ var GetDMChatHistory = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 	}
 })
 
-var ListenForNewDMChatMessage = helpers.WSHandlerProtected(func(c *websocket.Conn) {
+var WatchDMChatMessage = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 	var user apptypes.JWTUserData
 
 	helpers.MapToStruct(c.Locals("auth").(map[string]any), &user)
 
+	c.WriteJSON(map[string]string{"msg": "Enter the {dmChatId: {id}} to start watching. Any message after this closes the connection."})
+
 	var body struct {
-		ChatId int
+		DmChatId int
 	}
 
 	r_err := c.ReadJSON(&body)
@@ -61,11 +64,11 @@ var ListenForNewDMChatMessage = helpers.WSHandlerProtected(func(c *websocket.Con
 	var myMailbox = make(chan map[string]any, 2)
 	var closeMailBox = make(chan int)
 
-	mailboxKey := fmt.Sprintf("user-%d--dmchat-%d", user.UserId, body.ChatId)
+	mailboxKey := fmt.Sprintf("user-%d--dmchat-%d", user.UserId, body.DmChatId)
 
-	ndcmo := appglobals.NewDMChatMessageObserver{}
+	dcmo := appglobals.DMChatMessageObserver{}
 
-	ndcmo.Subscribe(mailboxKey, myMailbox)
+	dcmo.Subscribe(mailboxKey, myMailbox)
 
 	go func() {
 		c.ReadMessage()
@@ -76,14 +79,14 @@ var ListenForNewDMChatMessage = helpers.WSHandlerProtected(func(c *websocket.Con
 	for {
 		select {
 		case data := <-myMailbox:
-			w_err := c.WriteJSON(map[string]any{"new_message": data})
+			w_err := c.WriteJSON(data)
 			if w_err != nil {
 				log.Println(w_err)
-				ndcmo.Unsubscribe(mailboxKey)
+				dcmo.Unsubscribe(mailboxKey)
 				return
 			}
 		case <-closeMailBox:
-			ndcmo.Unsubscribe(mailboxKey)
+			dcmo.Unsubscribe(mailboxKey)
 			return
 		}
 	}
@@ -97,6 +100,7 @@ var SendDMChatMessage = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 	var body struct {
 		DmChatId   int
 		MsgContent map[string]any
+		CreatedAt  time.Time
 	}
 
 	for {
@@ -106,7 +110,7 @@ var SendDMChatMessage = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 			return
 		}
 
-		data, app_err := chatservice.DMChat{Id: body.DmChatId}.SendMessage(user.UserId, body.MsgContent)
+		data, app_err := chatservice.DMChat{Id: body.DmChatId}.SendMessage(user.UserId, body.MsgContent, body.CreatedAt)
 
 		var w_err error
 		if app_err != nil {

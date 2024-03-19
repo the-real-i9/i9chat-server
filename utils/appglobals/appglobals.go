@@ -8,120 +8,82 @@ var ErrInternalServerError = errors.New("internal server error: check logger")
 
 type Observer interface {
 	Subscribe(key string, mailbox chan<- map[string]any)
-	Unubscribe(key string)
-	Send(key string, data map[string]any)
+	Unsubscribe(key string)
+	Send(key string, data map[string]any, flag string)
 }
 
-var newChatObserver = make(map[string]chan<- map[string]any)
+var chatObserver = make(map[string]chan<- map[string]any)
 
-type NewChatObserver struct{}
+type ChatObserver struct{}
 
-func (NewChatObserver) Subscribe(key string, mailbox chan<- map[string]any) {
-	newChatObserver[key] = mailbox
+func (ChatObserver) Subscribe(key string, mailbox chan<- map[string]any) {
+	chatObserver[key] = mailbox
 }
 
-func (NewChatObserver) Unsubscribe(key string) {
-	close(newChatObserver[key])
-	delete(newChatObserver, key)
+func (ChatObserver) Unsubscribe(key string) {
+	close(chatObserver[key])
+	delete(chatObserver, key)
 }
 
-func (NewChatObserver) Send(key string, data map[string]any) { // call in a new goroutine
-	if mailbox, found := newChatObserver[key]; found {
-		mailbox <- data
+func (ChatObserver) Send(key string, data map[string]any, flag string) { // call in a new goroutine
+	if mailbox, found := chatObserver[key]; found {
+		mailbox <- map[string]any{"flag": flag, "data": data}
 	}
 }
 
-var chatUpdateObserver = make(map[string]chan<- map[string]any)
+var dMChatMessageObserver = make(map[string]chan<- map[string]any)
 
-type ChatUpdateObserver struct{}
+type DMChatMessageObserver struct{}
 
-func (ChatUpdateObserver) Subscribe(key string, mailbox chan<- map[string]any) {
-	chatUpdateObserver[key] = mailbox
+func (DMChatMessageObserver) Subscribe(key string, mailbox chan<- map[string]any) {
+	dMChatMessageObserver[key] = mailbox
 }
 
-func (ChatUpdateObserver) Unsubscribe(key string) {
-	close(chatUpdateObserver[key])
-	delete(chatUpdateObserver, key)
+func (DMChatMessageObserver) Unsubscribe(key string) {
+	close(dMChatMessageObserver[key])
+	delete(dMChatMessageObserver, key)
 }
 
-func (ChatUpdateObserver) Send(key string, data map[string]any) { // call in a new goroutine
-	if mailbox, found := chatUpdateObserver[key]; found {
-		mailbox <- data
+func (DMChatMessageObserver) Send(key string, data map[string]any, flag string) { // call in a new goroutine
+	if mailbox, found := dMChatMessageObserver[key]; found {
+		mailbox <- map[string]any{"flag": flag, "data": data}
 	}
 }
 
-var newDMChatMessageObserver = make(map[string]chan<- map[string]any)
+var groupChatMessageObserver = make(map[string]chan<- map[string]any)
 
-type NewDMChatMessageObserver struct{}
+type GroupChatMessageObserver struct{}
 
-func (NewDMChatMessageObserver) Subscribe(key string, mailbox chan<- map[string]any) {
-	newDMChatMessageObserver[key] = mailbox
+func (GroupChatMessageObserver) Subscribe(key string, mailbox chan<- map[string]any) {
+	groupChatMessageObserver[key] = mailbox
 }
 
-func (NewDMChatMessageObserver) Unsubscribe(key string) {
-	close(newDMChatMessageObserver[key])
-	delete(newDMChatMessageObserver, key)
+func (GroupChatMessageObserver) Unsubscribe(key string) {
+	close(groupChatMessageObserver[key])
+	delete(groupChatMessageObserver, key)
 }
 
-func (NewDMChatMessageObserver) Send(key string, data map[string]any) { // call in a new goroutine
-	if mailbox, found := newDMChatMessageObserver[key]; found {
-		mailbox <- data
+func (GroupChatMessageObserver) Send(key string, data map[string]any, flag string) { // call in a new goroutine
+	if mailbox, found := groupChatMessageObserver[key]; found {
+		mailbox <- map[string]any{"flag": flag, "data": data}
 	}
 }
 
-var dmChatMessageUpdateObserver = make(map[string]chan<- map[string]any)
+var groupChatActivityObserver = make(map[string]chan<- map[string]any)
 
-type DmChatMessageUpdateObserver struct{}
+type GroupChatActivityObserver struct{}
 
-func (DmChatMessageUpdateObserver) Subscribe(key string, mailbox chan<- map[string]any) {
-	dmChatMessageUpdateObserver[key] = mailbox
+func (GroupChatActivityObserver) Subscribe(key string, mailbox chan<- map[string]any) {
+	groupChatActivityObserver[key] = mailbox
 }
 
-func (DmChatMessageUpdateObserver) Unubscribe(key string) {
-	close(dmChatMessageUpdateObserver[key])
-	delete(dmChatMessageUpdateObserver, key)
+func (GroupChatActivityObserver) Unsubscribe(key string) {
+	close(groupChatActivityObserver[key])
+	delete(groupChatActivityObserver, key)
 }
 
-func (DmChatMessageUpdateObserver) Send(key string, data map[string]any) { // call in a new goroutine
-	if mailbox, found := dmChatMessageUpdateObserver[key]; found {
-		mailbox <- data
-	}
-}
-
-var newGroupChatMessageObserver = make(map[string]chan<- map[string]any)
-
-type NewGroupChatMessageObserver struct{}
-
-func (NewGroupChatMessageObserver) Subscribe(key string, mailbox chan<- map[string]any) {
-	newGroupChatMessageObserver[key] = mailbox
-}
-
-func (NewGroupChatMessageObserver) Unubscribe(key string) {
-	close(newGroupChatMessageObserver[key])
-	delete(newGroupChatMessageObserver, key)
-}
-
-func (NewGroupChatMessageObserver) Send(key string, data map[string]any) { // call in a new goroutine
-	if mailbox, found := newGroupChatMessageObserver[key]; found {
-		mailbox <- data
-	}
-}
-
-var groupChatMessageUpdateObserver = make(map[string]chan<- map[string]any)
-
-type GroupChatMessageUpdateObserver struct{}
-
-func (GroupChatMessageUpdateObserver) Subscribe(key string, mailbox chan<- map[string]any) {
-	groupChatMessageUpdateObserver[key] = mailbox
-}
-
-func (GroupChatMessageUpdateObserver) Unsubscribe(key string) {
-	close(groupChatMessageUpdateObserver[key])
-	delete(groupChatMessageUpdateObserver, key)
-}
-
-func (GroupChatMessageUpdateObserver) Send(key string, data map[string]any) { // call in a new goroutine
-	if mailbox, found := groupChatMessageUpdateObserver[key]; found {
+func (GroupChatActivityObserver) Log(key string, data map[string]any) { // call in a new goroutine
+	if mailbox, found := groupChatActivityObserver[key]; found {
 		mailbox <- data
 	}
 }

@@ -30,10 +30,9 @@ var GetMyChats = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 		log.Println(w_err)
 		return
 	}
-
 })
 
-var ListenForNewChat = helpers.WSHandlerProtected(func(c *websocket.Conn) {
+var WatchChat = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 	var user apptypes.JWTUserData
 
 	helpers.MapToStruct(c.Locals("auth").(map[string]any), &user)
@@ -47,7 +46,7 @@ var ListenForNewChat = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 
 	// subscribe to receiving chat updates
 	// myMailbox is passed by reference to an observer keeping several mailboxes wanting to receive updates
-	nco := appglobals.NewChatObserver{}
+	nco := appglobals.ChatObserver{}
 
 	nco.Subscribe(mailboxKey, myMailbox)
 

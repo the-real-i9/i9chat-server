@@ -3,6 +3,8 @@ package chatmodel
 import (
 	"fmt"
 	"log"
+	"strconv"
+	"time"
 	"utils/appglobals"
 	"utils/helpers"
 )
@@ -118,8 +120,8 @@ func (gpc GroupChat) RemoveUserFromAdmins(admin [2]string, user [2]string) error
 	return nil
 }
 
-func (gpc GroupChat) SendMessage(senderId int, msgContent map[string]any) (map[string]any, error) {
-	data, err := helpers.QueryRowFields("SELECT sender_resp_data AS srd, members_resp_data AS mrd, member_ids AS memberIds FROM send_dm_chat_message($1, $2, $3)", gpc.Id, senderId, msgContent)
+func (gpc GroupChat) SendMessage(senderId int, msgContent map[string]any, createdAt time.Time) (map[string]any, error) {
+	data, err := helpers.QueryRowFields("SELECT sender_resp_data AS srd, members_resp_data AS mrd, member_ids AS memberIds FROM send_dm_chat_message($1, $2, $3, $4)", gpc.Id, senderId, msgContent, createdAt)
 	if err != nil {
 		log.Println(fmt.Errorf("groupChatModel.go: GroupChat_SendMessage: %s", err))
 		return nil, appglobals.ErrInternalServerError
@@ -148,8 +150,8 @@ type GroupChatMessage struct {
 	SenderId    int
 }
 
-func (gpcm GroupChatMessage) UpdateDeliveryStatus(receiverId int, status string) (string, error) {
-	overallDeliveryStatus, err := helpers.QueryRowField[string]("SELECT overall_delivery_status FROM update_group_chat_message_delivery_status($1, $2, $3, $4)", gpcm.GroupChatId, gpcm.Id, receiverId, status)
+func (gpcm GroupChatMessage) UpdateDeliveryStatus(receiverId int, status string, updatedAt time.Time) (string, error) {
+	overallDeliveryStatus, err := helpers.QueryRowField[string]("SELECT overall_delivery_status FROM update_group_chat_message_delivery_status($1, $2, $3, $4, $5)", gpcm.GroupChatId, gpcm.Id, receiverId, status, updatedAt)
 	if err != nil {
 		log.Println(fmt.Errorf("groupChatModel.go: GroupChatMessage_UpdateDeliveryStatus: %s", err))
 		return "", appglobals.ErrInternalServerError
@@ -160,7 +162,7 @@ func (gpcm GroupChatMessage) UpdateDeliveryStatus(receiverId int, status string)
 
 func (gpcm GroupChatMessage) React(reactorId int, reaction rune) error {
 	// go helpers.QueryRowField[bool]("SELECT react_to_group_chat_message($1, $2, $3, $4)", gpcm.GroupChatId, gpcm.Id, reactorId, reaction)
-	_, err := helpers.QueryRowField[bool]("SELECT react_to_group_chat_message($1, $2, $3, $4)", gpcm.GroupChatId, gpcm.Id, reactorId, reaction)
+	_, err := helpers.QueryRowField[bool]("SELECT react_to_group_chat_message($1, $2, $3, $4)", gpcm.GroupChatId, gpcm.Id, reactorId, strconv.QuoteRuneToASCII(reaction))
 	if err != nil {
 		log.Println(fmt.Errorf("groupChatModel.go: GroupChatMessage_React: %s", err))
 		return appglobals.ErrInternalServerError
