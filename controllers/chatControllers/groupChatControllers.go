@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"services/chatservice"
+	"time"
 	"utils/appglobals"
 	"utils/apptypes"
 	"utils/helpers"
@@ -43,13 +44,15 @@ var GetGroupChatHistory = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 	}
 })
 
-var ListenForNewGroupChatMessage = helpers.WSHandlerProtected(func(c *websocket.Conn) {
+var WatchGroupChatMessage = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 	var user apptypes.JWTUserData
 
 	helpers.MapToStruct(c.Locals("auth").(map[string]any), &user)
 
+	c.WriteJSON(map[string]string{"msg": "Enter the {groupChatId: {id}} to start watching. Any message after this closes the connection."})
+
 	var body struct {
-		ChatId int
+		GroupChatId int
 	}
 
 	r_err := c.ReadJSON(&body)
@@ -61,11 +64,11 @@ var ListenForNewGroupChatMessage = helpers.WSHandlerProtected(func(c *websocket.
 	var myMailbox = make(chan map[string]any, 2)
 	var closeMailBox = make(chan int)
 
-	mailboxKey := fmt.Sprintf("user-%d--groupchat-%d", user.UserId, body.ChatId)
+	mailboxKey := fmt.Sprintf("user-%d--groupchat-%d", user.UserId, body.GroupChatId)
 
-	ngcmo := appglobals.NewGroupChatMessageObserver{}
+	gcmo := appglobals.GroupChatMessageObserver{}
 
-	ngcmo.Subscribe(mailboxKey, myMailbox)
+	gcmo.Subscribe(mailboxKey, myMailbox)
 
 	go func() {
 		c.ReadMessage()
@@ -76,14 +79,14 @@ var ListenForNewGroupChatMessage = helpers.WSHandlerProtected(func(c *websocket.
 	for {
 		select {
 		case data := <-myMailbox:
-			w_err := c.WriteJSON(map[string]any{"new_message": data})
+			w_err := c.WriteJSON(data)
 			if w_err != nil {
 				log.Println(w_err)
-				ngcmo.Unubscribe(mailboxKey)
+				gcmo.Unsubscribe(mailboxKey)
 				return
 			}
 		case <-closeMailBox:
-			ngcmo.Unubscribe(mailboxKey)
+			gcmo.Unsubscribe(mailboxKey)
 			return
 		}
 	}
@@ -97,6 +100,7 @@ var SendGroupChatMessage = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 	var body struct {
 		GroupChatId int
 		MsgContent  map[string]any
+		CreatedAt   time.Time
 	}
 
 	for {
@@ -106,8 +110,9 @@ var SendGroupChatMessage = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 			return
 		}
 
-		groupChat := chatservice.GroupChat{Id: body.GroupChatId}
-		data, app_err := groupChat.SendMessage(user.UserId, body.MsgContent)
+		data, app_err := chatservice.GroupChat{Id: body.GroupChatId}.SendMessage(
+			user.UserId, body.MsgContent, body.CreatedAt,
+		)
 
 		var w_err error
 		if app_err != nil {
@@ -118,6 +123,54 @@ var SendGroupChatMessage = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 
 		if w_err != nil {
 			log.Println(w_err)
+			return
+		}
+	}
+})
+
+var WatchGroupActivity = helpers.WSHandlerProtected(func(c *websocket.Conn) {
+	var user apptypes.JWTUserData
+
+	helpers.MapToStruct(c.Locals("auth").(map[string]any), &user)
+
+	c.WriteJSON(map[string]string{"msg": "Enter the {groupChatId: {id}} to start watching. Any message after this closes the connection."})
+
+	var body struct {
+		GroupChatId int
+	}
+
+	r_err := c.ReadJSON(&body)
+	if r_err != nil {
+		log.Println(r_err)
+		return
+	}
+
+	var myMailbox = make(chan map[string]any, 2)
+	var closeMailBox = make(chan int)
+
+	mailboxKey := fmt.Sprintf("user-%d--groupchat-%d", user.UserId, body.GroupChatId)
+
+	gcao := appglobals.GroupChatActivityObserver{}
+
+	gcao.Subscribe(mailboxKey, myMailbox)
+
+	go func() {
+		c.ReadMessage()
+		closeMailBox <- 1
+		close(closeMailBox)
+	}()
+
+	for {
+		select {
+		case data := <-myMailbox:
+			w_err := c.WriteJSON(data)
+			if w_err != nil {
+				log.Println(w_err)
+				gcao.Unsubscribe(mailboxKey)
+				return
+			}
+		case <-closeMailBox:
+			gcao.Unsubscribe(mailboxKey)
 			return
 		}
 	}
