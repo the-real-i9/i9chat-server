@@ -3,16 +3,82 @@ package usercontrollers
 import (
 	"fmt"
 	"log"
+	"services/chatservice"
 	"services/userservice"
+	"time"
 	"utils/appglobals"
 	"utils/apptypes"
 	"utils/helpers"
 
 	"github.com/gofiber/contrib/websocket"
+	"github.com/gofiber/fiber/v2"
 )
 
-var GetMyChats = helpers.WSHandlerProtected(func(c *websocket.Conn) {
+var NewDMChat = helpers.WSHandlerProtected(func(c *websocket.Conn) {
+	var user apptypes.JWTUserData
 
+	helpers.MapToStruct(c.Locals("auth").(map[string]any), &user)
+
+	var body struct {
+		PartnerId int
+		Msg       map[string]any
+		CreatedAt time.Time
+	}
+
+	r_err := c.ReadJSON(&body)
+	if r_err != nil {
+		log.Println(r_err)
+		return
+	}
+
+	var w_err error
+	data, app_err := chatservice.NewDMChat(user.UserId, body.PartnerId, body.Msg, body.CreatedAt)
+	if app_err != nil {
+		w_err = c.WriteJSON(helpers.AppError(fiber.StatusUnprocessableEntity, app_err))
+	} else {
+		w_err = c.WriteJSON(data)
+	}
+
+	if w_err != nil {
+		log.Println(w_err)
+	}
+})
+
+var NewGroupChat = helpers.WSHandlerProtected(func(c *websocket.Conn) {
+	var user apptypes.JWTUserData
+
+	helpers.MapToStruct(c.Locals("auth").(map[string]any), &user)
+
+	var body struct {
+		Name        string
+		Description string
+		Picture     []byte
+		InitUsers   [][]string
+	}
+
+	r_err := c.ReadJSON(&body)
+	if r_err != nil {
+		log.Println(r_err)
+		return
+	}
+
+	var w_err error
+	data, app_err := chatservice.NewGroupChat(
+		body.Name, body.Description, body.Picture,
+		[]string{fmt.Sprint(user.UserId), user.Username}, body.InitUsers,
+	)
+	if app_err != nil {
+		w_err = c.WriteJSON(helpers.AppError(fiber.StatusUnprocessableEntity, app_err))
+	} else {
+		w_err = c.WriteJSON(data)
+	}
+
+	if w_err != nil {
+		log.Println(w_err)
+	}
+})
+
+var GetMyChats = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 	var user apptypes.JWTUserData
 
 	helpers.MapToStruct(c.Locals("auth").(map[string]any), &user)
