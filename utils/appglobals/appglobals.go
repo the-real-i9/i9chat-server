@@ -1,10 +1,28 @@
 package appglobals
 
 import (
+	"context"
 	"errors"
+	"os"
+
+	"cloud.google.com/go/storage"
+	"google.golang.org/api/option"
 )
 
 var ErrInternalServerError = errors.New("internal server error: check logger")
+
+var GCSClient *storage.Client
+
+func InitGCSClient() error {
+	stClient, err := storage.NewClient(context.Background(), option.WithCredentialsFile(os.Getenv("GCS_CRED_FILE")))
+	if err != nil {
+		return err
+	}
+
+	GCSClient = stClient
+
+	return nil
+}
 
 type Observer interface {
 	Subscribe(key string, mailbox chan<- map[string]any)
