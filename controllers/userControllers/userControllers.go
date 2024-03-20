@@ -14,6 +14,36 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
+var ChangeProfilePicture = helpers.WSHandlerProtected(func(c *websocket.Conn) {
+	var user apptypes.JWTUserData
+
+	helpers.MapToStruct(c.Locals("auth").(map[string]any), &user)
+
+	var body struct {
+		Picture []byte
+	}
+
+	for {
+		r_err := c.ReadJSON(&body)
+		if r_err != nil {
+			log.Println(r_err)
+			break
+		}
+
+		var w_err error
+		if app_err := userservice.ChangeProfilePicture(user.UserId, body.Picture); app_err != nil {
+			w_err = c.WriteJSON(helpers.AppError(fiber.StatusUnprocessableEntity, app_err))
+		} else {
+			w_err = c.WriteJSON(map[string]any{"code": fiber.StatusOK, "msg": "Operation Successful"})
+		}
+
+		if w_err != nil {
+			log.Println(w_err)
+			break
+		}
+	}
+})
+
 var NewDMChat = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 	var user apptypes.JWTUserData
 

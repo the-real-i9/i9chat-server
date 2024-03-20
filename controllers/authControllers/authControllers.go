@@ -110,18 +110,21 @@ var RegisterUser = websocket.New(func(c *websocket.Conn) {
 
 		userData, jwtToken, app_err := authservices.RegisterUser(sessionData.SessionId, sessionData.Email, body.Username, body.Password, body.Geolocation)
 
-		var w_err error
-
 		if app_err != nil {
-			w_err = c.WriteJSON(helpers.AppError(fiber.StatusUnprocessableEntity, app_err))
+			w_err := c.WriteJSON(helpers.AppError(fiber.StatusUnprocessableEntity, app_err))
+			if w_err != nil {
+				log.Println(w_err)
+				break
+			}
 		} else {
-			w_err = c.WriteJSON(map[string]any{"code": fiber.StatusOK, "msg": "Signup success!", "user": userData, "jwtToken": jwtToken})
-		}
-
-		if w_err != nil {
-			log.Println(w_err)
+			w_err := c.WriteJSON(map[string]any{"code": fiber.StatusOK, "msg": "Signup success!", "user": userData, "jwtToken": jwtToken})
+			if w_err != nil {
+				log.Println(w_err)
+				break
+			}
 			break
 		}
+
 	}
 })
 

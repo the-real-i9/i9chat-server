@@ -22,7 +22,7 @@ func uploadGroupPicture(groupChatId int, picture []byte) {
 		return
 	}
 	// upload picture data and SET picture url
-	picPath := fmt.Sprintf("chat_pictures/group_chat_%d_pic.jpg", groupChatId)
+	picPath := fmt.Sprintf("chat_pictures/group_chat_%d_pic_%d.jpg", groupChatId, time.Now().UnixMilli())
 
 	picUrl, err := helpers.UploadFile(picPath, picture)
 
