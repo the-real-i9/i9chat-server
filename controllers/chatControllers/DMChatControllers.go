@@ -143,7 +143,7 @@ var BatchUpdateDMChatMessageDeliveryStatus = helpers.WSHandlerProtected(func(c *
 			break
 		}
 
-		go chatservice.BatchUpdateDMChatMessagesDeliveryStatus(user.UserId, body.Status, body.MsgDatas)
+		go chatservice.BatchUpdateDMChatMessageDeliveryStatus(user.UserId, body.Status, body.MsgDatas)
 
 	}
 

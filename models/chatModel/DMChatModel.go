@@ -20,7 +20,7 @@ func NewDMChat(initiatorId int, partnerId int, initMsgContent map[string]any, cr
 	return data, nil
 }
 
-func BatchUpdateDMChatMessagesDeliveryStatus(receiverId int, status string, delivDatas []*apptypes.DMChatMsgDeliveryData) error {
+func BatchUpdateDMChatMessageDeliveryStatus(receiverId int, status string, delivDatas []*apptypes.DMChatMsgDeliveryData) error {
 	var sqls = []string{}
 	var params = [][]any{}
 
@@ -31,7 +31,7 @@ func BatchUpdateDMChatMessagesDeliveryStatus(receiverId int, status string, deli
 
 	_, err := helpers.BatchQuery[bool](sqls, params)
 	if err != nil {
-		log.Println(fmt.Errorf("DMChatModel.go: BatchUpdateDMChatMessagesDeliveryStatus: %s", err))
+		log.Println(fmt.Errorf("DMChatModel.go: BatchUpdateDMChatMessageDeliveryStatus: %s", err))
 		return appglobals.ErrInternalServerError
 	}
 
