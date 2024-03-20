@@ -175,3 +175,27 @@ var WatchGroupActivity = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 		}
 	}
 })
+
+var BatchUpdateGroupChatMessageDeliveryStatus = helpers.WSHandlerProtected(func(c *websocket.Conn) {
+	var user apptypes.JWTUserData
+
+	helpers.MapToStruct(c.Locals("auth").(map[string]any), &user)
+
+	for {
+		var body struct {
+			GroupChatId int
+			Status      string
+			MsgDatas    []*apptypes.GroupChatMsgDeliveryData
+		}
+
+		r_err := c.ReadJSON(&body)
+		if r_err != nil {
+			log.Println(r_err)
+			break
+		}
+
+		go chatservice.GroupChat{Id: body.GroupChatId}.BatchUpdateGroupChatMessageDeliveryStatus(user.UserId, body.Status, body.MsgDatas)
+
+	}
+
+})

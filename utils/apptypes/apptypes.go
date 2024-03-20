@@ -20,7 +20,6 @@ type DMChatMsgDeliveryData struct {
 }
 
 type GroupChatMsgDeliveryData struct {
-	MsgId    int       `json:"msgId"`
-	SenderId int       `json:"senderId"`
-	At       time.Time `json:"at"`
+	MsgId int       `json:"msgId"`
+	At    time.Time `json:"at"`
 }

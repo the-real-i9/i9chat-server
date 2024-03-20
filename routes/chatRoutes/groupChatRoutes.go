@@ -11,4 +11,5 @@ func InitGroupChat(router fiber.Router) {
 	router.Get("/watch_message", chatcontrollers.WatchGroupChatMessage)
 	router.Get("/send_message", chatcontrollers.SendGroupChatMessage)
 	router.Get("/watch_activity", chatcontrollers.WatchGroupActivity)
+	router.Get("/batch_update_message_delivery_status", chatcontrollers.BatchUpdateGroupChatMessageDeliveryStatus)
 }

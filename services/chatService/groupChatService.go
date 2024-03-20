@@ -6,6 +6,7 @@ import (
 	"model/chatmodel"
 	"time"
 	"utils/appglobals"
+	"utils/apptypes"
 	"utils/helpers"
 )
 
@@ -86,6 +87,29 @@ func (gpc GroupChat) SendMessage(senderId int, msgContent map[string]any, create
 
 func (gpc GroupChat) GetChatHistory(offset int) ([]*map[string]any, error) {
 	return chatmodel.GroupChat{Id: gpc.Id}.GetChatHistory(offset)
+}
+
+func (gpc GroupChat) broadcastMessageDeliveryStatusUpdate(clientId int, delivDatas []*apptypes.GroupChatMsgDeliveryData, status string) {
+	memberIds, err := helpers.QueryRowsField[int]("SELECT member_id FROM group_chat_membership WHERE group_chat_id = $1 AND member_id != $2 AND deleted = false", gpc.Id, clientId)
+	if err == nil {
+		for _, mId := range memberIds {
+			mId := *mId
+			for _, data := range delivDatas {
+				msgId := data.MsgId
+				go appglobals.DMChatMessageObserver{}.Send(
+					fmt.Sprintf("user-%d--groupchat-%d", mId, gpc.Id),
+					map[string]any{"msgId": msgId, "event": "delivery", "status": status},
+					"update",
+				)
+			}
+		}
+	}
+}
+
+func (gpc GroupChat) BatchUpdateGroupChatMessageDeliveryStatus(receiverId int, status string, delivDatas []*apptypes.GroupChatMsgDeliveryData) {
+	if overallDeliveryStatus, err := (chatmodel.GroupChat{Id: gpc.Id}).BatchUpdateGroupChatMessageDeliveryStatus(receiverId, status, delivDatas); err == nil {
+		go gpc.broadcastMessageDeliveryStatusUpdate(receiverId, delivDatas, overallDeliveryStatus)
+	}
 }
 
 type GroupChatMessage struct {

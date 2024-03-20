@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"time"
 	"utils/appglobals"
+	"utils/apptypes"
 	"utils/helpers"
 )
 
@@ -121,13 +122,32 @@ func (gpc GroupChat) RemoveUserFromAdmins(admin []string, user []string) error {
 }
 
 func (gpc GroupChat) SendMessage(senderId int, msgContent map[string]any, createdAt time.Time) (map[string]any, error) {
-	data, err := helpers.QueryRowFields("SELECT sender_resp_data AS srd, members_resp_data AS mrd, member_ids AS memberIds FROM send_dm_chat_message($1, $2, $3, $4)", gpc.Id, senderId, msgContent, createdAt)
+	data, err := helpers.QueryRowFields("SELECT sender_resp_data AS srd, members_resp_data AS mrd, member_ids AS memberIds FROM send_group_chat_message($1, $2, $3, $4)", gpc.Id, senderId, msgContent, createdAt)
 	if err != nil {
 		log.Println(fmt.Errorf("groupChatModel.go: GroupChat_SendMessage: %s", err))
 		return nil, appglobals.ErrInternalServerError
 	}
 
 	return data, nil
+}
+
+func (gpc GroupChat) BatchUpdateGroupChatMessageDeliveryStatus(receiverId int, status string, delivDatas []*apptypes.GroupChatMsgDeliveryData) (string, error) {
+	var sqls = []string{}
+	var params = [][]any{}
+
+	for _, data := range delivDatas {
+		sqls = append(sqls, "SELECT overall_delivery_status FROM update_group_chat_message_delivery_status($1, $2, $3, $4, $5)")
+		params = append(params, []any{gpc.Id, data.MsgId, receiverId, status, data.At})
+	}
+
+	overallDeliveryStatus, err := helpers.BatchQuery[string](sqls, params)
+	if err != nil {
+		log.Println(fmt.Errorf("DMChatModel.go: BatchUpdateGroupChatMessageDeliveryStatus: %s", err))
+		return "", appglobals.ErrInternalServerError
+	}
+
+	return *overallDeliveryStatus, nil
+
 }
 
 func (gpc GroupChat) GetChatHistory(offset int) ([]*map[string]any, error) {
