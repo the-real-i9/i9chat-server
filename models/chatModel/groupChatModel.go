@@ -147,7 +147,6 @@ func (gpc GroupChat) GetChatHistory(offset int) ([]*map[string]any, error) {
 type GroupChatMessage struct {
 	Id          int
 	GroupChatId int
-	SenderId    int
 }
 
 func (gpcm GroupChatMessage) UpdateDeliveryStatus(receiverId int, status string, updatedAt time.Time) (string, error) {

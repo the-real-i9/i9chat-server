@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"time"
 	"utils/appglobals"
+	"utils/apptypes"
 	"utils/helpers"
 )
 
@@ -17,6 +18,24 @@ func NewDMChat(initiatorId int, partnerId int, initMsgContent map[string]any, cr
 	}
 
 	return data, nil
+}
+
+func BatchUpdateDMChatMessagesDeliveryStatus(receiverId int, status string, delivDatas []*apptypes.DMChatMsgDeliveryData) error {
+	var sqls = []string{}
+	var params = [][]any{}
+
+	for _, data := range delivDatas {
+		sqls = append(sqls, "SELECT update_dm_chat_message_delivery_status($1, $2, $3, $4, $5)")
+		params = append(params, []any{data.DmChatId, data.MsgId, receiverId, status, data.At})
+	}
+
+	_, err := helpers.BatchQuery[bool](sqls, params)
+	if err != nil {
+		log.Println(fmt.Errorf("DMChatModel.go: BatchUpdateDMChatMessagesDeliveryStatus: %s", err))
+		return appglobals.ErrInternalServerError
+	}
+
+	return nil
 }
 
 type DMChat struct {
@@ -49,13 +68,11 @@ func (dmc DMChat) GetChatHistory(offset int) ([]*map[string]any, error) {
 
 type DMChatMessage struct {
 	Id       int
-	DMChatId int
-	SenderId int
+	DmChatId int
 }
 
 func (dmcm DMChatMessage) UpdateDeliveryStatus(receiverId int, status string, updatedAt time.Time) error {
-	// go helpers.QueryRowField[bool]("SELECT update_dm_chat_message_delivery_status($1, $2, $3, $4, $5)", dmcm.DMChatId, dmcm.Id, receiverId, status, updatedAt)
-	_, err := helpers.QueryRowField[bool]("SELECT update_dm_chat_message_delivery_status($1, $2, $3, $4, $5)", dmcm.DMChatId, dmcm.Id, receiverId, status, updatedAt)
+	_, err := helpers.QueryRowField[bool]("SELECT update_dm_chat_message_delivery_status($1, $2, $3, $4, $5)", dmcm.DmChatId, dmcm.Id, receiverId, status, updatedAt)
 	if err != nil {
 		log.Println(fmt.Errorf("DMChatModel.go: DMChatMessage_UpdateDeliveryStatus: %s", err))
 		return appglobals.ErrInternalServerError
@@ -65,8 +82,7 @@ func (dmcm DMChatMessage) UpdateDeliveryStatus(receiverId int, status string, up
 }
 
 func (dmcm DMChatMessage) React(reactorId int, reaction rune) error {
-	// go helpers.QueryRowField[bool]("SELECT react_to_dm_chat_message($1, $2, $3, $4)", dmcm.DMChatId, dmcm.Id, reactorId, reaction)
-	_, err := helpers.QueryRowField[bool]("SELECT react_to_dm_chat_message($1, $2, $3, $4)", dmcm.DMChatId, dmcm.Id, reactorId, strconv.QuoteRuneToASCII(reaction))
+	_, err := helpers.QueryRowField[bool]("SELECT react_to_dm_chat_message($1, $2, $3, $4)", dmcm.DmChatId, dmcm.Id, reactorId, strconv.QuoteRuneToASCII(reaction))
 	if err != nil {
 		log.Println(fmt.Errorf("DMChatModel.go: DMChatMessage_React: %s", err))
 		return appglobals.ErrInternalServerError

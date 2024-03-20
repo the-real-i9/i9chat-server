@@ -125,3 +125,54 @@ var SendDMChatMessage = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 		}
 	}
 })
+
+var BatchUpdateDMChatMessageDeliveryStatus = helpers.WSHandlerProtected(func(c *websocket.Conn) {
+	var user apptypes.JWTUserData
+
+	helpers.MapToStruct(c.Locals("auth").(map[string]any), &user)
+
+	for {
+		var body struct {
+			Status   string
+			MsgDatas []*apptypes.DMChatMsgDeliveryData
+		}
+
+		r_err := c.ReadJSON(&body)
+		if r_err != nil {
+			log.Println(r_err)
+			break
+		}
+
+		go chatservice.BatchUpdateDMChatMessagesDeliveryStatus(user.UserId, body.Status, body.MsgDatas)
+
+	}
+
+})
+
+var UpdateDMChatMessageDeliveryStatus = helpers.WSHandlerProtected(func(c *websocket.Conn) {
+	var user apptypes.JWTUserData
+
+	helpers.MapToStruct(c.Locals("auth").(map[string]any), &user)
+
+	for {
+		var body struct {
+			MsgId    int
+			DmChatId int
+			SenderId int
+			Status   string
+			At       time.Time
+		}
+
+		r_err := c.ReadJSON(&body)
+		if r_err != nil {
+			log.Println(r_err)
+			break
+		}
+
+		go chatservice.DMChatMessage{
+			Id:       body.MsgId,
+			DmChatId: body.DmChatId,
+			SenderId: body.SenderId,
+		}.UpdateDeliveryStatus(user.UserId, body.Status, body.At)
+	}
+})

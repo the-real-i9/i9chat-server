@@ -5,6 +5,7 @@ import (
 	"model/chatmodel"
 	"time"
 	"utils/appglobals"
+	"utils/apptypes"
 	"utils/helpers"
 )
 
@@ -24,6 +25,21 @@ func NewDMChat(initiatorId int, partnerId int, initMsgContent map[string]any, cr
 	go appglobals.ChatObserver{}.Send(fmt.Sprintf("user-%d", partnerId), respData.Prd, "new")
 
 	return respData.Ird, nil
+}
+
+func BatchUpdateDMChatMessagesDeliveryStatus(receiverId int, status string, delivDatas []*apptypes.DMChatMsgDeliveryData) {
+	if err := chatmodel.BatchUpdateDMChatMessagesDeliveryStatus(receiverId, status, delivDatas); err == nil {
+		for _, data := range delivDatas {
+			data := data
+			go func() {
+				appglobals.DMChatMessageObserver{}.Send(
+					fmt.Sprintf("user-%d--dmchat-%d", data.SenderId, data.DmChatId),
+					map[string]any{"msgId": data.MsgId, "event": "delivery", "status": status},
+					"update",
+				)
+			}()
+		}
+	}
 }
 
 type DMChat struct {
@@ -47,9 +63,9 @@ func (dmc DMChat) SendMessage(senderId int, msgContent map[string]any, createdAt
 	go appglobals.DMChatMessageObserver{}.Send(
 		fmt.Sprintf("user-%d--dmchat-%d", respData.ReceiverId, dmc.Id), respData.Rrd, "new",
 	)
-	go appglobals.ChatObserver{}.Send(
-		fmt.Sprintf("user-%d", respData.ReceiverId), map[string]any{"dmChatId": dmc.Id, "event": "new message"}, "update",
-	)
+	/* go appglobals.ChatObserver{}.Send(
+		fmt.Sprintf("user-%d", respData.ReceiverId), map[string]any{"dmChatId": dmc.Id, "event": "new message", "senderId": senderId}, "update",
+	) */
 
 	return respData.Srd, nil
 }
@@ -58,15 +74,24 @@ func (dmc DMChat) GetChatHistory(offset int) ([]*map[string]any, error) {
 	return chatmodel.DMChat{Id: dmc.Id}.GetChatHistory(offset)
 }
 
-type DMMessage struct {
-	DMChatId int
+type DMChatMessage struct {
 	Id       int
+	DmChatId int
+	SenderId int
 }
 
-func (dmm DMMessage) React() {
+func (dmcm DMChatMessage) UpdateDeliveryStatus(receiverId int, status string, updatedAt time.Time) {
+	if err := (chatmodel.DMChatMessage{Id: dmcm.Id, DmChatId: dmcm.DmChatId}).UpdateDeliveryStatus(receiverId, status, updatedAt); err == nil {
+
+		go appglobals.DMChatMessageObserver{}.Send(
+			fmt.Sprintf("user-%d--dmchat-%d", dmcm.SenderId, dmcm.DmChatId),
+			map[string]any{"msgId": dmcm.Id, "event": "delivery", "status": status},
+			"update",
+		)
+	}
 
 }
 
-func (dmm DMMessage) UpdateDeliveryStatus() {
+func (dmcm DMChatMessage) React() {
 
 }
