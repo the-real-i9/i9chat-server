@@ -24,101 +24,94 @@ type GroupChat struct {
 	Id int
 }
 
-func (gpc GroupChat) ChangeName(admin []string, newName string) error {
-	// go helpers.QueryRowField[bool]("SELECT change_group_name($1, $2, $3)", gpc.Id, admin, newName)
-	_, err := helpers.QueryRowField[bool]("SELECT change_group_name($1, $2, $3)", gpc.Id, admin, newName)
+func (gpc GroupChat) ChangeName(admin []string, newName string) (map[string]any, error) {
+	data, err := helpers.QueryRowFields("SELECT member_ids AS memberIds, activity_data AS activityData change_group_name($1, $2, $3)", gpc.Id, admin, newName)
 	if err != nil {
 		log.Println(fmt.Errorf("groupChatModel.go: GroupChat_ChangeName: %s", err))
-		return appglobals.ErrInternalServerError
+		return nil, appglobals.ErrInternalServerError
 	}
 
-	return nil
+	return data, nil
 }
 
-func (gpc GroupChat) ChangeDescription(admin []string, newDescription string) error {
-	// go helpers.QueryRowField[bool]("SELECT change_group_description($1, $2, $3)", gpc.Id, admin, newDescription)
-	_, err := helpers.QueryRowField[bool]("SELECT change_group_description($1, $2, $3)", gpc.Id, admin, newDescription)
+func (gpc GroupChat) ChangeDescription(admin []string, newDescription string) (map[string]any, error) {
+	data, err := helpers.QueryRowFields("SELECT member_ids AS memberIds, activity_data AS activityData change_group_description($1, $2, $3)", gpc.Id, admin, newDescription)
 	if err != nil {
 		log.Println(fmt.Errorf("groupChatModel.go: GroupChat_ChangeDescription: %s", err))
-		return appglobals.ErrInternalServerError
+		return nil, appglobals.ErrInternalServerError
 	}
 
-	return nil
+	return data, nil
 }
 
-func (gpc GroupChat) ChangePicture(admin []string, newPicture string) error {
-	// go helpers.QueryRowField[bool]("SELECT change_group_picture($1, $2, $3)", gpc.Id, admin, newPicture)
-	_, err := helpers.QueryRowField[bool]("SELECT change_group_picture($1, $2, $3)", gpc.Id, admin, newPicture)
+func (gpc GroupChat) ChangePicture(admin []string, newPicture string) (map[string]any, error) {
+	data, err := helpers.QueryRowFields("SELECT member_ids AS memberIds, activity_data AS activityData change_group_picture($1, $2, $3)", gpc.Id, admin, newPicture)
 	if err != nil {
 		log.Println(fmt.Errorf("groupChatModel.go: GroupChat_ChangePicture: %s", err))
-		return appglobals.ErrInternalServerError
+		return nil, appglobals.ErrInternalServerError
 	}
 
-	return nil
+	return data, nil
 }
 
-func (gpc GroupChat) AddUsers(admin []string, users [][]string) error {
-	// go helpers.QueryRowField[bool]("SELECT add_users_to_group($1, $2, $3)", gpc.Id, admin, users)
-	_, err := helpers.QueryRowField[bool]("SELECT add_users_to_group($1, $2, $3)", gpc.Id, admin, users)
+func (gpc GroupChat) AddUsers(admin []string, newUsers [][]string) (map[string]any, error) {
+	data, err := helpers.QueryRowFields("SELECT member_ids AS memberIds, activity_data AS activityData add_users_to_group($1, $2, $3)", gpc.Id, admin, newUsers)
 	if err != nil {
 		log.Println(fmt.Errorf("groupChatModel.go: GroupChat_AddUsers: %s", err))
-		return appglobals.ErrInternalServerError
+		return nil, appglobals.ErrInternalServerError
 	}
 
-	return nil
+	return data, nil
 }
 
-func (gpc GroupChat) RemoveUser(admin []string, user []string) error {
-	// go helpers.QueryRowField[bool]("SELECT remove_user_to_group($1, $2, $3)", gpc.Id, admin, user)
-	_, err := helpers.QueryRowField[bool]("SELECT remove_user_to_group($1, $2, $3)", gpc.Id, admin, user)
+func (gpc GroupChat) RemoveUser(admin []string, user []string) (map[string]any, error) {
+	data, err := helpers.QueryRowFields("SELECT member_ids AS memberIds, activity_data AS activityData remove_user_to_group($1, $2, $3)", gpc.Id, admin, user)
 	if err != nil {
 		log.Println(fmt.Errorf("groupChatModel.go: GroupChat_RemoveUser: %s", err))
-		return appglobals.ErrInternalServerError
+		return nil, appglobals.ErrInternalServerError
 	}
 
-	return nil
+	return data, nil
 }
 
-func (gpc GroupChat) Join(user []string) error {
-	_, err := helpers.QueryRowField[bool]("SELECT join_group($1, $2)", gpc.Id, user)
+func (gpc GroupChat) Join(newUser []string) (map[string]any, error) {
+	data, err := helpers.QueryRowFields("SELECT member_ids AS memberIds, activity_data AS activityData join_group($1, $2)", gpc.Id, newUser)
 	if err != nil {
 		log.Println(fmt.Errorf("groupChatModel.go: GroupChat_Join: %s", err))
-		return appglobals.ErrInternalServerError
+		return nil, appglobals.ErrInternalServerError
 	}
 
-	return nil
+	return data, nil
 }
 
-func (gpc GroupChat) Leave(user []string) error {
-	_, err := helpers.QueryRowField[bool]("SELECT leave_group($1, $2)", gpc.Id, user)
+func (gpc GroupChat) Leave(user []string) (map[string]any, error) {
+	data, err := helpers.QueryRowFields("SELECT member_ids AS memberIds, activity_data AS activityData leave_group($1, $2)", gpc.Id, user)
 	if err != nil {
 		log.Println(fmt.Errorf("groupChatModel.go: GroupChat_Leave: %s", err))
-		return appglobals.ErrInternalServerError
+		return nil, appglobals.ErrInternalServerError
 	}
 
-	return nil
+	return data, nil
 }
 
-func (gpc GroupChat) MakeUserAdmin(admin []string, user []string) error {
-	// go helpers.QueryRowField[bool]("SELECT make_user_group_admin($1, $2, $3)", gpc.Id, admin, user)
-	_, err := helpers.QueryRowField[bool]("SELECT make_user_group_admin($1, $2, $3)", gpc.Id, admin, user)
+func (gpc GroupChat) MakeUserAdmin(admin []string, user []string) (map[string]any, error) {
+	data, err := helpers.QueryRowFields("SELECT member_ids AS memberIds, activity_data AS activityData make_user_group_admin($1, $2, $3)", gpc.Id, admin, user)
 	if err != nil {
 		log.Println(fmt.Errorf("groupChatModel.go: GroupChat_MakeUserAdmin: %s", err))
-		return appglobals.ErrInternalServerError
+		return nil, appglobals.ErrInternalServerError
 	}
 
-	return nil
+	return data, nil
 }
 
-func (gpc GroupChat) RemoveUserFromAdmins(admin []string, user []string) error {
-	// go helpers.QueryRowField[bool]("SELECT remove_user_from_group_admins($1, $2, $3)", gpc.Id, admin, user)
-	_, err := helpers.QueryRowField[bool]("SELECT remove_user_from_group_admins($1, $2, $3)", gpc.Id, admin, user)
+func (gpc GroupChat) RemoveUserFromAdmins(admin []string, user []string) (map[string]any, error) {
+	data, err := helpers.QueryRowFields("SELECT member_ids AS memberIds, activity_data AS activityData remove_user_from_group_admins($1, $2, $3)", gpc.Id, admin, user)
 	if err != nil {
 		log.Println(fmt.Errorf("groupChatModel.go: GroupChat_RemoveUserFromAdmins: %s", err))
-		return appglobals.ErrInternalServerError
+		return nil, appglobals.ErrInternalServerError
 	}
 
-	return nil
+	return data, nil
 }
 
 func (gpc GroupChat) SendMessage(senderId int, msgContent map[string]any, createdAt time.Time) (map[string]any, error) {
@@ -180,7 +173,6 @@ func (gpcm GroupChatMessage) UpdateDeliveryStatus(receiverId int, status string,
 }
 
 func (gpcm GroupChatMessage) React(reactorId int, reaction rune) error {
-	// go helpers.QueryRowField[bool]("SELECT react_to_group_chat_message($1, $2, $3, $4)", gpcm.GroupChatId, gpcm.Id, reactorId, reaction)
 	_, err := helpers.QueryRowField[bool]("SELECT react_to_group_chat_message($1, $2, $3, $4)", gpcm.GroupChatId, gpcm.Id, reactorId, strconv.QuoteRuneToASCII(reaction))
 	if err != nil {
 		log.Println(fmt.Errorf("groupChatModel.go: GroupChatMessage_React: %s", err))

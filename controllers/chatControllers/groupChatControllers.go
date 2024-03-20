@@ -197,5 +197,141 @@ var BatchUpdateGroupChatMessageDeliveryStatus = helpers.WSHandlerProtected(func(
 		go chatservice.GroupChat{Id: body.GroupChatId}.BatchUpdateGroupChatMessageDeliveryStatus(user.UserId, body.Status, body.MsgDatas)
 
 	}
-
 })
+
+var PerformGroupOperation = helpers.WSHandlerProtected(func(c *websocket.Conn) {
+	var user apptypes.JWTUserData
+
+	helpers.MapToStruct(c.Locals("auth").(map[string]any), &user)
+
+	operationHandlerMap := map[string]func(client []string, data map[string]any){
+		"change_name":             changeGroupName,
+		"change_description":      changeGroupDescription,
+		"change_picture":          changeGroupPicture,
+		"add_users":               addUsersToGroup,
+		"remove_user":             removeUserFromGroup,
+		"join":                    joinGroup,
+		"leave":                   leaveGroup,
+		"make_user_admin":         makeUserGroupAdmin,
+		"remove_user_from_admins": removeUserFromGroupAdmins,
+	}
+
+	for {
+		var body struct {
+			Operation string
+			Data      map[string]any
+		}
+
+		if r_err := c.ReadJSON(&body); r_err != nil {
+			log.Println(r_err)
+			break
+		}
+
+		client := []string{fmt.Sprint(user.UserId), user.Username}
+
+		go operationHandlerMap[body.Operation](client, body.Data)
+
+		if w_err := c.WriteJSON(map[string]any{"code": 200, "msg": "Operation Successful"}); w_err != nil {
+			log.Println(w_err)
+			break
+		}
+	}
+})
+
+func changeGroupName(client []string, data map[string]any) {
+	var d struct {
+		GroupChatId int
+		NewName     string
+	}
+
+	helpers.MapToStruct(data, &d)
+
+	chatservice.GroupChat{Id: d.GroupChatId}.ChangeName(client, d.NewName)
+
+}
+
+func changeGroupDescription(client []string, data map[string]any) {
+	var d struct {
+		GroupChatId    int
+		NewDescription string
+	}
+
+	helpers.MapToStruct(data, &d)
+
+	chatservice.GroupChat{Id: d.GroupChatId}.ChangeDescription(client, d.NewDescription)
+}
+
+func changeGroupPicture(client []string, data map[string]any) {
+	var d struct {
+		GroupChatId int
+		NewPicture  []byte
+	}
+
+	helpers.MapToStruct(data, &d)
+
+	chatservice.GroupChat{Id: d.GroupChatId}.ChangePicture(client, d.NewPicture)
+}
+
+func addUsersToGroup(client []string, data map[string]any) {
+	var d struct {
+		GroupChatId int
+		NewUsers    [][]string
+	}
+
+	helpers.MapToStruct(data, &d)
+
+	chatservice.GroupChat{Id: d.GroupChatId}.AddUsers(client, d.NewUsers)
+}
+
+func removeUserFromGroup(client []string, data map[string]any) {
+	var d struct {
+		GroupChatId int
+		User        []string
+	}
+
+	helpers.MapToStruct(data, &d)
+
+	chatservice.GroupChat{Id: d.GroupChatId}.RemoveUser(client, d.User)
+}
+
+func joinGroup(client []string, data map[string]any) {
+	var d struct {
+		GroupChatId int
+	}
+
+	helpers.MapToStruct(data, &d)
+
+	chatservice.GroupChat{Id: d.GroupChatId}.Join(client)
+}
+
+func leaveGroup(client []string, data map[string]any) {
+	var d struct {
+		GroupChatId int
+	}
+
+	helpers.MapToStruct(data, &d)
+
+	chatservice.GroupChat{Id: d.GroupChatId}.Leave(client)
+}
+
+func makeUserGroupAdmin(client []string, data map[string]any) {
+	var d struct {
+		GroupChatId int
+		User        []string
+	}
+
+	helpers.MapToStruct(data, &d)
+
+	chatservice.GroupChat{Id: d.GroupChatId}.MakeUserAdmin(client, d.User)
+}
+
+func removeUserFromGroupAdmins(client []string, data map[string]any) {
+	var d struct {
+		GroupChatId int
+		User        []string
+	}
+
+	helpers.MapToStruct(data, &d)
+
+	chatservice.GroupChat{Id: d.GroupChatId}.RemoveUserFromAdmins(client, d.User)
+}

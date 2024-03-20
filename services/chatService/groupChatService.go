@@ -2,7 +2,6 @@ package chatservice
 
 import (
 	"fmt"
-	"log"
 	"model/chatmodel"
 	"time"
 	"utils/appglobals"
@@ -17,9 +16,9 @@ func broadcastNewGroup(initUsers [][]string, newGroupData map[string]any) {
 	}
 }
 
-func uploadGroupPicture(groupChatId int, picture []byte) {
+func uploadGroupPicture(groupChatId int, picture []byte) string {
 	if len(picture) < 1 {
-		return
+		return ""
 	}
 	// upload picture data and SET picture url
 	picPath := fmt.Sprintf("chat_pictures/group_chat_%d_pic_%d.jpg", groupChatId, time.Now().UnixMilli())
@@ -27,11 +26,10 @@ func uploadGroupPicture(groupChatId int, picture []byte) {
 	picUrl, err := helpers.UploadFile(picPath, picture)
 
 	if err != nil {
-		log.Println(err)
-		return
+		return ""
 	}
 
-	helpers.QueryRowField[bool]("UPDATE group_chat SET picture = $1 WHERE id = $2 RETURNING true", picUrl, groupChatId)
+	return picUrl
 }
 
 func NewGroupChat(name string, description string, picture []byte, creator []string, initUsers [][]string) (map[string]any, error) {
@@ -47,7 +45,12 @@ func NewGroupChat(name string, description string, picture []byte, creator []str
 
 	helpers.MapToStruct(data, &respData)
 
-	go uploadGroupPicture(respData.Crd["new_group_chat_id"].(int), picture)
+	go func() {
+		groupChatId := respData.Crd["new_group_chat_id"].(int)
+		if picUrl := uploadGroupPicture(groupChatId, picture); picUrl != "" {
+			helpers.QueryRowField[bool]("UPDATE group_chat SET picture = $1 WHERE id = $2 RETURNING true", picUrl, groupChatId)
+		}
+	}()
 
 	go broadcastNewGroup(initUsers, respData.Nmrd)
 
@@ -56,6 +59,78 @@ func NewGroupChat(name string, description string, picture []byte, creator []str
 
 type GroupChat struct {
 	Id int
+}
+
+func (gpc GroupChat) broadcastActivity(modelResp map[string]any) {
+	var respData struct {
+		MemberIds    []int
+		ActivityData map[string]any
+	}
+
+	helpers.MapToStruct(modelResp, &respData)
+
+	for _, mId := range respData.MemberIds {
+		go appglobals.GroupChatActivityObserver{}.Log(fmt.Sprintf("user-%d--groupchat-%d", mId, gpc.Id), respData.ActivityData)
+	}
+}
+
+func (gpc GroupChat) ChangeName(admin []string, newName string) {
+	if resp, err := (chatmodel.GroupChat{Id: gpc.Id}).ChangeName(admin, newName); err == nil {
+		go gpc.broadcastActivity(resp)
+	}
+}
+
+func (gpc GroupChat) ChangeDescription(admin []string, newDescription string) {
+	if resp, err := (chatmodel.GroupChat{Id: gpc.Id}).ChangeDescription(admin, newDescription); err == nil {
+		go gpc.broadcastActivity(resp)
+	}
+}
+
+func (gpc GroupChat) ChangePicture(admin []string, newPicture []byte) {
+	picUrl := uploadGroupPicture(gpc.Id, newPicture)
+	if picUrl == "" {
+		return
+	}
+
+	if resp, err := (chatmodel.GroupChat{Id: gpc.Id}).ChangePicture(admin, picUrl); err == nil {
+		go gpc.broadcastActivity(resp)
+	}
+}
+
+func (gpc GroupChat) AddUsers(admin []string, newUsers [][]string) {
+	if resp, err := (chatmodel.GroupChat{Id: gpc.Id}).AddUsers(admin, newUsers); err == nil {
+		go gpc.broadcastActivity(resp)
+	}
+}
+
+func (gpc GroupChat) RemoveUser(admin []string, user []string) {
+	if resp, err := (chatmodel.GroupChat{Id: gpc.Id}).RemoveUser(admin, user); err == nil {
+		go gpc.broadcastActivity(resp)
+	}
+}
+
+func (gpc GroupChat) Join(newUser []string) {
+	if resp, err := (chatmodel.GroupChat{Id: gpc.Id}).Join(newUser); err == nil {
+		go gpc.broadcastActivity(resp)
+	}
+}
+
+func (gpc GroupChat) Leave(user []string) {
+	if resp, err := (chatmodel.GroupChat{Id: gpc.Id}).Leave(user); err == nil {
+		go gpc.broadcastActivity(resp)
+	}
+}
+
+func (gpc GroupChat) MakeUserAdmin(admin []string, user []string) {
+	if resp, err := (chatmodel.GroupChat{Id: gpc.Id}).MakeUserAdmin(admin, user); err == nil {
+		go gpc.broadcastActivity(resp)
+	}
+}
+
+func (gpc GroupChat) RemoveUserFromAdmins(admin []string, user []string) {
+	if resp, err := (chatmodel.GroupChat{Id: gpc.Id}).RemoveUserFromAdmins(admin, user); err == nil {
+		go gpc.broadcastActivity(resp)
+	}
 }
 
 func (gpc GroupChat) broadcastMessage(memberIds []int, msgData map[string]any) {
