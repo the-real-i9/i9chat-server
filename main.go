@@ -17,6 +17,10 @@ func main() {
 		log.Fatal(err)
 	}
 
+	if err := helpers.InitDBPool(); err != nil {
+		log.Fatal(err)
+	}
+
 	if err := appglobals.InitGCSClient(); err != nil {
 		log.Fatal(err)
 	}
