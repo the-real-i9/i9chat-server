@@ -160,7 +160,7 @@ var WatchChat = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 		// a data channel and a control channel is watched by the select
 		select {
 		case data := <-myMailbox:
-			w_err := c.WriteJSON(map[string]any{"new_chat": data})
+			w_err := c.WriteJSON(data)
 			if w_err != nil {
 				log.Println(w_err)
 				nco.Unsubscribe(mailboxKey)

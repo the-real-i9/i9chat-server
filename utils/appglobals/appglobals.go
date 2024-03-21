@@ -27,7 +27,7 @@ func InitGCSClient() error {
 type Observer interface {
 	Subscribe(key string, mailbox chan<- map[string]any)
 	Unsubscribe(key string)
-	Send(key string, data map[string]any, flag string)
+	Send(key string, data map[string]any, event string)
 }
 
 var chatObserver = make(map[string]chan<- map[string]any)
@@ -43,9 +43,9 @@ func (ChatObserver) Unsubscribe(key string) {
 	delete(chatObserver, key)
 }
 
-func (ChatObserver) Send(key string, data map[string]any, flag string) { // call in a new goroutine
+func (ChatObserver) Send(key string, data map[string]any, event string) { // call in a new goroutine
 	if mailbox, found := chatObserver[key]; found {
-		mailbox <- map[string]any{"flag": flag, "data": data}
+		mailbox <- map[string]any{"event": event, "data": data}
 	}
 }
 
@@ -62,9 +62,9 @@ func (DMChatMessageObserver) Unsubscribe(key string) {
 	delete(dMChatMessageObserver, key)
 }
 
-func (DMChatMessageObserver) Send(key string, data map[string]any, flag string) { // call in a new goroutine
+func (DMChatMessageObserver) Send(key string, data map[string]any, event string) { // call in a new goroutine
 	if mailbox, found := dMChatMessageObserver[key]; found {
-		mailbox <- map[string]any{"flag": flag, "data": data}
+		mailbox <- map[string]any{"event": event, "data": data}
 	}
 }
 
@@ -81,9 +81,9 @@ func (GroupChatMessageObserver) Unsubscribe(key string) {
 	delete(groupChatMessageObserver, key)
 }
 
-func (GroupChatMessageObserver) Send(key string, data map[string]any, flag string) { // call in a new goroutine
+func (GroupChatMessageObserver) Send(key string, data map[string]any, event string) { // call in a new goroutine
 	if mailbox, found := groupChatMessageObserver[key]; found {
-		mailbox <- map[string]any{"flag": flag, "data": data}
+		mailbox <- map[string]any{"event": event, "data": data}
 	}
 }
 
