@@ -70,7 +70,7 @@ func (gpc GroupChat) broadcastActivity(modelResp map[string]any) {
 	helpers.MapToStruct(modelResp, &respData)
 
 	for _, mId := range respData.MemberIds {
-		go appglobals.GroupChatActivityObserver{}.Log(fmt.Sprintf("user-%d--groupchat-%d", mId, gpc.Id), respData.ActivityData)
+		go appglobals.GroupChatSessionObserver{}.Send(fmt.Sprintf("user-%d--groupchat-%d", mId, gpc.Id), respData.ActivityData, "new activity")
 	}
 }
 
@@ -136,7 +136,7 @@ func (gpc GroupChat) RemoveUserFromAdmins(admin []string, user []string) {
 func (gpc GroupChat) broadcastMessage(memberIds []int, msgData map[string]any) {
 	for _, mId := range memberIds {
 		memberId := mId
-		go appglobals.GroupChatMessageObserver{}.Send(fmt.Sprintf("user-%d--groupchat-%d", memberId, gpc.Id), msgData, "new group message")
+		go appglobals.GroupChatSessionObserver{}.Send(fmt.Sprintf("user-%d--groupchat-%d", memberId, gpc.Id), msgData, "new message")
 	}
 }
 
@@ -173,7 +173,7 @@ func (gpc GroupChat) broadcastMessageDeliveryStatusUpdate(clientId int, delivDat
 				go appglobals.DMChatMessageObserver{}.Send(
 					fmt.Sprintf("user-%d--groupchat-%d", mId, gpc.Id),
 					map[string]any{"msgId": msgId, "key": "delivery_status", "value": status},
-					"group message update",
+					"message update",
 				)
 			}
 		}

@@ -68,26 +68,26 @@ func (DMChatMessageObserver) Send(key string, data map[string]any, event string)
 	}
 }
 
-var groupChatMessageObserver = make(map[string]chan<- map[string]any)
+var groupChatSessionObserver = make(map[string]chan<- map[string]any)
 
-type GroupChatMessageObserver struct{}
+type GroupChatSessionObserver struct{}
 
-func (GroupChatMessageObserver) Subscribe(key string, mailbox chan<- map[string]any) {
-	groupChatMessageObserver[key] = mailbox
+func (GroupChatSessionObserver) Subscribe(key string, mailbox chan<- map[string]any) {
+	groupChatSessionObserver[key] = mailbox
 }
 
-func (GroupChatMessageObserver) Unsubscribe(key string) {
-	close(groupChatMessageObserver[key])
-	delete(groupChatMessageObserver, key)
+func (GroupChatSessionObserver) Unsubscribe(key string) {
+	close(groupChatSessionObserver[key])
+	delete(groupChatSessionObserver, key)
 }
 
-func (GroupChatMessageObserver) Send(key string, data map[string]any, event string) { // call in a new goroutine
-	if mailbox, found := groupChatMessageObserver[key]; found {
+func (GroupChatSessionObserver) Send(key string, data map[string]any, event string) { // call in a new goroutine
+	if mailbox, found := groupChatSessionObserver[key]; found {
 		mailbox <- map[string]any{"event": event, "data": data}
 	}
 }
 
-var groupChatActivityObserver = make(map[string]chan<- map[string]any)
+/* var groupChatActivityObserver = make(map[string]chan<- map[string]any)
 
 type GroupChatActivityObserver struct{}
 
@@ -104,4 +104,4 @@ func (GroupChatActivityObserver) Log(key string, data map[string]any) { // call 
 	if mailbox, found := groupChatActivityObserver[key]; found {
 		mailbox <- data
 	}
-}
+} */
