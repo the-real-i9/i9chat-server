@@ -71,6 +71,15 @@ func RegisterUser(sessionId string, email string, username string, password stri
 		return nil, "", appglobals.ErrInternalServerError
 	}
 
+	accExists, err := appmodel.AccountExists(username)
+	if err != nil {
+		return nil, "", err
+	}
+
+	if accExists {
+		return nil, "", fmt.Errorf("username error: username '%s' is unavailable", username)
+	}
+
 	userData, err := usermodel.NewUser(email, username, string(hashedPassword), geolocation)
 	if err != nil {
 		return nil, "", err
