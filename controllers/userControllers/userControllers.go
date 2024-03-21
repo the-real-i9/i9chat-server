@@ -135,8 +135,6 @@ var WatchChat = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 
 	// a data channel for transmitting data
 	var myMailbox = make(chan map[string]any, 5)
-	// a control channel for terminating the wait
-	var closeMailBox = make(chan int)
 
 	mailboxKey := fmt.Sprintf("user-%d", user.UserId)
 
@@ -147,26 +145,15 @@ var WatchChat = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 	nco.Subscribe(mailboxKey, myMailbox)
 
 	go func() {
-		// a strategy to close the mailbox and, in turn, the websocket connection
-		// Ideally, this route doesn't receive any message,
-		// therefore, it'll be unnecessary to check for a specific "close" command
-		// so any message received at all triggers a close
+		// close the connection, when any message is received, including a normal client closure
 		c.ReadMessage()
-		closeMailBox <- 1
-		close(closeMailBox)
+		nco.Unsubscribe(mailboxKey)
 	}()
 
-	for {
-		// a data channel and a control channel is watched by the select
-		select {
-		case data := <-myMailbox:
-			w_err := c.WriteJSON(data)
-			if w_err != nil {
-				log.Println(w_err)
-				nco.Unsubscribe(mailboxKey)
-				return
-			}
-		case <-closeMailBox:
+	for data := range myMailbox {
+		w_err := c.WriteJSON(data)
+		if w_err != nil {
+			log.Println(w_err)
 			nco.Unsubscribe(mailboxKey)
 			return
 		}

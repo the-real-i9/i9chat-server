@@ -62,7 +62,6 @@ var WatchGroupChatMessage = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 	}
 
 	var myMailbox = make(chan map[string]any, 2)
-	var closeMailBox = make(chan int)
 
 	mailboxKey := fmt.Sprintf("user-%d--groupchat-%d", user.UserId, body.GroupChatId)
 
@@ -72,20 +71,13 @@ var WatchGroupChatMessage = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 
 	go func() {
 		c.ReadMessage()
-		closeMailBox <- 1
-		close(closeMailBox)
+		gcmo.Unsubscribe(mailboxKey)
 	}()
 
-	for {
-		select {
-		case data := <-myMailbox:
-			w_err := c.WriteJSON(data)
-			if w_err != nil {
-				log.Println(w_err)
-				gcmo.Unsubscribe(mailboxKey)
-				return
-			}
-		case <-closeMailBox:
+	for data := range myMailbox {
+		w_err := c.WriteJSON(data)
+		if w_err != nil {
+			log.Println(w_err)
 			gcmo.Unsubscribe(mailboxKey)
 			return
 		}
@@ -146,7 +138,6 @@ var WatchGroupActivity = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 	}
 
 	var myMailbox = make(chan map[string]any, 2)
-	var closeMailBox = make(chan int)
 
 	mailboxKey := fmt.Sprintf("user-%d--groupchat-%d", user.UserId, body.GroupChatId)
 
@@ -156,20 +147,13 @@ var WatchGroupActivity = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 
 	go func() {
 		c.ReadMessage()
-		closeMailBox <- 1
-		close(closeMailBox)
+		gcao.Unsubscribe(mailboxKey)
 	}()
 
-	for {
-		select {
-		case data := <-myMailbox:
-			w_err := c.WriteJSON(data)
-			if w_err != nil {
-				log.Println(w_err)
-				gcao.Unsubscribe(mailboxKey)
-				return
-			}
-		case <-closeMailBox:
+	for data := range myMailbox {
+		w_err := c.WriteJSON(data)
+		if w_err != nil {
+			log.Println(w_err)
 			gcao.Unsubscribe(mailboxKey)
 			return
 		}

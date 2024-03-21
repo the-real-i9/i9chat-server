@@ -62,7 +62,6 @@ var WatchDMChatMessage = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 	}
 
 	var myMailbox = make(chan map[string]any, 2)
-	var closeMailBox = make(chan int)
 
 	mailboxKey := fmt.Sprintf("user-%d--dmchat-%d", user.UserId, body.DmChatId)
 
@@ -72,20 +71,13 @@ var WatchDMChatMessage = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 
 	go func() {
 		c.ReadMessage()
-		closeMailBox <- 1
-		close(closeMailBox)
+		dcmo.Unsubscribe(mailboxKey)
 	}()
 
-	for {
-		select {
-		case data := <-myMailbox:
-			w_err := c.WriteJSON(data)
-			if w_err != nil {
-				log.Println(w_err)
-				dcmo.Unsubscribe(mailboxKey)
-				return
-			}
-		case <-closeMailBox:
+	for data := range myMailbox {
+		w_err := c.WriteJSON(data)
+		if w_err != nil {
+			log.Println(w_err)
 			dcmo.Unsubscribe(mailboxKey)
 			return
 		}
