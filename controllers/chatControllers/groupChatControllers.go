@@ -44,6 +44,124 @@ var GetGroupChatHistory = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 	}
 })
 
+func handleGroupChatMessageSendingAndAcknowledgement(c *websocket.Conn, user apptypes.JWTUserData, groupChatId int, endSession func()) {
+	var body struct {
+		Action string
+		Data   map[string]any
+	}
+
+	var msgBody struct {
+		MsgContent map[string]any
+		CreatedAt  time.Time
+	}
+
+	var ackBody struct {
+		Status   string
+		MsgDatas []*apptypes.GroupChatMsgDeliveryData
+	}
+
+	for {
+		r_err := c.ReadJSON(&body)
+		if r_err != nil {
+			log.Println(r_err)
+			return
+		}
+
+		handleMessaging := func() error {
+			helpers.MapToStruct(body.Data, &msgBody)
+
+			data, app_err := chatservice.GroupChat{Id: groupChatId}.SendMessage(
+				user.UserId, msgBody.MsgContent, msgBody.CreatedAt,
+			)
+
+			var w_err error
+			if app_err != nil {
+				w_err = c.WriteJSON(helpers.AppError(fiber.StatusUnprocessableEntity, app_err))
+			} else {
+				w_err = c.WriteJSON(data)
+			}
+
+			if w_err != nil {
+				return w_err
+			}
+
+			return nil
+		}
+
+		/* The client application by itself sends acknowledgement, not the user.
+		Each received message doesn't have to be acknowledge as soon as it is received.
+		You can wait for more messages so they all can be acknowledged in batches.
+		Considering it's not a two person communication
+		*/
+		handleAcknowledgement := func() {
+			helpers.MapToStruct(body.Data, &ackBody)
+
+			go chatservice.GroupChat{Id: groupChatId}.BatchUpdateGroupChatMessageDeliveryStatus(user.UserId, ackBody.Status, ackBody.MsgDatas)
+		}
+
+		if body.Action == "messaging" {
+			if err := handleMessaging(); err != nil {
+				log.Println(err)
+				endSession()
+				return
+			}
+		} else if body.Action == "acknowledgement" {
+			handleAcknowledgement()
+		} else {
+			w_err := c.WriteJSON(helpers.AppError(fiber.StatusUnprocessableEntity, fmt.Errorf("invalid 'action' value. should be 'messaging' for sending messages, or 'acknowledgement' for acknowledging received messages")))
+			if w_err != nil {
+				endSession()
+				return
+			}
+		}
+	}
+}
+
+var InitGroupChatSession = helpers.WSHandlerProtected(func(c *websocket.Conn) {
+	// This acts like a pipe handling send(), receive(), and acknowledgement()
+	// New message, Message update, and New activity event will be received in this session
+	// Only New message is acknowledged.
+	var user apptypes.JWTUserData
+
+	helpers.MapToStruct(c.Locals("auth").(map[string]any), &user)
+
+	c.WriteJSON(map[string]string{"msg": "First send the { groupChatId: #id } for this send() <-> receive() session."})
+
+	var body struct {
+		GroupChatId int
+	}
+
+	r_err := c.ReadJSON(&body)
+	if r_err != nil {
+		log.Println(r_err)
+		return
+	}
+
+	var myMailbox = make(chan map[string]any, 2)
+
+	mailboxKey := fmt.Sprintf("user-%d--groupchat-%d", user.UserId, body.GroupChatId)
+
+	gcso := appglobals.GroupChatSessionObserver{}
+
+	gcso.Subscribe(mailboxKey, myMailbox)
+
+	endSession := func() {
+		gcso.Unsubscribe(mailboxKey)
+	}
+
+	go handleGroupChatMessageSendingAndAcknowledgement(c, user, body.GroupChatId, endSession)
+
+	for data := range myMailbox {
+		w_err := c.WriteJSON(data)
+		if w_err != nil {
+			log.Println(w_err)
+			endSession()
+			return
+		}
+	}
+})
+
+/*
 var WatchGroupChatMessage = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 	var user apptypes.JWTUserData
 
@@ -120,6 +238,29 @@ var SendGroupChatMessage = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 	}
 })
 
+var BatchUpdateGroupChatMessageDeliveryStatus = helpers.WSHandlerProtected(func(c *websocket.Conn) {
+	var user apptypes.JWTUserData
+
+	helpers.MapToStruct(c.Locals("auth").(map[string]any), &user)
+
+	for {
+		var body struct {
+			GroupChatId int
+			Status      string
+			MsgDatas    []*apptypes.GroupChatMsgDeliveryData
+		}
+
+		r_err := c.ReadJSON(&body)
+		if r_err != nil {
+			log.Println(r_err)
+			break
+		}
+
+		go chatservice.GroupChat{Id: body.GroupChatId}.BatchUpdateGroupChatMessageDeliveryStatus(user.UserId, body.Status, body.MsgDatas)
+
+	}
+})
+
 var WatchGroupActivity = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 	var user apptypes.JWTUserData
 
@@ -158,30 +299,7 @@ var WatchGroupActivity = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 			return
 		}
 	}
-})
-
-var BatchUpdateGroupChatMessageDeliveryStatus = helpers.WSHandlerProtected(func(c *websocket.Conn) {
-	var user apptypes.JWTUserData
-
-	helpers.MapToStruct(c.Locals("auth").(map[string]any), &user)
-
-	for {
-		var body struct {
-			GroupChatId int
-			Status      string
-			MsgDatas    []*apptypes.GroupChatMsgDeliveryData
-		}
-
-		r_err := c.ReadJSON(&body)
-		if r_err != nil {
-			log.Println(r_err)
-			break
-		}
-
-		go chatservice.GroupChat{Id: body.GroupChatId}.BatchUpdateGroupChatMessageDeliveryStatus(user.UserId, body.Status, body.MsgDatas)
-
-	}
-})
+}) */
 
 var PerformGroupOperation = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 	var user apptypes.JWTUserData

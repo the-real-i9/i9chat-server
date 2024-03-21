@@ -35,7 +35,7 @@ func BatchUpdateDMChatMessageDeliveryStatus(receiverId int, status string, deliv
 				appglobals.DMChatMessageObserver{}.Send(
 					fmt.Sprintf("user-%d--dmchat-%d", data.SenderId, data.DmChatId),
 					map[string]any{"msgId": data.MsgId, "key": "delivery_status", "value": status},
-					"dm message update",
+					"message update",
 				)
 			}()
 		}
@@ -61,7 +61,7 @@ func (dmc DMChat) SendMessage(senderId int, msgContent map[string]any, createdAt
 	helpers.MapToStruct(data, &respData)
 
 	go appglobals.DMChatMessageObserver{}.Send(
-		fmt.Sprintf("user-%d--dmchat-%d", respData.ReceiverId, dmc.Id), respData.Rrd, "new dm message",
+		fmt.Sprintf("user-%d--dmchat-%d", respData.ReceiverId, dmc.Id), respData.Rrd, "new message",
 	)
 
 	return respData.Srd, nil
@@ -83,7 +83,7 @@ func (dmcm DMChatMessage) UpdateDeliveryStatus(receiverId int, status string, up
 		go appglobals.DMChatMessageObserver{}.Send(
 			fmt.Sprintf("user-%d--dmchat-%d", dmcm.SenderId, dmcm.DmChatId),
 			map[string]any{"msgId": dmcm.Id, "key": "delivery_status", "value": status},
-			"dm message update",
+			"message update",
 		)
 	}
 
