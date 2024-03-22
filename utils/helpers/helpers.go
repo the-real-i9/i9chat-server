@@ -9,8 +9,12 @@ import (
 	"log"
 	"os"
 	"strings"
-	"utils/appglobals"
+
+	"cloud.google.com/go/storage"
+	"google.golang.org/api/option"
 )
+
+var ErrInternalServerError = errors.New("internal server error: check logger")
 
 func LoadEnv() error {
 	dotenv, err := os.Open(".env")
@@ -35,6 +39,19 @@ func LoadEnv() error {
 	return nil
 }
 
+var GCSClient *storage.Client
+
+func InitGCSClient() error {
+	stClient, err := storage.NewClient(context.Background(), option.WithCredentialsFile(os.Getenv("GCS_CRED_FILE")))
+	if err != nil {
+		return err
+	}
+
+	GCSClient = stClient
+
+	return nil
+}
+
 func MapToStruct(mapData map[string]any, structData any) {
 	bt, _ := json.Marshal(mapData)
 
@@ -42,8 +59,8 @@ func MapToStruct(mapData map[string]any, structData any) {
 }
 
 func AppError(code int, err error) map[string]any {
-	if errors.Is(err, appglobals.ErrInternalServerError) {
-		return map[string]any{"code": 500, "error": appglobals.ErrInternalServerError.Error()}
+	if errors.Is(err, ErrInternalServerError) {
+		return map[string]any{"code": 500, "error": ErrInternalServerError.Error()}
 	}
 
 	return map[string]any{"code": code, "error": err.Error()}
@@ -52,7 +69,7 @@ func AppError(code int, err error) map[string]any {
 func UploadFile(filePath string, data []byte) (string, error) {
 	fileUrl := fmt.Sprintf("https://storage.cloud.google.com/i9chat-bucket/%s", filePath)
 
-	stWriter := appglobals.GCSClient.Bucket("i9chat-bucket").Object(filePath).NewWriter(context.Background())
+	stWriter := GCSClient.Bucket("i9chat-bucket").Object(filePath).NewWriter(context.Background())
 
 	stWriter.Write(data)
 

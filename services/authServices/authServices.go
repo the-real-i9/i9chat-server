@@ -11,7 +11,6 @@ import (
 	"model/appmodel"
 	"model/usermodel"
 	"services/appservices"
-	"utils/appglobals"
 	"utils/helpers"
 
 	"golang.org/x/crypto/bcrypt"
@@ -68,7 +67,7 @@ func RegisterUser(sessionId string, email string, username string, password stri
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
 		log.Println(fmt.Errorf("auth service: register user: %s", err))
-		return nil, "", appglobals.ErrInternalServerError
+		return nil, "", helpers.ErrInternalServerError
 	}
 
 	accExists, err := appmodel.AccountExists(username)
@@ -116,7 +115,7 @@ func Signin(emailOrUsername string, password string) (map[string]any, string, er
 	hashedPassword, err := helpers.QueryRowField[string]("SELECT password FROM get_user_password($1)", emailOrUsername)
 	if err != nil {
 		log.Println(fmt.Errorf("authServices.go: Signin: hashed Password: get_user_password db error: %s", err))
-		return nil, "", appglobals.ErrInternalServerError
+		return nil, "", helpers.ErrInternalServerError
 	}
 
 	pwd_err := bcrypt.CompareHashAndPassword([]byte(*hashedPassword), []byte(password))
@@ -125,7 +124,7 @@ func Signin(emailOrUsername string, password string) (map[string]any, string, er
 			return nil, "", fmt.Errorf("signin error: incorrect email/username or password")
 		} else {
 			log.Println(fmt.Errorf("authServices.go: Signin: %s", err))
-			return nil, "", appglobals.ErrInternalServerError
+			return nil, "", helpers.ErrInternalServerError
 		}
 	}
 

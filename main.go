@@ -5,7 +5,6 @@ import (
 	"routes/authroutes"
 	"routes/chatroutes"
 	"routes/userroutes"
-	"utils/appglobals"
 	"utils/helpers"
 
 	"github.com/gofiber/contrib/websocket"
@@ -21,7 +20,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	if err := appglobals.InitGCSClient(); err != nil {
+	if err := helpers.InitGCSClient(); err != nil {
 		log.Fatal(err)
 	}
 

@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"utils/appglobals"
 	"utils/apptypes"
 	"utils/helpers"
 
@@ -59,7 +58,7 @@ func CheckEmailVerified(c *websocket.Conn) (any, error) {
 	isVerified, err := helpers.QueryRowField[bool]("SELECT is_verified FROM signup_session_email_verified($1)", sessionData.SessionId)
 	if err != nil {
 		log.Println(fmt.Errorf("middlewares: CheckEmailVerified: isVerified: db error: %s", err))
-		return nil, appglobals.ErrInternalServerError
+		return nil, helpers.ErrInternalServerError
 	}
 
 	if !*isVerified {
