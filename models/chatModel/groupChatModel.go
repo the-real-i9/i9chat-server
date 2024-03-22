@@ -123,22 +123,22 @@ func (gpc GroupChat) SendMessage(senderId int, msgContent map[string]any, create
 	return data, nil
 }
 
-func (gpc GroupChat) BatchUpdateGroupChatMessageDeliveryStatus(receiverId int, status string, delivDatas []*apptypes.GroupChatMsgDeliveryData) (string, error) {
+func (gpc GroupChat) BatchUpdateGroupChatMessageDeliveryStatus(receiverId int, status string, delivDatas []*apptypes.GroupChatMsgDeliveryData) (map[string]any, error) {
 	var sqls = []string{}
 	var params = [][]any{}
 
 	for _, data := range delivDatas {
-		sqls = append(sqls, "SELECT overall_delivery_status FROM update_group_chat_message_delivery_status($1, $2, $3, $4, $5)")
+		sqls = append(sqls, "SELECT json_build_object('ods', overall_delivery_status, 'sb', should_broadcast) FROM update_group_chat_message_delivery_status($1, $2, $3, $4, $5)")
 		params = append(params, []any{gpc.Id, data.MsgId, receiverId, status, data.At})
 	}
 
-	overallDeliveryStatus, err := helpers.BatchQuery[string](sqls, params)
+	result, err := helpers.BatchQuery[map[string]any](sqls, params)
 	if err != nil {
 		log.Println(fmt.Errorf("DMChatModel.go: BatchUpdateGroupChatMessageDeliveryStatus: %s", err))
-		return "", helpers.ErrInternalServerError
+		return nil, helpers.ErrInternalServerError
 	}
 
-	return *overallDeliveryStatus, nil
+	return *result, nil
 
 }
 

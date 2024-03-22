@@ -181,8 +181,28 @@ func (gpc GroupChat) broadcastMessageDeliveryStatusUpdate(clientId int, delivDat
 }
 
 func (gpc GroupChat) BatchUpdateGroupChatMessageDeliveryStatus(receiverId int, status string, delivDatas []*apptypes.GroupChatMsgDeliveryData) {
-	if overallDeliveryStatus, err := (chatmodel.GroupChat{Id: gpc.Id}).BatchUpdateGroupChatMessageDeliveryStatus(receiverId, status, delivDatas); err == nil {
-		go gpc.broadcastMessageDeliveryStatusUpdate(receiverId, delivDatas, overallDeliveryStatus)
+	result, err := (chatmodel.GroupChat{Id: gpc.Id}).BatchUpdateGroupChatMessageDeliveryStatus(receiverId, status, delivDatas)
+	if err != nil {
+		return
+	}
+
+	// The idea is that, the delivery status of a group message changes
+	// if all members have acknowledged the message as "delivered" or "seen",
+	// this is set in the overall_delivery_status, after a certain number of members acknowledges delivery.
+
+	// should_broadcast tells us if we should broadcast the overall_delivery_status
+	// (if it has changed since the last one) or not (if it hasn't changed since the last one)
+	// this saves unnecessary data transfer
+
+	var res struct {
+		Ods string // overall_delivery_status
+		Sb  bool   // should_broadcast
+	}
+
+	helpers.MapToStruct(result, &res)
+
+	if res.Sb {
+		go gpc.broadcastMessageDeliveryStatusUpdate(receiverId, delivDatas, res.Ods)
 	}
 }
 
