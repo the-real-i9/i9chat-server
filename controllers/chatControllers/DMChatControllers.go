@@ -52,21 +52,13 @@ var ActivateDMChatSession = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 
 	helpers.MapToStruct(c.Locals("auth").(map[string]any), &user)
 
-	c.WriteJSON(map[string]string{"msg": "First send the { dmChatId: #id } for this send(), ack() <-> recv_ack() session."})
+	var dmChatId int
 
-	var body struct {
-		DmChatId int
-	}
-
-	r_err := c.ReadJSON(&body)
-	if r_err != nil {
-		log.Println(r_err)
-		return
-	}
+	fmt.Sscanf(c.Query("chat_id"), "%d", &dmChatId)
 
 	var myMailbox = make(chan map[string]any, 3)
 
-	mailboxKey := fmt.Sprintf("user-%d--dmchat-%d", user.UserId, body.DmChatId)
+	mailboxKey := fmt.Sprintf("user-%d--dmchat-%d", user.UserId, dmChatId)
 
 	dcmo := appglobals.DMChatSessionObserver{}
 
@@ -76,12 +68,12 @@ var ActivateDMChatSession = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 		dcmo.Unsubscribe(mailboxKey)
 	}
 
-	go sendDMChatMessages(c, user, body.DmChatId, endSession)
+	go sendDMChatMessages(c, user, dmChatId, endSession)
 
 	/* ---- stream dm chat message events pending dispatch to the channel ---- */
 	// observe that this happens once every new connection
 	// A "What did I miss?" sort of query
-	if event_data_kvps, err := (userservice.User{Id: user.UserId}).GetDMChatMessageEventsPendingDispatch(body.DmChatId); err == nil {
+	if event_data_kvps, err := (userservice.User{Id: user.UserId}).GetDMChatMessageEventsPendingDispatch(dmChatId); err == nil {
 		for _, evk := range event_data_kvps {
 			evk := *evk
 			myMailbox <- evk
@@ -101,18 +93,19 @@ var ActivateDMChatSession = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 func sendDMChatMessages(c *websocket.Conn, user apptypes.JWTUserData, dmChatId int, endSession func()) {
 	// this goroutine sends messages
 	var body struct {
-		MsgContent map[string]any
-		CreatedAt  time.Time
+		Msg map[string]any
+		At  time.Time
 	}
 
 	for {
 		r_err := c.ReadJSON(&body)
 		if r_err != nil {
+			log.Println(r_err)
 			endSession()
 			return
 		}
 
-		data, app_err := chatservice.DMChat{Id: dmChatId}.SendMessage(user.UserId, body.MsgContent, body.CreatedAt)
+		data, app_err := chatservice.DMChat{Id: dmChatId}.SendMessage(user.UserId, body.Msg, body.At)
 
 		var w_err error
 		if app_err != nil {

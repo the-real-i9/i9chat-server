@@ -52,21 +52,13 @@ var ActivateGroupChatSession = helpers.WSHandlerProtected(func(c *websocket.Conn
 
 	helpers.MapToStruct(c.Locals("auth").(map[string]any), &user)
 
-	c.WriteJSON(map[string]string{"msg": "First send the { groupChatId: #id } for this send(), ack() <-> recv_ack() session."})
+	var groupChatId int
 
-	var body struct {
-		GroupChatId int
-	}
-
-	r_err := c.ReadJSON(&body)
-	if r_err != nil {
-		log.Println(r_err)
-		return
-	}
+	fmt.Sscanf(c.Query("chat_id"), "%d", &groupChatId)
 
 	var myMailbox = make(chan map[string]any, 2)
 
-	mailboxKey := fmt.Sprintf("user-%d--groupchat-%d", user.UserId, body.GroupChatId)
+	mailboxKey := fmt.Sprintf("user-%d--groupchat-%d", user.UserId, groupChatId)
 
 	gcso := appglobals.GroupChatSessionObserver{}
 
@@ -76,12 +68,12 @@ var ActivateGroupChatSession = helpers.WSHandlerProtected(func(c *websocket.Conn
 		gcso.Unsubscribe(mailboxKey)
 	}
 
-	go sendGroupChatMessages(c, user, body.GroupChatId, endSession)
+	go sendGroupChatMessages(c, user, groupChatId, endSession)
 
 	/* ---- stream group chat message events pending dispatch to the channel ---- */
 	// observe that this happens once every new connection
 	// A "What did I miss?" sort of query
-	if event_data_kvps, err := (userservice.User{Id: user.UserId}).GetGroupChatMessageEventsPendingDispatch(body.GroupChatId); err == nil {
+	if event_data_kvps, err := (userservice.User{Id: user.UserId}).GetGroupChatMessageEventsPendingDispatch(groupChatId); err == nil {
 		for _, evk := range event_data_kvps {
 			evk := *evk
 			myMailbox <- evk
@@ -101,8 +93,8 @@ var ActivateGroupChatSession = helpers.WSHandlerProtected(func(c *websocket.Conn
 func sendGroupChatMessages(c *websocket.Conn, user apptypes.JWTUserData, groupChatId int, endSession func()) {
 	// this goroutine sends messages
 	var body struct {
-		MsgContent map[string]any
-		CreatedAt  time.Time
+		Msg map[string]any
+		At  time.Time
 	}
 
 	for {
@@ -113,7 +105,7 @@ func sendGroupChatMessages(c *websocket.Conn, user apptypes.JWTUserData, groupCh
 		}
 
 		data, app_err := chatservice.GroupChat{Id: groupChatId}.SendMessage(
-			user.UserId, body.MsgContent, body.CreatedAt,
+			user.UserId, body.Msg, body.At,
 		)
 
 		var w_err error
