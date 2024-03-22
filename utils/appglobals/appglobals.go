@@ -1,28 +1,9 @@
 package appglobals
 
 import (
-	"context"
-	"errors"
-	"os"
-
-	"cloud.google.com/go/storage"
-	"google.golang.org/api/option"
+	"fmt"
+	"utils/helpers"
 )
-
-var ErrInternalServerError = errors.New("internal server error: check logger")
-
-var GCSClient *storage.Client
-
-func InitGCSClient() error {
-	stClient, err := storage.NewClient(context.Background(), option.WithCredentialsFile(os.Getenv("GCS_CRED_FILE")))
-	if err != nil {
-		return err
-	}
-
-	GCSClient = stClient
-
-	return nil
-}
 
 type Observer interface {
 	Subscribe(key string, mailbox chan<- map[string]any)
@@ -30,41 +11,98 @@ type Observer interface {
 	Send(key string, data map[string]any, event string)
 }
 
-var chatObserver = make(map[string]chan<- map[string]any)
+// New Observers
+// DMChatObserver - Events: ("new chat" | "new message"). dmChatId: (n)
+// GroupChatObserver - Events: ("new chat" | "new message" | "new activity"). groupChatId: (n)
+// DMChatActiveSessionObserver - Events: ("message update"). dmChatId: (n)
+// GroupChatSessionObserver - Events: ("message update"). groupChatId: (n)
 
-type ChatObserver struct{}
+var dmChatObserver = make(map[string]chan<- map[string]any)
 
-func (ChatObserver) Subscribe(key string, mailbox chan<- map[string]any) {
-	chatObserver[key] = mailbox
+type DMChatObserver struct{}
+
+func (DMChatObserver) Subscribe(key string, mailbox chan<- map[string]any) {
+	dmChatObserver[key] = mailbox
 }
 
-func (ChatObserver) Unsubscribe(key string) {
-	close(chatObserver[key])
-	delete(chatObserver, key)
+func (DMChatObserver) Unsubscribe(key string) {
+	close(dmChatObserver[key])
+	delete(dmChatObserver, key)
 }
 
-func (ChatObserver) Send(key string, data map[string]any, event string) { // call in a new goroutine
-	if mailbox, found := chatObserver[key]; found {
+func (DMChatObserver) Send(key string, data map[string]any, event string) { // call in a new goroutine
+	if mailbox, found := dmChatObserver[key]; found {
 		mailbox <- map[string]any{"event": event, "data": data}
+	} else {
+		var userId int
+		fmt.Sscanf(key, "user-%d", &userId)
+
+		go helpers.QueryRowField[bool](`
+			INSERT INTO dm_chat_event_pending_dispatch (user_id, event, data) 
+			VALUES ($1, $2, $3) 
+			RETURNING true
+		`, userId, event, data)
+
 	}
 }
 
-var dMChatMessageObserver = make(map[string]chan<- map[string]any)
+var groupChatObserver = make(map[string]chan<- map[string]any)
 
-type DMChatMessageObserver struct{}
+type GroupChatObserver struct{}
 
-func (DMChatMessageObserver) Subscribe(key string, mailbox chan<- map[string]any) {
-	dMChatMessageObserver[key] = mailbox
+func (GroupChatObserver) Subscribe(key string, mailbox chan<- map[string]any) {
+	groupChatObserver[key] = mailbox
 }
 
-func (DMChatMessageObserver) Unsubscribe(key string) {
-	close(dMChatMessageObserver[key])
-	delete(dMChatMessageObserver, key)
+func (GroupChatObserver) Unsubscribe(key string) {
+	close(groupChatObserver[key])
+	delete(groupChatObserver, key)
 }
 
-func (DMChatMessageObserver) Send(key string, data map[string]any, event string) { // call in a new goroutine
-	if mailbox, found := dMChatMessageObserver[key]; found {
+func (GroupChatObserver) Send(key string, data map[string]any, event string) { // call in a new goroutine
+	if mailbox, found := groupChatObserver[key]; found {
 		mailbox <- map[string]any{"event": event, "data": data}
+	} else {
+		var userId int
+		fmt.Sscanf(key, "user-%d", &userId)
+
+		go helpers.QueryRowField[bool](`
+			INSERT INTO group_chat_event_pending_dispatch (user_id, event, data) 
+			VALUES ($1, $2, $3) 
+			RETURNING true
+		`, userId, event, data)
+	}
+}
+
+var dMChatSessionObserver = make(map[string]chan<- map[string]any)
+
+type DMChatSessionObserver struct{}
+
+func (DMChatSessionObserver) Subscribe(key string, mailbox chan<- map[string]any) {
+	dMChatSessionObserver[key] = mailbox
+}
+
+func (DMChatSessionObserver) Unsubscribe(key string) {
+	close(dMChatSessionObserver[key])
+	delete(dMChatSessionObserver, key)
+}
+
+func (DMChatSessionObserver) Send(key string, data map[string]any, event string) { // call in a new goroutine
+	if mailbox, found := dMChatSessionObserver[key]; found {
+		mailbox <- map[string]any{"event": event, "data": data}
+	} else {
+		var (
+			userId   int
+			dmChatId int
+		)
+
+		fmt.Sscanf(key, "user-%d--dmchat-%d", &userId, &dmChatId)
+
+		go helpers.QueryRowField[bool](`
+			INSERT INTO dm_chat_message_event_pending_dispatch (user_id, dm_chat_id, event, data) 
+			VALUES ($1, $2, $3, $4) 
+			RETURNING true
+		`, userId, dmChatId, event, data)
 	}
 }
 
@@ -84,24 +122,18 @@ func (GroupChatSessionObserver) Unsubscribe(key string) {
 func (GroupChatSessionObserver) Send(key string, data map[string]any, event string) { // call in a new goroutine
 	if mailbox, found := groupChatSessionObserver[key]; found {
 		mailbox <- map[string]any{"event": event, "data": data}
+	} else {
+		var (
+			userId      int
+			groupChatId int
+		)
+
+		fmt.Sscanf(key, "user-%d--groupchat-%d", &userId, &groupChatId)
+
+		go helpers.QueryRowField[bool](`
+			INSERT INTO group_chat_message_event_pending_dispatch (user_id, group_chat_id, event, data) 
+			VALUES ($1, $2, $3, $4) 
+			RETURNING true
+		`, userId, groupChatId, event, data)
 	}
 }
-
-/* var groupChatActivityObserver = make(map[string]chan<- map[string]any)
-
-type GroupChatActivityObserver struct{}
-
-func (GroupChatActivityObserver) Subscribe(key string, mailbox chan<- map[string]any) {
-	groupChatActivityObserver[key] = mailbox
-}
-
-func (GroupChatActivityObserver) Unsubscribe(key string) {
-	close(groupChatActivityObserver[key])
-	delete(groupChatActivityObserver, key)
-}
-
-func (GroupChatActivityObserver) Log(key string, data map[string]any) { // call in a new goroutine
-	if mailbox, found := groupChatActivityObserver[key]; found {
-		mailbox <- data
-	}
-} */

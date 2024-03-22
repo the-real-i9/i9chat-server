@@ -8,10 +8,5 @@ import (
 
 func InitGroupChat(router fiber.Router) {
 	router.Get("/chat_history", chatcontrollers.GetGroupChatHistory)
-	// router.Get("/watch_message", chatcontrollers.WatchGroupChatMessage)
-	// router.Get("/send_message", chatcontrollers.SendGroupChatMessage)
-	// router.Get("/watch_activity", chatcontrollers.WatchGroupActivity)
-	// router.Get("/batch_update_message_delivery_status", chatcontrollers.BatchUpdateGroupChatMessageDeliveryStatus)
-	router.Get("/init_group_chat_session", chatcontrollers.InitGroupChatSession)
-	router.Get("perform_group_operation", chatcontrollers.PerformGroupOperation)
+	router.Get("/activate_chat_session", chatcontrollers.ActivateGroupChatSession)
 }

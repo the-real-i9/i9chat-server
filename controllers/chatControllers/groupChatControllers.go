@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"services/chatservice"
+	"services/userservice"
 	"time"
 	"utils/appglobals"
 	"utils/apptypes"
@@ -44,88 +45,14 @@ var GetGroupChatHistory = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 	}
 })
 
-func handleGroupChatMessageSendingAndAcknowledgement(c *websocket.Conn, user apptypes.JWTUserData, groupChatId int, endSession func()) {
-	var body struct {
-		Action string
-		Data   map[string]any
-	}
-
-	var msgBody struct {
-		MsgContent map[string]any
-		CreatedAt  time.Time
-	}
-
-	var ackBody struct {
-		Status   string
-		MsgDatas []*apptypes.GroupChatMsgDeliveryData
-	}
-
-	for {
-		r_err := c.ReadJSON(&body)
-		if r_err != nil {
-			log.Println(r_err)
-			return
-		}
-
-		handleMessaging := func() error {
-			helpers.MapToStruct(body.Data, &msgBody)
-
-			data, app_err := chatservice.GroupChat{Id: groupChatId}.SendMessage(
-				user.UserId, msgBody.MsgContent, msgBody.CreatedAt,
-			)
-
-			var w_err error
-			if app_err != nil {
-				w_err = c.WriteJSON(helpers.AppError(fiber.StatusUnprocessableEntity, app_err))
-			} else {
-				w_err = c.WriteJSON(data)
-			}
-
-			if w_err != nil {
-				return w_err
-			}
-
-			return nil
-		}
-
-		/* The client application by itself sends acknowledgement, not the user.
-		Each received message doesn't have to be acknowledge as soon as it is received.
-		You can wait for more messages so they all can be acknowledged in batches.
-		Considering it's not a two person communication
-		*/
-		handleAcknowledgement := func() {
-			helpers.MapToStruct(body.Data, &ackBody)
-
-			go chatservice.GroupChat{Id: groupChatId}.BatchUpdateGroupChatMessageDeliveryStatus(user.UserId, ackBody.Status, ackBody.MsgDatas)
-		}
-
-		if body.Action == "messaging" {
-			if err := handleMessaging(); err != nil {
-				log.Println(err)
-				endSession()
-				return
-			}
-		} else if body.Action == "acknowledgement" {
-			handleAcknowledgement()
-		} else {
-			w_err := c.WriteJSON(helpers.AppError(fiber.StatusUnprocessableEntity, fmt.Errorf("invalid 'action' value. should be 'messaging' for sending messages, or 'acknowledgement' for acknowledging received messages")))
-			if w_err != nil {
-				endSession()
-				return
-			}
-		}
-	}
-}
-
-var InitGroupChatSession = helpers.WSHandlerProtected(func(c *websocket.Conn) {
-	// This acts like a pipe handling send(), receive(), and acknowledgement()
-	// New message, Message update, and New activity event will be received in this session
-	// Only New message is acknowledged.
+var ActivateGroupChatSession = helpers.WSHandlerProtected(func(c *websocket.Conn) {
+	// this goroutine receives message acknowlegement for sent messages
+	// and in turn changes the delivery status of messages sent by the child goroutine
 	var user apptypes.JWTUserData
 
 	helpers.MapToStruct(c.Locals("auth").(map[string]any), &user)
 
-	c.WriteJSON(map[string]string{"msg": "First send the { groupChatId: #id } for this send() <-> receive() session."})
+	c.WriteJSON(map[string]string{"msg": "First send the { groupChatId: #id } for this send(), ack() <-> recv_ack() session."})
 
 	var body struct {
 		GroupChatId int
@@ -149,7 +76,17 @@ var InitGroupChatSession = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 		gcso.Unsubscribe(mailboxKey)
 	}
 
-	go handleGroupChatMessageSendingAndAcknowledgement(c, user, body.GroupChatId, endSession)
+	go sendGroupChatMessages(c, user, body.GroupChatId, endSession)
+
+	/* ---- stream group chat message events pending dispatch to the channel ---- */
+	// observe that this happens once every new connection
+	// A "What did I miss?" sort of query
+	if event_data_kvps, err := (userservice.User{Id: user.UserId}).GetGroupChatMessageEventsPendingDispatch(body.GroupChatId); err == nil {
+		for _, evk := range event_data_kvps {
+			evk := *evk
+			myMailbox <- evk
+		}
+	}
 
 	for data := range myMailbox {
 		w_err := c.WriteJSON(data)
@@ -161,56 +98,11 @@ var InitGroupChatSession = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 	}
 })
 
-/*
-var WatchGroupChatMessage = helpers.WSHandlerProtected(func(c *websocket.Conn) {
-	var user apptypes.JWTUserData
-
-	helpers.MapToStruct(c.Locals("auth").(map[string]any), &user)
-
-	c.WriteJSON(map[string]string{"msg": "Enter the {groupChatId: {id}} to start watching. Any message after this closes the connection."})
-
+func sendGroupChatMessages(c *websocket.Conn, user apptypes.JWTUserData, groupChatId int, endSession func()) {
+	// this goroutine sends messages
 	var body struct {
-		GroupChatId int
-	}
-
-	r_err := c.ReadJSON(&body)
-	if r_err != nil {
-		log.Println(r_err)
-		return
-	}
-
-	var myMailbox = make(chan map[string]any, 2)
-
-	mailboxKey := fmt.Sprintf("user-%d--groupchat-%d", user.UserId, body.GroupChatId)
-
-	gcmo := appglobals.GroupChatMessageObserver{}
-
-	gcmo.Subscribe(mailboxKey, myMailbox)
-
-	go func() {
-		c.ReadMessage()
-		gcmo.Unsubscribe(mailboxKey)
-	}()
-
-	for data := range myMailbox {
-		w_err := c.WriteJSON(data)
-		if w_err != nil {
-			log.Println(w_err)
-			gcmo.Unsubscribe(mailboxKey)
-			return
-		}
-	}
-})
-
-var SendGroupChatMessage = helpers.WSHandlerProtected(func(c *websocket.Conn) {
-	var user apptypes.JWTUserData
-
-	helpers.MapToStruct(c.Locals("auth").(map[string]any), &user)
-
-	var body struct {
-		GroupChatId int
-		MsgContent  map[string]any
-		CreatedAt   time.Time
+		MsgContent map[string]any
+		CreatedAt  time.Time
 	}
 
 	for {
@@ -220,7 +112,7 @@ var SendGroupChatMessage = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 			return
 		}
 
-		data, app_err := chatservice.GroupChat{Id: body.GroupChatId}.SendMessage(
+		data, app_err := chatservice.GroupChat{Id: groupChatId}.SendMessage(
 			user.UserId, body.MsgContent, body.CreatedAt,
 		)
 
@@ -233,73 +125,11 @@ var SendGroupChatMessage = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 
 		if w_err != nil {
 			log.Println(w_err)
+			endSession()
 			return
 		}
 	}
-})
-
-var BatchUpdateGroupChatMessageDeliveryStatus = helpers.WSHandlerProtected(func(c *websocket.Conn) {
-	var user apptypes.JWTUserData
-
-	helpers.MapToStruct(c.Locals("auth").(map[string]any), &user)
-
-	for {
-		var body struct {
-			GroupChatId int
-			Status      string
-			MsgDatas    []*apptypes.GroupChatMsgDeliveryData
-		}
-
-		r_err := c.ReadJSON(&body)
-		if r_err != nil {
-			log.Println(r_err)
-			break
-		}
-
-		go chatservice.GroupChat{Id: body.GroupChatId}.BatchUpdateGroupChatMessageDeliveryStatus(user.UserId, body.Status, body.MsgDatas)
-
-	}
-})
-
-var WatchGroupActivity = helpers.WSHandlerProtected(func(c *websocket.Conn) {
-	var user apptypes.JWTUserData
-
-	helpers.MapToStruct(c.Locals("auth").(map[string]any), &user)
-
-	c.WriteJSON(map[string]string{"msg": "Enter the {groupChatId: {id}} to start watching. Any message after this closes the connection."})
-
-	var body struct {
-		GroupChatId int
-	}
-
-	r_err := c.ReadJSON(&body)
-	if r_err != nil {
-		log.Println(r_err)
-		return
-	}
-
-	var myMailbox = make(chan map[string]any, 2)
-
-	mailboxKey := fmt.Sprintf("user-%d--groupchat-%d", user.UserId, body.GroupChatId)
-
-	gcao := appglobals.GroupChatActivityObserver{}
-
-	gcao.Subscribe(mailboxKey, myMailbox)
-
-	go func() {
-		c.ReadMessage()
-		gcao.Unsubscribe(mailboxKey)
-	}()
-
-	for data := range myMailbox {
-		w_err := c.WriteJSON(data)
-		if w_err != nil {
-			log.Println(w_err)
-			gcao.Unsubscribe(mailboxKey)
-			return
-		}
-	}
-}) */
+}
 
 var PerformGroupOperation = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 	var user apptypes.JWTUserData

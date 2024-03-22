@@ -12,7 +12,7 @@ import (
 func broadcastNewGroup(initUsers [][]string, newGroupData map[string]any) {
 	for _, newMember := range initUsers[1:] { // the first user is the creator, hence, they're excluded
 		newMemberId := newMember[0]
-		go appglobals.ChatObserver{}.Send(fmt.Sprintf("user-%s", newMemberId), newGroupData, "new chat")
+		go appglobals.GroupChatObserver{}.Send(fmt.Sprintf("user-%s", newMemberId), newGroupData, "new chat")
 	}
 }
 
@@ -70,7 +70,7 @@ func (gpc GroupChat) broadcastActivity(modelResp map[string]any) {
 	helpers.MapToStruct(modelResp, &respData)
 
 	for _, mId := range respData.MemberIds {
-		go appglobals.GroupChatSessionObserver{}.Send(fmt.Sprintf("user-%d--groupchat-%d", mId, gpc.Id), respData.ActivityData, "new activity")
+		go appglobals.GroupChatObserver{}.Send(fmt.Sprintf("user-%d", mId), respData.ActivityData, "new activity")
 	}
 }
 
@@ -136,7 +136,7 @@ func (gpc GroupChat) RemoveUserFromAdmins(admin []string, user []string) {
 func (gpc GroupChat) broadcastMessage(memberIds []int, msgData map[string]any) {
 	for _, mId := range memberIds {
 		memberId := mId
-		go appglobals.GroupChatSessionObserver{}.Send(fmt.Sprintf("user-%d--groupchat-%d", memberId, gpc.Id), msgData, "new message")
+		go appglobals.GroupChatObserver{}.Send(fmt.Sprintf("user-%d", memberId), msgData, "new message")
 	}
 }
 
@@ -170,7 +170,7 @@ func (gpc GroupChat) broadcastMessageDeliveryStatusUpdate(clientId int, delivDat
 			mId := *mId
 			for _, data := range delivDatas {
 				msgId := data.MsgId
-				go appglobals.DMChatMessageObserver{}.Send(
+				go appglobals.DMChatSessionObserver{}.Send(
 					fmt.Sprintf("user-%d--groupchat-%d", mId, gpc.Id),
 					map[string]any{"msgId": msgId, "key": "delivery_status", "value": status},
 					"message update",
