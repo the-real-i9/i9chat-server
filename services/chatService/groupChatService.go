@@ -43,7 +43,7 @@ func NewGroupChat(name string, description string, picture []byte, creator []str
 		Nmrd map[string]any
 	}
 
-	helpers.MapToStruct(data, &respData)
+	helpers.ParseToStruct(data, &respData)
 
 	go func() {
 		groupChatId := respData.Crd["new_group_chat_id"].(int)
@@ -67,7 +67,7 @@ func (gpc GroupChat) broadcastActivity(modelResp map[string]any) {
 		ActivityData map[string]any
 	}
 
-	helpers.MapToStruct(modelResp, &respData)
+	helpers.ParseToStruct(modelResp, &respData)
 
 	for _, mId := range respData.MemberIds {
 		go appglobals.GroupChatObserver{}.Send(fmt.Sprintf("user-%d", mId), respData.ActivityData, "new activity")
@@ -152,7 +152,7 @@ func (gpc GroupChat) SendMessage(senderId int, msgContent map[string]any, create
 		return nil, err
 	}
 
-	helpers.MapToStruct(data, &respData)
+	helpers.ParseToStruct(data, &respData)
 
 	go gpc.broadcastMessage(respData.MemberIds, respData.Mrd)
 
@@ -199,7 +199,7 @@ func (gpc GroupChat) BatchUpdateGroupChatMessageDeliveryStatus(receiverId int, s
 		Sb  bool   // should_broadcast
 	}
 
-	helpers.MapToStruct(result, &res)
+	helpers.ParseToStruct(result, &res)
 
 	if res.Sb {
 		go gpc.broadcastMessageDeliveryStatusUpdate(receiverId, delivDatas, res.Ods)

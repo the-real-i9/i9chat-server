@@ -89,7 +89,7 @@ func RegisterUser(sessionId string, email string, username string, password stri
 		Username string
 	}
 
-	helpers.MapToStruct(userData, &user)
+	helpers.ParseToStruct(userData, &user)
 
 	// sign a jwt token
 	jwtToken := helpers.JwtSign(map[string]any{
@@ -133,7 +133,7 @@ func Signin(emailOrUsername string, password string) (map[string]any, string, er
 		Username string
 	}
 
-	helpers.MapToStruct(userData, &user)
+	helpers.ParseToStruct(userData, &user)
 
 	jwtToken := helpers.JwtSign(map[string]any{
 		"userId":   user.Id,

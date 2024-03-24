@@ -29,7 +29,7 @@ func CheckAccountRequested(c *websocket.Conn) (any, error) {
 
 	var sessionData apptypes.SignupSessionData
 
-	helpers.MapToStruct(sessData, &sessionData)
+	helpers.ParseToStruct(sessData, &sessionData)
 
 	return sessionData, nil
 }
@@ -53,7 +53,7 @@ func CheckEmailVerified(c *websocket.Conn) (any, error) {
 
 	var sessionData apptypes.SignupSessionData
 
-	helpers.MapToStruct(sessData, &sessionData)
+	helpers.ParseToStruct(sessData, &sessionData)
 
 	isVerified, err := helpers.QueryRowField[bool]("SELECT is_verified FROM signup_session_email_verified($1)", sessionData.SessionId)
 	if err != nil {

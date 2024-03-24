@@ -3,6 +3,7 @@ package chatcontrollers
 import (
 	"fmt"
 	"log"
+	"services/appservices"
 	"services/chatservice"
 	"services/userservice"
 	"time"
@@ -17,7 +18,7 @@ import (
 var GetDMChatHistory = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 	var user apptypes.JWTUserData
 
-	helpers.MapToStruct(c.Locals("auth").(map[string]any), &user)
+	helpers.ParseToStruct(c.Locals("auth").(map[string]any), &user)
 
 	var body struct {
 		DmChatId int
@@ -50,7 +51,7 @@ var ActivateDMChatSession = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 	// and in turn changes the delivery status of messages sent by the child goroutine
 	var user apptypes.JWTUserData
 
-	helpers.MapToStruct(c.Locals("auth").(map[string]any), &user)
+	helpers.ParseToStruct(c.Locals("auth").(map[string]any), &user)
 
 	var dmChatId int
 
@@ -105,7 +106,11 @@ func sendDMChatMessages(c *websocket.Conn, user apptypes.JWTUserData, dmChatId i
 			return
 		}
 
-		data, app_err := chatservice.DMChat{Id: dmChatId}.SendMessage(user.UserId, body.Msg, body.At)
+		data, app_err := chatservice.DMChat{Id: dmChatId}.SendMessage(
+			user.UserId,
+			appservices.MessageBinaryToUrl(user.UserId, body.Msg),
+			body.At,
+		)
 
 		var w_err error
 		if app_err != nil {

@@ -52,8 +52,8 @@ func InitGCSClient() error {
 	return nil
 }
 
-func MapToStruct(mapData map[string]any, structData any) {
-	bt, _ := json.Marshal(mapData)
+func ParseToStruct(val any, structData any) {
+	bt, _ := json.Marshal(val)
 
 	json.Unmarshal(bt, structData)
 }

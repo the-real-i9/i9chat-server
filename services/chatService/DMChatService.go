@@ -20,7 +20,7 @@ func NewDMChat(initiatorId int, partnerId int, initMsgContent map[string]any, cr
 		return nil, err
 	}
 
-	helpers.MapToStruct(data, &respData)
+	helpers.ParseToStruct(data, &respData)
 
 	go appglobals.DMChatObserver{}.Send(fmt.Sprintf("user-%d", partnerId), respData.Prd, "new chat")
 
@@ -58,7 +58,7 @@ func (dmc DMChat) SendMessage(senderId int, msgContent map[string]any, createdAt
 		return nil, err
 	}
 
-	helpers.MapToStruct(data, &respData)
+	helpers.ParseToStruct(data, &respData)
 
 	go appglobals.DMChatObserver{}.Send(
 		fmt.Sprintf("user-%d", respData.ReceiverId), respData.Rrd, "new message",

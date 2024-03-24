@@ -1,28 +1,6 @@
 # Progress
-### Improvement thoughts
-- Messages than couldn't be delivered to target channels, due to their inactive stream/session, should be stored in the database.
-- An open stream (one each for dm and group) that:
-  - Streams unread messages on "open", acknowledges each, and deleted their entry in the unread messages table
-  - Receives new messages and acknowledges them accordingly. 
-    - For inactive chats, the acknwoledgement is "delivered", while it's "seen" for an active chat
-  - This stream also handles the receival of new chats:
-    - The init message of DM chats are acknowledged ASAP
-  - EXP: The group stream should also stream activities, but won't acknowledge them
-> On the client side, each received message is handled accordingly, for inactive chats, "unread messages count" is updated and for an active chat, new messages are appended in the chat session. For group stream, activity stream only has effect in active group chat session.
-
-- Another open stream that, sends messages and receive updates (delivery status, edits) to messages
-
----
-
-### Nearby Users
-- Store locations as `circle` geometric type, (long, lat), radius
-- The radius is the default radius of your choosing
-- To check if a locationB is contained within locationA
-- Convert locationB to a point, and test
-```sql
-point_b = point(circleB)
-circleA @> point_b
-```
+- Implement the sending of different message types
+- 
 
 ---
 
