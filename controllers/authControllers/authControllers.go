@@ -31,7 +31,12 @@ var RequestNewAccount = websocket.New(func(c *websocket.Conn) {
 		if app_err != nil {
 			w_err = c.WriteJSON(helpers.AppError(fiber.StatusUnprocessableEntity, app_err))
 		} else {
-			w_err = c.WriteJSON(map[string]any{"code": fiber.StatusOK, "signup_session_jwt": jwtToken})
+			w_err = c.WriteJSON(map[string]any{
+				"statusCode": fiber.StatusOK, 
+				"body": map[string]any{
+					"signup_session_jwt": jwtToken,
+				},
+			})
 		}
 
 		if w_err != nil {
@@ -72,7 +77,12 @@ var VerifyEmail = websocket.New(func(c *websocket.Conn) {
 		if app_err != nil {
 			w_err = c.WriteJSON(helpers.AppError(fiber.StatusUnprocessableEntity, app_err))
 		} else {
-			w_err = c.WriteJSON(map[string]any{"code": fiber.StatusOK, "msg": fmt.Sprintf("Your email '%s' has been verified!", sessionData.Email)})
+			w_err = c.WriteJSON(map[string]any{
+				"statusCode": fiber.StatusOK, 
+				"body": map[string]any{
+					"msg": fmt.Sprintf("Your email '%s' has been verified!", sessionData.Email),
+				},
+			})
 		}
 
 		if w_err != nil {
@@ -114,7 +124,14 @@ var RegisterUser = websocket.New(func(c *websocket.Conn) {
 		if app_err != nil {
 			w_err = c.WriteJSON(helpers.AppError(fiber.StatusUnprocessableEntity, app_err))
 		} else {
-			w_err = c.WriteJSON(map[string]any{"code": fiber.StatusOK, "msg": "Signup success!", "user": userData, "jwtToken": jwtToken})
+			w_err = c.WriteJSON(map[string]any{
+				"statusCode": fiber.StatusOK, 
+				"body": map[string]any{
+					"msg": "Signup success!", 
+					"user": userData,
+					"jwtToken": jwtToken,
+				},
+			})
 		}
 
 		if w_err != nil {
@@ -144,7 +161,14 @@ var Signin = websocket.New(func(c *websocket.Conn) {
 		if app_err != nil {
 			w_err = c.WriteJSON(helpers.AppError(fiber.StatusUnprocessableEntity, app_err))
 		} else {
-			w_err = c.WriteJSON(map[string]any{"code": fiber.StatusOK, "msg": "Signin success!", "user": userData, "jwtToken": jwtToken})
+			w_err = c.WriteJSON(map[string]any{
+				"statusCode": fiber.StatusOK, 
+				"body": map[string]any{
+					"msg": "Signin success!", 
+					"user": userData, 
+					"jwtToken": jwtToken,
+				},
+			})
 		}
 
 		if w_err != nil {

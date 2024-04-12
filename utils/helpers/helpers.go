@@ -42,7 +42,7 @@ func LoadEnv() error {
 var GCSClient *storage.Client
 
 func InitGCSClient() error {
-	stClient, err := storage.NewClient(context.Background(), option.WithCredentialsFile(os.Getenv("GCS_CRED_FILE")))
+	stClient, err := storage.NewClient(context.Background(), option.WithCredentialsFile("i9apps-storage.json"))
 	if err != nil {
 		return err
 	}
@@ -60,10 +60,10 @@ func ParseToStruct(val any, structData any) {
 
 func AppError(code int, err error) map[string]any {
 	if errors.Is(err, ErrInternalServerError) {
-		return map[string]any{"code": 500, "error": ErrInternalServerError.Error()}
+		return map[string]any{"statusCode": 500, "error": ErrInternalServerError.Error()}
 	}
 
-	return map[string]any{"code": code, "error": err.Error()}
+	return map[string]any{"statusCode": code, "error": err.Error()}
 }
 
 func UploadFile(filePath string, data []byte) (string, error) {

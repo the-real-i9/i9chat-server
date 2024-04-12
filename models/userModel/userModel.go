@@ -55,20 +55,31 @@ func SearchUser(clientId int, searchQuery string) ([]map[string]any, error) {
 	return matchUsers, nil
 }
 
-func GetMyChats(clientId int) ([]*map[string]any, error) {
+func GetAllUsers(clientId int) ([]*map[string]any, error) {
 
-	myChats, err := helpers.QueryRowsField[map[string]any]("SELECT chat FROM get_my_chats($1)", clientId)
+	allUsers, err := helpers.QueryRowsField[map[string]any]("SELECT * FROM get_all_users($1)", clientId)
 
 	if err != nil {
-		log.Println(fmt.Errorf("userModel.go: GetMyChats: %s", err))
+		log.Println(fmt.Errorf("userModel.go: GetAllUsers: %s", err))
 		return nil, helpers.ErrInternalServerError
 	}
 
-	return myChats, nil
+	return allUsers, nil
 }
 
 type User struct {
 	Id int
+}
+
+func (user User) GetMyChats() ([]*map[string]any, error) {
+	myChats, err := helpers.QueryRowsField[map[string]any]("SELECT chat FROM get_my_chats($1)", user.Id)
+
+	if err != nil {
+		log.Println(fmt.Errorf("userModel.go: User_GetMyChats: %s", err))
+		return nil, helpers.ErrInternalServerError
+	}
+
+	return myChats, nil
 }
 
 func (user User) Edit(fieldValuePair [][]string) (map[string]any, error) {

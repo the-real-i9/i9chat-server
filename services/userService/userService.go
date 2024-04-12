@@ -12,8 +12,12 @@ type User struct {
 	Id int
 }
 
+func (user User) GetAllUsers() ([]*map[string]any, error) {
+	return usermodel.GetAllUsers(user.Id)
+}
+
 func (user User) GetMyChats() ([]*map[string]any, error) {
-	return usermodel.GetMyChats(user.Id)
+	return usermodel.User{Id: user.Id}.GetMyChats()
 }
 
 func (user User) ChangeProfilePicture(picture []byte) error {

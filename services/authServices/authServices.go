@@ -123,7 +123,7 @@ func Signin(emailOrUsername string, password string) (map[string]any, string, er
 		if errors.Is(pwd_err, bcrypt.ErrMismatchedHashAndPassword) {
 			return nil, "", fmt.Errorf("signin error: incorrect email/username or password")
 		} else {
-			log.Println(fmt.Errorf("authServices.go: Signin: %s", err))
+			log.Println(fmt.Errorf("authServices.go: Signin: %s", pwd_err))
 			return nil, "", helpers.ErrInternalServerError
 		}
 	}

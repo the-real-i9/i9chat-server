@@ -324,3 +324,33 @@ var GetMyChats = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 		return
 	}
 })
+
+var GetAllUsers = helpers.WSHandlerProtected(func(c *websocket.Conn) {
+	var user apptypes.JWTUserData
+
+	helpers.ParseToStruct(c.Locals("auth").(map[string]any), &user)
+
+	allUsers, app_err := userservice.User{Id: user.UserId}.GetAllUsers()
+
+	var w_err error
+	if app_err != nil {
+		w_err = c.WriteJSON(map[string]any{
+			"statusCode": 200,
+			"body": map[string]any{
+				"all_users": make([]any, 0),
+			},
+		})
+	} else {
+		w_err = c.WriteJSON(map[string]any{
+			"statusCode": 200,
+			"body": map[string]any{
+				"all_users": allUsers,
+			},
+		})
+	}
+
+	if w_err != nil {
+		log.Println(w_err)
+		return
+	}
+})
