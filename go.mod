@@ -5,8 +5,8 @@ go 1.22.0
 require (
 	github.com/gofiber/contrib/websocket v1.3.0
 	github.com/gofiber/fiber/v2 v2.52.2
-gopkg.in/gomail.v2 v2.0.0-20160411212932-81ebce5c23df
-cloud.google.com/go/storage v1.39.1
+	gopkg.in/gomail.v2 v2.0.0-20160411212932-81ebce5c23df
+	cloud.google.com/go/storage v1.39.1
 	github.com/gofiber/contrib/websocket v1.3.0
 	github.com/gofiber/fiber/v2 v2.52.2
 	github.com/jackc/pgx/v5 v5.5.4
@@ -14,7 +14,7 @@ cloud.google.com/go/storage v1.39.1
 )
 
 require (
-cloud.google.com/go v0.112.1 // indirect
+	cloud.google.com/go v0.112.1 // indirect
 	cloud.google.com/go/compute v1.24.0 // indirect
 	cloud.google.com/go/compute/metadata v0.2.3 // indirect
 	cloud.google.com/go/iam v1.1.6 // indirect
@@ -60,7 +60,7 @@ cloud.google.com/go v0.112.1 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20240228224816-df926f6c8641 // indirect
 	google.golang.org/grpc v1.62.0 // indirect
 	google.golang.org/protobuf v1.32.0 // indirect
-gopkg.in/alexcesaro/quotedprintable.v3 v3.0.0-20150716171945-2caba252f4dc // indirect
+	gopkg.in/alexcesaro/quotedprintable.v3 v3.0.0-20150716171945-2caba252f4dc // indirect
 	github.com/andybalholm/brotli v1.1.0 // indirect
 	github.com/fasthttp/websocket v1.5.7 // indirect
 	github.com/google/uuid v1.6.0 // indirect
