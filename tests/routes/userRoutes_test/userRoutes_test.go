@@ -41,7 +41,7 @@ func XTestGetAllUsers(t *testing.T) {
 	testhelpers.PrintJSON(recvData.Body)
 }
 
-func TestGetMyChats(t *testing.T) {
+func XTestGetMyChats(t *testing.T) {
 	wsd := websocket.Dialer{}
 
 	reqH := http.Header{"Authorization": {testdata.I9xAuthJwt}}

@@ -46,7 +46,7 @@ var GetDMChatHistory = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 })
 
 var ActivateDMChatSession = helpers.WSHandlerProtected(func(c *websocket.Conn) {
-	// this goroutine receives message acknowlegement for sent messages
+	// this handler receives message acknowlegement for sent messages
 	// and in turn changes the delivery status of messages sent by the child goroutine
 	var user appTypes.JWTUserData
 
@@ -60,12 +60,12 @@ var ActivateDMChatSession = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 
 	mailboxKey := fmt.Sprintf("user-%d--dmchat-%d", user.UserId, dmChatId)
 
-	dcmo := appGlobals.DMChatSessionObserver{}
+	dcso := appGlobals.DMChatSessionObserver{}
 
-	dcmo.Subscribe(mailboxKey, myMailbox)
+	dcso.Subscribe(mailboxKey, myMailbox)
 
 	endSession := func() {
-		dcmo.Unsubscribe(mailboxKey)
+		dcso.Unsubscribe(mailboxKey)
 	}
 
 	go sendDMChatMessages(c, user, dmChatId, endSession)

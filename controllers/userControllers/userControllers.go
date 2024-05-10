@@ -47,7 +47,7 @@ var ChangeProfilePicture = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 
 // This handler:
 //
-// 1. As soon as connection is restored (client online), streams all new dm messages and/or new dm chats pending receipt (while client offline) to the client, and keeps the connection open to send new ones.
+// 1. As soon as connection is restored (client online), streams all new dm chats pending receipt (while client offline) to the client, and keeps the connection open to send new ones.
 //
 // 2. Enables the client to: "initiate a new dm chat" and "acknowledge received dm messages"
 var InitDMChatStream = helpers.WSHandlerProtected(func(c *websocket.Conn) {
@@ -201,7 +201,7 @@ func createNewDMChatAndAckMessages(c *websocket.Conn, user appTypes.JWTUserData,
 
 // This handler:
 //
-// 1. As soon as connection is restored (client online), streams all new group messages and/or new group chats pending receipt (while client offline) to the client, and keeps the connection open to send new ones.
+// 1. As soon as connection is restored (client online), streams all new group chats pending receipt (while client offline) to the client, and keeps the connection open to send new ones.
 //
 // 2. Enables the client to: "initiate a new group chat" and "acknowledge received group messages"
 var InitGroupChatStream = helpers.WSHandlerProtected(func(c *websocket.Conn) {
