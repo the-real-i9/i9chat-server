@@ -55,9 +55,9 @@ func SearchUser(clientId int, searchQuery string) ([]map[string]any, error) {
 	return matchUsers, nil
 }
 
-func GetAllUsers(clientId int) ([]*map[string]any, error) {
+func GetAllUsers(clientId int) ([]map[string]any, error) {
 
-	allUsers, err := helpers.QueryRowsField[map[string]any]("SELECT * FROM get_all_users($1)", clientId)
+	allUsers, err := helpers.QueryRowsFields("SELECT * FROM get_all_users($1)", clientId)
 
 	if err != nil {
 		log.Println(fmt.Errorf("userModel.go: GetAllUsers: %s", err))

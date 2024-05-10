@@ -12,7 +12,7 @@ type User struct {
 	Id int
 }
 
-func (user User) GetAllUsers() ([]*map[string]any, error) {
+func (user User) GetAllUsers() ([]map[string]any, error) {
 	return userModel.GetAllUsers(user.Id)
 }
 

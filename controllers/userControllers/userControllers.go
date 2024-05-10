@@ -334,12 +334,7 @@ var GetAllUsers = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 
 	var w_err error
 	if app_err != nil {
-		w_err = c.WriteJSON(map[string]any{
-			"statusCode": 200,
-			"body": map[string]any{
-				"all_users": make([]any, 0),
-			},
-		})
+		w_err = c.WriteJSON(helpers.AppError(fiber.StatusUnprocessableEntity, app_err))
 	} else {
 		w_err = c.WriteJSON(map[string]any{
 			"statusCode": 200,

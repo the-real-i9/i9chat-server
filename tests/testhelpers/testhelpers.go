@@ -1,6 +1,8 @@
 package testhelpers
 
 import (
+	"encoding/json"
+	"fmt"
 	"i9chat/utils/appTypes"
 
 	"github.com/fasthttp/websocket"
@@ -18,4 +20,10 @@ func WSSendRecv(connStream *websocket.Conn, sendData map[string]any, recvData *a
 	}
 
 	return nil
+}
+
+func PrintJSON(data map[string]any) {
+	res, _ := json.MarshalIndent(data, "", "  ")
+
+	fmt.Println(string(res))
 }

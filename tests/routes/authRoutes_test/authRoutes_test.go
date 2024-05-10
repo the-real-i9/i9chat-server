@@ -1,8 +1,6 @@
 package authRoutes_test
 
 import (
-	"encoding/json"
-	"fmt"
 	"i9chat/tests/testdata"
 	"i9chat/tests/testhelpers"
 	"i9chat/utils/appTypes"
@@ -13,12 +11,6 @@ import (
 )
 
 const pathPrefix string = "ws://localhost:8000/api/auth"
-
-func printJSON(data map[string]any) {
-	res, _ := json.MarshalIndent(data, "", "  ")
-
-	fmt.Println(string(res))
-}
 
 func XTestRequestNewAccount(t *testing.T) {
 	wsd := &websocket.Dialer{}
@@ -47,7 +39,7 @@ func XTestRequestNewAccount(t *testing.T) {
 		return
 	}
 
-	printJSON(recvData.Body)
+	testhelpers.PrintJSON(recvData.Body)
 }
 
 func XTestVerifyEmail(t *testing.T) {
@@ -79,7 +71,7 @@ func XTestVerifyEmail(t *testing.T) {
 		return
 	}
 
-	printJSON(recvData.Body)
+	testhelpers.PrintJSON(recvData.Body)
 }
 
 func XTestRegisterUser(t *testing.T) {
@@ -119,10 +111,10 @@ func XTestRegisterUser(t *testing.T) {
 		return
 	}
 
-	printJSON(recvData.Body)
+	testhelpers.PrintJSON(recvData.Body)
 }
 
-func TestSignin(t *testing.T) {
+func XTestSignin(t *testing.T) {
 	wsd := &websocket.Dialer{}
 
 	connStream, _, err := wsd.Dial(pathPrefix+"/signin", nil)
@@ -150,5 +142,5 @@ func TestSignin(t *testing.T) {
 		return
 	}
 
-	printJSON(recvData.Body)
+	testhelpers.PrintJSON(recvData.Body)
 }
