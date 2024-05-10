@@ -45,34 +45,36 @@ var ChangeProfilePicture = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 	}
 })
 
+// This handler:
+//
+// 1. As soon as connection is restored (client online), streams all new dm messages and/or new dm chats pending receipt (while client offline) to the client, and keeps the connection open to send new ones.
+//
+// 2. Enables the client to: "initiate a new dm chat" and "acknowledge received dm messages"
 var InitDMChatStream = helpers.WSHandlerProtected(func(c *websocket.Conn) {
-	// this goroutine streams chat updates to the client
-	// including new chats and new messages
-
 	var user appTypes.JWTUserData
 
 	helpers.ParseToStruct(c.Locals("auth").(map[string]any), &user)
 
-	// a data channel for transmitting data
+	// a channel for streaming data to client
 	var myMailbox = make(chan map[string]any, 5)
 
 	// subscribe to receiving chat updates
 	// myMailbox is passed by reference to an observer keeping several mailboxes wanting to receive updates
-	nco := appGlobals.DMChatObserver{}
+	dco := appGlobals.DMChatObserver{}
 
 	mailboxKey := fmt.Sprintf("user-%d", user.UserId)
 
-	nco.Subscribe(mailboxKey, myMailbox)
+	dco.Subscribe(mailboxKey, myMailbox)
 
 	endSession := func() {
-		nco.Unsubscribe(mailboxKey)
+		dco.Unsubscribe(mailboxKey)
 	}
 
 	go createNewDMChatAndAckMessages(c, user, endSession)
 
-	/* ---- stream chat events pending dispatch to the channel ---- */
-	// observe that this happens once every new connection
-	// A "What did I miss?" sort of query
+	/* ---- stream chat events pending dispatch to the myMailbox ---- */
+	// this excecutes once every connection restoration
+	// "What did I miss?" - When the client comes online they get a report of all missed data, while offline
 	if event_data_kvps, err := (userService.User{Id: user.UserId}).GetDMChatEventsPendingDispatch(); err == nil {
 		for _, evk := range event_data_kvps {
 			evk := *evk
@@ -80,6 +82,7 @@ var InitDMChatStream = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 		}
 	}
 
+	// when myMailbox receives any new data, it is sent to the client
 	for data := range myMailbox {
 		w_err := c.WriteJSON(data)
 		if w_err != nil {
@@ -90,6 +93,11 @@ var InitDMChatStream = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 	}
 })
 
+// This goroutine handles:
+//
+// + the initation of new dm chats
+//
+// + the acknowledgement of received dm messages
 func createNewDMChatAndAckMessages(c *websocket.Conn, user appTypes.JWTUserData, endSession func()) {
 	var body struct {
 		Action string
@@ -102,13 +110,10 @@ func createNewDMChatAndAckMessages(c *websocket.Conn, user appTypes.JWTUserData,
 		CreatedAt time.Time
 	}
 
-	// For DM Chat, you have the options for both single and batch acknowledgements
+	// For DM Chat, we allowed options for both single and batch acknowledgements
 	var ackMsgBody struct {
-		Status   string
-		MsgId    int
-		ChatId   int
-		SenderId int
-		At       time.Time
+		Status string
+		appTypes.DMChatMsgDeliveryData
 	}
 
 	var batchAckMsgBody struct {
@@ -125,9 +130,11 @@ func createNewDMChatAndAckMessages(c *websocket.Conn, user appTypes.JWTUserData,
 		}
 
 		createNewChat := func() error {
+
 			helpers.ParseToStruct(body.Data, &newChatBody)
 
 			var w_err error
+
 			data, app_err := chatService.NewDMChat(
 				user.UserId,
 				newChatBody.PartnerId,
@@ -147,32 +154,41 @@ func createNewDMChatAndAckMessages(c *websocket.Conn, user appTypes.JWTUserData,
 			return nil
 		}
 
+		// acknowledge messages singly
 		acknowledgeMessage := func() {
+
 			helpers.ParseToStruct(body.Data, &ackMsgBody)
 
 			go chatService.DMChatMessage{
 				Id:       ackMsgBody.MsgId,
-				DmChatId: ackMsgBody.ChatId,
+				DmChatId: ackMsgBody.DmChatId,
 				SenderId: ackMsgBody.SenderId,
 			}.UpdateDeliveryStatus(user.UserId, ackMsgBody.Status, ackMsgBody.At)
 		}
 
+		// acknowledge messages in batches
 		batchAcknowledgeMessages := func() {
+
 			helpers.ParseToStruct(body.Data, &batchAckMsgBody)
 
 			go chatService.BatchUpdateDMChatMessageDeliveryStatus(user.UserId, batchAckMsgBody.Status, batchAckMsgBody.MsgDatas)
 		}
 
 		if body.Action == "create new chat" {
+
 			if err := createNewChat(); err != nil {
 				log.Println(err)
 				endSession()
 				return
 			}
 		} else if body.Action == "acknowledge message" {
+
 			acknowledgeMessage()
+
 		} else if body.Action == "batch acknowledge messages" {
+
 			batchAcknowledgeMessages()
+
 		} else {
 			if w_err := c.WriteJSON(helpers.AppError(fiber.StatusUnprocessableEntity, fmt.Errorf("invalid 'action' value"))); w_err != nil {
 				// log.Println(w_err)
@@ -183,33 +199,36 @@ func createNewDMChatAndAckMessages(c *websocket.Conn, user appTypes.JWTUserData,
 	}
 }
 
+// This handler:
+//
+// 1. As soon as connection is restored (client online), streams all new group messages and/or new group chats pending receipt (while client offline) to the client, and keeps the connection open to send new ones.
+//
+// 2. Enables the client to: "initiate a new group chat" and "acknowledge received group messages"
 var InitGroupChatStream = helpers.WSHandlerProtected(func(c *websocket.Conn) {
-	// this goroutine streams chat updates to the client
-	// including new chats and new messages
 	var user appTypes.JWTUserData
 
 	helpers.ParseToStruct(c.Locals("auth").(map[string]any), &user)
 
-	// a data channel for transmitting data
+	// a channel for streaming data to client
 	var myMailbox = make(chan map[string]any, 5)
 
 	// subscribe to receiving chat updates
 	// myMailbox is passed by reference to an observer keeping several mailboxes wanting to receive updates
-	nco := appGlobals.GroupChatObserver{}
+	gco := appGlobals.GroupChatObserver{}
 
 	mailboxKey := fmt.Sprintf("user-%d", user.UserId)
 
-	nco.Subscribe(mailboxKey, myMailbox)
+	gco.Subscribe(mailboxKey, myMailbox)
 
 	endSession := func() {
-		nco.Unsubscribe(mailboxKey)
+		gco.Unsubscribe(mailboxKey)
 	}
 
 	go createNewGroupDMChatAndAckMessages(c, user, endSession)
 
-	/* ---- stream chat events pending dispatch to the channel ---- */
-	// observe that this happens once every new connection
-	// A "What did I miss?" sort of query
+	/* ---- stream chat events pending dispatch to the myMailbox ---- */
+	// this excecutes once every connection restoration
+	// "What did I miss?" - When the client comes online they get a report of all missed data, while offline
 	if event_data_kvps, err := (userService.User{Id: user.UserId}).GetGroupChatEventsPendingDispatch(); err == nil {
 		for _, evk := range event_data_kvps {
 			evk := *evk
@@ -217,6 +236,7 @@ var InitGroupChatStream = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 		}
 	}
 
+	// when myMailbox receives any new data, it is sent to the client
 	for data := range myMailbox {
 		w_err := c.WriteJSON(data)
 		if w_err != nil {
@@ -227,6 +247,11 @@ var InitGroupChatStream = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 	}
 })
 
+// This goroutine handles:
+//
+// + the initation of new group chats
+//
+// + the acknowledgement of received group messages
 func createNewGroupDMChatAndAckMessages(c *websocket.Conn, user appTypes.JWTUserData, endSession func()) {
 	var body struct {
 		Action string
@@ -243,9 +268,9 @@ func createNewGroupDMChatAndAckMessages(c *websocket.Conn, user appTypes.JWTUser
 	// For Group chat, messages can only be acknowledged in batches,
 	// and it's one group chat and one status at a time
 	var ackMsgsBody struct {
-		ChatId   int
-		Status   string
-		MsgDatas []*appTypes.GroupChatMsgDeliveryData
+		Status      string
+		GroupChatId int
+		MsgDatas    []*appTypes.GroupChatMsgDeliveryData
 	}
 
 	for {
@@ -257,12 +282,17 @@ func createNewGroupDMChatAndAckMessages(c *websocket.Conn, user appTypes.JWTUser
 		}
 
 		createNewChat := func() error {
+
 			helpers.ParseToStruct(body.Data, &newChatBody)
 
 			var w_err error
+
 			data, app_err := chatService.NewGroupChat(
-				newChatBody.Name, newChatBody.Description, newChatBody.Picture,
-				[]string{fmt.Sprint(user.UserId), user.Username}, newChatBody.InitUsers,
+				newChatBody.Name,
+				newChatBody.Description,
+				newChatBody.Picture,
+				[]string{fmt.Sprint(user.UserId), user.Username},
+				newChatBody.InitUsers,
 			)
 			if app_err != nil {
 				w_err = c.WriteJSON(helpers.AppError(fiber.StatusUnprocessableEntity, app_err))
@@ -277,19 +307,23 @@ func createNewGroupDMChatAndAckMessages(c *websocket.Conn, user appTypes.JWTUser
 			return nil
 		}
 
+		// For Group chat, messages can only be acknowledged in batches,
 		acknowledgeMessages := func() {
+
 			helpers.ParseToStruct(body.Data, &ackMsgsBody)
 
-			go chatService.GroupChat{Id: ackMsgsBody.ChatId}.BatchUpdateGroupChatMessageDeliveryStatus(user.UserId, ackMsgsBody.Status, ackMsgsBody.MsgDatas)
+			go chatService.GroupChat{Id: ackMsgsBody.GroupChatId}.BatchUpdateGroupChatMessageDeliveryStatus(user.UserId, ackMsgsBody.Status, ackMsgsBody.MsgDatas)
 		}
 
 		if body.Action == "create new chat" {
+
 			if err := createNewChat(); err != nil {
 				log.Println(err)
 				endSession()
 				return
 			}
 		} else if body.Action == "acknowledge messages" {
+
 			acknowledgeMessages()
 		} else {
 			if w_err := c.WriteJSON(helpers.AppError(fiber.StatusUnprocessableEntity, fmt.Errorf("invalid 'action' value"))); w_err != nil {
@@ -302,9 +336,9 @@ func createNewGroupDMChatAndAckMessages(c *websocket.Conn, user appTypes.JWTUser
 }
 
 var GetMyChats = helpers.WSHandlerProtected(func(c *websocket.Conn) {
-	// This guy merely get chats as is in the database, no updates accounted for yet
+	// This handler merely get chats as is from the database, no updates accounted for yet
 	// After this guy closes:
-	// We must "InitChatUpdateStream"
+	// We must "Init[DM|Group]ChatStream"
 
 	var user appTypes.JWTUserData
 
