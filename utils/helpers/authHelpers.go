@@ -21,11 +21,7 @@ func JwtSign(userData map[string]any, secret string, expires time.Time) string {
 
 	payload := map[string]any{
 		"data": userData,
-		"jwtClaims": map[string]any{
-			"issuer": "i9chat",
-			"iat":    time.Now().UTC(),
-			"exp":    expires,
-		},
+		"exp":  expires,
 	}
 
 	bytePayload, _ := json.Marshal(payload)
@@ -71,15 +67,13 @@ func JwtVerify(jwtToken string, secret string) (map[string]any, error) {
 	decPay, _ := base64.RawURLEncoding.DecodeString(encodedPayload)
 
 	var decodedPayload struct {
-		Data      map[string]any
-		JwtClaims struct {
-			Exp time.Time
-		}
+		Data map[string]any
+		Exp  time.Time
 	}
 
 	json.Unmarshal(decPay, &decodedPayload)
 
-	if decodedPayload.JwtClaims.Exp.Before(time.Now()) {
+	if decodedPayload.Exp.Before(time.Now()) {
 		return nil, fmt.Errorf("%s", "authorization error: jwt expired")
 	}
 
