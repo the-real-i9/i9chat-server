@@ -23,3 +23,9 @@ type GroupChatMsgDeliveryData struct {
 	MsgId int       `json:"msgId"`
 	At    time.Time `json:"at"`
 }
+
+type WSResp struct {
+	StatusCode int
+	Body       map[string]any
+	Error      error
+}
