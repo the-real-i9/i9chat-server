@@ -2,7 +2,7 @@ package chatControllers
 
 import (
 	"fmt"
-	authServices "i9chat/services/appServices"
+	"i9chat/services/appServices"
 	"i9chat/services/chatService"
 	"i9chat/services/userService"
 	"i9chat/utils/appGlobals"
@@ -108,7 +108,7 @@ func sendDMChatMessages(c *websocket.Conn, user appTypes.JWTUserData, dmChatId i
 
 		data, app_err := chatService.DMChat{Id: dmChatId}.SendMessage(
 			user.UserId,
-			authServices.MessageBinaryToUrl(user.UserId, body.Msg),
+			appServices.MessageBinaryToUrl(user.UserId, body.Msg),
 			body.At,
 		)
 

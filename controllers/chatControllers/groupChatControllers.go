@@ -2,7 +2,7 @@ package chatControllers
 
 import (
 	"fmt"
-	authServices "i9chat/services/appServices"
+	"i9chat/services/appServices"
 	"i9chat/services/chatService"
 	"i9chat/services/userService"
 	"i9chat/utils/appGlobals"
@@ -107,7 +107,7 @@ func sendGroupChatMessages(c *websocket.Conn, user appTypes.JWTUserData, groupCh
 
 		data, app_err := chatService.GroupChat{Id: groupChatId}.SendMessage(
 			user.UserId,
-			authServices.MessageBinaryToUrl(user.UserId, body.Msg),
+			appServices.MessageBinaryToUrl(user.UserId, body.Msg),
 			body.At,
 		)
 
