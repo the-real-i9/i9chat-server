@@ -6,7 +6,6 @@ import (
 	"i9chat/services/authServices"
 	"i9chat/utils/appTypes"
 	"i9chat/utils/helpers"
-	"log"
 
 	"github.com/gofiber/contrib/websocket"
 	"github.com/gofiber/fiber/v2"
@@ -20,7 +19,7 @@ var RequestNewAccount = websocket.New(func(c *websocket.Conn) {
 	for {
 		r_err := c.ReadJSON(&body)
 		if r_err != nil {
-			log.Println(r_err)
+			// log.Println(r_err)
 			break
 		}
 
@@ -40,7 +39,7 @@ var RequestNewAccount = websocket.New(func(c *websocket.Conn) {
 		}
 
 		if w_err != nil {
-			log.Println(w_err)
+			// log.Println(w_err)
 			break
 		}
 	}
@@ -51,7 +50,7 @@ var VerifyEmail = websocket.New(func(c *websocket.Conn) {
 
 	if mid_err != nil {
 		if w_err := c.WriteJSON(helpers.AppError(fiber.StatusUnprocessableEntity, mid_err)); w_err != nil {
-			log.Println(w_err)
+			// log.Println(w_err)
 			return
 		}
 		return
@@ -64,7 +63,7 @@ var VerifyEmail = websocket.New(func(c *websocket.Conn) {
 	for {
 		r_err := c.ReadJSON(&body)
 		if r_err != nil {
-			log.Println(r_err)
+			// log.Println(r_err)
 			break
 		}
 
@@ -86,7 +85,7 @@ var VerifyEmail = websocket.New(func(c *websocket.Conn) {
 		}
 
 		if w_err != nil {
-			log.Println(w_err)
+			// log.Println(w_err)
 			break
 		}
 	}
@@ -97,7 +96,7 @@ var RegisterUser = websocket.New(func(c *websocket.Conn) {
 
 	if mid_err != nil {
 		if w_err := c.WriteJSON(helpers.AppError(fiber.StatusUnprocessableEntity, mid_err)); w_err != nil {
-			log.Println(w_err)
+			// log.Println(w_err)
 			return
 		}
 		return
@@ -112,7 +111,7 @@ var RegisterUser = websocket.New(func(c *websocket.Conn) {
 	for {
 		r_err := c.ReadJSON(&body)
 		if r_err != nil {
-			log.Println(r_err)
+			// log.Println(r_err)
 			break
 		}
 
@@ -135,7 +134,7 @@ var RegisterUser = websocket.New(func(c *websocket.Conn) {
 		}
 
 		if w_err != nil {
-			log.Println(w_err)
+			// log.Println(w_err)
 			break
 		}
 	}
@@ -150,7 +149,7 @@ var Signin = websocket.New(func(c *websocket.Conn) {
 	for {
 		r_err := c.ReadJSON(&body)
 		if r_err != nil {
-			log.Println(r_err)
+			// log.Println(r_err)
 			break
 		}
 
@@ -172,7 +171,7 @@ var Signin = websocket.New(func(c *websocket.Conn) {
 		}
 
 		if w_err != nil {
-			log.Println(w_err)
+			// log.Println(w_err)
 			break
 		}
 	}

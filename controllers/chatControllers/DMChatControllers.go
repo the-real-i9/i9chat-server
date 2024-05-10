@@ -8,7 +8,6 @@ import (
 	"i9chat/utils/appGlobals"
 	"i9chat/utils/appTypes"
 	"i9chat/utils/helpers"
-	"log"
 	"time"
 
 	"github.com/gofiber/contrib/websocket"
@@ -27,7 +26,7 @@ var GetDMChatHistory = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 
 	r_err := c.ReadJSON(&body)
 	if r_err != nil {
-		log.Println(r_err)
+		// log.Println(r_err)
 		return
 	}
 
@@ -41,7 +40,7 @@ var GetDMChatHistory = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 	}
 
 	if w_err != nil {
-		log.Println(w_err)
+		// log.Println(w_err)
 		return
 	}
 })
@@ -84,7 +83,7 @@ var ActivateDMChatSession = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 	for data := range myMailbox {
 		w_err := c.WriteJSON(data)
 		if w_err != nil {
-			log.Println(w_err)
+			// log.Println(w_err)
 			endSession()
 			return
 		}
@@ -101,7 +100,7 @@ func sendDMChatMessages(c *websocket.Conn, user appTypes.JWTUserData, dmChatId i
 	for {
 		r_err := c.ReadJSON(&body)
 		if r_err != nil {
-			log.Println(r_err)
+			// log.Println(r_err)
 			endSession()
 			return
 		}
@@ -120,7 +119,7 @@ func sendDMChatMessages(c *websocket.Conn, user appTypes.JWTUserData, dmChatId i
 		}
 
 		if w_err != nil {
-			log.Println(w_err)
+			// log.Println(w_err)
 			endSession()
 			return
 		}

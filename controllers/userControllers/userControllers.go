@@ -27,7 +27,7 @@ var ChangeProfilePicture = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 	for {
 		r_err := c.ReadJSON(&body)
 		if r_err != nil {
-			log.Println(r_err)
+			// log.Println(r_err)
 			break
 		}
 
@@ -39,7 +39,7 @@ var ChangeProfilePicture = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 		}
 
 		if w_err != nil {
-			log.Println(w_err)
+			// log.Println(w_err)
 			break
 		}
 	}
@@ -83,7 +83,7 @@ var InitDMChatStream = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 	for data := range myMailbox {
 		w_err := c.WriteJSON(data)
 		if w_err != nil {
-			log.Println(w_err)
+			// log.Println(w_err)
 			endSession()
 			return
 		}
@@ -119,7 +119,7 @@ func createNewDMChatAndAckMessages(c *websocket.Conn, user appTypes.JWTUserData,
 	for {
 		r_err := c.ReadJSON(&body)
 		if r_err != nil {
-			log.Println(r_err)
+			// log.Println(r_err)
 			endSession()
 			return
 		}
@@ -175,7 +175,7 @@ func createNewDMChatAndAckMessages(c *websocket.Conn, user appTypes.JWTUserData,
 			batchAcknowledgeMessages()
 		} else {
 			if w_err := c.WriteJSON(helpers.AppError(fiber.StatusUnprocessableEntity, fmt.Errorf("invalid 'action' value"))); w_err != nil {
-				log.Println(w_err)
+				// log.Println(w_err)
 				endSession()
 				return
 			}
@@ -220,7 +220,7 @@ var InitGroupChatStream = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 	for data := range myMailbox {
 		w_err := c.WriteJSON(data)
 		if w_err != nil {
-			log.Println(w_err)
+			// log.Println(w_err)
 			endSession()
 			return
 		}
@@ -251,7 +251,7 @@ func createNewGroupDMChatAndAckMessages(c *websocket.Conn, user appTypes.JWTUser
 	for {
 		r_err := c.ReadJSON(&body)
 		if r_err != nil {
-			log.Println(r_err)
+			// log.Println(r_err)
 			endSession()
 			return
 		}
@@ -271,7 +271,7 @@ func createNewGroupDMChatAndAckMessages(c *websocket.Conn, user appTypes.JWTUser
 			}
 
 			if w_err != nil {
-				log.Println(w_err)
+				// log.Println(w_err)
 			}
 
 			return nil
@@ -293,7 +293,7 @@ func createNewGroupDMChatAndAckMessages(c *websocket.Conn, user appTypes.JWTUser
 			acknowledgeMessages()
 		} else {
 			if w_err := c.WriteJSON(helpers.AppError(fiber.StatusUnprocessableEntity, fmt.Errorf("invalid 'action' value"))); w_err != nil {
-				log.Println(w_err)
+				// log.Println(w_err)
 				endSession()
 				return
 			}
@@ -320,7 +320,7 @@ var GetMyChats = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 	}
 
 	if w_err != nil {
-		log.Println(w_err)
+		// log.Println(w_err)
 		return
 	}
 })
@@ -350,7 +350,7 @@ var GetAllUsers = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 	}
 
 	if w_err != nil {
-		log.Println(w_err)
+		// log.Println(w_err)
 		return
 	}
 })

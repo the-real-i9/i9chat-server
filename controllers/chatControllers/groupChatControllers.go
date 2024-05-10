@@ -8,7 +8,6 @@ import (
 	"i9chat/utils/appGlobals"
 	"i9chat/utils/appTypes"
 	"i9chat/utils/helpers"
-	"log"
 	"time"
 
 	"github.com/gofiber/contrib/websocket"
@@ -27,7 +26,7 @@ var GetGroupChatHistory = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 
 	r_err := c.ReadJSON(&body)
 	if r_err != nil {
-		log.Println(r_err)
+		// log.Println(r_err)
 		return
 	}
 
@@ -41,7 +40,7 @@ var GetGroupChatHistory = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 	}
 
 	if w_err != nil {
-		log.Println(w_err)
+		// log.Println(w_err)
 		return
 	}
 })
@@ -84,7 +83,7 @@ var ActivateGroupChatSession = helpers.WSHandlerProtected(func(c *websocket.Conn
 	for data := range myMailbox {
 		w_err := c.WriteJSON(data)
 		if w_err != nil {
-			log.Println(w_err)
+			// log.Println(w_err)
 			endSession()
 			return
 		}
@@ -101,7 +100,7 @@ func sendGroupChatMessages(c *websocket.Conn, user appTypes.JWTUserData, groupCh
 	for {
 		r_err := c.ReadJSON(&body)
 		if r_err != nil {
-			log.Println(r_err)
+			// log.Println(r_err)
 			return
 		}
 
@@ -119,7 +118,7 @@ func sendGroupChatMessages(c *websocket.Conn, user appTypes.JWTUserData, groupCh
 		}
 
 		if w_err != nil {
-			log.Println(w_err)
+			// log.Println(w_err)
 			endSession()
 			return
 		}
@@ -150,7 +149,7 @@ var PerformGroupOperation = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 		}
 
 		if r_err := c.ReadJSON(&body); r_err != nil {
-			log.Println(r_err)
+			// log.Println(r_err)
 			break
 		}
 
@@ -159,7 +158,7 @@ var PerformGroupOperation = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 		go operationHandlerMap[body.Operation](client, body.Data)
 
 		if w_err := c.WriteJSON(map[string]any{"code": 200, "msg": "Operation Successful"}); w_err != nil {
-			log.Println(w_err)
+			// log.Println(w_err)
 			break
 		}
 	}
