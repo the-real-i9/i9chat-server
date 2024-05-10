@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"i9chat/tests/testdata"
+	"i9chat/tests/testhelpers"
 	"i9chat/utils/appTypes"
 	"net/http"
 	"testing"
@@ -30,21 +31,14 @@ func XTestRequestNewAccount(t *testing.T) {
 
 	defer connStream.Close()
 
-	sendData := map[string]string{
-		"email": "oluwarinolasam@gmail.com",
-	}
-
-	w_err := connStream.WriteJSON(sendData)
-	if w_err != nil {
-		t.Error(w_err)
-		return
+	sendData := map[string]any{
+		"email": "ogunrinola.kehinde@yahoo.com",
 	}
 
 	var recvData appTypes.WSResp
 
-	r_err := connStream.ReadJSON(&recvData)
-	if r_err != nil {
-		t.Error(r_err)
+	if wr_err := testhelpers.WSSendRecv(connStream, sendData, &recvData); wr_err != nil {
+		t.Error(wr_err)
 		return
 	}
 
@@ -69,21 +63,14 @@ func XTestVerifyEmail(t *testing.T) {
 
 	defer connStream.Close()
 
-	sendData := map[string]int{
-		"code": 910272,
-	}
-
-	w_err := connStream.WriteJSON(sendData)
-	if w_err != nil {
-		t.Error(w_err)
-		return
+	sendData := map[string]any{
+		"code": 133470,
 	}
 
 	var recvData appTypes.WSResp
 
-	r_err := connStream.ReadJSON(&recvData)
-	if r_err != nil {
-		t.Error(r_err)
+	if wr_err := testhelpers.WSSendRecv(connStream, sendData, &recvData); wr_err != nil {
+		t.Error(wr_err)
 		return
 	}
 
@@ -108,10 +95,10 @@ func XTestRegisterUser(t *testing.T) {
 
 	defer connStream.Close()
 
-	sendData := map[string]string{
-		"username":    "i9x",
+	sendData := map[string]any{
+		"username":    "dollyp",
 		"password":    "fhunmytor",
-		"geolocation": "5, 2, 2",
+		"geolocation": "9, 5, 2",
 	}
 
 	w_err := connStream.WriteJSON(sendData)
@@ -122,9 +109,8 @@ func XTestRegisterUser(t *testing.T) {
 
 	var recvData appTypes.WSResp
 
-	r_err := connStream.ReadJSON(&recvData)
-	if r_err != nil {
-		t.Error(r_err)
+	if wr_err := testhelpers.WSSendRecv(connStream, sendData, &recvData); wr_err != nil {
+		t.Error(wr_err)
 		return
 	}
 
@@ -147,22 +133,15 @@ func TestSignin(t *testing.T) {
 
 	defer connStream.Close()
 
-	sendData := map[string]string{
-		"emailOrUsername": "i9x",
+	sendData := map[string]any{
+		"emailOrUsername": "dollyp",
 		"password":        "fhunmytor",
-	}
-
-	w_err := connStream.WriteJSON(sendData)
-	if w_err != nil {
-		t.Error(w_err)
-		return
 	}
 
 	var recvData appTypes.WSResp
 
-	r_err := connStream.ReadJSON(&recvData)
-	if r_err != nil {
-		t.Error(r_err)
+	if wr_err := testhelpers.WSSendRecv(connStream, sendData, &recvData); wr_err != nil {
+		t.Error(wr_err)
 		return
 	}
 
