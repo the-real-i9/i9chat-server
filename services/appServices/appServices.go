@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"i9chat/models/appModel"
 	"i9chat/utils/helpers"
-	"log"
 	"os"
 	"time"
 
@@ -27,7 +26,8 @@ func SendMail(email string, subject string, body string) {
 	d.TLSConfig = &tls.Config{InsecureSkipVerify: true}
 
 	if err := d.DialAndSend(m); err != nil {
-		log.Println(err)
+		// log.Println(err)
+		return
 	}
 }
 

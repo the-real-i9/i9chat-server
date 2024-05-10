@@ -64,7 +64,7 @@ func TestVerifyEmail(t *testing.T) {
 	defer connStream.Close()
 
 	sendData := map[string]int{
-		"code": 910271,
+		"code": 910272,
 	}
 
 	w_err := connStream.WriteJSON(sendData)
