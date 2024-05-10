@@ -1,12 +1,12 @@
-package chatmodel
+package chatModel
 
 import (
 	"fmt"
+	"i9chat/utils/appTypes"
+	"i9chat/utils/helpers"
 	"log"
 	"strconv"
 	"time"
-	"utils/apptypes"
-	"utils/helpers"
 )
 
 func NewDMChat(initiatorId int, partnerId int, initMsgContent map[string]any, createdAt time.Time) (map[string]any, error) {
@@ -19,7 +19,7 @@ func NewDMChat(initiatorId int, partnerId int, initMsgContent map[string]any, cr
 	return data, nil
 }
 
-func BatchUpdateDMChatMessageDeliveryStatus(receiverId int, status string, delivDatas []*apptypes.DMChatMsgDeliveryData) error {
+func BatchUpdateDMChatMessageDeliveryStatus(receiverId int, status string, delivDatas []*appTypes.DMChatMsgDeliveryData) error {
 	var sqls = []string{}
 	var params = [][]any{}
 

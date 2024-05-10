@@ -1,12 +1,12 @@
-package chatroutes
+package chatRoutes
 
 import (
-	"controllers/chatcontrollers"
+	"i9chat/controllers/chatControllers"
 
 	"github.com/gofiber/fiber/v2"
 )
 
 func InitDMChat(router fiber.Router) {
-	router.Get("/chat_history", chatcontrollers.GetDMChatHistory)
-	router.Get("/activate_chat_session", chatcontrollers.ActivateDMChatSession)
+	router.Get("/chat_history", chatControllers.GetDMChatHistory)
+	router.Get("/activate_chat_session", chatControllers.ActivateDMChatSession)
 }

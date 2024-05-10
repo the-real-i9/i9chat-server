@@ -1,12 +1,12 @@
-package chatroutes
+package chatRoutes
 
 import (
-	"controllers/chatcontrollers"
+	"i9chat/controllers/chatControllers"
 
 	"github.com/gofiber/fiber/v2"
 )
 
 func InitGroupChat(router fiber.Router) {
-	router.Get("/chat_history", chatcontrollers.GetGroupChatHistory)
-	router.Get("/activate_chat_session", chatcontrollers.ActivateGroupChatSession)
+	router.Get("/chat_history", chatControllers.GetGroupChatHistory)
+	router.Get("/activate_chat_session", chatControllers.ActivateGroupChatSession)
 }

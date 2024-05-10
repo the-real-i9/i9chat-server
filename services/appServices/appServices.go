@@ -1,13 +1,13 @@
-package appservices
+package appServices
 
 import (
 	"crypto/tls"
 	"fmt"
+	appModel "i9chat/models/appModel"
+	"i9chat/utils/helpers"
 	"log"
-	"model/appmodel"
 	"os"
 	"time"
-	"utils/helpers"
 
 	"gopkg.in/gomail.v2"
 )
@@ -32,7 +32,7 @@ func SendMail(email string, subject string, body string) {
 }
 
 func EndSignupSession(sessionId string) {
-	appmodel.EndSignupSession(sessionId)
+	appModel.EndSignupSession(sessionId)
 }
 
 func handleVoiceMsg(userId int, content map[string]any) map[string]any {

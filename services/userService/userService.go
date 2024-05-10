@@ -1,11 +1,11 @@
-package userservice
+package userService
 
 import (
 	"fmt"
+	"i9chat/models/userModel"
+	"i9chat/utils/helpers"
 	"log"
-	"model/usermodel"
 	"time"
-	"utils/helpers"
 )
 
 type User struct {
@@ -13,11 +13,11 @@ type User struct {
 }
 
 func (user User) GetAllUsers() ([]*map[string]any, error) {
-	return usermodel.GetAllUsers(user.Id)
+	return userModel.GetAllUsers(user.Id)
 }
 
 func (user User) GetMyChats() ([]*map[string]any, error) {
-	return usermodel.User{Id: user.Id}.GetMyChats()
+	return userModel.User{Id: user.Id}.GetMyChats()
 }
 
 func (user User) ChangeProfilePicture(picture []byte) error {
@@ -31,7 +31,7 @@ func (user User) ChangeProfilePicture(picture []byte) error {
 		return err
 	}
 
-	_, ed_err := usermodel.User{Id: user.Id}.Edit([][]string{{"profile_picture", picUrl}})
+	_, ed_err := userModel.User{Id: user.Id}.Edit([][]string{{"profile_picture", picUrl}})
 	if ed_err != nil {
 		log.Println(fmt.Errorf("userService.go: ChangeProfilePicture: %s", ed_err))
 		return helpers.ErrInternalServerError
@@ -41,17 +41,17 @@ func (user User) ChangeProfilePicture(picture []byte) error {
 }
 
 func (user User) GetDMChatEventsPendingDispatch() ([]*map[string]any, error) {
-	return usermodel.User{Id: user.Id}.GetDMChatEventsPendingDispatch()
+	return userModel.User{Id: user.Id}.GetDMChatEventsPendingDispatch()
 }
 
 func (user User) GetGroupChatEventsPendingDispatch() ([]*map[string]any, error) {
-	return usermodel.User{Id: user.Id}.GetGroupChatEventsPendingDispatch()
+	return userModel.User{Id: user.Id}.GetGroupChatEventsPendingDispatch()
 }
 
 func (user User) GetDMChatMessageEventsPendingDispatch(dmChatid int) ([]*map[string]any, error) {
-	return usermodel.User{Id: user.Id}.GetDMChatMessageEventsPendingDispatch(dmChatid)
+	return userModel.User{Id: user.Id}.GetDMChatMessageEventsPendingDispatch(dmChatid)
 }
 
 func (user User) GetGroupChatMessageEventsPendingDispatch(groupChatId int) ([]*map[string]any, error) {
-	return usermodel.User{Id: user.Id}.GetGroupChatMessageEventsPendingDispatch(groupChatId)
+	return userModel.User{Id: user.Id}.GetGroupChatMessageEventsPendingDispatch(groupChatId)
 }

@@ -2,10 +2,10 @@ package middlewares
 
 import (
 	"fmt"
+	"i9chat/utils/appTypes"
+	"i9chat/utils/helpers"
 	"log"
 	"os"
-	"utils/apptypes"
-	"utils/helpers"
 
 	"github.com/gofiber/contrib/websocket"
 )
@@ -27,7 +27,7 @@ func CheckAccountRequested(c *websocket.Conn) (any, error) {
 		}
 	}
 
-	var sessionData apptypes.SignupSessionData
+	var sessionData appTypes.SignupSessionData
 
 	helpers.ParseToStruct(sessData, &sessionData)
 
@@ -51,7 +51,7 @@ func CheckEmailVerified(c *websocket.Conn) (any, error) {
 		}
 	}
 
-	var sessionData apptypes.SignupSessionData
+	var sessionData appTypes.SignupSessionData
 
 	helpers.ParseToStruct(sessData, &sessionData)
 

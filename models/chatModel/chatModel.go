@@ -1,4 +1,4 @@
-package chatmodel
+package chatModel
 
 type Chat interface {
 	SendMessage()

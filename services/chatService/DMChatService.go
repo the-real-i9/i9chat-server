@@ -1,12 +1,12 @@
-package chatservice
+package chatService
 
 import (
 	"fmt"
-	"model/chatmodel"
+	"i9chat/models/chatModel"
+	"i9chat/utils/appGlobals"
+	"i9chat/utils/appTypes"
+	"i9chat/utils/helpers"
 	"time"
-	"utils/appglobals"
-	"utils/apptypes"
-	"utils/helpers"
 )
 
 func NewDMChat(initiatorId int, partnerId int, initMsgContent map[string]any, createdAt time.Time) (map[string]any, error) {
@@ -15,24 +15,24 @@ func NewDMChat(initiatorId int, partnerId int, initMsgContent map[string]any, cr
 		Prd map[string]any // partner_resp_data AS prd
 	}
 
-	data, err := chatmodel.NewDMChat(initiatorId, partnerId, initMsgContent, createdAt)
+	data, err := chatModel.NewDMChat(initiatorId, partnerId, initMsgContent, createdAt)
 	if err != nil {
 		return nil, err
 	}
 
 	helpers.ParseToStruct(data, &respData)
 
-	go appglobals.DMChatObserver{}.Send(fmt.Sprintf("user-%d", partnerId), respData.Prd, "new chat")
+	go appGlobals.DMChatObserver{}.Send(fmt.Sprintf("user-%d", partnerId), respData.Prd, "new chat")
 
 	return respData.Ird, nil
 }
 
-func BatchUpdateDMChatMessageDeliveryStatus(receiverId int, status string, delivDatas []*apptypes.DMChatMsgDeliveryData) {
-	if err := chatmodel.BatchUpdateDMChatMessageDeliveryStatus(receiverId, status, delivDatas); err == nil {
+func BatchUpdateDMChatMessageDeliveryStatus(receiverId int, status string, delivDatas []*appTypes.DMChatMsgDeliveryData) {
+	if err := chatModel.BatchUpdateDMChatMessageDeliveryStatus(receiverId, status, delivDatas); err == nil {
 		for _, data := range delivDatas {
 			data := data
 			go func() {
-				appglobals.DMChatSessionObserver{}.Send(
+				appGlobals.DMChatSessionObserver{}.Send(
 					fmt.Sprintf("user-%d--dmchat-%d", data.SenderId, data.DmChatId),
 					map[string]any{"msgId": data.MsgId, "key": "delivery_status", "value": status},
 					"message update",
@@ -53,14 +53,14 @@ func (dmc DMChat) SendMessage(senderId int, msgContent map[string]any, createdAt
 		ReceiverId int
 	}
 
-	data, err := chatmodel.DMChat{Id: dmc.Id}.SendMessage(senderId, msgContent, createdAt)
+	data, err := chatModel.DMChat{Id: dmc.Id}.SendMessage(senderId, msgContent, createdAt)
 	if err != nil {
 		return nil, err
 	}
 
 	helpers.ParseToStruct(data, &respData)
 
-	go appglobals.DMChatObserver{}.Send(
+	go appGlobals.DMChatObserver{}.Send(
 		fmt.Sprintf("user-%d", respData.ReceiverId), respData.Rrd, "new message",
 	)
 
@@ -68,7 +68,7 @@ func (dmc DMChat) SendMessage(senderId int, msgContent map[string]any, createdAt
 }
 
 func (dmc DMChat) GetChatHistory(offset int) ([]*map[string]any, error) {
-	return chatmodel.DMChat{Id: dmc.Id}.GetChatHistory(offset)
+	return chatModel.DMChat{Id: dmc.Id}.GetChatHistory(offset)
 }
 
 type DMChatMessage struct {
@@ -78,9 +78,9 @@ type DMChatMessage struct {
 }
 
 func (dmcm DMChatMessage) UpdateDeliveryStatus(receiverId int, status string, updatedAt time.Time) {
-	if err := (chatmodel.DMChatMessage{Id: dmcm.Id, DmChatId: dmcm.DmChatId}).UpdateDeliveryStatus(receiverId, status, updatedAt); err == nil {
+	if err := (chatModel.DMChatMessage{Id: dmcm.Id, DmChatId: dmcm.DmChatId}).UpdateDeliveryStatus(receiverId, status, updatedAt); err == nil {
 
-		go appglobals.DMChatSessionObserver{}.Send(
+		go appGlobals.DMChatSessionObserver{}.Send(
 			fmt.Sprintf("user-%d--dmchat-%d", dmcm.SenderId, dmcm.DmChatId),
 			map[string]any{"msgId": dmcm.Id, "key": "delivery_status", "value": status},
 			"message update",

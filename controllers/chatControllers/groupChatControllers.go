@@ -1,22 +1,22 @@
-package chatcontrollers
+package chatControllers
 
 import (
 	"fmt"
+	authServices "i9chat/services/appServices"
+	"i9chat/services/chatService"
+	"i9chat/services/userService"
+	"i9chat/utils/appGlobals"
+	"i9chat/utils/appTypes"
+	"i9chat/utils/helpers"
 	"log"
-	"services/appservices"
-	"services/chatservice"
-	"services/userservice"
 	"time"
-	"utils/appglobals"
-	"utils/apptypes"
-	"utils/helpers"
 
 	"github.com/gofiber/contrib/websocket"
 	"github.com/gofiber/fiber/v2"
 )
 
 var GetGroupChatHistory = helpers.WSHandlerProtected(func(c *websocket.Conn) {
-	var user apptypes.JWTUserData
+	var user appTypes.JWTUserData
 
 	helpers.ParseToStruct(c.Locals("auth").(map[string]any), &user)
 
@@ -31,7 +31,7 @@ var GetGroupChatHistory = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 		return
 	}
 
-	groupChatHistory, app_err := chatservice.GroupChat{Id: body.GroupChatId}.GetChatHistory(body.Offset)
+	groupChatHistory, app_err := chatService.GroupChat{Id: body.GroupChatId}.GetChatHistory(body.Offset)
 
 	var w_err error
 	if app_err != nil {
@@ -49,7 +49,7 @@ var GetGroupChatHistory = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 var ActivateGroupChatSession = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 	// this goroutine receives message acknowlegement for sent messages
 	// and in turn changes the delivery status of messages sent by the child goroutine
-	var user apptypes.JWTUserData
+	var user appTypes.JWTUserData
 
 	helpers.ParseToStruct(c.Locals("auth").(map[string]any), &user)
 
@@ -61,7 +61,7 @@ var ActivateGroupChatSession = helpers.WSHandlerProtected(func(c *websocket.Conn
 
 	mailboxKey := fmt.Sprintf("user-%d--groupchat-%d", user.UserId, groupChatId)
 
-	gcso := appglobals.GroupChatSessionObserver{}
+	gcso := appGlobals.GroupChatSessionObserver{}
 
 	gcso.Subscribe(mailboxKey, myMailbox)
 
@@ -74,7 +74,7 @@ var ActivateGroupChatSession = helpers.WSHandlerProtected(func(c *websocket.Conn
 	/* ---- stream group chat message events pending dispatch to the channel ---- */
 	// observe that this happens once every new connection
 	// A "What did I miss?" sort of query
-	if event_data_kvps, err := (userservice.User{Id: user.UserId}).GetGroupChatMessageEventsPendingDispatch(groupChatId); err == nil {
+	if event_data_kvps, err := (userService.User{Id: user.UserId}).GetGroupChatMessageEventsPendingDispatch(groupChatId); err == nil {
 		for _, evk := range event_data_kvps {
 			evk := *evk
 			myMailbox <- evk
@@ -91,7 +91,7 @@ var ActivateGroupChatSession = helpers.WSHandlerProtected(func(c *websocket.Conn
 	}
 })
 
-func sendGroupChatMessages(c *websocket.Conn, user apptypes.JWTUserData, groupChatId int, endSession func()) {
+func sendGroupChatMessages(c *websocket.Conn, user appTypes.JWTUserData, groupChatId int, endSession func()) {
 	// this goroutine sends messages
 	var body struct {
 		Msg map[string]any
@@ -105,9 +105,9 @@ func sendGroupChatMessages(c *websocket.Conn, user apptypes.JWTUserData, groupCh
 			return
 		}
 
-		data, app_err := chatservice.GroupChat{Id: groupChatId}.SendMessage(
+		data, app_err := chatService.GroupChat{Id: groupChatId}.SendMessage(
 			user.UserId,
-			appservices.MessageBinaryToUrl(user.UserId, body.Msg),
+			authServices.MessageBinaryToUrl(user.UserId, body.Msg),
 			body.At,
 		)
 
@@ -127,7 +127,7 @@ func sendGroupChatMessages(c *websocket.Conn, user apptypes.JWTUserData, groupCh
 }
 
 var PerformGroupOperation = helpers.WSHandlerProtected(func(c *websocket.Conn) {
-	var user apptypes.JWTUserData
+	var user appTypes.JWTUserData
 
 	helpers.ParseToStruct(c.Locals("auth").(map[string]any), &user)
 
@@ -173,7 +173,7 @@ func changeGroupName(client []string, data map[string]any) {
 
 	helpers.ParseToStruct(data, &d)
 
-	chatservice.GroupChat{Id: d.GroupChatId}.ChangeName(client, d.NewName)
+	chatService.GroupChat{Id: d.GroupChatId}.ChangeName(client, d.NewName)
 
 }
 
@@ -185,7 +185,7 @@ func changeGroupDescription(client []string, data map[string]any) {
 
 	helpers.ParseToStruct(data, &d)
 
-	chatservice.GroupChat{Id: d.GroupChatId}.ChangeDescription(client, d.NewDescription)
+	chatService.GroupChat{Id: d.GroupChatId}.ChangeDescription(client, d.NewDescription)
 }
 
 func changeGroupPicture(client []string, data map[string]any) {
@@ -196,7 +196,7 @@ func changeGroupPicture(client []string, data map[string]any) {
 
 	helpers.ParseToStruct(data, &d)
 
-	chatservice.GroupChat{Id: d.GroupChatId}.ChangePicture(client, d.NewPicture)
+	chatService.GroupChat{Id: d.GroupChatId}.ChangePicture(client, d.NewPicture)
 }
 
 func addUsersToGroup(client []string, data map[string]any) {
@@ -207,7 +207,7 @@ func addUsersToGroup(client []string, data map[string]any) {
 
 	helpers.ParseToStruct(data, &d)
 
-	chatservice.GroupChat{Id: d.GroupChatId}.AddUsers(client, d.NewUsers)
+	chatService.GroupChat{Id: d.GroupChatId}.AddUsers(client, d.NewUsers)
 }
 
 func removeUserFromGroup(client []string, data map[string]any) {
@@ -218,7 +218,7 @@ func removeUserFromGroup(client []string, data map[string]any) {
 
 	helpers.ParseToStruct(data, &d)
 
-	chatservice.GroupChat{Id: d.GroupChatId}.RemoveUser(client, d.User)
+	chatService.GroupChat{Id: d.GroupChatId}.RemoveUser(client, d.User)
 }
 
 func joinGroup(client []string, data map[string]any) {
@@ -228,7 +228,7 @@ func joinGroup(client []string, data map[string]any) {
 
 	helpers.ParseToStruct(data, &d)
 
-	chatservice.GroupChat{Id: d.GroupChatId}.Join(client)
+	chatService.GroupChat{Id: d.GroupChatId}.Join(client)
 }
 
 func leaveGroup(client []string, data map[string]any) {
@@ -238,7 +238,7 @@ func leaveGroup(client []string, data map[string]any) {
 
 	helpers.ParseToStruct(data, &d)
 
-	chatservice.GroupChat{Id: d.GroupChatId}.Leave(client)
+	chatService.GroupChat{Id: d.GroupChatId}.Leave(client)
 }
 
 func makeUserGroupAdmin(client []string, data map[string]any) {
@@ -249,7 +249,7 @@ func makeUserGroupAdmin(client []string, data map[string]any) {
 
 	helpers.ParseToStruct(data, &d)
 
-	chatservice.GroupChat{Id: d.GroupChatId}.MakeUserAdmin(client, d.User)
+	chatService.GroupChat{Id: d.GroupChatId}.MakeUserAdmin(client, d.User)
 }
 
 func removeUserFromGroupAdmins(client []string, data map[string]any) {
@@ -260,5 +260,5 @@ func removeUserFromGroupAdmins(client []string, data map[string]any) {
 
 	helpers.ParseToStruct(data, &d)
 
-	chatservice.GroupChat{Id: d.GroupChatId}.RemoveUserFromAdmins(client, d.User)
+	chatService.GroupChat{Id: d.GroupChatId}.RemoveUserFromAdmins(client, d.User)
 }

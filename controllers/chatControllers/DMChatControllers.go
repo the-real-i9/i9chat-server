@@ -1,22 +1,22 @@
-package chatcontrollers
+package chatControllers
 
 import (
 	"fmt"
+	authServices "i9chat/services/appServices"
+	"i9chat/services/chatService"
+	"i9chat/services/userService"
+	"i9chat/utils/appGlobals"
+	"i9chat/utils/appTypes"
+	"i9chat/utils/helpers"
 	"log"
-	"services/appservices"
-	"services/chatservice"
-	"services/userservice"
 	"time"
-	"utils/appglobals"
-	"utils/apptypes"
-	"utils/helpers"
 
 	"github.com/gofiber/contrib/websocket"
 	"github.com/gofiber/fiber/v2"
 )
 
 var GetDMChatHistory = helpers.WSHandlerProtected(func(c *websocket.Conn) {
-	var user apptypes.JWTUserData
+	var user appTypes.JWTUserData
 
 	helpers.ParseToStruct(c.Locals("auth").(map[string]any), &user)
 
@@ -31,7 +31,7 @@ var GetDMChatHistory = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 		return
 	}
 
-	dmChatHistory, app_err := chatservice.DMChat{Id: body.DmChatId}.GetChatHistory(body.Offset)
+	dmChatHistory, app_err := chatService.DMChat{Id: body.DmChatId}.GetChatHistory(body.Offset)
 
 	var w_err error
 	if app_err != nil {
@@ -49,7 +49,7 @@ var GetDMChatHistory = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 var ActivateDMChatSession = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 	// this goroutine receives message acknowlegement for sent messages
 	// and in turn changes the delivery status of messages sent by the child goroutine
-	var user apptypes.JWTUserData
+	var user appTypes.JWTUserData
 
 	helpers.ParseToStruct(c.Locals("auth").(map[string]any), &user)
 
@@ -61,7 +61,7 @@ var ActivateDMChatSession = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 
 	mailboxKey := fmt.Sprintf("user-%d--dmchat-%d", user.UserId, dmChatId)
 
-	dcmo := appglobals.DMChatSessionObserver{}
+	dcmo := appGlobals.DMChatSessionObserver{}
 
 	dcmo.Subscribe(mailboxKey, myMailbox)
 
@@ -74,7 +74,7 @@ var ActivateDMChatSession = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 	/* ---- stream dm chat message events pending dispatch to the channel ---- */
 	// observe that this happens once every new connection
 	// A "What did I miss?" sort of query
-	if event_data_kvps, err := (userservice.User{Id: user.UserId}).GetDMChatMessageEventsPendingDispatch(dmChatId); err == nil {
+	if event_data_kvps, err := (userService.User{Id: user.UserId}).GetDMChatMessageEventsPendingDispatch(dmChatId); err == nil {
 		for _, evk := range event_data_kvps {
 			evk := *evk
 			myMailbox <- evk
@@ -91,7 +91,7 @@ var ActivateDMChatSession = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 	}
 })
 
-func sendDMChatMessages(c *websocket.Conn, user apptypes.JWTUserData, dmChatId int, endSession func()) {
+func sendDMChatMessages(c *websocket.Conn, user appTypes.JWTUserData, dmChatId int, endSession func()) {
 	// this goroutine sends messages
 	var body struct {
 		Msg map[string]any
@@ -106,9 +106,9 @@ func sendDMChatMessages(c *websocket.Conn, user apptypes.JWTUserData, dmChatId i
 			return
 		}
 
-		data, app_err := chatservice.DMChat{Id: dmChatId}.SendMessage(
+		data, app_err := chatService.DMChat{Id: dmChatId}.SendMessage(
 			user.UserId,
-			appservices.MessageBinaryToUrl(user.UserId, body.Msg),
+			authServices.MessageBinaryToUrl(user.UserId, body.Msg),
 			body.At,
 		)
 

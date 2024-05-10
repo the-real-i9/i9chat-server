@@ -1,11 +1,11 @@
 package main
 
 import (
+	"i9chat/routes/authRoutes"
+	"i9chat/routes/chatRoutes"
+	"i9chat/routes/userRoutes"
+	"i9chat/utils/helpers"
 	"log"
-	"routes/authroutes"
-	"routes/chatroutes"
-	"routes/userroutes"
-	"utils/helpers"
 
 	"github.com/gofiber/contrib/websocket"
 	"github.com/gofiber/fiber/v2"
@@ -34,12 +34,12 @@ func main() {
 		return fiber.ErrUpgradeRequired
 	})
 
-	app.Route("/api/auth", authroutes.Init)
+	app.Route("/api/auth", authRoutes.Init)
 
-	app.Route("/api/app/user", userroutes.Init)
+	app.Route("/api/app/user", userRoutes.Init)
 
-	app.Route("/api/app/dm_chat", chatroutes.InitDMChat)
-	app.Route("/api/app/group_chat", chatroutes.InitGroupChat)
+	app.Route("/api/app/dm_chat", chatRoutes.InitDMChat)
+	app.Route("/api/app/group_chat", chatRoutes.InitGroupChat)
 
 	log.Fatalln(app.Listen("localhost:8000"))
 }

@@ -1,22 +1,22 @@
-package usercontrollers
+package userControllers
 
 import (
 	"fmt"
+	"i9chat/services/appServices"
+	"i9chat/services/chatService"
+	"i9chat/services/userService"
+	"i9chat/utils/appGlobals"
+	"i9chat/utils/appTypes"
+	"i9chat/utils/helpers"
 	"log"
-	"services/appservices"
-	"services/chatservice"
-	"services/userservice"
 	"time"
-	"utils/appglobals"
-	"utils/apptypes"
-	"utils/helpers"
 
 	"github.com/gofiber/contrib/websocket"
 	"github.com/gofiber/fiber/v2"
 )
 
 var ChangeProfilePicture = helpers.WSHandlerProtected(func(c *websocket.Conn) {
-	var user apptypes.JWTUserData
+	var user appTypes.JWTUserData
 
 	helpers.ParseToStruct(c.Locals("auth").(map[string]any), &user)
 
@@ -32,7 +32,7 @@ var ChangeProfilePicture = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 		}
 
 		var w_err error
-		if app_err := (userservice.User{Id: user.UserId}).ChangeProfilePicture(body.Picture); app_err != nil {
+		if app_err := (userService.User{Id: user.UserId}).ChangeProfilePicture(body.Picture); app_err != nil {
 			w_err = c.WriteJSON(helpers.AppError(fiber.StatusUnprocessableEntity, app_err))
 		} else {
 			w_err = c.WriteJSON(map[string]any{"code": fiber.StatusOK, "msg": "Operation Successful"})
@@ -49,7 +49,7 @@ var InitDMChatStream = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 	// this goroutine streams chat updates to the client
 	// including new chats and new messages
 
-	var user apptypes.JWTUserData
+	var user appTypes.JWTUserData
 
 	helpers.ParseToStruct(c.Locals("auth").(map[string]any), &user)
 
@@ -58,7 +58,7 @@ var InitDMChatStream = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 
 	// subscribe to receiving chat updates
 	// myMailbox is passed by reference to an observer keeping several mailboxes wanting to receive updates
-	nco := appglobals.DMChatObserver{}
+	nco := appGlobals.DMChatObserver{}
 
 	mailboxKey := fmt.Sprintf("user-%d", user.UserId)
 
@@ -73,7 +73,7 @@ var InitDMChatStream = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 	/* ---- stream chat events pending dispatch to the channel ---- */
 	// observe that this happens once every new connection
 	// A "What did I miss?" sort of query
-	if event_data_kvps, err := (userservice.User{Id: user.UserId}).GetDMChatEventsPendingDispatch(); err == nil {
+	if event_data_kvps, err := (userService.User{Id: user.UserId}).GetDMChatEventsPendingDispatch(); err == nil {
 		for _, evk := range event_data_kvps {
 			evk := *evk
 			myMailbox <- evk
@@ -90,7 +90,7 @@ var InitDMChatStream = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 	}
 })
 
-func createNewDMChatAndAckMessages(c *websocket.Conn, user apptypes.JWTUserData, endSession func()) {
+func createNewDMChatAndAckMessages(c *websocket.Conn, user appTypes.JWTUserData, endSession func()) {
 	var body struct {
 		Action string
 		Data   map[string]any
@@ -113,7 +113,7 @@ func createNewDMChatAndAckMessages(c *websocket.Conn, user apptypes.JWTUserData,
 
 	var batchAckMsgBody struct {
 		Status   string
-		MsgDatas []*apptypes.DMChatMsgDeliveryData
+		MsgDatas []*appTypes.DMChatMsgDeliveryData
 	}
 
 	for {
@@ -128,10 +128,10 @@ func createNewDMChatAndAckMessages(c *websocket.Conn, user apptypes.JWTUserData,
 			helpers.ParseToStruct(body.Data, &newChatBody)
 
 			var w_err error
-			data, app_err := chatservice.NewDMChat(
+			data, app_err := chatService.NewDMChat(
 				user.UserId,
 				newChatBody.PartnerId,
-				appservices.MessageBinaryToUrl(user.UserId, newChatBody.Msg),
+				appServices.MessageBinaryToUrl(user.UserId, newChatBody.Msg),
 				newChatBody.CreatedAt,
 			)
 			if app_err != nil {
@@ -150,7 +150,7 @@ func createNewDMChatAndAckMessages(c *websocket.Conn, user apptypes.JWTUserData,
 		acknowledgeMessage := func() {
 			helpers.ParseToStruct(body.Data, &ackMsgBody)
 
-			go chatservice.DMChatMessage{
+			go chatService.DMChatMessage{
 				Id:       ackMsgBody.MsgId,
 				DmChatId: ackMsgBody.ChatId,
 				SenderId: ackMsgBody.SenderId,
@@ -160,7 +160,7 @@ func createNewDMChatAndAckMessages(c *websocket.Conn, user apptypes.JWTUserData,
 		batchAcknowledgeMessages := func() {
 			helpers.ParseToStruct(body.Data, &batchAckMsgBody)
 
-			go chatservice.BatchUpdateDMChatMessageDeliveryStatus(user.UserId, batchAckMsgBody.Status, batchAckMsgBody.MsgDatas)
+			go chatService.BatchUpdateDMChatMessageDeliveryStatus(user.UserId, batchAckMsgBody.Status, batchAckMsgBody.MsgDatas)
 		}
 
 		if body.Action == "create new chat" {
@@ -186,7 +186,7 @@ func createNewDMChatAndAckMessages(c *websocket.Conn, user apptypes.JWTUserData,
 var InitGroupChatStream = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 	// this goroutine streams chat updates to the client
 	// including new chats and new messages
-	var user apptypes.JWTUserData
+	var user appTypes.JWTUserData
 
 	helpers.ParseToStruct(c.Locals("auth").(map[string]any), &user)
 
@@ -195,7 +195,7 @@ var InitGroupChatStream = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 
 	// subscribe to receiving chat updates
 	// myMailbox is passed by reference to an observer keeping several mailboxes wanting to receive updates
-	nco := appglobals.GroupChatObserver{}
+	nco := appGlobals.GroupChatObserver{}
 
 	mailboxKey := fmt.Sprintf("user-%d", user.UserId)
 
@@ -210,7 +210,7 @@ var InitGroupChatStream = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 	/* ---- stream chat events pending dispatch to the channel ---- */
 	// observe that this happens once every new connection
 	// A "What did I miss?" sort of query
-	if event_data_kvps, err := (userservice.User{Id: user.UserId}).GetGroupChatEventsPendingDispatch(); err == nil {
+	if event_data_kvps, err := (userService.User{Id: user.UserId}).GetGroupChatEventsPendingDispatch(); err == nil {
 		for _, evk := range event_data_kvps {
 			evk := *evk
 			myMailbox <- evk
@@ -227,7 +227,7 @@ var InitGroupChatStream = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 	}
 })
 
-func createNewGroupDMChatAndAckMessages(c *websocket.Conn, user apptypes.JWTUserData, endSession func()) {
+func createNewGroupDMChatAndAckMessages(c *websocket.Conn, user appTypes.JWTUserData, endSession func()) {
 	var body struct {
 		Action string
 		Data   map[string]any
@@ -245,7 +245,7 @@ func createNewGroupDMChatAndAckMessages(c *websocket.Conn, user apptypes.JWTUser
 	var ackMsgsBody struct {
 		ChatId   int
 		Status   string
-		MsgDatas []*apptypes.GroupChatMsgDeliveryData
+		MsgDatas []*appTypes.GroupChatMsgDeliveryData
 	}
 
 	for {
@@ -260,7 +260,7 @@ func createNewGroupDMChatAndAckMessages(c *websocket.Conn, user apptypes.JWTUser
 			helpers.ParseToStruct(body.Data, &newChatBody)
 
 			var w_err error
-			data, app_err := chatservice.NewGroupChat(
+			data, app_err := chatService.NewGroupChat(
 				newChatBody.Name, newChatBody.Description, newChatBody.Picture,
 				[]string{fmt.Sprint(user.UserId), user.Username}, newChatBody.InitUsers,
 			)
@@ -280,7 +280,7 @@ func createNewGroupDMChatAndAckMessages(c *websocket.Conn, user apptypes.JWTUser
 		acknowledgeMessages := func() {
 			helpers.ParseToStruct(body.Data, &ackMsgsBody)
 
-			go chatservice.GroupChat{Id: ackMsgsBody.ChatId}.BatchUpdateGroupChatMessageDeliveryStatus(user.UserId, ackMsgsBody.Status, ackMsgsBody.MsgDatas)
+			go chatService.GroupChat{Id: ackMsgsBody.ChatId}.BatchUpdateGroupChatMessageDeliveryStatus(user.UserId, ackMsgsBody.Status, ackMsgsBody.MsgDatas)
 		}
 
 		if body.Action == "create new chat" {
@@ -306,11 +306,11 @@ var GetMyChats = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 	// After this guy closes:
 	// We must "InitChatUpdateStream"
 
-	var user apptypes.JWTUserData
+	var user appTypes.JWTUserData
 
 	helpers.ParseToStruct(c.Locals("auth").(map[string]any), &user)
 
-	myChats, app_err := userservice.User{Id: user.UserId}.GetMyChats()
+	myChats, app_err := userService.User{Id: user.UserId}.GetMyChats()
 
 	var w_err error
 	if app_err != nil {
@@ -326,11 +326,11 @@ var GetMyChats = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 })
 
 var GetAllUsers = helpers.WSHandlerProtected(func(c *websocket.Conn) {
-	var user apptypes.JWTUserData
+	var user appTypes.JWTUserData
 
 	helpers.ParseToStruct(c.Locals("auth").(map[string]any), &user)
 
-	allUsers, app_err := userservice.User{Id: user.UserId}.GetAllUsers()
+	allUsers, app_err := userService.User{Id: user.UserId}.GetAllUsers()
 
 	var w_err error
 	if app_err != nil {

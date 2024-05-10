@@ -1,10 +1,10 @@
-package usermodel
+package userModel
 
 import (
 	"fmt"
+	"i9chat/utils/helpers"
 	"log"
 	"time"
-	"utils/helpers"
 )
 
 func NewUser(email string, username string, password string, geolocation string) (map[string]any, error) {

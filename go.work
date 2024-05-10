@@ -2,21 +2,4 @@ go 1.22.0
 
 use (
   .
-  ./routes/authRoutes
-  ./routes/userRoutes
-  ./routes/chatRoutes
-  ./controllers/authControllers
-  ./controllers/userControllers
-  ./controllers/chatControllers
-  ./services/userService
-  ./services/chatService
-  ./models/userModel
-  ./models/chatModel
-  ./models/appModel
-  ./services/appServices
-  ./services/authServices
-  ./utils/helpers
-  ./utils/apptypes
-  ./utils/appglobals
-  ./middlewares
 )

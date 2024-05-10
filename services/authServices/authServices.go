@@ -1,24 +1,23 @@
-package authservices
+package authServices
 
 import (
 	"errors"
 	"fmt"
+	"i9chat/models/appModel"
+	"i9chat/models/userModel"
+	"i9chat/services/appServices"
+	"i9chat/utils/helpers"
 	"log"
 	"math/rand"
 	"os"
 	"time"
-
-	"model/appmodel"
-	"model/usermodel"
-	"services/appservices"
-	"utils/helpers"
 
 	"golang.org/x/crypto/bcrypt"
 )
 
 func RequestNewAccount(email string) (string, error) {
 	// check if email already exists. if yes, send error
-	accExists, err := appmodel.AccountExists(email)
+	accExists, err := appModel.AccountExists(email)
 	if err != nil {
 		return "", err
 	}
@@ -32,11 +31,11 @@ func RequestNewAccount(email string) (string, error) {
 	expires := time.Now().UTC().Add(1 * time.Hour)
 
 	// send 6-digit code to email
-	go appservices.SendMail(email, "Email Verification", fmt.Sprintf("Your email verification code is: <b>%d</b>", verfCode))
+	go appServices.SendMail(email, "Email Verification", fmt.Sprintf("Your email verification code is: <b>%d</b>", verfCode))
 
 	// store the email(varchar), verfCode(int), and vefified(bool) in an ongoing_signup table
 	// get back the id as session_id
-	sessionId, err := appmodel.NewSignupSession(email, verfCode)
+	sessionId, err := appModel.NewSignupSession(email, verfCode)
 	if err != nil {
 		return "", err
 	}
@@ -49,7 +48,7 @@ func RequestNewAccount(email string) (string, error) {
 }
 
 func VerifyEmail(sessionId string, inputVerfCode int, email string) error {
-	isSuccess, err := appmodel.VerifyEmail(sessionId, inputVerfCode)
+	isSuccess, err := appModel.VerifyEmail(sessionId, inputVerfCode)
 	if err != nil {
 		return err
 	}
@@ -58,7 +57,7 @@ func VerifyEmail(sessionId string, inputVerfCode int, email string) error {
 		return fmt.Errorf("email verification error: incorrect verification code")
 	}
 
-	go appservices.SendMail(email, "Email Verification Success", fmt.Sprintf("Your email %s has been verified!", email))
+	go appServices.SendMail(email, "Email Verification Success", fmt.Sprintf("Your email %s has been verified!", email))
 
 	return nil
 }
@@ -70,7 +69,7 @@ func RegisterUser(sessionId string, email string, username string, password stri
 		return nil, "", helpers.ErrInternalServerError
 	}
 
-	accExists, err := appmodel.AccountExists(username)
+	accExists, err := appModel.AccountExists(username)
 	if err != nil {
 		return nil, "", err
 	}
@@ -79,7 +78,7 @@ func RegisterUser(sessionId string, email string, username string, password stri
 		return nil, "", fmt.Errorf("username error: username '%s' is unavailable", username)
 	}
 
-	userData, err := usermodel.NewUser(email, username, string(hashedPassword), geolocation)
+	userData, err := userModel.NewUser(email, username, string(hashedPassword), geolocation)
 	if err != nil {
 		return nil, "", err
 	}
@@ -97,13 +96,13 @@ func RegisterUser(sessionId string, email string, username string, password stri
 		"username": user.Username,
 	}, os.Getenv("AUTH_JWT_SECRET"), time.Now().UTC().Add(365*24*time.Hour)) // 1 year
 
-	appmodel.EndSignupSession(sessionId)
+	appModel.EndSignupSession(sessionId)
 
 	return userData, jwtToken, nil
 }
 
 func Signin(emailOrUsername string, password string) (map[string]any, string, error) {
-	userData, err := usermodel.GetUser(emailOrUsername)
+	userData, err := userModel.GetUser(emailOrUsername)
 	if err != nil {
 		return nil, "", err
 	}

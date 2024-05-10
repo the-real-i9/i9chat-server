@@ -1,18 +1,18 @@
-package chatservice
+package chatService
 
 import (
 	"fmt"
-	"model/chatmodel"
+	"i9chat/models/chatModel"
+	"i9chat/utils/appGlobals"
+	"i9chat/utils/appTypes"
+	"i9chat/utils/helpers"
 	"time"
-	"utils/appglobals"
-	"utils/apptypes"
-	"utils/helpers"
 )
 
 func broadcastNewGroup(initUsers [][]string, newGroupData map[string]any) {
 	for _, newMember := range initUsers[1:] { // the first user is the creator, hence, they're excluded
 		newMemberId := newMember[0]
-		go appglobals.GroupChatObserver{}.Send(fmt.Sprintf("user-%s", newMemberId), newGroupData, "new chat")
+		go appGlobals.GroupChatObserver{}.Send(fmt.Sprintf("user-%s", newMemberId), newGroupData, "new chat")
 	}
 }
 
@@ -33,7 +33,7 @@ func uploadGroupPicture(groupChatId int, picture []byte) string {
 }
 
 func NewGroupChat(name string, description string, picture []byte, creator []string, initUsers [][]string) (map[string]any, error) {
-	data, err := chatmodel.NewGroupChat(name, description, "", creator, initUsers)
+	data, err := chatModel.NewGroupChat(name, description, "", creator, initUsers)
 	if err != nil {
 		return nil, err
 	}
@@ -70,18 +70,18 @@ func (gpc GroupChat) broadcastActivity(modelResp map[string]any) {
 	helpers.ParseToStruct(modelResp, &respData)
 
 	for _, mId := range respData.MemberIds {
-		go appglobals.GroupChatObserver{}.Send(fmt.Sprintf("user-%d", mId), respData.ActivityData, "new activity")
+		go appGlobals.GroupChatObserver{}.Send(fmt.Sprintf("user-%d", mId), respData.ActivityData, "new activity")
 	}
 }
 
 func (gpc GroupChat) ChangeName(admin []string, newName string) {
-	if resp, err := (chatmodel.GroupChat{Id: gpc.Id}).ChangeName(admin, newName); err == nil {
+	if resp, err := (chatModel.GroupChat{Id: gpc.Id}).ChangeName(admin, newName); err == nil {
 		go gpc.broadcastActivity(resp)
 	}
 }
 
 func (gpc GroupChat) ChangeDescription(admin []string, newDescription string) {
-	if resp, err := (chatmodel.GroupChat{Id: gpc.Id}).ChangeDescription(admin, newDescription); err == nil {
+	if resp, err := (chatModel.GroupChat{Id: gpc.Id}).ChangeDescription(admin, newDescription); err == nil {
 		go gpc.broadcastActivity(resp)
 	}
 }
@@ -92,43 +92,43 @@ func (gpc GroupChat) ChangePicture(admin []string, newPicture []byte) {
 		return
 	}
 
-	if resp, err := (chatmodel.GroupChat{Id: gpc.Id}).ChangePicture(admin, picUrl); err == nil {
+	if resp, err := (chatModel.GroupChat{Id: gpc.Id}).ChangePicture(admin, picUrl); err == nil {
 		go gpc.broadcastActivity(resp)
 	}
 }
 
 func (gpc GroupChat) AddUsers(admin []string, newUsers [][]string) {
-	if resp, err := (chatmodel.GroupChat{Id: gpc.Id}).AddUsers(admin, newUsers); err == nil {
+	if resp, err := (chatModel.GroupChat{Id: gpc.Id}).AddUsers(admin, newUsers); err == nil {
 		go gpc.broadcastActivity(resp)
 	}
 }
 
 func (gpc GroupChat) RemoveUser(admin []string, user []string) {
-	if resp, err := (chatmodel.GroupChat{Id: gpc.Id}).RemoveUser(admin, user); err == nil {
+	if resp, err := (chatModel.GroupChat{Id: gpc.Id}).RemoveUser(admin, user); err == nil {
 		go gpc.broadcastActivity(resp)
 	}
 }
 
 func (gpc GroupChat) Join(newUser []string) {
-	if resp, err := (chatmodel.GroupChat{Id: gpc.Id}).Join(newUser); err == nil {
+	if resp, err := (chatModel.GroupChat{Id: gpc.Id}).Join(newUser); err == nil {
 		go gpc.broadcastActivity(resp)
 	}
 }
 
 func (gpc GroupChat) Leave(user []string) {
-	if resp, err := (chatmodel.GroupChat{Id: gpc.Id}).Leave(user); err == nil {
+	if resp, err := (chatModel.GroupChat{Id: gpc.Id}).Leave(user); err == nil {
 		go gpc.broadcastActivity(resp)
 	}
 }
 
 func (gpc GroupChat) MakeUserAdmin(admin []string, user []string) {
-	if resp, err := (chatmodel.GroupChat{Id: gpc.Id}).MakeUserAdmin(admin, user); err == nil {
+	if resp, err := (chatModel.GroupChat{Id: gpc.Id}).MakeUserAdmin(admin, user); err == nil {
 		go gpc.broadcastActivity(resp)
 	}
 }
 
 func (gpc GroupChat) RemoveUserFromAdmins(admin []string, user []string) {
-	if resp, err := (chatmodel.GroupChat{Id: gpc.Id}).RemoveUserFromAdmins(admin, user); err == nil {
+	if resp, err := (chatModel.GroupChat{Id: gpc.Id}).RemoveUserFromAdmins(admin, user); err == nil {
 		go gpc.broadcastActivity(resp)
 	}
 }
@@ -136,7 +136,7 @@ func (gpc GroupChat) RemoveUserFromAdmins(admin []string, user []string) {
 func (gpc GroupChat) broadcastMessage(memberIds []int, msgData map[string]any) {
 	for _, mId := range memberIds {
 		memberId := mId
-		go appglobals.GroupChatObserver{}.Send(fmt.Sprintf("user-%d", memberId), msgData, "new message")
+		go appGlobals.GroupChatObserver{}.Send(fmt.Sprintf("user-%d", memberId), msgData, "new message")
 	}
 }
 
@@ -147,7 +147,7 @@ func (gpc GroupChat) SendMessage(senderId int, msgContent map[string]any, create
 		MemberIds []int
 	}
 
-	data, err := chatmodel.GroupChat{Id: gpc.Id}.SendMessage(senderId, msgContent, createdAt)
+	data, err := chatModel.GroupChat{Id: gpc.Id}.SendMessage(senderId, msgContent, createdAt)
 	if err != nil {
 		return nil, err
 	}
@@ -160,17 +160,17 @@ func (gpc GroupChat) SendMessage(senderId int, msgContent map[string]any, create
 }
 
 func (gpc GroupChat) GetChatHistory(offset int) ([]*map[string]any, error) {
-	return chatmodel.GroupChat{Id: gpc.Id}.GetChatHistory(offset)
+	return chatModel.GroupChat{Id: gpc.Id}.GetChatHistory(offset)
 }
 
-func (gpc GroupChat) broadcastMessageDeliveryStatusUpdate(clientId int, delivDatas []*apptypes.GroupChatMsgDeliveryData, status string) {
+func (gpc GroupChat) broadcastMessageDeliveryStatusUpdate(clientId int, delivDatas []*appTypes.GroupChatMsgDeliveryData, status string) {
 	memberIds, err := helpers.QueryRowsField[int]("SELECT member_id FROM group_chat_membership WHERE group_chat_id = $1 AND member_id != $2 AND deleted = false", gpc.Id, clientId)
 	if err == nil {
 		for _, mId := range memberIds {
 			mId := *mId
 			for _, data := range delivDatas {
 				msgId := data.MsgId
-				go appglobals.DMChatSessionObserver{}.Send(
+				go appGlobals.DMChatSessionObserver{}.Send(
 					fmt.Sprintf("user-%d--groupchat-%d", mId, gpc.Id),
 					map[string]any{"msgId": msgId, "key": "delivery_status", "value": status},
 					"message update",
@@ -180,8 +180,8 @@ func (gpc GroupChat) broadcastMessageDeliveryStatusUpdate(clientId int, delivDat
 	}
 }
 
-func (gpc GroupChat) BatchUpdateGroupChatMessageDeliveryStatus(receiverId int, status string, delivDatas []*apptypes.GroupChatMsgDeliveryData) {
-	result, err := (chatmodel.GroupChat{Id: gpc.Id}).BatchUpdateGroupChatMessageDeliveryStatus(receiverId, status, delivDatas)
+func (gpc GroupChat) BatchUpdateGroupChatMessageDeliveryStatus(receiverId int, status string, delivDatas []*appTypes.GroupChatMsgDeliveryData) {
+	result, err := (chatModel.GroupChat{Id: gpc.Id}).BatchUpdateGroupChatMessageDeliveryStatus(receiverId, status, delivDatas)
 	if err != nil {
 		return
 	}

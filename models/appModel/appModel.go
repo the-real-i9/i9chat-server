@@ -1,9 +1,9 @@
-package appmodel
+package appModel
 
 import (
 	"fmt"
+	"i9chat/utils/helpers"
 	"log"
-	"utils/helpers"
 )
 
 func AccountExists(emailOrUsername string) (bool, error) {

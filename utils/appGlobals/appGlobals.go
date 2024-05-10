@@ -1,8 +1,8 @@
-package appglobals
+package appGlobals
 
 import (
 	"fmt"
-	"utils/helpers"
+	"i9chat/utils/helpers"
 )
 
 type Observer interface {

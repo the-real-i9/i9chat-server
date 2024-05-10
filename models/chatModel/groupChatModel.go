@@ -1,12 +1,12 @@
-package chatmodel
+package chatModel
 
 import (
 	"fmt"
+	"i9chat/utils/appTypes"
+	"i9chat/utils/helpers"
 	"log"
 	"strconv"
 	"time"
-	"utils/apptypes"
-	"utils/helpers"
 )
 
 func NewGroupChat(name string, description string, picture string, creator []string, initUsers [][]string) (map[string]any, error) {
@@ -123,7 +123,7 @@ func (gpc GroupChat) SendMessage(senderId int, msgContent map[string]any, create
 	return data, nil
 }
 
-func (gpc GroupChat) BatchUpdateGroupChatMessageDeliveryStatus(receiverId int, status string, delivDatas []*apptypes.GroupChatMsgDeliveryData) (map[string]any, error) {
+func (gpc GroupChat) BatchUpdateGroupChatMessageDeliveryStatus(receiverId int, status string, delivDatas []*appTypes.GroupChatMsgDeliveryData) (map[string]any, error) {
 	var sqls = []string{}
 	var params = [][]any{}
 
