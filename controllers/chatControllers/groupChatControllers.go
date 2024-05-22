@@ -130,7 +130,10 @@ var PerformGroupOperation = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 
 	helpers.MapToStruct(c.Locals("auth").(map[string]any), &user)
 
-	operationHandlerMap := map[string]func(client []string, data map[string]any){
+	type operation string
+	type handler func(client []string, data map[string]any)
+
+	operationToHandlerMap := map[operation]handler{
 		"change_name":             changeGroupName,
 		"change_description":      changeGroupDescription,
 		"change_picture":          changeGroupPicture,
@@ -144,7 +147,7 @@ var PerformGroupOperation = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 
 	for {
 		var body struct {
-			Operation string
+			Operation operation
 			Data      map[string]any
 		}
 
@@ -155,7 +158,7 @@ var PerformGroupOperation = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 
 		client := []string{fmt.Sprint(user.UserId), user.Username}
 
-		go operationHandlerMap[body.Operation](client, body.Data)
+		go operationToHandlerMap[body.Operation](client, body.Data)
 
 		if w_err := c.WriteJSON(map[string]any{"code": 200, "msg": "Operation Successful"}); w_err != nil {
 			// log.Println(w_err)
