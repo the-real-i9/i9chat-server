@@ -38,7 +38,7 @@ func (DMChatObserver) Send(key string, data map[string]any, event string) { // c
 		fmt.Sscanf(key, "user-%d", &userId)
 
 		go helpers.QueryRowField[bool](`
-			INSERT INTO dm_chat_event_pending_dispatch (user_id, event, data) 
+			INSERT INTO dm_chat_event_pending_receipt (user_id, event, data) 
 			VALUES ($1, $2, $3) 
 			RETURNING true
 		`, userId, event, data)
@@ -67,7 +67,7 @@ func (GroupChatObserver) Send(key string, data map[string]any, event string) { /
 		fmt.Sscanf(key, "user-%d", &userId)
 
 		go helpers.QueryRowField[bool](`
-			INSERT INTO group_chat_event_pending_dispatch (user_id, event, data) 
+			INSERT INTO group_chat_event_pending_receipt (user_id, event, data) 
 			VALUES ($1, $2, $3) 
 			RETURNING true
 		`, userId, event, data)
@@ -99,7 +99,7 @@ func (DMChatSessionObserver) Send(key string, data map[string]any, event string)
 		fmt.Sscanf(key, "user-%d--dmchat-%d", &userId, &dmChatId)
 
 		go helpers.QueryRowField[bool](`
-			INSERT INTO dm_chat_message_event_pending_dispatch (user_id, dm_chat_id, event, data) 
+			INSERT INTO dm_chat_message_event_pending_receipt (user_id, dm_chat_id, event, data) 
 			VALUES ($1, $2, $3, $4) 
 			RETURNING true
 		`, userId, dmChatId, event, data)
@@ -131,7 +131,7 @@ func (GroupChatSessionObserver) Send(key string, data map[string]any, event stri
 		fmt.Sscanf(key, "user-%d--groupchat-%d", &userId, &groupChatId)
 
 		go helpers.QueryRowField[bool](`
-			INSERT INTO group_chat_message_event_pending_dispatch (user_id, group_chat_id, event, data) 
+			INSERT INTO group_chat_message_event_pending_receipt (user_id, group_chat_id, event, data) 
 			VALUES ($1, $2, $3, $4) 
 			RETURNING true
 		`, userId, groupChatId, event, data)

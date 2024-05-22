@@ -73,7 +73,7 @@ var ActivateDMChatSession = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 	/* ---- stream dm chat message events pending dispatch to the channel ---- */
 	// observe that this happens once every new connection
 	// A "What did I miss?" sort of query
-	if event_data_kvps, err := (userService.User{Id: user.UserId}).GetDMChatMessageEventsPendingDispatch(dmChatId); err == nil {
+	if event_data_kvps, err := (userService.User{Id: user.UserId}).GetDMChatMessageEventsPendingReceipt(dmChatId); err == nil {
 		for _, evk := range event_data_kvps {
 			evk := *evk
 			myMailbox <- evk

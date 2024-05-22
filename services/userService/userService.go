@@ -40,18 +40,18 @@ func (user User) ChangeProfilePicture(picture []byte) error {
 	return nil
 }
 
-func (user User) GetDMChatEventsPendingDispatch() ([]*map[string]any, error) {
-	return userModel.User{Id: user.Id}.GetDMChatEventsPendingDispatch()
+func (user User) GetDMChatEventsPendingReceipt() ([]*map[string]any, error) {
+	return userModel.User{Id: user.Id}.GetDMChatEventsPendingReceipt()
 }
 
-func (user User) GetGroupChatEventsPendingDispatch() ([]*map[string]any, error) {
-	return userModel.User{Id: user.Id}.GetGroupChatEventsPendingDispatch()
+func (user User) GetGroupChatEventsPendingReceipt() ([]*map[string]any, error) {
+	return userModel.User{Id: user.Id}.GetGroupChatEventsPendingReceipt()
 }
 
-func (user User) GetDMChatMessageEventsPendingDispatch(dmChatid int) ([]*map[string]any, error) {
-	return userModel.User{Id: user.Id}.GetDMChatMessageEventsPendingDispatch(dmChatid)
+func (user User) GetDMChatMessageEventsPendingReceipt(dmChatid int) ([]*map[string]any, error) {
+	return userModel.User{Id: user.Id}.GetDMChatMessageEventsPendingReceipt(dmChatid)
 }
 
-func (user User) GetGroupChatMessageEventsPendingDispatch(groupChatId int) ([]*map[string]any, error) {
-	return userModel.User{Id: user.Id}.GetGroupChatMessageEventsPendingDispatch(groupChatId)
+func (user User) GetGroupChatMessageEventsPendingReceipt(groupChatId int) ([]*map[string]any, error) {
+	return userModel.User{Id: user.Id}.GetGroupChatMessageEventsPendingReceipt(groupChatId)
 }

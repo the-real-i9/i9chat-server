@@ -286,24 +286,24 @@ $$;
 ALTER FUNCTION public.get_all_users(in_client_id integer) OWNER TO postgres;
 
 --
--- Name: get_dm_chat_events_pending_dispatch(integer); Type: FUNCTION; Schema: public; Owner: postgres
+-- Name: get_dm_chat_events_pending_receipt(integer); Type: FUNCTION; Schema: public; Owner: postgres
 --
 
-CREATE FUNCTION public.get_dm_chat_events_pending_dispatch(in_user_id integer) RETURNS TABLE(event_data_kvp json)
+CREATE FUNCTION public.get_dm_chat_events_pending_receipt(in_user_id integer) RETURNS TABLE(event_data_kvp json)
     LANGUAGE plpgsql
     AS $$
 BEGIN
   RETURN QUERY 
-  SELECT json_build_object('event', event, 'data', data) FROM dm_chat_event_pending_dispatch
+  SELECT json_build_object('event', event, 'data', data) FROM dm_chat_event_pending_receipt
   WHERE user_id = in_user_id ORDER BY created_at;
   
-  DELETE FROM dm_chat_event_pending_dispatch WHERE user_id = in_user_id;
+  DELETE FROM dm_chat_event_pending_receipt WHERE user_id = in_user_id;
   RETURN;
 END;
 $$;
 
 
-ALTER FUNCTION public.get_dm_chat_events_pending_dispatch(in_user_id integer) OWNER TO postgres;
+ALTER FUNCTION public.get_dm_chat_events_pending_receipt(in_user_id integer) OWNER TO postgres;
 
 --
 -- Name: get_dm_chat_history(integer); Type: FUNCTION; Schema: public; Owner: postgres
@@ -352,44 +352,44 @@ $$;
 ALTER FUNCTION public.get_dm_chat_history(in_dm_chat_id integer) OWNER TO postgres;
 
 --
--- Name: get_dm_chat_message_events_pending_dispatch(integer, integer); Type: FUNCTION; Schema: public; Owner: postgres
+-- Name: get_dm_chat_message_events_pending_receipt(integer, integer); Type: FUNCTION; Schema: public; Owner: postgres
 --
 
-CREATE FUNCTION public.get_dm_chat_message_events_pending_dispatch(in_user_id integer, in_dm_chat_id integer) RETURNS TABLE(event_data_kvp json)
+CREATE FUNCTION public.get_dm_chat_message_events_pending_receipt(in_user_id integer, in_dm_chat_id integer) RETURNS TABLE(event_data_kvp json)
     LANGUAGE plpgsql
     AS $$
 BEGIN
   RETURN QUERY 
-  SELECT json_build_object('event', event, 'data', data) FROM dm_chat_message_event_pending_dispatch
+  SELECT json_build_object('event', event, 'data', data) FROM dm_chat_message_event_pending_receipt
   WHERE user_id = in_user_id AND dm_chat_id = in_dm_chat_id ORDER BY created_at;
   
-  DELETE FROM dm_chat_message_event_pending_dispatch WHERE user_id = in_user_id AND dm_chat_id = in_dm_chat_id;
+  DELETE FROM dm_chat_message_event_pending_receipt WHERE user_id = in_user_id AND dm_chat_id = in_dm_chat_id;
   RETURN;
 END;
 $$;
 
 
-ALTER FUNCTION public.get_dm_chat_message_events_pending_dispatch(in_user_id integer, in_dm_chat_id integer) OWNER TO postgres;
+ALTER FUNCTION public.get_dm_chat_message_events_pending_receipt(in_user_id integer, in_dm_chat_id integer) OWNER TO postgres;
 
 --
--- Name: get_group_chat_events_pending_dispatch(integer); Type: FUNCTION; Schema: public; Owner: postgres
+-- Name: get_group_chat_events_pending_receipt(integer); Type: FUNCTION; Schema: public; Owner: postgres
 --
 
-CREATE FUNCTION public.get_group_chat_events_pending_dispatch(in_user_id integer) RETURNS TABLE(event_data_kvp json)
+CREATE FUNCTION public.get_group_chat_events_pending_receipt(in_user_id integer) RETURNS TABLE(event_data_kvp json)
     LANGUAGE plpgsql
     AS $$
 BEGIN
   RETURN QUERY 
-  SELECT json_build_object('event', event, 'data', data) FROM group_chat_event_pending_dispatch
+  SELECT json_build_object('event', event, 'data', data) FROM group_chat_event_pending_receipt
   WHERE user_id = in_user_id ORDER BY created_at;
   
-  DELETE FROM group_chat_event_pending_dispatch WHERE user_id = in_user_id;
+  DELETE FROM group_chat_event_pending_receipt WHERE user_id = in_user_id;
   RETURN;
 END;
 $$;
 
 
-ALTER FUNCTION public.get_group_chat_events_pending_dispatch(in_user_id integer) OWNER TO postgres;
+ALTER FUNCTION public.get_group_chat_events_pending_receipt(in_user_id integer) OWNER TO postgres;
 
 --
 -- Name: get_group_chat_history(integer); Type: FUNCTION; Schema: public; Owner: postgres
@@ -446,24 +446,24 @@ $$;
 ALTER FUNCTION public.get_group_chat_history(in_group_chat_id integer) OWNER TO postgres;
 
 --
--- Name: get_group_chat_message_events_pending_dispatch(integer, integer); Type: FUNCTION; Schema: public; Owner: postgres
+-- Name: get_group_chat_message_events_pending_receipt(integer, integer); Type: FUNCTION; Schema: public; Owner: postgres
 --
 
-CREATE FUNCTION public.get_group_chat_message_events_pending_dispatch(in_user_id integer, in_group_chat_id integer) RETURNS TABLE(event_data_kvp json)
+CREATE FUNCTION public.get_group_chat_message_events_pending_receipt(in_user_id integer, in_group_chat_id integer) RETURNS TABLE(event_data_kvp json)
     LANGUAGE plpgsql
     AS $$
 BEGIN
   RETURN QUERY 
-  SELECT json_build_object('event', event, 'data', data) FROM group_chat_message_event_pending_dispatch
+  SELECT json_build_object('event', event, 'data', data) FROM group_chat_message_event_pending_receipt
   WHERE user_id = in_user_id AND group_chat_id = in_group_chat_id ORDER BY created_at;
   
-  DELETE FROM group_chat_message_event_pending_dispatch WHERE user_id = in_user_id AND group_chat_id = in_group_chat_id;
+  DELETE FROM group_chat_message_event_pending_receipt WHERE user_id = in_user_id AND group_chat_id = in_group_chat_id;
   RETURN;
 END;
 $$;
 
 
-ALTER FUNCTION public.get_group_chat_message_events_pending_dispatch(in_user_id integer, in_group_chat_id integer) OWNER TO postgres;
+ALTER FUNCTION public.get_group_chat_message_events_pending_receipt(in_user_id integer, in_group_chat_id integer) OWNER TO postgres;
 
 --
 -- Name: get_my_chats(integer); Type: FUNCTION; Schema: public; Owner: postgres
@@ -1259,10 +1259,10 @@ CREATE TABLE public.dm_chat (
 ALTER TABLE public.dm_chat OWNER TO postgres;
 
 --
--- Name: dm_chat_event_pending_dispatch; Type: TABLE; Schema: public; Owner: postgres
+-- Name: dm_chat_event_pending_receipt; Type: TABLE; Schema: public; Owner: postgres
 --
 
-CREATE TABLE public.dm_chat_event_pending_dispatch (
+CREATE TABLE public.dm_chat_event_pending_receipt (
     id integer NOT NULL,
     user_id integer NOT NULL,
     event character varying NOT NULL,
@@ -1271,13 +1271,13 @@ CREATE TABLE public.dm_chat_event_pending_dispatch (
 );
 
 
-ALTER TABLE public.dm_chat_event_pending_dispatch OWNER TO postgres;
+ALTER TABLE public.dm_chat_event_pending_receipt OWNER TO postgres;
 
 --
--- Name: dm_chat_event_pending_dispatch_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+-- Name: dm_chat_event_pending_receipt_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
 --
 
-CREATE SEQUENCE public.dm_chat_event_pending_dispatch_id_seq
+CREATE SEQUENCE public.dm_chat_event_pending_receipt_id_seq
     AS integer
     START WITH 1
     INCREMENT BY 1
@@ -1286,13 +1286,13 @@ CREATE SEQUENCE public.dm_chat_event_pending_dispatch_id_seq
     CACHE 1;
 
 
-ALTER SEQUENCE public.dm_chat_event_pending_dispatch_id_seq OWNER TO postgres;
+ALTER SEQUENCE public.dm_chat_event_pending_receipt_id_seq OWNER TO postgres;
 
 --
--- Name: dm_chat_event_pending_dispatch_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+-- Name: dm_chat_event_pending_receipt_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
 --
 
-ALTER SEQUENCE public.dm_chat_event_pending_dispatch_id_seq OWNED BY public.dm_chat_event_pending_dispatch.id;
+ALTER SEQUENCE public.dm_chat_event_pending_receipt_id_seq OWNED BY public.dm_chat_event_pending_receipt.id;
 
 
 --
@@ -1338,10 +1338,10 @@ CREATE TABLE public.dm_chat_message (
 ALTER TABLE public.dm_chat_message OWNER TO postgres;
 
 --
--- Name: dm_chat_message_event_pending_dispatch; Type: TABLE; Schema: public; Owner: postgres
+-- Name: dm_chat_message_event_pending_receipt; Type: TABLE; Schema: public; Owner: postgres
 --
 
-CREATE TABLE public.dm_chat_message_event_pending_dispatch (
+CREATE TABLE public.dm_chat_message_event_pending_receipt (
     id integer NOT NULL,
     user_id integer NOT NULL,
     dm_chat_id integer NOT NULL,
@@ -1351,13 +1351,13 @@ CREATE TABLE public.dm_chat_message_event_pending_dispatch (
 );
 
 
-ALTER TABLE public.dm_chat_message_event_pending_dispatch OWNER TO postgres;
+ALTER TABLE public.dm_chat_message_event_pending_receipt OWNER TO postgres;
 
 --
--- Name: dm_chat_message_event_pending_dispatch_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+-- Name: dm_chat_message_event_pending_receipt_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
 --
 
-CREATE SEQUENCE public.dm_chat_message_event_pending_dispatch_id_seq
+CREATE SEQUENCE public.dm_chat_message_event_pending_receipt_id_seq
     AS integer
     START WITH 1
     INCREMENT BY 1
@@ -1366,13 +1366,13 @@ CREATE SEQUENCE public.dm_chat_message_event_pending_dispatch_id_seq
     CACHE 1;
 
 
-ALTER SEQUENCE public.dm_chat_message_event_pending_dispatch_id_seq OWNER TO postgres;
+ALTER SEQUENCE public.dm_chat_message_event_pending_receipt_id_seq OWNER TO postgres;
 
 --
--- Name: dm_chat_message_event_pending_dispatch_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+-- Name: dm_chat_message_event_pending_receipt_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
 --
 
-ALTER SEQUENCE public.dm_chat_message_event_pending_dispatch_id_seq OWNED BY public.dm_chat_message_event_pending_dispatch.id;
+ALTER SEQUENCE public.dm_chat_message_event_pending_receipt_id_seq OWNED BY public.dm_chat_message_event_pending_receipt.id;
 
 
 --
@@ -1492,10 +1492,10 @@ ALTER SEQUENCE public.group_chat_activity_log_id_seq OWNED BY public.group_chat_
 
 
 --
--- Name: group_chat_event_pending_dispatch; Type: TABLE; Schema: public; Owner: postgres
+-- Name: group_chat_event_pending_receipt; Type: TABLE; Schema: public; Owner: postgres
 --
 
-CREATE TABLE public.group_chat_event_pending_dispatch (
+CREATE TABLE public.group_chat_event_pending_receipt (
     id integer NOT NULL,
     user_id integer NOT NULL,
     event character varying NOT NULL,
@@ -1504,13 +1504,13 @@ CREATE TABLE public.group_chat_event_pending_dispatch (
 );
 
 
-ALTER TABLE public.group_chat_event_pending_dispatch OWNER TO postgres;
+ALTER TABLE public.group_chat_event_pending_receipt OWNER TO postgres;
 
 --
--- Name: group_chat_event_pending_dispatch_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+-- Name: group_chat_event_pending_receipt_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
 --
 
-CREATE SEQUENCE public.group_chat_event_pending_dispatch_id_seq
+CREATE SEQUENCE public.group_chat_event_pending_receipt_id_seq
     AS integer
     START WITH 1
     INCREMENT BY 1
@@ -1519,13 +1519,13 @@ CREATE SEQUENCE public.group_chat_event_pending_dispatch_id_seq
     CACHE 1;
 
 
-ALTER SEQUENCE public.group_chat_event_pending_dispatch_id_seq OWNER TO postgres;
+ALTER SEQUENCE public.group_chat_event_pending_receipt_id_seq OWNER TO postgres;
 
 --
--- Name: group_chat_event_pending_dispatch_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+-- Name: group_chat_event_pending_receipt_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
 --
 
-ALTER SEQUENCE public.group_chat_event_pending_dispatch_id_seq OWNED BY public.group_chat_event_pending_dispatch.id;
+ALTER SEQUENCE public.group_chat_event_pending_receipt_id_seq OWNED BY public.group_chat_event_pending_receipt.id;
 
 
 --
@@ -1647,10 +1647,10 @@ ALTER SEQUENCE public.group_chat_message_delivery_id_seq OWNED BY public.group_c
 
 
 --
--- Name: group_chat_message_event_pending_dispatch; Type: TABLE; Schema: public; Owner: postgres
+-- Name: group_chat_message_event_pending_receipt; Type: TABLE; Schema: public; Owner: postgres
 --
 
-CREATE TABLE public.group_chat_message_event_pending_dispatch (
+CREATE TABLE public.group_chat_message_event_pending_receipt (
     id integer NOT NULL,
     user_id integer NOT NULL,
     group_chat_id integer NOT NULL,
@@ -1660,13 +1660,13 @@ CREATE TABLE public.group_chat_message_event_pending_dispatch (
 );
 
 
-ALTER TABLE public.group_chat_message_event_pending_dispatch OWNER TO postgres;
+ALTER TABLE public.group_chat_message_event_pending_receipt OWNER TO postgres;
 
 --
--- Name: group_chat_message_event_pending_dispatch_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+-- Name: group_chat_message_event_pending_receipt_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
 --
 
-CREATE SEQUENCE public.group_chat_message_event_pending_dispatch_id_seq
+CREATE SEQUENCE public.group_chat_message_event_pending_receipt_id_seq
     AS integer
     START WITH 1
     INCREMENT BY 1
@@ -1675,13 +1675,13 @@ CREATE SEQUENCE public.group_chat_message_event_pending_dispatch_id_seq
     CACHE 1;
 
 
-ALTER SEQUENCE public.group_chat_message_event_pending_dispatch_id_seq OWNER TO postgres;
+ALTER SEQUENCE public.group_chat_message_event_pending_receipt_id_seq OWNER TO postgres;
 
 --
--- Name: group_chat_message_event_pending_dispatch_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+-- Name: group_chat_message_event_pending_receipt_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
 --
 
-ALTER SEQUENCE public.group_chat_message_event_pending_dispatch_id_seq OWNED BY public.group_chat_message_event_pending_dispatch.id;
+ALTER SEQUENCE public.group_chat_message_event_pending_receipt_id_seq OWNED BY public.group_chat_message_event_pending_receipt.id;
 
 
 --
@@ -1887,10 +1887,10 @@ ALTER TABLE ONLY public.dm_chat ALTER COLUMN id SET DEFAULT nextval('public.dm_c
 
 
 --
--- Name: dm_chat_event_pending_dispatch id; Type: DEFAULT; Schema: public; Owner: postgres
+-- Name: dm_chat_event_pending_receipt id; Type: DEFAULT; Schema: public; Owner: postgres
 --
 
-ALTER TABLE ONLY public.dm_chat_event_pending_dispatch ALTER COLUMN id SET DEFAULT nextval('public.dm_chat_event_pending_dispatch_id_seq'::regclass);
+ALTER TABLE ONLY public.dm_chat_event_pending_receipt ALTER COLUMN id SET DEFAULT nextval('public.dm_chat_event_pending_receipt_id_seq'::regclass);
 
 
 --
@@ -1901,10 +1901,10 @@ ALTER TABLE ONLY public.dm_chat_message ALTER COLUMN id SET DEFAULT nextval('pub
 
 
 --
--- Name: dm_chat_message_event_pending_dispatch id; Type: DEFAULT; Schema: public; Owner: postgres
+-- Name: dm_chat_message_event_pending_receipt id; Type: DEFAULT; Schema: public; Owner: postgres
 --
 
-ALTER TABLE ONLY public.dm_chat_message_event_pending_dispatch ALTER COLUMN id SET DEFAULT nextval('public.dm_chat_message_event_pending_dispatch_id_seq'::regclass);
+ALTER TABLE ONLY public.dm_chat_message_event_pending_receipt ALTER COLUMN id SET DEFAULT nextval('public.dm_chat_message_event_pending_receipt_id_seq'::regclass);
 
 
 --
@@ -1929,10 +1929,10 @@ ALTER TABLE ONLY public.group_chat_activity_log ALTER COLUMN id SET DEFAULT next
 
 
 --
--- Name: group_chat_event_pending_dispatch id; Type: DEFAULT; Schema: public; Owner: postgres
+-- Name: group_chat_event_pending_receipt id; Type: DEFAULT; Schema: public; Owner: postgres
 --
 
-ALTER TABLE ONLY public.group_chat_event_pending_dispatch ALTER COLUMN id SET DEFAULT nextval('public.group_chat_event_pending_dispatch_id_seq'::regclass);
+ALTER TABLE ONLY public.group_chat_event_pending_receipt ALTER COLUMN id SET DEFAULT nextval('public.group_chat_event_pending_receipt_id_seq'::regclass);
 
 
 --
@@ -1957,10 +1957,10 @@ ALTER TABLE ONLY public.group_chat_message_delivery ALTER COLUMN id SET DEFAULT 
 
 
 --
--- Name: group_chat_message_event_pending_dispatch id; Type: DEFAULT; Schema: public; Owner: postgres
+-- Name: group_chat_message_event_pending_receipt id; Type: DEFAULT; Schema: public; Owner: postgres
 --
 
-ALTER TABLE ONLY public.group_chat_message_event_pending_dispatch ALTER COLUMN id SET DEFAULT nextval('public.group_chat_message_event_pending_dispatch_id_seq'::regclass);
+ALTER TABLE ONLY public.group_chat_message_event_pending_receipt ALTER COLUMN id SET DEFAULT nextval('public.group_chat_message_event_pending_receipt_id_seq'::regclass);
 
 
 --
@@ -2120,11 +2120,11 @@ ALTER TABLE ONLY public.user_group_chat
 
 
 --
--- Name: dm_chat_event_pending_dispatch dm_chat_event_pending_dispatch_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+-- Name: dm_chat_event_pending_receipt dm_chat_event_pending_receipt_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
-ALTER TABLE ONLY public.dm_chat_event_pending_dispatch
-    ADD CONSTRAINT dm_chat_event_pending_dispatch_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.i9c_user(id) ON DELETE CASCADE;
+ALTER TABLE ONLY public.dm_chat_event_pending_receipt
+    ADD CONSTRAINT dm_chat_event_pending_receipt_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.i9c_user(id) ON DELETE CASCADE;
 
 
 --
@@ -2144,19 +2144,19 @@ ALTER TABLE ONLY public.dm_chat_message
 
 
 --
--- Name: dm_chat_message_event_pending_dispatch dm_chat_message_event_pending_dispatch_dm_chat_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+-- Name: dm_chat_message_event_pending_receipt dm_chat_message_event_pending_receipt_dm_chat_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
-ALTER TABLE ONLY public.dm_chat_message_event_pending_dispatch
-    ADD CONSTRAINT dm_chat_message_event_pending_dispatch_dm_chat_id_fkey FOREIGN KEY (dm_chat_id) REFERENCES public.dm_chat(id) ON DELETE CASCADE;
+ALTER TABLE ONLY public.dm_chat_message_event_pending_receipt
+    ADD CONSTRAINT dm_chat_message_event_pending_receipt_dm_chat_id_fkey FOREIGN KEY (dm_chat_id) REFERENCES public.dm_chat(id) ON DELETE CASCADE;
 
 
 --
--- Name: dm_chat_message_event_pending_dispatch dm_chat_message_event_pending_dispatch_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+-- Name: dm_chat_message_event_pending_receipt dm_chat_message_event_pending_receipt_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
-ALTER TABLE ONLY public.dm_chat_message_event_pending_dispatch
-    ADD CONSTRAINT dm_chat_message_event_pending_dispatch_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.i9c_user(id) ON DELETE CASCADE;
+ALTER TABLE ONLY public.dm_chat_message_event_pending_receipt
+    ADD CONSTRAINT dm_chat_message_event_pending_receipt_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.i9c_user(id) ON DELETE CASCADE;
 
 
 --
@@ -2216,11 +2216,11 @@ ALTER TABLE ONLY public.group_chat
 
 
 --
--- Name: group_chat_event_pending_dispatch group_chat_event_pending_dispatch_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+-- Name: group_chat_event_pending_receipt group_chat_event_pending_receipt_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
-ALTER TABLE ONLY public.group_chat_event_pending_dispatch
-    ADD CONSTRAINT group_chat_event_pending_dispatch_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.i9c_user(id) ON DELETE CASCADE;
+ALTER TABLE ONLY public.group_chat_event_pending_receipt
+    ADD CONSTRAINT group_chat_event_pending_receipt_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.i9c_user(id) ON DELETE CASCADE;
 
 
 --
@@ -2264,19 +2264,19 @@ ALTER TABLE ONLY public.group_chat_message_delivery
 
 
 --
--- Name: group_chat_message_event_pending_dispatch group_chat_message_event_pending_dispatch_group_chat_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+-- Name: group_chat_message_event_pending_receipt group_chat_message_event_pending_receipt_group_chat_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
-ALTER TABLE ONLY public.group_chat_message_event_pending_dispatch
-    ADD CONSTRAINT group_chat_message_event_pending_dispatch_group_chat_id_fkey FOREIGN KEY (group_chat_id) REFERENCES public.group_chat(id) ON DELETE CASCADE;
+ALTER TABLE ONLY public.group_chat_message_event_pending_receipt
+    ADD CONSTRAINT group_chat_message_event_pending_receipt_group_chat_id_fkey FOREIGN KEY (group_chat_id) REFERENCES public.group_chat(id) ON DELETE CASCADE;
 
 
 --
--- Name: group_chat_message_event_pending_dispatch group_chat_message_event_pending_dispatch_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+-- Name: group_chat_message_event_pending_receipt group_chat_message_event_pending_receipt_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
-ALTER TABLE ONLY public.group_chat_message_event_pending_dispatch
-    ADD CONSTRAINT group_chat_message_event_pending_dispatch_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.i9c_user(id) ON DELETE CASCADE;
+ALTER TABLE ONLY public.group_chat_message_event_pending_receipt
+    ADD CONSTRAINT group_chat_message_event_pending_receipt_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.i9c_user(id) ON DELETE CASCADE;
 
 
 --

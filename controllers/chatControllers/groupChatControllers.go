@@ -73,7 +73,7 @@ var ActivateGroupChatSession = helpers.WSHandlerProtected(func(c *websocket.Conn
 	/* ---- stream group chat message events pending dispatch to the channel ---- */
 	// observe that this happens once every new connection
 	// A "What did I miss?" sort of query
-	if event_data_kvps, err := (userService.User{Id: user.UserId}).GetGroupChatMessageEventsPendingDispatch(groupChatId); err == nil {
+	if event_data_kvps, err := (userService.User{Id: user.UserId}).GetGroupChatMessageEventsPendingReceipt(groupChatId); err == nil {
 		for _, evk := range event_data_kvps {
 			evk := *evk
 			myMailbox <- evk

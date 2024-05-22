@@ -118,48 +118,48 @@ func (user User) UpdateLocation(newGeolocation string) error {
 	return nil
 }
 
-func (user User) GetDMChatEventsPendingDispatch() ([]*map[string]any, error) {
+func (user User) GetDMChatEventsPendingReceipt() ([]*map[string]any, error) {
 
-	data, err := helpers.QueryRowsField[map[string]any]("SELECT event_data_kvp FROM get_dm_chat_events_pending_dispatch($1)", user.Id)
+	data, err := helpers.QueryRowsField[map[string]any]("SELECT event_data_kvp FROM get_dm_chat_events_pending_receipt($1)", user.Id)
 
 	if err != nil {
-		log.Println(fmt.Errorf("userModel.go: User_GetDMChatEventsPendingDispatch: %s", err))
+		log.Println(fmt.Errorf("userModel.go: User_GetDMChatEventsPendingReceipt: %s", err))
 		return nil, helpers.ErrInternalServerError
 	}
 
 	return data, nil
 }
 
-func (user User) GetGroupChatEventsPendingDispatch() ([]*map[string]any, error) {
+func (user User) GetGroupChatEventsPendingReceipt() ([]*map[string]any, error) {
 
-	data, err := helpers.QueryRowsField[map[string]any]("SELECT event_data_kvp FROM get_group_chat_events_pending_dispatch($1)", user.Id)
+	data, err := helpers.QueryRowsField[map[string]any]("SELECT event_data_kvp FROM get_group_chat_events_pending_receipt($1)", user.Id)
 
 	if err != nil {
-		log.Println(fmt.Errorf("userModel.go: User_GetGroupChatEventsPendingDispatch: %s", err))
+		log.Println(fmt.Errorf("userModel.go: User_GetGroupChatEventsPendingReceipt: %s", err))
 		return nil, helpers.ErrInternalServerError
 	}
 
 	return data, nil
 }
 
-func (user User) GetDMChatMessageEventsPendingDispatch(dmChatId int) ([]*map[string]any, error) {
+func (user User) GetDMChatMessageEventsPendingReceipt(dmChatId int) ([]*map[string]any, error) {
 
-	data, err := helpers.QueryRowsField[map[string]any]("SELECT event_data_kvp FROM get_dm_chat_message_events_pending_dispatch($1, $2)", user.Id, dmChatId)
+	data, err := helpers.QueryRowsField[map[string]any]("SELECT event_data_kvp FROM get_dm_chat_message_events_pending_receipt($1, $2)", user.Id, dmChatId)
 
 	if err != nil {
-		log.Println(fmt.Errorf("userModel.go: User_GetDMChatEventsPendingDispatch: %s", err))
+		log.Println(fmt.Errorf("userModel.go: User_GetDMChatEventsPendingReceipt: %s", err))
 		return nil, helpers.ErrInternalServerError
 	}
 
 	return data, nil
 }
 
-func (user User) GetGroupChatMessageEventsPendingDispatch(groupChatId int) ([]*map[string]any, error) {
+func (user User) GetGroupChatMessageEventsPendingReceipt(groupChatId int) ([]*map[string]any, error) {
 
-	data, err := helpers.QueryRowsField[map[string]any]("SELECT event_data_kvp FROM get_group_chat_message_events_pending_dispatch($1, $2)", user.Id, groupChatId)
+	data, err := helpers.QueryRowsField[map[string]any]("SELECT event_data_kvp FROM get_group_chat_message_events_pending_receipt($1, $2)", user.Id, groupChatId)
 
 	if err != nil {
-		log.Println(fmt.Errorf("userModel.go: User_GetGroupChatEventsPendingDispatch: %s", err))
+		log.Println(fmt.Errorf("userModel.go: User_GetGroupChatEventsPendingReceipt: %s", err))
 		return nil, helpers.ErrInternalServerError
 	}
 
