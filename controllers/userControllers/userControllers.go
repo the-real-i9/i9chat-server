@@ -2,10 +2,10 @@ package userControllers
 
 import (
 	"fmt"
+	"i9chat/services/appObservers"
 	"i9chat/services/appServices"
 	"i9chat/services/chatService"
 	"i9chat/services/userService"
-	"i9chat/utils/appGlobals"
 	"i9chat/utils/appTypes"
 	"i9chat/utils/helpers"
 	"log"
@@ -33,7 +33,7 @@ var ChangeProfilePicture = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 
 		var w_err error
 		if app_err := (userService.User{Id: user.UserId}).ChangeProfilePicture(body.Picture); app_err != nil {
-			w_err = c.WriteJSON(helpers.AppError(fiber.StatusUnprocessableEntity, app_err))
+			w_err = c.WriteJSON(helpers.BuildErrResp(fiber.StatusUnprocessableEntity, app_err))
 		} else {
 			w_err = c.WriteJSON(map[string]any{"code": fiber.StatusOK, "msg": "Operation Successful"})
 		}
@@ -60,7 +60,7 @@ var InitDMChatStream = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 
 	// subscribe to receiving chat updates
 	// myMailbox is passed by reference to an observer keeping several mailboxes wanting to receive updates
-	dco := appGlobals.DMChatObserver{}
+	dco := appObservers.DMChatObserver{}
 
 	mailboxKey := fmt.Sprintf("user-%d", user.UserId)
 
@@ -142,7 +142,7 @@ func createNewDMChatAndAckMessages(c *websocket.Conn, user appTypes.JWTUserData,
 				newChatBody.CreatedAt,
 			)
 			if app_err != nil {
-				w_err = c.WriteJSON(helpers.AppError(fiber.StatusUnprocessableEntity, app_err))
+				w_err = c.WriteJSON(helpers.BuildErrResp(fiber.StatusUnprocessableEntity, app_err))
 			} else {
 				w_err = c.WriteJSON(data)
 			}
@@ -190,7 +190,7 @@ func createNewDMChatAndAckMessages(c *websocket.Conn, user appTypes.JWTUserData,
 			batchAcknowledgeMessages()
 
 		} else {
-			if w_err := c.WriteJSON(helpers.AppError(fiber.StatusUnprocessableEntity, fmt.Errorf("invalid 'action' value"))); w_err != nil {
+			if w_err := c.WriteJSON(helpers.BuildErrResp(fiber.StatusUnprocessableEntity, fmt.Errorf("invalid 'action' value"))); w_err != nil {
 				// log.Println(w_err)
 				endSession()
 				return
@@ -214,7 +214,7 @@ var InitGroupChatStream = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 
 	// subscribe to receiving chat updates
 	// myMailbox is passed by reference to an observer keeping several mailboxes wanting to receive updates
-	gco := appGlobals.GroupChatObserver{}
+	gco := appObservers.GroupChatObserver{}
 
 	mailboxKey := fmt.Sprintf("user-%d", user.UserId)
 
@@ -295,7 +295,7 @@ func createNewGroupDMChatAndAckMessages(c *websocket.Conn, user appTypes.JWTUser
 				newChatBody.InitUsers,
 			)
 			if app_err != nil {
-				w_err = c.WriteJSON(helpers.AppError(fiber.StatusUnprocessableEntity, app_err))
+				w_err = c.WriteJSON(helpers.BuildErrResp(fiber.StatusUnprocessableEntity, app_err))
 			} else {
 				w_err = c.WriteJSON(data)
 			}
@@ -326,7 +326,7 @@ func createNewGroupDMChatAndAckMessages(c *websocket.Conn, user appTypes.JWTUser
 
 			acknowledgeMessages()
 		} else {
-			if w_err := c.WriteJSON(helpers.AppError(fiber.StatusUnprocessableEntity, fmt.Errorf("invalid 'action' value"))); w_err != nil {
+			if w_err := c.WriteJSON(helpers.BuildErrResp(fiber.StatusUnprocessableEntity, fmt.Errorf("invalid 'action' value"))); w_err != nil {
 				// log.Println(w_err)
 				endSession()
 				return
@@ -348,7 +348,7 @@ var GetMyChats = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 
 	var w_err error
 	if app_err != nil {
-		w_err = c.WriteJSON(helpers.AppError(500, app_err))
+		w_err = c.WriteJSON(helpers.BuildErrResp(500, app_err))
 	} else {
 		w_err = c.WriteJSON(map[string]any{"my_chats": myChats})
 	}
@@ -368,7 +368,7 @@ var GetAllUsers = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 
 	var w_err error
 	if app_err != nil {
-		w_err = c.WriteJSON(helpers.AppError(fiber.StatusUnprocessableEntity, app_err))
+		w_err = c.WriteJSON(helpers.BuildErrResp(fiber.StatusUnprocessableEntity, app_err))
 	} else {
 		w_err = c.WriteJSON(map[string]any{
 			"statusCode": 200,

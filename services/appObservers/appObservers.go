@@ -1,4 +1,4 @@
-package appGlobals
+package appObservers
 
 import (
 	"fmt"

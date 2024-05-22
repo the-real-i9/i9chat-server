@@ -2,10 +2,10 @@ package chatControllers
 
 import (
 	"fmt"
+	"i9chat/services/appObservers"
 	"i9chat/services/appServices"
 	"i9chat/services/chatService"
 	"i9chat/services/userService"
-	"i9chat/utils/appGlobals"
 	"i9chat/utils/appTypes"
 	"i9chat/utils/helpers"
 	"time"
@@ -34,7 +34,7 @@ var GetGroupChatHistory = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 
 	var w_err error
 	if app_err != nil {
-		w_err = c.WriteJSON(helpers.AppError(fiber.StatusUnprocessableEntity, app_err))
+		w_err = c.WriteJSON(helpers.BuildErrResp(fiber.StatusUnprocessableEntity, app_err))
 	} else {
 		w_err = c.WriteJSON(map[string]any{"chat_history": groupChatHistory})
 	}
@@ -60,7 +60,7 @@ var ActivateGroupChatSession = helpers.WSHandlerProtected(func(c *websocket.Conn
 
 	mailboxKey := fmt.Sprintf("user-%d--groupchat-%d", user.UserId, groupChatId)
 
-	gcso := appGlobals.GroupChatSessionObserver{}
+	gcso := appObservers.GroupChatSessionObserver{}
 
 	gcso.Subscribe(mailboxKey, myMailbox)
 
@@ -112,7 +112,7 @@ func sendGroupChatMessages(c *websocket.Conn, user appTypes.JWTUserData, groupCh
 
 		var w_err error
 		if app_err != nil {
-			w_err = c.WriteJSON(helpers.AppError(fiber.StatusUnprocessableEntity, app_err))
+			w_err = c.WriteJSON(helpers.BuildErrResp(fiber.StatusUnprocessableEntity, app_err))
 		} else {
 			w_err = c.WriteJSON(data)
 		}

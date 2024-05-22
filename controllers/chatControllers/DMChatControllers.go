@@ -2,10 +2,10 @@ package chatControllers
 
 import (
 	"fmt"
+	"i9chat/services/appObservers"
 	"i9chat/services/appServices"
 	"i9chat/services/chatService"
 	"i9chat/services/userService"
-	"i9chat/utils/appGlobals"
 	"i9chat/utils/appTypes"
 	"i9chat/utils/helpers"
 	"time"
@@ -34,7 +34,7 @@ var GetDMChatHistory = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 
 	var w_err error
 	if app_err != nil {
-		w_err = c.WriteJSON(helpers.AppError(fiber.StatusUnprocessableEntity, app_err))
+		w_err = c.WriteJSON(helpers.BuildErrResp(fiber.StatusUnprocessableEntity, app_err))
 	} else {
 		w_err = c.WriteJSON(map[string]any{"chat_history": dmChatHistory})
 	}
@@ -60,7 +60,7 @@ var ActivateDMChatSession = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 
 	mailboxKey := fmt.Sprintf("user-%d--dmchat-%d", user.UserId, dmChatId)
 
-	dcso := appGlobals.DMChatSessionObserver{}
+	dcso := appObservers.DMChatSessionObserver{}
 
 	dcso.Subscribe(mailboxKey, myMailbox)
 
@@ -113,7 +113,7 @@ func sendDMChatMessages(c *websocket.Conn, user appTypes.JWTUserData, dmChatId i
 
 		var w_err error
 		if app_err != nil {
-			w_err = c.WriteJSON(helpers.AppError(fiber.StatusUnprocessableEntity, app_err))
+			w_err = c.WriteJSON(helpers.BuildErrResp(fiber.StatusUnprocessableEntity, app_err))
 		} else {
 			w_err = c.WriteJSON(data)
 		}
