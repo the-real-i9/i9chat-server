@@ -16,35 +16,30 @@ import (
 )
 
 func RequestNewAccount(email string) (string, error) {
-	// check if email already exists. if yes, send error
 	accExists, err := appModel.AccountExists(email)
 	if err != nil {
 		return "", err
 	}
 
 	if accExists {
-		return "", fmt.Errorf("email error: an account with '%s' already exists", email)
+		return "", fmt.Errorf("signup error: an account with '%s' already exists", email)
 	}
 
-	// generate 6-digit verification code and expiration
-	verfCode := rand.Intn(899999) + 100000
-	expires := time.Now().UTC().Add(1 * time.Hour)
+	verfCode, expires := rand.Intn(899999)+100000, time.Now().UTC().Add(1*time.Hour)
 
-	// send 6-digit code to email
 	go appServices.SendMail(email, "Email Verification", fmt.Sprintf("Your email verification code is: <b>%d</b>", verfCode))
 
-	// store the email(varchar), verfCode(int), and vefified(bool) in an ongoing_signup table
-	// get back the id as session_id
 	sessionId, err := appModel.NewSignupSession(email, verfCode)
 	if err != nil {
 		return "", err
 	}
 
-	// generate a 30min. JWT token that holds the session_id
-	jwtToken := helpers.JwtSign(map[string]any{"sessionId": sessionId, "email": email}, os.Getenv("SIGNUP_SESSION_JWT_SECRET"), expires)
+	signupSessionJwt := helpers.JwtSign(map[string]any{
+		"sessionId": sessionId,
+		"email":     email,
+	}, os.Getenv("SIGNUP_SESSION_JWT_SECRET"), expires)
 
-	// return the jwtToken
-	return jwtToken, nil
+	return signupSessionJwt, nil
 }
 
 func VerifyEmail(sessionId string, inputVerfCode int, email string) error {

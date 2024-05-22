@@ -8,6 +8,7 @@ import (
 
 func AccountExists(emailOrUsername string) (bool, error) {
 	exist, err := helpers.QueryRowField[bool]("SELECT exist FROM account_exists($1)", emailOrUsername)
+
 	if err != nil {
 		log.Println(fmt.Errorf("appModel.go: AccountExists: %s", err))
 		return false, helpers.ErrInternalServerError
@@ -18,6 +19,7 @@ func AccountExists(emailOrUsername string) (bool, error) {
 
 func NewSignupSession(email string, verfCode int) (string, error) {
 	sessionId, err := helpers.QueryRowField[string]("SELECT session_id FROM new_signup_session($1, $2)", email, verfCode)
+
 	if err != nil {
 		log.Println(fmt.Errorf("appModel.go: NewSignupSession: %s", err))
 		return "", helpers.ErrInternalServerError

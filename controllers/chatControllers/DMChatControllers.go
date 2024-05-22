@@ -34,7 +34,7 @@ var GetDMChatHistory = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 
 	var w_err error
 	if app_err != nil {
-		w_err = c.WriteJSON(helpers.BuildErrResp(fiber.StatusUnprocessableEntity, app_err))
+		w_err = c.WriteJSON(helpers.ErrResp(fiber.StatusUnprocessableEntity, app_err))
 	} else {
 		w_err = c.WriteJSON(map[string]any{"chat_history": dmChatHistory})
 	}
@@ -113,7 +113,7 @@ func sendDMChatMessages(c *websocket.Conn, user appTypes.JWTUserData, dmChatId i
 
 		var w_err error
 		if app_err != nil {
-			w_err = c.WriteJSON(helpers.BuildErrResp(fiber.StatusUnprocessableEntity, app_err))
+			w_err = c.WriteJSON(helpers.ErrResp(fiber.StatusUnprocessableEntity, app_err))
 		} else {
 			w_err = c.WriteJSON(data)
 		}

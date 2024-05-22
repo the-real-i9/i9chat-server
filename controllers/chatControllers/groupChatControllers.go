@@ -34,7 +34,7 @@ var GetGroupChatHistory = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 
 	var w_err error
 	if app_err != nil {
-		w_err = c.WriteJSON(helpers.BuildErrResp(fiber.StatusUnprocessableEntity, app_err))
+		w_err = c.WriteJSON(helpers.ErrResp(fiber.StatusUnprocessableEntity, app_err))
 	} else {
 		w_err = c.WriteJSON(map[string]any{"chat_history": groupChatHistory})
 	}
@@ -112,7 +112,7 @@ func sendGroupChatMessages(c *websocket.Conn, user appTypes.JWTUserData, groupCh
 
 		var w_err error
 		if app_err != nil {
-			w_err = c.WriteJSON(helpers.BuildErrResp(fiber.StatusUnprocessableEntity, app_err))
+			w_err = c.WriteJSON(helpers.ErrResp(fiber.StatusUnprocessableEntity, app_err))
 		} else {
 			w_err = c.WriteJSON(data)
 		}

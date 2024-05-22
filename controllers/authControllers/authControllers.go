@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"i9chat/middlewares"
 	"i9chat/services/authServices"
-	"i9chat/utils/appTypes"
 	"i9chat/utils/helpers"
 
 	"github.com/gofiber/contrib/websocket"
@@ -23,17 +22,17 @@ var RequestNewAccount = websocket.New(func(c *websocket.Conn) {
 			break
 		}
 
+		signupSessionJwt, app_err := authServices.RequestNewAccount(body.Email)
+
 		var w_err error
 
-		jwtToken, app_err := authServices.RequestNewAccount(body.Email)
-
 		if app_err != nil {
-			w_err = c.WriteJSON(helpers.AppError(fiber.StatusUnprocessableEntity, app_err))
+			w_err = c.WriteJSON(helpers.ErrResp(fiber.StatusUnprocessableEntity, app_err))
 		} else {
 			w_err = c.WriteJSON(map[string]any{
 				"statusCode": fiber.StatusOK,
 				"body": map[string]any{
-					"signup_session_jwt": jwtToken,
+					"signup_session_jwt": signupSessionJwt,
 				},
 			})
 		}
@@ -46,10 +45,10 @@ var RequestNewAccount = websocket.New(func(c *websocket.Conn) {
 })
 
 var VerifyEmail = websocket.New(func(c *websocket.Conn) {
-	sessData, mid_err := middlewares.CheckAccountRequested(c)
+	sessionData, mid_err := middlewares.CheckAccountRequested(c)
 
 	if mid_err != nil {
-		if w_err := c.WriteJSON(helpers.AppError(fiber.StatusUnprocessableEntity, mid_err)); w_err != nil {
+		if w_err := c.WriteJSON(helpers.ErrResp(fiber.StatusUnprocessableEntity, mid_err)); w_err != nil {
 			// log.Println(w_err)
 			return
 		}
@@ -67,14 +66,12 @@ var VerifyEmail = websocket.New(func(c *websocket.Conn) {
 			break
 		}
 
-		sessionData := sessData.(appTypes.SignupSessionData)
-
 		app_err := authServices.VerifyEmail(sessionData.SessionId, body.Code, sessionData.Email)
 
 		var w_err error
 
 		if app_err != nil {
-			w_err = c.WriteJSON(helpers.AppError(fiber.StatusUnprocessableEntity, app_err))
+			w_err = c.WriteJSON(helpers.ErrResp(fiber.StatusUnprocessableEntity, app_err))
 		} else {
 			w_err = c.WriteJSON(map[string]any{
 				"statusCode": fiber.StatusOK,
@@ -92,10 +89,10 @@ var VerifyEmail = websocket.New(func(c *websocket.Conn) {
 })
 
 var RegisterUser = websocket.New(func(c *websocket.Conn) {
-	sessData, mid_err := middlewares.CheckEmailVerified(c)
+	sessionData, mid_err := middlewares.CheckEmailVerified(c)
 
 	if mid_err != nil {
-		if w_err := c.WriteJSON(helpers.AppError(fiber.StatusUnprocessableEntity, mid_err)); w_err != nil {
+		if w_err := c.WriteJSON(helpers.ErrResp(fiber.StatusUnprocessableEntity, mid_err)); w_err != nil {
 			// log.Println(w_err)
 			return
 		}
@@ -115,13 +112,11 @@ var RegisterUser = websocket.New(func(c *websocket.Conn) {
 			break
 		}
 
-		sessionData := sessData.(appTypes.SignupSessionData)
-
 		userData, jwtToken, app_err := authServices.RegisterUser(sessionData.SessionId, sessionData.Email, body.Username, body.Password, body.Geolocation)
 
 		var w_err error
 		if app_err != nil {
-			w_err = c.WriteJSON(helpers.AppError(fiber.StatusUnprocessableEntity, app_err))
+			w_err = c.WriteJSON(helpers.ErrResp(fiber.StatusUnprocessableEntity, app_err))
 		} else {
 			w_err = c.WriteJSON(map[string]any{
 				"statusCode": fiber.StatusOK,
@@ -158,7 +153,7 @@ var Signin = websocket.New(func(c *websocket.Conn) {
 		var w_err error
 
 		if app_err != nil {
-			w_err = c.WriteJSON(helpers.AppError(fiber.StatusUnprocessableEntity, app_err))
+			w_err = c.WriteJSON(helpers.ErrResp(fiber.StatusUnprocessableEntity, app_err))
 		} else {
 			w_err = c.WriteJSON(map[string]any{
 				"statusCode": fiber.StatusOK,

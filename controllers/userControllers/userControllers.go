@@ -33,7 +33,7 @@ var ChangeProfilePicture = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 
 		var w_err error
 		if app_err := (userService.User{Id: user.UserId}).ChangeProfilePicture(body.Picture); app_err != nil {
-			w_err = c.WriteJSON(helpers.BuildErrResp(fiber.StatusUnprocessableEntity, app_err))
+			w_err = c.WriteJSON(helpers.ErrResp(fiber.StatusUnprocessableEntity, app_err))
 		} else {
 			w_err = c.WriteJSON(map[string]any{"code": fiber.StatusOK, "msg": "Operation Successful"})
 		}
@@ -142,7 +142,7 @@ func createNewDMChatAndAckMessages(c *websocket.Conn, user appTypes.JWTUserData,
 				newChatBody.CreatedAt,
 			)
 			if app_err != nil {
-				w_err = c.WriteJSON(helpers.BuildErrResp(fiber.StatusUnprocessableEntity, app_err))
+				w_err = c.WriteJSON(helpers.ErrResp(fiber.StatusUnprocessableEntity, app_err))
 			} else {
 				w_err = c.WriteJSON(data)
 			}
@@ -190,7 +190,7 @@ func createNewDMChatAndAckMessages(c *websocket.Conn, user appTypes.JWTUserData,
 			batchAcknowledgeMessages()
 
 		} else {
-			if w_err := c.WriteJSON(helpers.BuildErrResp(fiber.StatusUnprocessableEntity, fmt.Errorf("invalid 'action' value"))); w_err != nil {
+			if w_err := c.WriteJSON(helpers.ErrResp(fiber.StatusUnprocessableEntity, fmt.Errorf("invalid 'action' value"))); w_err != nil {
 				// log.Println(w_err)
 				endSession()
 				return
@@ -295,7 +295,7 @@ func createNewGroupDMChatAndAckMessages(c *websocket.Conn, user appTypes.JWTUser
 				newChatBody.InitUsers,
 			)
 			if app_err != nil {
-				w_err = c.WriteJSON(helpers.BuildErrResp(fiber.StatusUnprocessableEntity, app_err))
+				w_err = c.WriteJSON(helpers.ErrResp(fiber.StatusUnprocessableEntity, app_err))
 			} else {
 				w_err = c.WriteJSON(data)
 			}
@@ -326,7 +326,7 @@ func createNewGroupDMChatAndAckMessages(c *websocket.Conn, user appTypes.JWTUser
 
 			acknowledgeMessages()
 		} else {
-			if w_err := c.WriteJSON(helpers.BuildErrResp(fiber.StatusUnprocessableEntity, fmt.Errorf("invalid 'action' value"))); w_err != nil {
+			if w_err := c.WriteJSON(helpers.ErrResp(fiber.StatusUnprocessableEntity, fmt.Errorf("invalid 'action' value"))); w_err != nil {
 				// log.Println(w_err)
 				endSession()
 				return
@@ -348,7 +348,7 @@ var GetMyChats = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 
 	var w_err error
 	if app_err != nil {
-		w_err = c.WriteJSON(helpers.BuildErrResp(500, app_err))
+		w_err = c.WriteJSON(helpers.ErrResp(500, app_err))
 	} else {
 		w_err = c.WriteJSON(map[string]any{"my_chats": myChats})
 	}
@@ -368,7 +368,7 @@ var GetAllUsers = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 
 	var w_err error
 	if app_err != nil {
-		w_err = c.WriteJSON(helpers.BuildErrResp(fiber.StatusUnprocessableEntity, app_err))
+		w_err = c.WriteJSON(helpers.ErrResp(fiber.StatusUnprocessableEntity, app_err))
 	} else {
 		w_err = c.WriteJSON(map[string]any{
 			"statusCode": 200,

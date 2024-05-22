@@ -85,7 +85,7 @@ func WSHandlerProtected(handler func(*websocket.Conn), config ...websocket.Confi
 		jwtToken := c.Headers("Authorization")
 
 		if jwtToken == "" {
-			w_err := c.WriteJSON(BuildErrResp(fiber.StatusUnauthorized, fmt.Errorf("authorization error: authorization token required")))
+			w_err := c.WriteJSON(ErrResp(fiber.StatusUnauthorized, fmt.Errorf("authorization error: authorization token required")))
 			if w_err != nil {
 				return
 			}
@@ -94,7 +94,7 @@ func WSHandlerProtected(handler func(*websocket.Conn), config ...websocket.Confi
 
 		userData, err := JwtVerify(jwtToken, os.Getenv("AUTH_JWT_SECRET"))
 		if err != nil {
-			w_err := c.WriteJSON(BuildErrResp(fiber.StatusUnprocessableEntity, err))
+			w_err := c.WriteJSON(ErrResp(fiber.StatusUnprocessableEntity, err))
 			if w_err != nil {
 				return
 			}

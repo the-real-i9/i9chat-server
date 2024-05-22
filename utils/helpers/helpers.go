@@ -58,7 +58,7 @@ func ParseToStruct(val any, structData any) {
 	json.Unmarshal(bt, structData)
 }
 
-func BuildErrResp(code int, err error) map[string]any {
+func ErrResp(code int, err error) map[string]any {
 	if errors.Is(err, ErrInternalServerError) {
 		return map[string]any{"statusCode": 500, "error": ErrInternalServerError.Error()}
 	}
