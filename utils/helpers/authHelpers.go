@@ -15,10 +15,12 @@ import (
 )
 
 func JwtSign(userData map[string]any, secret string, expires time.Time) string {
+	// base64-encode header
 	header := map[string]string{"alg": "HS256", "typ": "JWT"}
 	byteHeader, _ := json.Marshal(header)
 	encodedHeader := base64.RawURLEncoding.EncodeToString(byteHeader)
 
+	// base64-encode header
 	payload := map[string]any{
 		"data": userData,
 		"exp":  expires,
@@ -27,16 +29,14 @@ func JwtSign(userData map[string]any, secret string, expires time.Time) string {
 	bytePayload, _ := json.Marshal(payload)
 	encodedPayload := base64.RawURLEncoding.EncodeToString(bytePayload)
 
+	// generate HMAC signature | sign the `header.payload` portion
 	h := hmac.New(sha256.New, []byte(secret))
-
 	h.Write([]byte(encodedHeader + "." + encodedPayload))
+	hashRes := h.Sum(nil)
 
-	sig, _ := json.Marshal(h.Sum(nil))
+	signature := base64.RawURLEncoding.EncodeToString(hashRes[:])
 
-	var signature string
-
-	json.Unmarshal(sig, &signature)
-
+	// construct jwt
 	jwt := fmt.Sprintf("%s.%s.%s", encodedHeader, encodedPayload, signature)
 
 	return jwt
@@ -51,21 +51,20 @@ func JwtVerify(jwt string, secret string) (map[string]any, error) {
 		signature      = jwtParts[2]
 	)
 
+	// generate HMAC expected signature | re-sign the `header.payload` portion
 	h := hmac.New(sha256.New, []byte(secret))
-
 	h.Write([]byte(encodedHeader + "." + encodedPayload))
+	hashRes := h.Sum(nil)
 
-	expSig, _ := json.Marshal(h.Sum(nil))
+	expectedSignature := base64.RawURLEncoding.EncodeToString(hashRes[:])
 
-	var expectedSignature string
-
-	json.Unmarshal(expSig, &expectedSignature)
-
-	tokenValid := hmac.Equal([]byte(signature), []byte(expectedSignature))
-	if !tokenValid {
+	// check jwt validity
+	jwtValid := hmac.Equal([]byte(signature), []byte(expectedSignature))
+	if !jwtValid {
 		return nil, fmt.Errorf("%s", "authorization error: invalid jwt")
 	}
 
+	// decode the payload
 	decPay, _ := base64.RawURLEncoding.DecodeString(encodedPayload)
 
 	var decodedPayload struct {
@@ -75,6 +74,7 @@ func JwtVerify(jwt string, secret string) (map[string]any, error) {
 
 	json.Unmarshal(decPay, &decodedPayload)
 
+	// check jwt expiration
 	if decodedPayload.Exp.Before(time.Now()) {
 		return nil, fmt.Errorf("%s", "authorization error: jwt expired")
 	}
