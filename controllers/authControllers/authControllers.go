@@ -112,7 +112,7 @@ var RegisterUser = websocket.New(func(c *websocket.Conn) {
 			break
 		}
 
-		userData, jwtToken, app_err := authServices.RegisterUser(sessionData.SessionId, sessionData.Email, body.Username, body.Password, body.Geolocation)
+		userData, authJwt, app_err := authServices.RegisterUser(sessionData.SessionId, sessionData.Email, body.Username, body.Password, body.Geolocation)
 
 		var w_err error
 		if app_err != nil {
@@ -121,9 +121,9 @@ var RegisterUser = websocket.New(func(c *websocket.Conn) {
 			w_err = c.WriteJSON(map[string]any{
 				"statusCode": fiber.StatusOK,
 				"body": map[string]any{
-					"msg":      "Signup success!",
-					"user":     userData,
-					"jwtToken": jwtToken,
+					"msg":     "Signup success!",
+					"user":    userData,
+					"authJwt": authJwt,
 				},
 			})
 		}
@@ -148,7 +148,7 @@ var Signin = websocket.New(func(c *websocket.Conn) {
 			break
 		}
 
-		userData, jwtToken, app_err := authServices.Signin(body.EmailOrUsername, body.Password)
+		userData, authJwt, app_err := authServices.Signin(body.EmailOrUsername, body.Password)
 
 		var w_err error
 
@@ -158,9 +158,9 @@ var Signin = websocket.New(func(c *websocket.Conn) {
 			w_err = c.WriteJSON(map[string]any{
 				"statusCode": fiber.StatusOK,
 				"body": map[string]any{
-					"msg":      "Signin success!",
-					"user":     userData,
-					"jwtToken": jwtToken,
+					"msg":     "Signin success!",
+					"user":    userData,
+					"authJwt": authJwt,
 				},
 			})
 		}

@@ -13,20 +13,15 @@ import (
 var nilSsd = appTypes.SignupSessionData{}
 
 func CheckAccountRequested(c *websocket.Conn) (appTypes.SignupSessionData, error) {
-	token := c.Headers("Authorization")
+	signupSessionJwt := c.Headers("Authorization")
 
-	if token == "" {
-		return nilSsd, fmt.Errorf("signup error: no ongoing signup session. you must first submit your email and attach the autorization token sent")
+	if signupSessionJwt == "" {
+		return nilSsd, fmt.Errorf("authorization error: authorization token required")
 	}
 
-	sessData, err := helpers.JwtVerify(token, os.Getenv("SIGNUP_SESSION_JWT_SECRET"))
+	sessData, err := helpers.JwtVerify(signupSessionJwt, os.Getenv("SIGNUP_SESSION_JWT_SECRET"))
 	if err != nil {
-		if err.Error() == "authorization error: invalid jwt" {
-			return nilSsd, fmt.Errorf("signup error: invalid signup session token")
-		}
-		if err.Error() == "authorization error: jwt expired" {
-			return nilSsd, fmt.Errorf("signup error: signup session expired")
-		}
+		return nilSsd, err
 	}
 
 	var sessionData appTypes.SignupSessionData
@@ -37,20 +32,15 @@ func CheckAccountRequested(c *websocket.Conn) (appTypes.SignupSessionData, error
 }
 
 func CheckEmailVerified(c *websocket.Conn) (appTypes.SignupSessionData, error) {
-	token := c.Headers("Authorization")
+	signupSessionJwt := c.Headers("Authorization")
 
-	if token == "" {
-		return nilSsd, fmt.Errorf("signup error: no ongoing signup session. you must first submit your email and attach the autorization token sent")
+	if signupSessionJwt == "" {
+		return nilSsd, fmt.Errorf("authorization error: authorization token required")
 	}
 
-	sessData, err := helpers.JwtVerify(token, os.Getenv("SIGNUP_SESSION_JWT_SECRET"))
+	sessData, err := helpers.JwtVerify(signupSessionJwt, os.Getenv("SIGNUP_SESSION_JWT_SECRET"))
 	if err != nil {
-		if err.Error() == "authorization error: invalid jwt" {
-			return nilSsd, fmt.Errorf("signup error: invalid signup session token")
-		}
-		if err.Error() == "authorization error: jwt expired" {
-			return nilSsd, fmt.Errorf("signup error: signup session expired")
-		}
+		return nilSsd, err
 	}
 
 	var sessionData appTypes.SignupSessionData

@@ -60,7 +60,7 @@ func VerifyEmail(sessionId string, inputVerfCode int, email string) error {
 func RegisterUser(sessionId string, email string, username string, password string, geolocation string) (map[string]any, string, error) {
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
-		log.Println(fmt.Errorf("auth service: register user: %s", err))
+		log.Println(fmt.Errorf("authServices.go: RegisterUser: %s", err))
 		return nil, "", helpers.ErrInternalServerError
 	}
 
@@ -85,15 +85,14 @@ func RegisterUser(sessionId string, email string, username string, password stri
 
 	helpers.ParseToStruct(userData, &user)
 
-	// sign a jwt token
-	jwtToken := helpers.JwtSign(map[string]any{
+	authJwt := helpers.JwtSign(map[string]any{
 		"userId":   user.Id,
 		"username": user.Username,
 	}, os.Getenv("AUTH_JWT_SECRET"), time.Now().UTC().Add(365*24*time.Hour)) // 1 year
 
 	appModel.EndSignupSession(sessionId)
 
-	return userData, jwtToken, nil
+	return userData, authJwt, nil
 }
 
 func Signin(emailOrUsername string, password string) (map[string]any, string, error) {
@@ -108,16 +107,16 @@ func Signin(emailOrUsername string, password string) (map[string]any, string, er
 
 	hashedPassword, err := helpers.QueryRowField[string]("SELECT password FROM get_user_password($1)", emailOrUsername)
 	if err != nil {
-		log.Println(fmt.Errorf("authServices.go: Signin: hashed Password: get_user_password db error: %s", err))
+		log.Println(fmt.Errorf("authServices.go: Signin: DB query error: get_user_password(): %s", err))
 		return nil, "", helpers.ErrInternalServerError
 	}
 
-	pwd_err := bcrypt.CompareHashAndPassword([]byte(*hashedPassword), []byte(password))
-	if pwd_err != nil {
-		if errors.Is(pwd_err, bcrypt.ErrMismatchedHashAndPassword) {
+	cmp_err := bcrypt.CompareHashAndPassword([]byte(*hashedPassword), []byte(password))
+	if cmp_err != nil {
+		if errors.Is(cmp_err, bcrypt.ErrMismatchedHashAndPassword) {
 			return nil, "", fmt.Errorf("signin error: incorrect email/username or password")
 		} else {
-			log.Println(fmt.Errorf("authServices.go: Signin: %s", pwd_err))
+			log.Println(fmt.Errorf("authServices.go: Signin: %s", cmp_err))
 			return nil, "", helpers.ErrInternalServerError
 		}
 	}
@@ -129,10 +128,10 @@ func Signin(emailOrUsername string, password string) (map[string]any, string, er
 
 	helpers.ParseToStruct(userData, &user)
 
-	jwtToken := helpers.JwtSign(map[string]any{
+	authJwt := helpers.JwtSign(map[string]any{
 		"userId":   user.Id,
 		"username": user.Username,
 	}, os.Getenv("AUTH_JWT_SECRET"), time.Now().UTC().Add(365*24*time.Hour))
 
-	return userData, jwtToken, nil
+	return userData, authJwt, nil
 }

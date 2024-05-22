@@ -37,11 +37,13 @@ func JwtSign(userData map[string]any, secret string, expires time.Time) string {
 
 	json.Unmarshal(sig, &signature)
 
-	return fmt.Sprintf("%s.%s.%s", encodedHeader, encodedPayload, signature)
+	jwt := fmt.Sprintf("%s.%s.%s", encodedHeader, encodedPayload, signature)
+
+	return jwt
 }
 
-func JwtVerify(jwtToken string, secret string) (map[string]any, error) {
-	jwtParts := strings.Split(jwtToken, ".")
+func JwtVerify(jwt string, secret string) (map[string]any, error) {
+	jwtParts := strings.Split(jwt, ".")
 
 	var (
 		encodedHeader  = jwtParts[0]
@@ -82,9 +84,9 @@ func JwtVerify(jwtToken string, secret string) (map[string]any, error) {
 
 func WSHandlerProtected(handler func(*websocket.Conn), config ...websocket.Config) func(*fiber.Ctx) error {
 	return websocket.New(func(c *websocket.Conn) {
-		jwtToken := c.Headers("Authorization")
+		authJwt := c.Headers("Authorization")
 
-		if jwtToken == "" {
+		if authJwt == "" {
 			w_err := c.WriteJSON(ErrResp(fiber.StatusUnauthorized, fmt.Errorf("authorization error: authorization token required")))
 			if w_err != nil {
 				return
@@ -92,9 +94,9 @@ func WSHandlerProtected(handler func(*websocket.Conn), config ...websocket.Confi
 			return
 		}
 
-		userData, err := JwtVerify(jwtToken, os.Getenv("AUTH_JWT_SECRET"))
+		userData, err := JwtVerify(authJwt, os.Getenv("AUTH_JWT_SECRET"))
 		if err != nil {
-			w_err := c.WriteJSON(ErrResp(fiber.StatusUnprocessableEntity, err))
+			w_err := c.WriteJSON(ErrResp(fiber.StatusUnauthorized, err))
 			if w_err != nil {
 				return
 			}

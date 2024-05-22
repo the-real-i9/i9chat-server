@@ -30,6 +30,7 @@ func NewSignupSession(email string, verfCode int) (string, error) {
 
 func VerifyEmail(sessionId string, verfCode int) (bool, error) {
 	isSuccess, err := helpers.QueryRowField[bool]("SELECT is_success FROM verify_email($1, $2)", sessionId, verfCode)
+
 	if err != nil {
 		log.Println(fmt.Errorf("appModel.go: VerifyEmail: %s", err))
 		return false, helpers.ErrInternalServerError
