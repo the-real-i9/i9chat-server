@@ -75,10 +75,10 @@ var InitDMChatStream = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 	/* ---- stream chat events pending dispatch to the myMailbox ---- */
 	// this excecutes once every connection restoration
 	// "What did I miss?" - When the client comes online they get a report of all missed data (while offline)
-	if event_data_kvps, err := (userService.User{Id: user.UserId}).GetDMChatEventsPendingReceipt(); err == nil {
-		for _, evk := range event_data_kvps {
-			evk := *evk
-			myMailbox <- evk
+	if eventDataList, err := (userService.User{Id: user.UserId}).GetDMChatEventsPendingReceipt(); err == nil {
+		for _, eventData := range eventDataList {
+			eventData := *eventData
+			myMailbox <- eventData
 		}
 	}
 
@@ -229,10 +229,10 @@ var InitGroupChatStream = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 	/* ---- stream chat events pending dispatch to the myMailbox ---- */
 	// this excecutes once every connection restoration
 	// "What did I miss?" - When the client comes online they get a report of all missed data (while offline)
-	if event_data_kvps, err := (userService.User{Id: user.UserId}).GetGroupChatEventsPendingReceipt(); err == nil {
-		for _, evk := range event_data_kvps {
-			evk := *evk
-			myMailbox <- evk
+	if eventDataList, err := (userService.User{Id: user.UserId}).GetGroupChatEventsPendingReceipt(); err == nil {
+		for _, eventData := range eventDataList {
+			eventData := *eventData
+			myMailbox <- eventData
 		}
 	}
 
