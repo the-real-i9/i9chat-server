@@ -17,7 +17,7 @@ import (
 var GetDMChatHistory = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 	var user appTypes.JWTUserData
 
-	helpers.ParseToStruct(c.Locals("auth").(map[string]any), &user)
+	helpers.MapToStruct(c.Locals("auth").(map[string]any), &user)
 
 	var body struct {
 		DmChatId int
@@ -50,7 +50,7 @@ var ActivateDMChatSession = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 	// and in turn changes the delivery status of messages sent by the child goroutine
 	var user appTypes.JWTUserData
 
-	helpers.ParseToStruct(c.Locals("auth").(map[string]any), &user)
+	helpers.MapToStruct(c.Locals("auth").(map[string]any), &user)
 
 	var dmChatId int
 

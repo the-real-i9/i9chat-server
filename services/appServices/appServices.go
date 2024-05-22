@@ -40,7 +40,7 @@ func handleVoiceMsg(userId int, content map[string]any) map[string]any {
 		Voice []byte
 	}
 
-	helpers.ParseToStruct(content, &vo)
+	helpers.MapToStruct(content, &vo)
 
 	voiceUrl, _ := helpers.UploadFile(fmt.Sprintf("voice messages/user-%d/voice-%d.ogg", userId, time.Now().UnixMilli()), vo.Voice)
 
@@ -54,7 +54,7 @@ func handleAudioMsg(userId int, content map[string]any) map[string]any {
 		Audios [][]byte
 	}
 
-	helpers.ParseToStruct(content, &audd)
+	helpers.MapToStruct(content, &audd)
 
 	for i, aud := range audd.Audios {
 		audioUrl, _ := helpers.UploadFile(fmt.Sprintf("audios/user-%d/aud-%d.mp3", userId, time.Now().UnixMilli()), aud)
@@ -71,7 +71,7 @@ func handleVideoMsg(userId int, content map[string]any) map[string]any {
 		}
 	}
 
-	helpers.ParseToStruct(content, &vd)
+	helpers.MapToStruct(content, &vd)
 
 	for i, vid := range vd.Videos {
 		videoUrl, _ := helpers.UploadFile(fmt.Sprintf("videos/user-%d/vid-%d.mp4", userId, time.Now().UnixMilli()), vid.Video)
@@ -88,7 +88,7 @@ func handleImageMsg(userId int, content map[string]any) map[string]any {
 		}
 	}
 
-	helpers.ParseToStruct(content, &imgd)
+	helpers.MapToStruct(content, &imgd)
 
 	for i, img := range imgd.Images {
 		imageUrl, _ := helpers.UploadFile(fmt.Sprintf("images/user-%d/img-%d.mp4", userId, time.Now().UnixMilli()), img.Image)
@@ -104,7 +104,7 @@ func MessageBinaryToUrl(userId int, msgBody map[string]any) map[string]any {
 		Content map[string]any
 	}
 
-	helpers.ParseToStruct(msgBody, &msg)
+	helpers.MapToStruct(msgBody, &msg)
 
 	switch msg.Type {
 	case "voice":

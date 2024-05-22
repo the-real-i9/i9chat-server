@@ -18,7 +18,7 @@ import (
 var ChangeProfilePicture = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 	var user appTypes.JWTUserData
 
-	helpers.ParseToStruct(c.Locals("auth").(map[string]any), &user)
+	helpers.MapToStruct(c.Locals("auth").(map[string]any), &user)
 
 	var body struct {
 		Picture []byte
@@ -53,7 +53,7 @@ var ChangeProfilePicture = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 var InitDMChatStream = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 	var user appTypes.JWTUserData
 
-	helpers.ParseToStruct(c.Locals("auth").(map[string]any), &user)
+	helpers.MapToStruct(c.Locals("auth").(map[string]any), &user)
 
 	// a channel for streaming data to client
 	var myMailbox = make(chan map[string]any, 5)
@@ -131,7 +131,7 @@ func createNewDMChatAndAckMessages(c *websocket.Conn, user appTypes.JWTUserData,
 
 		createNewChat := func() error {
 
-			helpers.ParseToStruct(body.Data, &newChatBody)
+			helpers.MapToStruct(body.Data, &newChatBody)
 
 			var w_err error
 
@@ -157,7 +157,7 @@ func createNewDMChatAndAckMessages(c *websocket.Conn, user appTypes.JWTUserData,
 		// acknowledge messages singly
 		acknowledgeMessage := func() {
 
-			helpers.ParseToStruct(body.Data, &ackMsgBody)
+			helpers.MapToStruct(body.Data, &ackMsgBody)
 
 			go chatService.DMChatMessage{
 				Id:       ackMsgBody.MsgId,
@@ -169,7 +169,7 @@ func createNewDMChatAndAckMessages(c *websocket.Conn, user appTypes.JWTUserData,
 		// acknowledge messages in batches
 		batchAcknowledgeMessages := func() {
 
-			helpers.ParseToStruct(body.Data, &batchAckMsgBody)
+			helpers.MapToStruct(body.Data, &batchAckMsgBody)
 
 			go chatService.BatchUpdateDMChatMessageDeliveryStatus(user.UserId, batchAckMsgBody.Status, batchAckMsgBody.MsgDatas)
 		}
@@ -207,7 +207,7 @@ func createNewDMChatAndAckMessages(c *websocket.Conn, user appTypes.JWTUserData,
 var InitGroupChatStream = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 	var user appTypes.JWTUserData
 
-	helpers.ParseToStruct(c.Locals("auth").(map[string]any), &user)
+	helpers.MapToStruct(c.Locals("auth").(map[string]any), &user)
 
 	// a channel for streaming data to client
 	var myMailbox = make(chan map[string]any, 5)
@@ -283,7 +283,7 @@ func createNewGroupDMChatAndAckMessages(c *websocket.Conn, user appTypes.JWTUser
 
 		createNewChat := func() error {
 
-			helpers.ParseToStruct(body.Data, &newChatBody)
+			helpers.MapToStruct(body.Data, &newChatBody)
 
 			var w_err error
 
@@ -310,7 +310,7 @@ func createNewGroupDMChatAndAckMessages(c *websocket.Conn, user appTypes.JWTUser
 		// For Group chat, messages can only be acknowledged in batches,
 		acknowledgeMessages := func() {
 
-			helpers.ParseToStruct(body.Data, &ackMsgsBody)
+			helpers.MapToStruct(body.Data, &ackMsgsBody)
 
 			go chatService.GroupChat{Id: ackMsgsBody.GroupChatId}.BatchUpdateGroupChatMessageDeliveryStatus(user.UserId, ackMsgsBody.Status, ackMsgsBody.MsgDatas)
 		}
@@ -342,7 +342,7 @@ var GetMyChats = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 
 	var user appTypes.JWTUserData
 
-	helpers.ParseToStruct(c.Locals("auth").(map[string]any), &user)
+	helpers.MapToStruct(c.Locals("auth").(map[string]any), &user)
 
 	myChats, app_err := userService.User{Id: user.UserId}.GetMyChats()
 
@@ -362,7 +362,7 @@ var GetMyChats = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 var GetAllUsers = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 	var user appTypes.JWTUserData
 
-	helpers.ParseToStruct(c.Locals("auth").(map[string]any), &user)
+	helpers.MapToStruct(c.Locals("auth").(map[string]any), &user)
 
 	allUsers, app_err := userService.User{Id: user.UserId}.GetAllUsers()
 
