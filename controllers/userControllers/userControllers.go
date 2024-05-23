@@ -166,7 +166,7 @@ func createNewDMChatAndAckMessages(c *websocket.Conn, user appTypes.JWTUserData,
 			}.UpdateDeliveryStatus(user.UserId, ackMsgBody.Status, ackMsgBody.At)
 		}
 
-		// acknowledge messages in batches
+		// acknowledge messages in batch
 		batchAcknowledgeMessages := func() {
 
 			helpers.MapToStruct(body.Data, &batchAckMsgBody)

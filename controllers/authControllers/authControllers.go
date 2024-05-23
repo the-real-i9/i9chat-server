@@ -32,7 +32,8 @@ var RequestNewAccount = websocket.New(func(c *websocket.Conn) {
 			w_err = c.WriteJSON(map[string]any{
 				"statusCode": fiber.StatusOK,
 				"body": map[string]any{
-					"signup_session_jwt": signupSessionJwt,
+					"msg":              "A 6-digit verification code has been sent to " + body.Email,
+					"signupSessionJwt": signupSessionJwt,
 				},
 			})
 		}
