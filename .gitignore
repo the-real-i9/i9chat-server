@@ -3,3 +3,6 @@
 tmp/
 .air.toml
 i9apps-storage.json
+plannotes.md
+.gitignore
+.bashrc
