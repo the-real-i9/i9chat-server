@@ -25,7 +25,7 @@ The are two **formats of received data** :
 
 - The second format indicates an **error response** (if an error has occured):
 
-  ```json
+  ```txt
     {
       "statusCode": 4xx,
       "error": "reason for error"
@@ -44,7 +44,7 @@ The endpoint usage instructions follow a defined pattern:
 4. A description of each type of sent data and its corresponding received data, accompanied by examples.
 5. Final instructions on the endpoint, if any.
 
-The application's endpoints are organized into three categories: user authentication, user management, and chat operations.
+The application's endpoints are organized into three categories: user authentication, user actions, and chat actions.
 
 ### User Authentication
 
@@ -56,11 +56,19 @@ This category includes endpoints handling all aspects of user authentication.
   - [Register user](#sign-up-register-user---step-3)
 - [Signin](#sign-in)
 
-### User Management
+### User Actions
 
-This category includes endpoints handling all aspects of user management.
+This category includes endpoints handling user actions.
 
-### Chat Operations
+- [Change profile picture](#change-profile-picture)
+- [Get my chats](#get-my-chats)
+- [Get all users](#get-all-users)
+- [Open DM Chat Stream](#open-dm-chat-stream)
+- [Open Group Chat Stream](#open-group-chat-stream)
+
+### Chat Actions
+
+This category includes endpoints handling chat actions.
 
 ## Endpoints and Usage
 
@@ -88,9 +96,8 @@ The `signupSessionJwt` is a session token to establish a session for the signup 
 {
   "statusCode": 200,
   "body": {
-    "msg": "A 6-digit verification code has been sent to
-    example_user@gmail.com",
-    "signupSessionJwt": `${jwt}`
+    "msg": "A 6-digit verification code has been sent to example_user@gmail.com",
+    "signupSessionJwt": "${jwt}"
   }
 }
 ```
@@ -138,8 +145,7 @@ Here, the client provides the verification code sent to the email in the previou
 ```json
 {
   "statusCode": 422,
-  "error": "Incorrect verification code. Check your email or 
-  re-submit your email",
+  "error": "Incorrect verification code. Check your email or re-submit your email",
   "error": "Verification code has expired. Re-submit your email"
 }
 // Note: The duplicated `error` keys here are just to provide the two possible errors you can get.
@@ -174,10 +180,9 @@ Note: `geolocation` data should not be provided explicitly by the user, rather i
     "msg": "Signup success!",
     "user": {
       "id": 1,
-      "username": "abc",
-      ...
+      "username": "abc"
     },
-    "authJwt": `${authJwt}`
+    "authJwt": "${authJwt}"
   }
 }
 ```
@@ -187,9 +192,100 @@ Note: `geolocation` data should not be provided explicitly by the user, rather i
 ```json
 {
   "statusCode": 422,
-  // if an existing user name is used
   "error": "Username unavailable", 
 }
 ```
 
 ### Sign in
+
+**URL:** `ws://localhost:8000/api/auth/signin`
+
+**Sent Data:**
+
+```json
+{
+  "emailOrUsername": "abc",
+  "password": "blablabla",
+}
+```
+
+**Received Data:** (Success)
+
+```json
+{
+  "statusCode": 200,
+  "body": {
+    "msg": "Signin success!",
+    "user": {
+      "id": 1,
+      "username": "abc"
+    },
+    "authJwt": "${authJwt}"
+  }
+}
+```
+
+**Received Data:** (Error)
+
+```json
+{
+  "statusCode": 422,
+  "error": "Incorrect username or password"
+}
+```
+
+---
+---
+
+### Change profile picture
+
+**URL:** `ws://localhost:8000/api/app/user/change_profile_picture`
+
+**Sent Header:** `Authorization: Bearer ${authJwt}`
+
+**Sent Data:**
+
+The value `picture` is of a binary data representation, a `uint8` array, precisely. Almost, if not all programming languages, have a data type of this representation.
+
+```json
+{
+  "picture": [97, 98, 99, 100, 100, 101, 102]
+}
+```
+
+**Received Data:** (Success)
+
+```json
+{
+  "statusCode": 200,
+  "body": {
+    "msg": "Signup success!",
+    "user": {
+      "id": 1,
+      "username": "abc"
+    },
+    "authJwt": "${authJwt}"
+  }
+}
+```
+
+**Received Data:** (Error)
+
+```json
+{
+  "statusCode": 422,
+  "error": "Username unavailable", 
+}
+```
+
+### Get my chats
+
+
+### Get all users
+
+
+### Open DM Chat Stream
+
+
+### Open Group Chat Stream
+

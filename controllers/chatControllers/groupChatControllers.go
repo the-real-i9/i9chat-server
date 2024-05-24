@@ -192,13 +192,13 @@ func changeGroupDescription(client []string, data map[string]any) {
 
 func changeGroupPicture(client []string, data map[string]any) {
 	var d struct {
-		GroupChatId int
-		NewPicture  []byte
+		GroupChatId    int
+		NewPictureData []byte
 	}
 
 	helpers.MapToStruct(data, &d)
 
-	chatService.GroupChat{Id: d.GroupChatId}.ChangePicture(client, d.NewPicture)
+	chatService.GroupChat{Id: d.GroupChatId}.ChangePicture(client, d.NewPictureData)
 }
 
 func addUsersToGroup(client []string, data map[string]any) {

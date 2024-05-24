@@ -16,14 +16,13 @@ func broadcastNewGroup(initUsers [][]string, newGroupData map[string]any) {
 	}
 }
 
-func uploadGroupPicture(groupChatId int, picture []byte) string {
-	if len(picture) < 1 {
+func uploadGroupPicture(pictureData []byte) string {
+	if len(pictureData) < 1 {
 		return ""
 	}
-	// upload picture data and SET picture url
-	picPath := fmt.Sprintf("chat_pictures/group_chat_%d_pic_%d.jpg", groupChatId, time.Now().UnixMilli())
+	picPath := fmt.Sprintf("group_chat_pictures/group_chat_pic_%d.jpg", time.Now().UnixNano())
 
-	picUrl, err := helpers.UploadFile(picPath, picture)
+	picUrl, err := helpers.UploadFile(picPath, pictureData)
 
 	if err != nil {
 		return ""
@@ -32,8 +31,10 @@ func uploadGroupPicture(groupChatId int, picture []byte) string {
 	return picUrl
 }
 
-func NewGroupChat(name string, description string, picture []byte, creator []string, initUsers [][]string) (map[string]any, error) {
-	data, err := chatModel.NewGroupChat(name, description, "", creator, initUsers)
+func NewGroupChat(name string, description string, pictureData []byte, creator []string, initUsers [][]string) (map[string]any, error) {
+	picUrl := uploadGroupPicture(pictureData)
+
+	data, err := chatModel.NewGroupChat(name, description, picUrl, creator, initUsers)
 	if err != nil {
 		return nil, err
 	}
@@ -44,13 +45,6 @@ func NewGroupChat(name string, description string, picture []byte, creator []str
 	}
 
 	helpers.MapToStruct(data, &respData)
-
-	go func() {
-		groupChatId := respData.Crd["new_group_chat_id"].(int)
-		if picUrl := uploadGroupPicture(groupChatId, picture); picUrl != "" {
-			helpers.QueryRowField[bool]("UPDATE group_chat SET picture = $1 WHERE id = $2 RETURNING true", picUrl, groupChatId)
-		}
-	}()
 
 	go broadcastNewGroup(initUsers, respData.Nmrd)
 
@@ -86,13 +80,13 @@ func (gpc GroupChat) ChangeDescription(admin []string, newDescription string) {
 	}
 }
 
-func (gpc GroupChat) ChangePicture(admin []string, newPicture []byte) {
-	picUrl := uploadGroupPicture(gpc.Id, newPicture)
-	if picUrl == "" {
+func (gpc GroupChat) ChangePicture(admin []string, newPictureData []byte) {
+	newPicUrl := uploadGroupPicture(newPictureData)
+	if newPicUrl == "" {
 		return
 	}
 
-	if resp, err := (chatModel.GroupChat{Id: gpc.Id}).ChangePicture(admin, picUrl); err == nil {
+	if resp, err := (chatModel.GroupChat{Id: gpc.Id}).ChangePicture(admin, newPicUrl); err == nil {
 		go gpc.broadcastActivity(resp)
 	}
 }

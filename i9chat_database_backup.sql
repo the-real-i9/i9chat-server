@@ -17,6 +17,21 @@ SET client_min_messages = warning;
 SET row_security = off;
 
 --
+-- Name: i9c_user_t; Type: TYPE; Schema: public; Owner: postgres
+--
+
+CREATE TYPE public.i9c_user_t AS (
+	id integer,
+	username character varying,
+	profile_picture_url character varying,
+	presence character varying,
+	last_seen timestamp without time zone
+);
+
+
+ALTER TYPE public.i9c_user_t OWNER TO postgres;
+
+--
 -- Name: account_exists(character varying); Type: FUNCTION; Schema: public; Owner: postgres
 --
 
@@ -163,7 +178,7 @@ ALTER FUNCTION public.change_group_name(in_group_chat_id integer, in_admin chara
 -- Name: change_group_picture(integer, character varying[], character varying); Type: FUNCTION; Schema: public; Owner: postgres
 --
 
-CREATE FUNCTION public.change_group_picture(in_group_chat_id integer, in_admin character varying[], in_new_picture character varying, OUT member_ids integer[], OUT activity_data json) RETURNS record
+CREATE FUNCTION public.change_group_picture(in_group_chat_id integer, in_admin character varying[], in_new_picture_url character varying, OUT member_ids integer[], OUT activity_data json) RETURNS record
     LANGUAGE plpgsql
     AS $$
 BEGIN
@@ -175,9 +190,9 @@ BEGIN
     RAISE EXCEPTION 'user (id=%) is not a group admin', in_admin[1];
   END IF;
   
-  -- set group_chat's name to new picture
+  -- set group_chat's picture to new picture
   UPDATE group_chat 
-  SET picture = in_new_picture
+  SET picture_url = in_new_picture_url
   WHERE id = in_group_chat_id;
   
   -- create group_chat_activity_log for group picture change
@@ -194,13 +209,13 @@ END;
 $$;
 
 
-ALTER FUNCTION public.change_group_picture(in_group_chat_id integer, in_admin character varying[], in_new_picture character varying, OUT member_ids integer[], OUT activity_data json) OWNER TO postgres;
+ALTER FUNCTION public.change_group_picture(in_group_chat_id integer, in_admin character varying[], in_new_picture_url character varying, OUT member_ids integer[], OUT activity_data json) OWNER TO postgres;
 
 --
 -- Name: edit_user(integer, character varying[]); Type: FUNCTION; Schema: public; Owner: postgres
 --
 
-CREATE FUNCTION public.edit_user(in_user_id integer, in_col_updates character varying[]) RETURNS TABLE(id integer, username character varying, profile_picture character varying, presence character varying, last_seen timestamp without time zone)
+CREATE FUNCTION public.edit_user(in_user_id integer, in_col_updates character varying[]) RETURNS SETOF public.i9c_user_t
     LANGUAGE plpgsql
     AS $_$
 DECLARE
@@ -209,7 +224,7 @@ DECLARE
 BEGIN
   FOREACH col_name_val SLICE 1 IN ARRAY in_col_updates 
   LOOP
-    IF col_name_val[1] NOT IN ('username', 'password', 'email', 'profile_picture', 'location') THEN
+    IF col_name_val[1] NOT IN ('username', 'password', 'email', 'profile_picture_url', 'location') THEN
 	  RAISE EXCEPTION '"%" is either an invalid or a non-editable column', col_name_val[1] 
 	  USING HINT = 'Validate column name or set column from the proper routine';
 	END IF;
@@ -218,7 +233,7 @@ BEGIN
   
   update_sets := LEFT(update_sets, LENGTH(update_sets) - 2);
   
-  RETURN QUERY EXECUTE 'UPDATE i9c_user SET ' || update_sets || ' WHERE id = $1 RETURNING i9c_user.id, i9c_user.username, i9c_user.profile_picture, i9c_user.presence, i9c_user.last_seen' USING in_user_id;
+  RETURN QUERY EXECUTE 'UPDATE i9c_user SET ' || update_sets || ' WHERE id = $1 RETURNING id, username, profile_picture_url, presence, last_seen' USING in_user_id;
   
   RETURN;
 END;
@@ -249,14 +264,13 @@ ALTER FUNCTION public.end_signup_session(in_session_id uuid) OWNER TO postgres;
 -- Name: find_nearby_users(integer, circle); Type: FUNCTION; Schema: public; Owner: postgres
 --
 
-CREATE FUNCTION public.find_nearby_users(in_client_id integer, in_user_live_location circle) RETURNS TABLE(id integer, username character varying, profile_picture character varying, presence character varying, last_seen timestamp without time zone)
+CREATE FUNCTION public.find_nearby_users(in_client_id integer, in_user_live_location circle) RETURNS SETOF public.i9c_user_t
     LANGUAGE plpgsql
     AS $$
 BEGIN
-  RETURN QUERY SELECT i9c_user.id, i9c_user.username, i9c_user.profile_picture, 
-  i9c_user.presence, i9c_user.last_seen 
+  RETURN QUERY SELECT id, username, profile_picture_url, presence, last_seen 
                FROM i9c_user 
-			   WHERE in_user_live_location @> point(i9c_user.location) AND deleted = false AND i9c_user.id != in_client_id;
+			   WHERE in_user_live_location @> point(location) AND deleted = false AND id != in_client_id;
   
   RETURN;
 END;
@@ -269,14 +283,14 @@ ALTER FUNCTION public.find_nearby_users(in_client_id integer, in_user_live_locat
 -- Name: get_all_users(integer); Type: FUNCTION; Schema: public; Owner: postgres
 --
 
-CREATE FUNCTION public.get_all_users(in_client_id integer) RETURNS TABLE(id integer, username character varying, profile_picture character varying, presence character varying, last_seen timestamp without time zone)
+CREATE FUNCTION public.get_all_users(in_client_id integer) RETURNS SETOF public.i9c_user_t
     LANGUAGE plpgsql
     AS $$
 BEGIN
   RETURN QUERY 
-    SELECT i9c_user.id, i9c_user.username, i9c_user.profile_picture, i9c_user.presence, i9c_user.last_seen
+    SELECT id, username, profile_picture_url, presence, last_seen
 	FROM i9c_user 
-	WHERE i9c_user.id != in_client_id;
+	WHERE id != in_client_id;
   
   RETURN;
 END;
@@ -482,7 +496,7 @@ BEGIN
 	  'partner', jsonb_build_object(
 		  'id', partner.id,
 		  'username', partner.username,
-		  'profile_picture', partner.profile_picture,
+		  'profile_picture_url', partner.profile_picture_url,
 		  'presence', partner.presence,
 		  'last_seen', partner.last_seen
 	  )
@@ -494,7 +508,7 @@ BEGIN
 	  'type', 'group',
 	  'id', group_chat_id,
 	  'name', group_chat.name,
-	  'picture', group_chat.picture,
+	  'picture_url', group_chat.picture_url,
 	  'updated_at', updated_at,
 	  'unread_messages_count', unread_messages_count
   ) AS my_chat, updated_at FROM user_group_chat
@@ -513,12 +527,12 @@ ALTER FUNCTION public.get_my_chats(in_user_id integer) OWNER TO postgres;
 -- Name: get_user(anycompatible); Type: FUNCTION; Schema: public; Owner: postgres
 --
 
-CREATE FUNCTION public.get_user(unique_identifier anycompatible) RETURNS TABLE(id integer, username character varying, profile_picture character varying, presence character varying, last_seen timestamp without time zone)
+CREATE FUNCTION public.get_user(unique_identifier anycompatible) RETURNS SETOF public.i9c_user_t
     LANGUAGE plpgsql
     AS $$
 BEGIN
-  RETURN QUERY SELECT i9c_user.id, i9c_user.username, i9c_user.profile_picture, i9c_user.presence, i9c_user.last_seen FROM i9c_user 
-  WHERE unique_identifier::varchar = ANY(ARRAY[i9c_user.id::varchar, i9c_user.email, i9c_user.username]) AND deleted = false;
+  RETURN QUERY SELECT id, username, profile_picture_url, presence, last_seen FROM i9c_user 
+  WHERE unique_identifier::varchar = ANY(ARRAY[id::varchar, email, username]) AND deleted = false;
   
   RETURN;
 END;
@@ -536,7 +550,7 @@ CREATE FUNCTION public.get_user_password(unique_identifier anycompatible, OUT pa
     AS $$
 BEGIN
   SELECT i9c_user.password FROM i9c_user 
-  WHERE unique_identifier::varchar = ANY(ARRAY[i9c_user.id::varchar, i9c_user.email, i9c_user.username]) AND deleted = false 
+  WHERE unique_identifier::varchar = ANY(ARRAY[id::varchar, email, username]) AND deleted = false 
   INTO "password";
 END;
 $$;
@@ -690,7 +704,7 @@ BEGIN
   SELECT json_build_object(
 		  'id', id,
 		  'username', username,
-		  'profile_picture', profile_picture,
+		  'profile_picture_url', profile_picture_url,
 		  'presence', presence,
 		  'last_seen', last_seen
 	  ) FROM i9c_user WHERE id = in_initiator_id INTO initiator_user_data;
@@ -714,7 +728,7 @@ ALTER FUNCTION public.new_dm_chat(in_initiator_id integer, in_partner_id integer
 -- Name: new_group_chat(character varying, character varying, character varying, character varying[], character varying[]); Type: FUNCTION; Schema: public; Owner: postgres
 --
 
-CREATE FUNCTION public.new_group_chat(in_name character varying, in_description character varying, in_picture character varying, in_creator character varying[], in_init_users character varying[], OUT creator_resp_data json, OUT new_members_resp_data json) RETURNS record
+CREATE FUNCTION public.new_group_chat(in_name character varying, in_description character varying, in_picture_url character varying, in_creator character varying[], in_init_users character varying[], OUT creator_resp_data json, OUT new_members_resp_data json) RETURNS record
     LANGUAGE plpgsql
     AS $$
 DECLARE
@@ -724,8 +738,8 @@ DECLARE
   iusers_usernames varchar[];
 BEGIN
   -- create group chat
-  INSERT INTO group_chat (name, description, picture, creator_id, members_count)
-  VALUES (in_name, in_description, in_picture, in_creator[1]::int, array_length(in_init_users, 1))
+  INSERT INTO group_chat (name, description, picture_url, creator_id, members_count)
+  VALUES (in_name, in_description, in_picture_url, in_creator[1]::int, array_length(in_init_users, 1))
   RETURNING id INTO new_group_chat_id;
   
   -- input group_chat_activity_log for group created
@@ -755,7 +769,7 @@ BEGIN
 	  'type', 'group',
 	  'id', new_group_chat_id,
 	  'name', in_name,
-	  'picture', in_picture,
+	  'picture_url', in_picture_url,
 	  'updated_at', now()::timestamp,
 	  'unread_messages_count', 0
   )
@@ -765,7 +779,7 @@ END;
 $$;
 
 
-ALTER FUNCTION public.new_group_chat(in_name character varying, in_description character varying, in_picture character varying, in_creator character varying[], in_init_users character varying[], OUT creator_resp_data json, OUT new_members_resp_data json) OWNER TO postgres;
+ALTER FUNCTION public.new_group_chat(in_name character varying, in_description character varying, in_picture_url character varying, in_creator character varying[], in_init_users character varying[], OUT creator_resp_data json, OUT new_members_resp_data json) OWNER TO postgres;
 
 --
 -- Name: new_signup_session(character varying, integer); Type: FUNCTION; Schema: public; Owner: postgres
@@ -792,13 +806,13 @@ ALTER FUNCTION public.new_signup_session(in_email character varying, in_verifica
 -- Name: new_user(character varying, character varying, character varying, circle); Type: FUNCTION; Schema: public; Owner: postgres
 --
 
-CREATE FUNCTION public.new_user(in_email character varying, in_username character varying, in_password character varying, in_location circle) RETURNS TABLE(id integer, username character varying, profile_picture character varying, presence character varying, last_seen timestamp without time zone)
+CREATE FUNCTION public.new_user(in_email character varying, in_username character varying, in_password character varying, in_location circle) RETURNS SETOF public.i9c_user_t
     LANGUAGE plpgsql
     AS $$
 BEGIN
   RETURN QUERY INSERT INTO i9c_user (email, username, password, location) 
   VALUES (in_email, in_username, in_password, in_location)
-  RETURNING i9c_user.id, i9c_user.username, i9c_user.profile_picture, i9c_user.presence, i9c_user.last_seen;
+  RETURNING id, username, profile_picture_url, presence, last_seen;
   
   RETURN;
 END;
@@ -931,14 +945,14 @@ ALTER FUNCTION public.remove_user_from_group_admins(in_group_chat_id integer, in
 -- Name: search_user(integer, text); Type: FUNCTION; Schema: public; Owner: postgres
 --
 
-CREATE FUNCTION public.search_user(in_client_id integer, search_query text) RETURNS TABLE(id integer, username character varying, profile_picture character varying, presence character varying, last_seen timestamp without time zone)
+CREATE FUNCTION public.search_user(in_client_id integer, search_query text) RETURNS SETOF public.i9c_user_t
     LANGUAGE plpgsql
     AS $$
 BEGIN
   RETURN QUERY 
-    SELECT i9c_user.id, i9c_user.username, i9c_user.profile_picture, i9c_user.presence, i9c_user.last_seen
+    SELECT id, username, profile_picture_url, presence, last_seen
 	FROM i9c_user 
-	WHERE i9c_user.username LIKE format('%%%s%%', search_query) AND deleted = false AND i9c_user.id != in_client_id;
+	WHERE username LIKE format('%%%s%%', search_query) AND deleted = false AND id != in_client_id;
   
   RETURN;
 END;
@@ -1448,7 +1462,7 @@ CREATE TABLE public.group_chat (
     created_at timestamp without time zone DEFAULT now() NOT NULL,
     deleted boolean DEFAULT false NOT NULL,
     members_count integer NOT NULL,
-    picture character varying DEFAULT ''::character varying NOT NULL
+    picture_url character varying DEFAULT ''::character varying NOT NULL
 );
 
 
@@ -1754,7 +1768,7 @@ CREATE TABLE public.i9c_user (
     username character varying NOT NULL,
     password character varying NOT NULL,
     email character varying NOT NULL,
-    profile_picture character varying DEFAULT ''::character varying NOT NULL,
+    profile_picture_url character varying DEFAULT ''::character varying NOT NULL,
     presence character varying DEFAULT 'online'::character varying NOT NULL,
     last_seen timestamp without time zone,
     created_at timestamp without time zone DEFAULT now() NOT NULL,

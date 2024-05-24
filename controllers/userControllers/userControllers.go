@@ -21,7 +21,7 @@ var ChangeProfilePicture = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 	helpers.MapToStruct(c.Locals("auth").(map[string]any), &user)
 
 	var body struct {
-		Picture []byte
+		PictureData []byte
 	}
 
 	for {
@@ -32,7 +32,7 @@ var ChangeProfilePicture = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 		}
 
 		var w_err error
-		if app_err := (userService.User{Id: user.UserId}).ChangeProfilePicture(body.Picture); app_err != nil {
+		if app_err := (userService.User{Id: user.UserId}).ChangeProfilePicture(body.PictureData); app_err != nil {
 			w_err = c.WriteJSON(helpers.ErrResp(fiber.StatusUnprocessableEntity, app_err))
 		} else {
 			w_err = c.WriteJSON(map[string]any{"code": fiber.StatusOK, "msg": "Operation Successful"})
@@ -50,7 +50,7 @@ var ChangeProfilePicture = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 // 1. As soon as connection is restored (client online), streams all new dm chats pending receipt (while client offline) to the client, and keeps the connection open to send new ones.
 //
 // 2. Lets the client: "initiate a new dm chat" and "acknowledge received dm messages"
-var InitDMChatStream = helpers.WSHandlerProtected(func(c *websocket.Conn) {
+var OpenDMChatStream = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 	var user appTypes.JWTUserData
 
 	helpers.MapToStruct(c.Locals("auth").(map[string]any), &user)
@@ -95,9 +95,9 @@ var InitDMChatStream = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 
 // This goroutine handles:
 //
-// + the initation of new dm chats
+// + initating new dm chats
 //
-// + the acknowledgement of received dm messages
+// + sending acknowledgements for received dm messages
 func createNewDMChatAndAckMessages(c *websocket.Conn, user appTypes.JWTUserData, endSession func()) {
 	var body struct {
 		Action string
@@ -204,7 +204,7 @@ func createNewDMChatAndAckMessages(c *websocket.Conn, user appTypes.JWTUserData,
 // 1. As soon as connection is restored (client online), streams all new group chats pending receipt (while client offline) to the client, and keeps the connection open to send new ones.
 //
 // 2. Lets the client: "initiate a new group chat" and "acknowledge received group messages"
-var InitGroupChatStream = helpers.WSHandlerProtected(func(c *websocket.Conn) {
+var OpenGroupChatStream = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 	var user appTypes.JWTUserData
 
 	helpers.MapToStruct(c.Locals("auth").(map[string]any), &user)
@@ -224,7 +224,7 @@ var InitGroupChatStream = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 		gco.Unsubscribe(mailboxKey)
 	}
 
-	go createNewGroupDMChatAndAckMessages(c, user, endSession)
+	go createNewGroupChatAndAckMessages(c, user, endSession)
 
 	/* ---- stream chat events pending dispatch to the myMailbox ---- */
 	// this excecutes once every connection restoration
@@ -249,10 +249,10 @@ var InitGroupChatStream = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 
 // This goroutine handles:
 //
-// + the initation of new group chats
+// + initating new group chats
 //
-// + the acknowledgement of received group messages
-func createNewGroupDMChatAndAckMessages(c *websocket.Conn, user appTypes.JWTUserData, endSession func()) {
+// + sending acknowledgement for received group messages
+func createNewGroupChatAndAckMessages(c *websocket.Conn, user appTypes.JWTUserData, endSession func()) {
 	var body struct {
 		Action string
 		Data   map[string]any
@@ -261,7 +261,7 @@ func createNewGroupDMChatAndAckMessages(c *websocket.Conn, user appTypes.JWTUser
 	var newChatBody struct {
 		Name        string
 		Description string
-		Picture     []byte
+		PictureData []byte
 		InitUsers   [][]string
 	}
 
@@ -290,7 +290,7 @@ func createNewGroupDMChatAndAckMessages(c *websocket.Conn, user appTypes.JWTUser
 			data, app_err := chatService.NewGroupChat(
 				newChatBody.Name,
 				newChatBody.Description,
-				newChatBody.Picture,
+				newChatBody.PictureData,
 				[]string{fmt.Sprint(user.UserId), user.Username},
 				newChatBody.InitUsers,
 			)

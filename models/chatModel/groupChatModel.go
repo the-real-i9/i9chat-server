@@ -9,8 +9,8 @@ import (
 	"time"
 )
 
-func NewGroupChat(name string, description string, picture string, creator []string, initUsers [][]string) (map[string]any, error) {
-	data, err := helpers.QueryRowFields("SELECT creator_resp_data AS crd, new_members_resp_data AS nmrd FROM new_group_chat($1, $2, $3, $4, $5)", name, description, picture, creator, initUsers)
+func NewGroupChat(name string, description string, pictureUrl string, creator []string, initUsers [][]string) (map[string]any, error) {
+	data, err := helpers.QueryRowFields("SELECT creator_resp_data AS crd, new_members_resp_data AS nmrd FROM new_group_chat($1, $2, $3, $4, $5)", name, description, pictureUrl, creator, initUsers)
 	if err != nil {
 		log.Println(fmt.Errorf("groupChatModel.go: NewGroupChat: %s", err))
 		return nil, helpers.ErrInternalServerError
@@ -43,8 +43,8 @@ func (gpc GroupChat) ChangeDescription(admin []string, newDescription string) (m
 	return data, nil
 }
 
-func (gpc GroupChat) ChangePicture(admin []string, newPicture string) (map[string]any, error) {
-	data, err := helpers.QueryRowFields("SELECT member_ids AS memberIds, activity_data AS activityData change_group_picture($1, $2, $3)", gpc.Id, admin, newPicture)
+func (gpc GroupChat) ChangePicture(admin []string, newPictureUrl string) (map[string]any, error) {
+	data, err := helpers.QueryRowFields("SELECT member_ids AS memberIds, activity_data AS activityData change_group_picture($1, $2, $3)", gpc.Id, admin, newPictureUrl)
 	if err != nil {
 		log.Println(fmt.Errorf("groupChatModel.go: GroupChat_ChangePicture: %s", err))
 		return nil, helpers.ErrInternalServerError
