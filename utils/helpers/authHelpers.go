@@ -42,14 +42,23 @@ func JwtSign(userData map[string]any, secret string, expires time.Time) string {
 	return jwt
 }
 
-func JwtVerify(jwt string, secret string) (map[string]any, error) {
-	jwtParts := strings.Split(jwt, ".")
+func parseJwtString(jwt string) (encodedHeader, encodedPayload, signature string, err error) {
+	token, found := strings.CutPrefix(jwt, "Bearer ")
+	if !found {
+		return "", "", "", fmt.Errorf("%s", "authorization error: jwt missing bearer prefix")
+	}
 
-	var (
-		encodedHeader  = jwtParts[0]
-		encodedPayload = jwtParts[1]
-		signature      = jwtParts[2]
-	)
+	jwtParts := strings.Split(token, ".")
+
+	return jwtParts[0], jwtParts[1], jwtParts[2], nil
+}
+
+func JwtVerify(jwt string, secret string) (map[string]any, error) {
+
+	encodedHeader, encodedPayload, signature, p_err := parseJwtString(jwt)
+	if p_err != nil {
+		return nil, p_err
+	}
 
 	// generate HMAC expected signature | re-sign the `header.payload` portion
 	h := hmac.New(sha256.New, []byte(secret))
