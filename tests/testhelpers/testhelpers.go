@@ -22,7 +22,7 @@ func WSSendRecv(connStream *websocket.Conn, sendData map[string]any, recvData *a
 	return nil
 }
 
-func PrintJSON(data map[string]any) {
+func PrintJSON(data any) {
 	res, _ := json.MarshalIndent(data, "", "  ")
 
 	fmt.Println(string(res))

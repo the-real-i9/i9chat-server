@@ -12,6 +12,8 @@ func Init(router fiber.Router) {
 	router.Get("/all_users", userControllers.GetAllUsers)
 	router.Get("/search_user", userControllers.SearchUser)
 	router.Get("/find_nearby_users", userControllers.FindNearbyUsers)
+	router.Get("/update_my_location", userControllers.UpdateMyLocation)
+	router.Get("/switch_my_presence", userControllers.SwitchMyPresence)
 	router.Get("/open_dm_chat_stream", userControllers.OpenDMChatStream)
 	router.Get("/open_group_chat_stream", userControllers.OpenGroupChatStream)
 }

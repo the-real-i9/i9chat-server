@@ -94,9 +94,9 @@ func (user User) Edit(fieldValuePair [][]string) (map[string]any, error) {
 	return updatedUser, nil
 }
 
-func (user User) SwitchPresence(presence string, last_seen time.Time) error {
+func (user User) SwitchPresence(presence string, lastSeen time.Time) error {
 
-	_, err := helpers.QueryRowField[bool](`SELECT switch_user_presence($1, $2, $3)`, user.Id, presence, last_seen)
+	_, err := helpers.QueryRowField[bool](`SELECT switch_user_presence($1, $2, $3)`, user.Id, presence, lastSeen)
 
 	if err != nil {
 		log.Println(fmt.Errorf("userModel.go: User_SwitchPresence: %s", err))

@@ -457,3 +457,76 @@ var FindNearbyUsers = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 		}
 	}
 })
+
+var SwitchMyPresence = helpers.WSHandlerProtected(func(c *websocket.Conn) {
+	var user appTypes.JWTUserData
+
+	helpers.MapToStruct(c.Locals("auth").(map[string]any), &user)
+
+	var body struct {
+		Presence string
+		LastSeen time.Time
+	}
+
+	for {
+		r_err := c.ReadJSON(&body)
+		if r_err != nil {
+			return
+		}
+
+		app_err := userService.User{Id: user.UserId}.SwitchPresence(body.Presence, body.LastSeen)
+
+		var w_err error
+		if app_err != nil {
+			w_err = c.WriteJSON(helpers.ErrResp(fiber.StatusUnprocessableEntity, app_err))
+		} else {
+			w_err = c.WriteJSON(map[string]any{
+				"statusCode": 200,
+				"body": map[string]any{
+					"msg": "Operation Successful",
+				},
+			})
+		}
+
+		if w_err != nil {
+			// log.Println(w_err)
+			return
+		}
+	}
+})
+
+var UpdateMyLocation = helpers.WSHandlerProtected(func(c *websocket.Conn) {
+	var user appTypes.JWTUserData
+
+	helpers.MapToStruct(c.Locals("auth").(map[string]any), &user)
+
+	var body struct {
+		NewGeolocation string
+	}
+
+	for {
+		r_err := c.ReadJSON(&body)
+		if r_err != nil {
+			return
+		}
+
+		app_err := userService.User{Id: user.UserId}.UpdateLocation(body.NewGeolocation)
+
+		var w_err error
+		if app_err != nil {
+			w_err = c.WriteJSON(helpers.ErrResp(fiber.StatusUnprocessableEntity, app_err))
+		} else {
+			w_err = c.WriteJSON(map[string]any{
+				"statusCode": 200,
+				"body": map[string]any{
+					"msg": "Operation Successful",
+				},
+			})
+		}
+
+		if w_err != nil {
+			// log.Println(w_err)
+			return
+		}
+	}
+})

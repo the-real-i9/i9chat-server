@@ -24,8 +24,12 @@ type User struct {
 	Id int
 }
 
-func (user User) GetMyChats() ([]*map[string]any, error) {
-	return userModel.User{Id: user.Id}.GetMyChats()
+func (user User) SwitchPresence(presence string, lastSeen time.Time) error {
+	return userModel.User{Id: user.Id}.SwitchPresence(presence, lastSeen)
+}
+
+func (user User) UpdateLocation(newGeolocation string) error {
+	return userModel.User{Id: user.Id}.UpdateLocation(newGeolocation)
 }
 
 func (user User) ChangeProfilePicture(pictureData []byte) error {
@@ -46,6 +50,10 @@ func (user User) ChangeProfilePicture(pictureData []byte) error {
 	}
 
 	return nil
+}
+
+func (user User) GetMyChats() ([]*map[string]any, error) {
+	return userModel.User{Id: user.Id}.GetMyChats()
 }
 
 func (user User) GetDMChatEventsPendingReceipt() ([]*map[string]any, error) {
