@@ -495,7 +495,7 @@ var SwitchMyPresence = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 	}
 })
 
-var UpdateMyLocation = helpers.WSHandlerProtected(func(c *websocket.Conn) {
+var UpdateMyGeolocation = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 	var user appTypes.JWTUserData
 
 	helpers.MapToStruct(c.Locals("auth").(map[string]any), &user)
