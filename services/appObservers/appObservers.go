@@ -46,6 +46,12 @@ func (DMChatObserver) Send(key string, data map[string]any, event string) { // c
 	}
 }
 
+func (DMChatObserver) SendPresenceUpdate(key string, data map[string]any, event string) {
+	if mailbox, found := dmChatObserver[key]; found {
+		mailbox <- map[string]any{"event": event, "data": data}
+	}
+}
+
 var groupChatObserver = make(map[string]chan<- map[string]any)
 
 type GroupChatObserver struct{}
