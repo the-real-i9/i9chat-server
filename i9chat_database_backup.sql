@@ -333,7 +333,7 @@ BEGIN
 	  'sender', json_build_object(
 		  'id', sender.id,
 		  'username', sender.username,
-		  'profile_picture', sender.profile_picture
+		  'profile_picture_url', sender.profile_picture_url
 	  ),
 	  'content', dcm.msg_content,
 	  'edited', dcm.edited,
@@ -346,7 +346,7 @@ BEGIN
 			  'reactor', json_build_object(
 				  'id', reactor.id,
 				  'username', reactor.username,
-				  'profile_picture', reactor.profile_picture
+				  'profile_picture_url', reactor.profile_picture_url
 			  )
 		  )
 	  )
@@ -420,7 +420,7 @@ BEGIN
 	  'sender', jsonb_build_object(
 		  'id', sender.id,
 		  'username', sender.username,
-		  'profile_picture', sender.profile_picture
+		  'profile_picture_url', sender.profile_picture_url
 	  ),
 	  'content', gcm.msg_content,
 	  'edited', gcm.edited,
@@ -433,7 +433,7 @@ BEGIN
 			  'reactor', jsonb_build_object(
 				  'id', reactor.id,
 				  'username', reactor.username,
-				  'profile_picture', reactor.profile_picture
+				  'profile_picture_url', reactor.profile_picture_url
 			  )
 		  )
 	  )
@@ -711,10 +711,12 @@ BEGIN
   
   initiator_resp_data := json_build_object('new_dm_chat_id', new_dm_chat_id, 'init_msg_id', init_msg_id);
   partner_resp_data := json_build_object(
-	  'type', 'dm', 
-	  'id', new_dm_chat_id, 
+	  'dm_chat_id', new_dm_chat_id, 
 	  'partner', initiator_user_data,
-	  'init_msg_id', init_msg_id
+	  'init_msg', json_build_object(
+		  'id', init_msg_id,
+		  'content', in_init_msg_content
+	  )
   );
   
   RETURN;
@@ -766,12 +768,9 @@ BEGIN
   
   creator_resp_data := json_build_object('new_group_chat_id', new_group_chat_id);
   new_members_resp_data := json_build_object(
-	  'type', 'group',
-	  'id', new_group_chat_id,
+	  'group_chat_id', new_group_chat_id,
 	  'name', in_name,
-	  'picture_url', in_picture_url,
-	  'updated_at', now()::timestamp,
-	  'unread_messages_count', 0
+	  'picture_url', in_picture_url
   )
   
   RETURN;
@@ -987,12 +986,12 @@ BEGIN
   SELECT json_build_object (
 	  'id', id,
 	  'username', username,
-	  'profile_picture', profile_picture
+	  'profile_picture_url', profile_picture_url
   ) FROM i9c_user WHERE id = in_sender_id INTO sender_info;
   
   sender_resp_data := json_build_object('new_msg_id', new_msg_id);
   receiver_resp_data := json_build_object(
-	  'id', new_msg_id,
+	  'msg_id', new_msg_id,
 	  'dm_chat_id', in_dm_chat_id,
 	  'sender', sender_info,
 	  'content', in_msg_content,
@@ -1039,12 +1038,12 @@ BEGIN
   SELECT json_build_object (
 	  'id', id,
 	  'username', username,
-	  'profile_picture', profile_picture
+	  'profile_picture_url', profile_picture_url
   ) FROM i9c_user WHERE id = in_sender_id INTO sender_info;
   
   sender_resp_data := json_build_object('new_msg_id', new_msg_id);
   members_resp_data := json_build_object(
-	  'id', new_msg_id,
+	  'msg_id', new_msg_id,
 	  'group_chat_id', in_group_chat_id,
 	  'sender', sender_info,
 	  'content', in_msg_content,
