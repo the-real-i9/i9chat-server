@@ -8,12 +8,20 @@ import (
 	"time"
 )
 
-type User struct {
-	Id int
+func GetAllUsers(clientId int) ([]map[string]any, error) {
+	return userModel.GetAllUsers(clientId)
 }
 
-func (user User) GetAllUsers() ([]map[string]any, error) {
-	return userModel.GetAllUsers(user.Id)
+func SearchUser(clientId int, searchQuery string) ([]map[string]any, error) {
+	return userModel.SearchUser(clientId, searchQuery)
+}
+
+func FindNearbyUsers(clientId int, liveLocation string) ([]map[string]any, error) {
+	return userModel.FindNearbyUsers(clientId, liveLocation)
+}
+
+type User struct {
+	Id int
 }
 
 func (user User) GetMyChats() ([]*map[string]any, error) {

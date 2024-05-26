@@ -26,6 +26,6 @@ type GroupChatMsgDeliveryData struct {
 
 type WSResp struct {
 	StatusCode int
-	Body       map[string]any
+	Body       any
 	Error      string
 }
