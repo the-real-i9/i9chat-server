@@ -19,11 +19,11 @@ func NewDMChat(initiatorId int, partnerId int, initMsgContent map[string]any, cr
 	return data, nil
 }
 
-func BatchUpdateDMChatMessageDeliveryStatus(receiverId int, status string, delivDatas []*appTypes.DMChatMsgDeliveryData) error {
+func BatchUpdateDMChatMessageDeliveryStatus(receiverId int, status string, ackDatas []*appTypes.DMChatMsgAckData) error {
 	var sqls = []string{}
 	var params = [][]any{}
 
-	for _, data := range delivDatas {
+	for _, data := range ackDatas {
 		sqls = append(sqls, "SELECT update_dm_chat_message_delivery_status($1, $2, $3, $4, $5)")
 		params = append(params, []any{data.DmChatId, data.MsgId, receiverId, status, data.At})
 	}

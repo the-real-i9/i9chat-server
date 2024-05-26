@@ -111,19 +111,19 @@ func createNewDMChatAndAckMessages(c *websocket.Conn, user appTypes.JWTUserData,
 
 	var newChatBody struct {
 		PartnerId int
-		Msg       map[string]any
+		InitMsg   map[string]any
 		CreatedAt time.Time
 	}
 
 	// For DM Chat, we allowed options for both single and batch acknowledgements
 	var ackMsgBody struct {
 		Status string
-		appTypes.DMChatMsgDeliveryData
+		appTypes.DMChatMsgAckData
 	}
 
 	var batchAckMsgBody struct {
-		Status   string
-		MsgDatas []*appTypes.DMChatMsgDeliveryData
+		Status      string
+		MsgAckDatas []*appTypes.DMChatMsgAckData
 	}
 
 	for {
@@ -143,7 +143,7 @@ func createNewDMChatAndAckMessages(c *websocket.Conn, user appTypes.JWTUserData,
 			data, app_err := chatService.NewDMChat(
 				user.UserId,
 				newChatBody.PartnerId,
-				appServices.MessageBinaryToUrl(user.UserId, newChatBody.Msg),
+				appServices.MessageBinaryToUrl(user.UserId, newChatBody.InitMsg),
 				newChatBody.CreatedAt,
 			)
 			if app_err != nil {
@@ -176,7 +176,7 @@ func createNewDMChatAndAckMessages(c *websocket.Conn, user appTypes.JWTUserData,
 
 			helpers.MapToStruct(body.Data, &batchAckMsgBody)
 
-			go chatService.BatchUpdateDMChatMessageDeliveryStatus(user.UserId, batchAckMsgBody.Status, batchAckMsgBody.MsgDatas)
+			go chatService.BatchUpdateDMChatMessageDeliveryStatus(user.UserId, batchAckMsgBody.Status, batchAckMsgBody.MsgAckDatas)
 		}
 
 		if body.Action == "create new chat" {
@@ -275,7 +275,7 @@ func createNewGroupChatAndAckMessages(c *websocket.Conn, user appTypes.JWTUserDa
 	var ackMsgsBody struct {
 		Status      string
 		GroupChatId int
-		MsgDatas    []*appTypes.GroupChatMsgDeliveryData
+		MsgDatas    []*appTypes.GroupChatMsgAckData
 	}
 
 	for {

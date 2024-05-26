@@ -27,9 +27,9 @@ func NewDMChat(initiatorId int, partnerId int, initMsgContent map[string]any, cr
 	return respData.Ird, nil
 }
 
-func BatchUpdateDMChatMessageDeliveryStatus(receiverId int, status string, delivDatas []*appTypes.DMChatMsgDeliveryData) {
-	if err := chatModel.BatchUpdateDMChatMessageDeliveryStatus(receiverId, status, delivDatas); err == nil {
-		for _, data := range delivDatas {
+func BatchUpdateDMChatMessageDeliveryStatus(receiverId int, status string, ackDatas []*appTypes.DMChatMsgAckData) {
+	if err := chatModel.BatchUpdateDMChatMessageDeliveryStatus(receiverId, status, ackDatas); err == nil {
+		for _, data := range ackDatas {
 			data := data
 			go func() {
 				appObservers.DMChatSessionObserver{}.Send(

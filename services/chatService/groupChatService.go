@@ -157,12 +157,12 @@ func (gpc GroupChat) GetChatHistory(offset int) ([]*map[string]any, error) {
 	return chatModel.GroupChat{Id: gpc.Id}.GetChatHistory(offset)
 }
 
-func (gpc GroupChat) broadcastMessageDeliveryStatusUpdate(clientId int, delivDatas []*appTypes.GroupChatMsgDeliveryData, status string) {
+func (gpc GroupChat) broadcastMessageDeliveryStatusUpdate(clientId int, ackDatas []*appTypes.GroupChatMsgAckData, status string) {
 	memberIds, err := helpers.QueryRowsField[int]("SELECT member_id FROM group_chat_membership WHERE group_chat_id = $1 AND member_id != $2 AND deleted = false", gpc.Id, clientId)
 	if err == nil {
 		for _, mId := range memberIds {
 			mId := *mId
-			for _, data := range delivDatas {
+			for _, data := range ackDatas {
 				msgId := data.MsgId
 				go appObservers.DMChatSessionObserver{}.Send(
 					fmt.Sprintf("user-%d--groupchat-%d", mId, gpc.Id),
@@ -174,8 +174,8 @@ func (gpc GroupChat) broadcastMessageDeliveryStatusUpdate(clientId int, delivDat
 	}
 }
 
-func (gpc GroupChat) BatchUpdateGroupChatMessageDeliveryStatus(receiverId int, status string, delivDatas []*appTypes.GroupChatMsgDeliveryData) {
-	result, err := (chatModel.GroupChat{Id: gpc.Id}).BatchUpdateGroupChatMessageDeliveryStatus(receiverId, status, delivDatas)
+func (gpc GroupChat) BatchUpdateGroupChatMessageDeliveryStatus(receiverId int, status string, ackDatas []*appTypes.GroupChatMsgAckData) {
+	result, err := (chatModel.GroupChat{Id: gpc.Id}).BatchUpdateGroupChatMessageDeliveryStatus(receiverId, status, ackDatas)
 	if err != nil {
 		return
 	}
@@ -196,7 +196,7 @@ func (gpc GroupChat) BatchUpdateGroupChatMessageDeliveryStatus(receiverId int, s
 	helpers.MapToStruct(result, &res)
 
 	if res.Sb {
-		go gpc.broadcastMessageDeliveryStatusUpdate(receiverId, delivDatas, res.Ods)
+		go gpc.broadcastMessageDeliveryStatusUpdate(receiverId, ackDatas, res.Ods)
 	}
 }
 

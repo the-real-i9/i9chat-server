@@ -123,11 +123,11 @@ func (gpc GroupChat) SendMessage(senderId int, msgContent map[string]any, create
 	return data, nil
 }
 
-func (gpc GroupChat) BatchUpdateGroupChatMessageDeliveryStatus(receiverId int, status string, delivDatas []*appTypes.GroupChatMsgDeliveryData) (map[string]any, error) {
+func (gpc GroupChat) BatchUpdateGroupChatMessageDeliveryStatus(receiverId int, status string, ackDatas []*appTypes.GroupChatMsgAckData) (map[string]any, error) {
 	var sqls = []string{}
 	var params = [][]any{}
 
-	for _, data := range delivDatas {
+	for _, data := range ackDatas {
 		sqls = append(sqls, "SELECT json_build_object('ods', overall_delivery_status, 'sb', should_broadcast) FROM update_group_chat_message_delivery_status($1, $2, $3, $4, $5)")
 		params = append(params, []any{gpc.Id, data.MsgId, receiverId, status, data.At})
 	}
