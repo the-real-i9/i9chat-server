@@ -19,7 +19,7 @@ The are two **formats of received data** :
   ```json
     {
       "statusCode": 200,
-      "body": {...}
+      "body": 
     }
   ```
 
@@ -234,9 +234,6 @@ Note: `geolocation` data should not be provided explicitly by the user, rather i
 }
 ```
 
----
----
-
 ### Change profile picture
 
 **URL:** `ws://localhost:8000/api/app/user/change_profile_picture`
@@ -245,11 +242,11 @@ Note: `geolocation` data should not be provided explicitly by the user, rather i
 
 **Sent Data:**
 
-The value `picture` is of a binary data representation, a `uint8` array, precisely. Almost, if not all programming languages, have a data type of this representation.
+The value `pictureData` is of a binary data representation, a `uint8` array, precisely. Most programming languages have a data type of this representation.
 
 ```json
 {
-  "picture": [97, 98, 99, 100, 100, 101, 102]
+  "pictureData": [97, 98, 99, 100, 100, 101, 102]
 }
 ```
 
@@ -259,12 +256,7 @@ The value `picture` is of a binary data representation, a `uint8` array, precise
 {
   "statusCode": 200,
   "body": {
-    "msg": "Signup success!",
-    "user": {
-      "id": 1,
-      "username": "abc"
-    },
-    "authJwt": "${authJwt}"
+    "msg": "Operation successful",
   }
 }
 ```
@@ -274,18 +266,384 @@ The value `picture` is of a binary data representation, a `uint8` array, precise
 ```json
 {
   "statusCode": 422,
-  "error": "Username unavailable", 
+  "error": "Operation failed: ...", 
+}
+```
+
+### Get all users
+
+For some reason you might want to get all users, perhaps, to start a new dm chat, create a group or add participants.
+
+**URL:** `ws://localhost:8000/api/app/user/all_users`
+
+**Sent Header:** `Authorization: Bearer ${authJwt}`
+
+**Received Data:** (Success)
+
+```json
+{
+  "statusCode": 200,
+  "body":  [
+    {
+      "type": "dm",
+      "chat_id": 1,
+      "partner": {
+        "user_id": 4,
+        "username": "risotto",
+        "profile_pic_url": "someurl.jpg"
+      },
+      "updated_at": "${some date}"
+    },
+    {
+      "type": "group",
+      "chat_id": 2,
+      "name": "Class of 2018",
+      "description": "Still wondering what we are...",
+      "picture_url": "someurl.jpg",
+      "updated_at": "${some date}"
+    }
+  ],
+}
+```
+
+### Search User
+
+For some reason you might want to search user, perhaps, to start a new dm chat, narrow the search result when creating a group or adding participants.
+
+**URL:** `ws://localhost:8000/api/app/user/search_user`
+
+**Sent Header:** `Authorization: Bearer ${authJwt}`
+
+**Sent Data:**
+
+```json
+{
+  "query": "da"
+}
+```
+
+**Received Data:** (Success)
+
+```json
+{
+  "statusCode": 200,
+  "body":  [
+    {
+      "user_id": 4,
+      "username": "david",
+      "profile_pic_url": "someurl.jpg"
+    },
+    {
+      "user_id": 5,
+      "username": "daemon",
+      "profile_pic_url": "someurl.jpg"
+    }
+  ],
+}
+```
+
+### Find Nearby Users
+
+**URL:** `ws://localhost:8000/api/app/user/find_nearby_users`
+
+**Sent Header:** `Authorization: Bearer ${authJwt}`
+
+**Sent Data:**
+
+The client application should provide a location value at present time: `latitude, longitude, center` or `(latitude, longitude), center`
+
+```json
+{
+  "liveLocation": "5, 2, 4"
+}
+```
+
+**Received Data:** (Success)
+
+```json
+{
+  "statusCode": 200,
+  "body":  [
+    {
+      "user_id": 4,
+      "username": "david",
+      "profile_pic_url": "someurl.jpg"
+    },
+    {
+      "user_id": 5,
+      "username": "daemon",
+      "profile_pic_url": "someurl.jpg"
+    }
+  ],
+}
+```
+
+### Update Client's Geolocation
+
+**URL:** `ws://localhost:8000/api/app/user/update_my_geolocation`
+
+**Sent Header:** `Authorization: Bearer ${authJwt}`
+
+**Sent Data:**
+
+Clients should be able to update their current location if, perhaps, they move to a new place and want to be seen nearby.
+
+Format: `latitude, longitude, center` or `(latitude, longitude), center`
+
+```json
+{
+  "newGeolocation": "5, 2, 4"
+}
+```
+
+**Received Data:** (Success)
+
+```json
+{
+  "statusCode": 200,
+  "body":  {
+    "msg": "Operation successful"
+  }
+}
+```
+
+### Switch Client's Presence
+
+The client application should detect and update the client's presence on the server.
+
+**URL:** `ws://localhost:8000/api/app/user/switch_my_presence`
+
+**Sent Header:** `Authorization: Bearer ${authJwt}`
+
+**Sent Data:**
+
+The value of `presence` is either `online` or `offline`.
+
+If `presence`'s value is `offline`, then the value of `lastSeen` should be the time the client went offline, else the value of `lastSeen` should be `null`.
+
+```json
+{
+  "presence": "offline",
+  "lastSeen": "${dateString}"
+}
+
+{
+  "presence": "online",
+  "lastSeen": null
+}
+```
+
+**Received Data:** (Success)
+
+```json
+{
+  "statusCode": 200,
+  "body":  {
+    "msg": "Operation successful"
+  }
 }
 ```
 
 ### Get my chats
 
+Access this endpoint provided the client's chat list is not previously cached. After which you must access the endpoints: `.../open_dm_chat_stream` and `.../open_group_chat_stream` below.
 
-### Get all users
+**URL:** `ws://localhost:8000/api/app/user/my_chats`
 
+**Sent Header:** `Authorization: Bearer ${authJwt}`
+
+**Received Data:** (Success)
+
+A list consisting all user's DM and Group chats in descending order by time updated. **It is recommended that you cache this result.**
+
+```json
+{
+  "statusCode": 200,
+  "body": [
+    {
+      "type": "dm",
+      "chat_id": 1,
+      "partner": {
+        "user_id": 4,
+        "username": "risotto",
+        "profile_pic_url": "someurl.jpg"
+      },
+      "updated_at": "${some date}"
+    },
+    {
+      "type": "group",
+      "chat_id": 2,
+      "name": "Class of 2018",
+      "description": "Still wondering what we are...",
+      "picture_url": "someurl.jpg",
+      "updated_at": "${some date}"
+    }
+  ],
+}
+```
 
 ### Open DM Chat Stream
 
+This stream (endpoint) should be opened (accessed) as soon as the client is online (as the name implies), and remain open until the client goes offline, after which it is closed.
+
+> Note! The structure of a chat message is defined in the "Send message" endpoint section.
+
+**URL:** `ws://localhost:8000/api/app/user/open_dm_chat_stream`
+
+**Sent Header:** `Authorization: Bearer ${authJwt}`
+
+**Received Events:** (*Study carefully!!*)
+
+This stream receives "events" sent from the server. The events, associated data, recommended listeners, and additional information (if any) are discussed below:
+
+- The `new chat` event:
+
+  - Received when another user initiates a new DM chat with the client. Here's the data's structure:
+
+    ```json
+    {
+      "event": "new chat",
+      "data": {
+        "dm_chat_id": 2,
+        "partner": {
+          "id": 2,
+          "username": "samuel",
+          "profile_picture_url": "someurl.jpg",
+          "presence": "online",
+          "last_seen": null
+        },
+        "init_msg": {
+          "id": 5,
+          "content": {
+            "type": "text",
+            "props": {
+              "textContent": "Hi! How're you?"
+            } 
+          }
+        }
+      }
+    }
+    ```
+
+  - The UI that lists the client's chats should listen for this event, so as to stack this new chat on top of the list.
+  - The application should set the rendered chat snippet's "unread messages count" to `1`, to reflect the new chat's associated initial message.
+  - If the application includes the "latest message" on the chat snippet UI, the message content associated with `init_msg` should be used.
+  - The application should send acknowledgement for the initial message attached. How to achieve this is described later in this section.
+
+- The `new message` event:
+
+  - Received when a client's gets a new message in an existing DM chat.
+
+    ```json
+      {
+        "event": "new message",
+        "data": {
+          "msg_id": 2,
+          "dm_chat_id": 4,
+          "sender": {
+            "id": 5,
+            "username": "samuel",
+            "profile_pic_url": "someimage.jpg"
+          },
+          "content": {
+            "type": "text",
+            "props": {
+              "textContent": "Hi! How're you?"
+            } 
+          },
+          "reactions": []
+        }
+      }  
+    ```
+
+  - The UI that lists the client's chats should listen for this event, so as to find the target chat snippet,
+
+    - update its "unread messages count" `+1`,
+    - update its "lastest message" with content of the new message,
+    - update its "last updated time" to the time at which the message was received.
+
+    **But,** if the target DM chat is open, this new message is appended to the chat history list, rather than updating the chat snippet's "unread messages count" `+1`. Other chat snippet updates (listed above) are done.
+  - The application should send acknowledgement for this new message. How to achieve this is described later in this section.
+
+**Sent Data:**
+
+This stream allows sending three types of data, determined by the `action` to execute.
+
+Each type of `action` has its associated data.
+
+- First, to create a new DM chat, send:
+
+    ```json
+    {
+      "action": "create new chat",
+      "data": {
+        "partnerId": 2,
+        "initMsg": {
+          "type": "text",
+          "props": {
+            "textContent": "Hi! How're you?"
+          }
+        },
+        "createdAt": "${dateTimeString}"
+      }
+    }
+    ```
+
+- Second, to send acknowledgement for received messages
+
+    The value of `status` can either be `delivered` or `read`. The property `at` indicates the time of delivery.
+
+    ```json
+    {
+      "action": "acknowledge message",
+      "data": {
+        "status": "delivered",
+        "msgId": 2,
+        "dmChatId": 4,
+        "senderId": 2,
+        "at": "${dateTimeString}",
+      }
+    }
+    ```
+
+- The third is like the second, with an extra feature that lets you acknowledge received messages (with the same status) in batch.
+
+    ```json
+    {
+      "action": "batch acknowledge messages",
+      "data": {
+        "status": "delivered",
+        "msgAckDatas": [
+          {
+            "msgId": 2,
+            "dmChatId": 4,
+            "senderId": 2,
+            "at": "${dateTimeString}",
+          },
+          {
+            "msgId": 3,
+            "dmChatId": 4,
+            "senderId": 3,
+            "at": "${dateTimeString}",
+          }
+        ]
+      }
+    }
+    ```
+
+**Received Data:**
+
+The only data received is the servers's response to the client's `create new chat` send action.
+
+Recall that, the partner with which the client has initiated this new chat will receive thier own data in a `new chat` event (as described above). This happens immediately provided the partner is online, else, the event is queued as part of the "events pending receipt" for the user, which will be streamed to them as soon as they come online.
+
+```json
+{
+  "new_dm_chat_id": 4,
+  "init_msg_id": 5
+}
+```
 
 ### Open Group Chat Stream
 
+This stream (endpoint) should be opened (accessed) as soon as the client is online (as the name implies), and remain open until the client goes offline, after which it is closed.
