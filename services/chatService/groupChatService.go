@@ -9,8 +9,8 @@ import (
 	"time"
 )
 
-func broadcastNewGroup(initUsers [][]string, newGroupData map[string]any) {
-	for _, newMember := range initUsers[1:] { // the first user is the creator, hence, they're excluded
+func broadcastNewGroup(initUsers [][]appTypes.String, newGroupData map[string]any) {
+	for _, newMember := range initUsers {
 		newMemberId := newMember[0]
 		go appObservers.GroupChatObserver{}.Send(fmt.Sprintf("user-%s", newMemberId), newGroupData, "new chat")
 	}
@@ -31,7 +31,7 @@ func uploadGroupPicture(pictureData []byte) string {
 	return picUrl
 }
 
-func NewGroupChat(name string, description string, pictureData []byte, creator []string, initUsers [][]string) (map[string]any, error) {
+func NewGroupChat(name string, description string, pictureData []byte, creator []string, initUsers [][]appTypes.String) (map[string]any, error) {
 	picUrl := uploadGroupPicture(pictureData)
 
 	data, err := chatModel.NewGroupChat(name, description, picUrl, creator, initUsers)
@@ -40,8 +40,8 @@ func NewGroupChat(name string, description string, pictureData []byte, creator [
 	}
 
 	var respData struct {
-		Crd  map[string]any
-		Nmrd map[string]any
+		Crd  map[string]any // client_resp_data
+		Nmrd map[string]any // new_members_resp_data
 	}
 
 	helpers.MapToStruct(data, &respData)
@@ -91,7 +91,7 @@ func (gpc GroupChat) ChangePicture(admin []string, newPictureData []byte) {
 	}
 }
 
-func (gpc GroupChat) AddUsers(admin []string, newUsers [][]string) {
+func (gpc GroupChat) AddUsers(admin []string, newUsers [][]appTypes.String) {
 	if resp, err := (chatModel.GroupChat{Id: gpc.Id}).AddUsers(admin, newUsers); err == nil {
 		go gpc.broadcastActivity(resp)
 	}

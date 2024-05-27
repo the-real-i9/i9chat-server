@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-func NewGroupChat(name string, description string, pictureUrl string, creator []string, initUsers [][]string) (map[string]any, error) {
+func NewGroupChat(name string, description string, pictureUrl string, creator []string, initUsers [][]appTypes.String) (map[string]any, error) {
 	data, err := helpers.QueryRowFields("SELECT creator_resp_data AS crd, new_members_resp_data AS nmrd FROM new_group_chat($1, $2, $3, $4, $5)", name, description, pictureUrl, creator, initUsers)
 	if err != nil {
 		log.Println(fmt.Errorf("groupChatModel.go: NewGroupChat: %s", err))
@@ -53,7 +53,7 @@ func (gpc GroupChat) ChangePicture(admin []string, newPictureUrl string) (map[st
 	return data, nil
 }
 
-func (gpc GroupChat) AddUsers(admin []string, newUsers [][]string) (map[string]any, error) {
+func (gpc GroupChat) AddUsers(admin []string, newUsers [][]appTypes.String) (map[string]any, error) {
 	data, err := helpers.QueryRowFields("SELECT member_ids AS memberIds, activity_data AS activityData add_users_to_group($1, $2, $3)", gpc.Id, admin, newUsers)
 	if err != nil {
 		log.Println(fmt.Errorf("groupChatModel.go: GroupChat_AddUsers: %s", err))

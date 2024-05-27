@@ -267,15 +267,15 @@ func createNewGroupChatAndAckMessages(c *websocket.Conn, user appTypes.JWTUserDa
 		Name        string
 		Description string
 		PictureData []byte
-		InitUsers   [][]string
+		InitUsers   [][]appTypes.String
 	}
 
-	// For Group chat, messages can only be acknowledged in batches,
-	// and it's one group chat and one status at a time
+	// For Group chat, messages should be acknowledged in batches,
+	// and it's only for a single group chat at a time
 	var ackMsgsBody struct {
 		Status      string
 		GroupChatId int
-		MsgDatas    []*appTypes.GroupChatMsgAckData
+		MsgAckDatas []*appTypes.GroupChatMsgAckData
 	}
 
 	for {
@@ -317,7 +317,7 @@ func createNewGroupChatAndAckMessages(c *websocket.Conn, user appTypes.JWTUserDa
 
 			helpers.MapToStruct(body.Data, &ackMsgsBody)
 
-			go chatService.GroupChat{Id: ackMsgsBody.GroupChatId}.BatchUpdateGroupChatMessageDeliveryStatus(user.UserId, ackMsgsBody.Status, ackMsgsBody.MsgDatas)
+			go chatService.GroupChat{Id: ackMsgsBody.GroupChatId}.BatchUpdateGroupChatMessageDeliveryStatus(user.UserId, ackMsgsBody.Status, ackMsgsBody.MsgAckDatas)
 		}
 
 		if body.Action == "create new chat" {

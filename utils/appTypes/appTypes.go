@@ -1,31 +1,44 @@
 package appTypes
 
-import "time"
+import (
+	"bytes"
+	"time"
+)
 
 type SignupSessionData struct {
-	SessionId string `json:"sessionId"`
-	Email     string `json:"email"`
+	SessionId string
+	Email     string
 }
 
 type JWTUserData struct {
-	UserId   int    `json:"userId"`
-	Username string `json:"username"`
+	UserId   int
+	Username string
 }
 
 type DMChatMsgAckData struct {
-	MsgId    int       `json:"msgId"`
-	DmChatId int       `json:"dmChatId"`
-	SenderId int       `json:"senderId"`
-	At       time.Time `json:"at"`
+	MsgId    int
+	DmChatId int
+	SenderId int
+	At       time.Time
 }
 
 type GroupChatMsgAckData struct {
-	MsgId int       `json:"msgId"`
-	At    time.Time `json:"at"`
+	MsgId int
+	At    time.Time
 }
 
 type WSResp struct {
 	StatusCode int
 	Body       any
 	Error      string
+}
+
+type String string
+
+func (s *String) UnmarshalJSON(b []byte) error {
+	nb := bytes.Trim(b, "\"")
+
+	*s = String(nb)
+
+	return nil
 }
