@@ -45,7 +45,7 @@ var GetGroupChatHistory = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 	}
 })
 
-var ActivateGroupChatSession = helpers.WSHandlerProtected(func(c *websocket.Conn) {
+var OpenGroupMessagingStream = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 	// this goroutine receives message acknowlegement for sent messages
 	// and in turn changes the delivery status of messages sent by the child goroutine
 	var user appTypes.JWTUserData

@@ -45,7 +45,7 @@ var GetDMChatHistory = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 	}
 })
 
-var ActivateDMChatSession = helpers.WSHandlerProtected(func(c *websocket.Conn) {
+var OpenDMMessagingStream = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 	// this handler receives message acknowlegement for sent messages
 	// and in turn changes the delivery status of messages sent by the child goroutine
 	var user appTypes.JWTUserData
