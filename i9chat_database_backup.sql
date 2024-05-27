@@ -711,6 +711,7 @@ BEGIN
   
   initiator_resp_data := json_build_object('new_dm_chat_id', new_dm_chat_id, 'init_msg_id', init_msg_id);
   partner_resp_data := json_build_object(
+	  'type', 'dm',
 	  'dm_chat_id', new_dm_chat_id, 
 	  'partner', initiator_user_data,
 	  'init_msg', json_build_object(
@@ -741,12 +742,20 @@ DECLARE
 BEGIN
   -- create group chat
   INSERT INTO group_chat (name, description, picture_url, creator_id, members_count)
-  VALUES (in_name, in_description, in_picture_url, in_creator[1]::int, array_length(in_init_users, 1))
+  VALUES (in_name, in_description, in_picture_url, in_creator[1]::int, array_length(in_init_users, 1) + 1)
   RETURNING id INTO new_group_chat_id;
   
   -- input group_chat_activity_log for group created
   INSERT INTO group_chat_activity_log (group_chat_id, activity_type, activity_info)
   VALUES (new_group_chat_id, 'group_created', json_build_object('creator', in_creator[2], 'group_name', in_name));
+  
+  -- create user_group_chat for creator
+  INSERT INTO user_group_chat (user_id, group_chat_id)
+  VALUES (in_creator[1]::int, new_group_chat_id);
+	
+  -- create group_chat_membership for creator
+  INSERT INTO group_chat_membership (group_chat_id, member_id, "role")
+  VALUES (new_group_chat_id, in_creator[1]::int, 'admin');
   
   FOREACH iuser SLICE 1 IN ARRAY in_init_users 
   LOOP
@@ -754,9 +763,9 @@ BEGIN
     INSERT INTO user_group_chat (user_id, group_chat_id)
 	VALUES (iuser[1]::int, new_group_chat_id);
 	
-    -- create group_chat_membership for all iusers: set creator's role to admin
+    -- create group_chat_membership for all iusers
 	INSERT INTO group_chat_membership (group_chat_id, member_id, "role")
-    VALUES (new_group_chat_id, iuser[1]::int, CASE WHEN iuser[1]::int = in_creator[1]::int THEN 'admin' ELSE 'member' END);
+    VALUES (new_group_chat_id, iuser[1]::int, 'member');
 	
 	-- extract each iuser's username for later
 	iusers_usernames := array_append(iusers_usernames, iuser[2]);
@@ -768,6 +777,7 @@ BEGIN
   
   creator_resp_data := json_build_object('new_group_chat_id', new_group_chat_id);
   new_members_resp_data := json_build_object(
+	  'type', 'group',
 	  'group_chat_id', new_group_chat_id,
 	  'name', in_name,
 	  'picture_url', in_picture_url
