@@ -504,6 +504,7 @@ This stream receives "events" sent from the server. The events, associated data,
     {
       "event": "new chat",
       "data": {
+        "type": "dm",
         "dm_chat_id": 2,
         "partner": {
           "id": 2,
@@ -525,14 +526,14 @@ This stream receives "events" sent from the server. The events, associated data,
     }
     ```
 
-  - The UI that lists the client's chats should listen for this event, so as to stack this new chat on top of the list.
+  - The UI that lists the client's chats should listen for this event, so as to stack this new DM chat on top of the list.
   - The application should set the rendered chat snippet's "unread messages count" to `1`, to reflect the new chat's associated initial message.
   - If the application includes the "latest message" on the chat snippet UI, the message content associated with `init_msg` should be used.
   - The application should send acknowledgement for the initial message attached. How to achieve this is described later in this section.
 
 - The `new message` event:
 
-  - Received when a client's gets a new message in an existing DM chat.
+  - Received when the client gets a new message in an existing DM chat.
 
     ```json
       {
@@ -556,10 +557,10 @@ This stream receives "events" sent from the server. The events, associated data,
       }  
     ```
 
-  - The UI that lists the client's chats should listen for this event, so as to find the target chat snippet,
+  - The UI that lists the client's chats should listen for this event, so as to find the target DM chat snippet,
 
     - update its "unread messages count" `+1`,
-    - update its "lastest message" with content of the new message,
+    - update its "lastest message" with the content of the new message,
     - update its "last updated time" to the time at which the message was received.
 
     **But,** if the target DM chat is open, this new message is appended to the chat history list, rather than updating the chat snippet's "unread messages count" `+1`. Other chat snippet updates (listed above) are done.
@@ -635,7 +636,9 @@ Each type of `action` has its associated data.
 
 The only data received is the servers's response to the client's `create new chat` send action.
 
-Recall that, the partner with which the client has initiated this new chat will receive thier own data in a `new chat` event (as described above). This happens immediately provided the partner is online, else, the event is queued as part of the "events pending receipt" for the user, which will be streamed to them as soon as they come online.
+> Recall that, the partner with which the client has initiated this new chat will receive thier own data in a `new chat` event (as described above). This happens immediately provided the partner is online, else, the event is queued as part of the "dm chat events pending receipt" for the user, which will be streamed to them as soon as they come online.
+
+The client is expected to perform an "optimistic UI" rendering with the data used to create the DM chat, hence, only the needful data is returned.
 
 ```json
 {
@@ -647,3 +650,135 @@ Recall that, the partner with which the client has initiated this new chat will 
 ### Open Group Chat Stream
 
 This stream (endpoint) should be opened (accessed) as soon as the client is online (as the name implies), and remain open until the client goes offline, after which it is closed.
+
+> Note! The structure of a chat message is defined in the "Send message" endpoint section.
+
+**URL:** `ws://localhost:8000/api/app/user/open_group_chat_stream`
+
+**Sent Header:** `Authorization: Bearer ${authJwt}`
+
+**Received Events:** (*Study carefully!!*)
+
+This stream receives "events" sent from the server. The events, associated data, recommended listeners, and additional information (if any) are discussed below:
+
+- The `new chat` event:
+
+  - Received when the client is added to a new or existing Group chat. Other participants will also receive this event (excluding the creator of the group chat).
+
+    ```json
+    {
+      "event": "new chat",
+      "data": {
+        "type": "group",
+        "group_chat_id": 2,
+        "name": "Class of 2018",
+        "picture_url": "somegrouppic.jpg"
+      }
+    }
+    ```
+
+  - The UI that lists the client's chats should listen for this event, so as to stack this new group chat on top of the list.
+  - If the application includes the "latest activity" on the chat snippet UI, it should read *"You were added"*.
+
+- The `new message` event:
+
+  - Received when a new message is sent to one of your group chats. Other group members, excluding the sender, will also receive this event.
+
+    ```json
+      {
+        "event": "new message",
+        "data": {
+          "msg_id": 2,
+          "group_chat_id": 4,
+          "sender": {
+            "id": 5,
+            "username": "samuel",
+            "profile_pic_url": "someimage.jpg"
+          },
+          "content": {
+            "type": "text",
+            "props": {
+              "textContent": "Hi! How're you?"
+            } 
+          },
+          "reactions": []
+        }
+      }  
+    ```
+
+  - The UI that lists the client's chats should listen for this event, so as to find the target group chat snippet,
+
+    - update its "unread messages count" `+1`,
+    - update its "lastest message" with the content of the new message,
+    - update its "last updated time" to the time at which the message was received.
+
+    **But,** if the target group chat is open, this new message is appended to the chat history list, rather than updating the chat snippet's "unread messages count" `+1`. Other chat snippet updates (listed above) are done.
+  - The application should send acknowledgement for this new message. How to achieve this is described later in this section.
+
+**Sent Data:**
+
+This stream allows sending two types of data, determined by the `action` to execute.
+
+Each type of `action` has its associated data.
+
+- First, to create a new Group chat, send:
+
+    The `pictureData` is a binary data represented as a `uint8` integer array, as described earlier. The data will be uploaded to a cloud storage and replaces with the result URL.
+
+    The `initUsers` is a 2D-array containing the `[id, username]` of the initial participants with which the group will be created.
+
+    ```json
+    {
+      "action": "create new chat",
+      "data": {
+        "name": "Class of 2018",
+        "description": "We don't suck, you see!",
+        "pictureData": [97, 98, 99, 100, 101, 102],
+        "initUsers": [
+          [2, "samuel"],
+          [4, "david"],
+          [5, "dave"],
+        ]
+      }
+    }
+    ```
+
+- Second, to send acknowledgement for received messages
+
+    The value of `status` can either be `delivered` or `read`. The property `at` indicates the time of delivery.
+
+    Seeing we're dealing with a group, it is more efficient to acknowledge messages in batch rather than singly. Also, observe that you can only acknowledge messages for a single group at a time.
+
+    ```json
+    {
+      "action": "acknowledge messages",
+      "data": {
+        "status": "read",
+        "groupChatId": 4,
+        "msgAckDatas": [
+          {
+            "msgId": 2,
+            "at": "${dateTimeString}",
+          },
+          {
+            "msgId": 3,
+            "at": "${dateTimeString}",
+          }
+        ]
+      }
+    }
+    ```
+
+**Received Data:**
+
+The only data received is the servers's response to the client's `create new chat` send action.
+
+> Recall that, all participants included in the creation of the group chat will receive their own data in a `new chat` event (as described above). This happens immediately provided the participant is online, else, the event is queued as part of the "group chat events pending receipt" for the user, which will be streamed to them as soon as they come online.
+
+The client is expected to perform an "optimistic UI" rendering with data it uses to create the group chat, hence, only the needful data is returned.
+
+```json
+{
+  "new_group_chat_id": 4
+}
+```
