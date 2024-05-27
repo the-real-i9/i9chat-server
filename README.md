@@ -19,7 +19,7 @@ The are two **formats of received data** :
   ```json
     {
       "statusCode": 200,
-      "body": 
+      "body": {}
     }
   ```
 
@@ -61,14 +61,23 @@ This category includes endpoints handling all aspects of user authentication.
 This category includes endpoints handling user actions.
 
 - [Change profile picture](#change-profile-picture)
-- [Get my chats](#get-my-chats)
+- [Update client's geolocation](#update-clients-geolocation)
+- [Switch client's presence](#switch-clients-presence)
 - [Get all users](#get-all-users)
+- [Search user](#search-user)
+- [Find nearby users](#find-nearby-users)
+- [Get my chats](#get-my-chats)
 - [Open DM Chat Stream](#open-dm-chat-stream)
 - [Open Group Chat Stream](#open-group-chat-stream)
 
 ### Chat Actions
 
-This category includes endpoints handling chat actions.
+This category includes endpoints handling chat session operations.
+
+- [Get DM chat history](#get-dm-chat-history)
+- [Get Group chat history](#get-group-chat-history)
+- [Open DM Messaging Stream](#open-dm-messaging-stream)
+- [Open Group Messaging Stream](#open-group-messaging-stream)
 
 ## Endpoints and Usage
 
@@ -270,6 +279,72 @@ The value `pictureData` is of a binary data representation, a `uint8` array, pre
 }
 ```
 
+### Update Client's Geolocation
+
+**URL:** `ws://localhost:8000/api/app/user/update_my_geolocation`
+
+**Sent Header:** `Authorization: Bearer ${authJwt}`
+
+**Sent Data:**
+
+Clients should be able to update their current location if, perhaps, they move to a new place and want to be seen nearby.
+
+Format: `latitude, longitude, center` or `(latitude, longitude), center`
+
+```json
+{
+  "newGeolocation": "5, 2, 4"
+}
+```
+
+**Received Data:** (Success)
+
+```json
+{
+  "statusCode": 200,
+  "body":  {
+    "msg": "Operation successful"
+  }
+}
+```
+
+### Switch Client's Presence
+
+The client application should detect and update the client's presence on the server.
+
+**URL:** `ws://localhost:8000/api/app/user/switch_my_presence`
+
+**Sent Header:** `Authorization: Bearer ${authJwt}`
+
+**Sent Data:**
+
+The value of `presence` is either `online` or `offline`.
+
+If `presence`'s value is `offline`, then the value of `lastSeen` should be the time the client went offline, else the value of `lastSeen` should be `null`.
+
+```json
+{
+  "presence": "offline",
+  "lastSeen": "${dateString}"
+}
+
+{
+  "presence": "online",
+  "lastSeen": null
+}
+```
+
+**Received Data:** (Success)
+
+```json
+{
+  "statusCode": 200,
+  "body":  {
+    "msg": "Operation successful"
+  }
+}
+```
+
 ### Get all users
 
 For some reason you might want to get all users, perhaps, to start a new dm chat, create a group or add participants.
@@ -378,72 +453,6 @@ The client application should provide a location value at present time: `latitud
 }
 ```
 
-### Update Client's Geolocation
-
-**URL:** `ws://localhost:8000/api/app/user/update_my_geolocation`
-
-**Sent Header:** `Authorization: Bearer ${authJwt}`
-
-**Sent Data:**
-
-Clients should be able to update their current location if, perhaps, they move to a new place and want to be seen nearby.
-
-Format: `latitude, longitude, center` or `(latitude, longitude), center`
-
-```json
-{
-  "newGeolocation": "5, 2, 4"
-}
-```
-
-**Received Data:** (Success)
-
-```json
-{
-  "statusCode": 200,
-  "body":  {
-    "msg": "Operation successful"
-  }
-}
-```
-
-### Switch Client's Presence
-
-The client application should detect and update the client's presence on the server.
-
-**URL:** `ws://localhost:8000/api/app/user/switch_my_presence`
-
-**Sent Header:** `Authorization: Bearer ${authJwt}`
-
-**Sent Data:**
-
-The value of `presence` is either `online` or `offline`.
-
-If `presence`'s value is `offline`, then the value of `lastSeen` should be the time the client went offline, else the value of `lastSeen` should be `null`.
-
-```json
-{
-  "presence": "offline",
-  "lastSeen": "${dateString}"
-}
-
-{
-  "presence": "online",
-  "lastSeen": null
-}
-```
-
-**Received Data:** (Success)
-
-```json
-{
-  "statusCode": 200,
-  "body":  {
-    "msg": "Operation successful"
-  }
-}
-```
-
 ### Get my chats
 
 Access this endpoint provided the client's chat list is not previously cached. After which you must access the endpoints: `.../open_dm_chat_stream` and `.../open_group_chat_stream` below.
@@ -484,7 +493,7 @@ A list consisting all user's DM and Group chats in descending order by time upda
 
 ### Open DM Chat Stream
 
-This stream (endpoint) should be opened (accessed) as soon as the client is online (as the name implies), and remain open until the client goes offline, after which it is closed.
+This stream (endpoint) should open (be accessed) as soon as the client is online, and remain open until the client goes offline, after which it is closed. This, basically, is how the client lets the server know they are online or offline.
 
 > Note! The structure of a chat message is defined in the "Send message" endpoint section.
 
@@ -494,7 +503,11 @@ This stream (endpoint) should be opened (accessed) as soon as the client is onli
 
 **Received Events:** (*Study carefully!!*)
 
-This stream receives "events" sent from the server. The events, associated data, recommended listeners, and additional information (if any) are discussed below:
+This stream receives "events" sent from the server.
+
+At every opening of the stream (when user comes online), all events pending receipt and associated data are first streamed to the client.
+
+The events, associated data, recommended listeners, and additional information (if any) are discussed below:
 
 - The `new chat` event:
 
@@ -649,7 +662,7 @@ The client is expected to perform an "optimistic UI" rendering with the data use
 
 ### Open Group Chat Stream
 
-This stream (endpoint) should be opened (accessed) as soon as the client is online (as the name implies), and remain open until the client goes offline, after which it is closed.
+This stream (endpoint) should open (be accessed) as soon as the client is online, and remain open until the client goes offline, after which it is closed. This, basically, is how the client lets the server know they are online or offline.
 
 > Note! The structure of a chat message is defined in the "Send message" endpoint section.
 
@@ -659,7 +672,11 @@ This stream (endpoint) should be opened (accessed) as soon as the client is onli
 
 **Received Events:** (*Study carefully!!*)
 
-This stream receives "events" sent from the server. The events, associated data, recommended listeners, and additional information (if any) are discussed below:
+This stream receives "events" sent from the server.
+
+At every opening of the stream (when user comes online), all events pending receipt and associated data are first streamed to the client.
+
+The events, associated data, recommended listeners, and additional information (if any) are discussed below:
 
 - The `new chat` event:
 
@@ -782,3 +799,134 @@ The client is expected to perform an "optimistic UI" rendering with data it uses
   "new_group_chat_id": 4
 }
 ```
+
+### Get DM Chat History
+
+**URL:** `ws://localhost:8000/api/app/dm_chat/chat_history`
+
+**Sent Header:** `Authorization: Bearer ${authJwt}`
+
+**Sent Data:**
+
+The `offset` is how we implement infinite scrolling or pagination. An `offset = 0` returns the latest messages in the history. The default `limit = 50`; you won't need to change it, therefore, it is not allowed to be set.
+
+I don't think I have to explain how infinite scrolling works, nevertheless, just do `offset = numberOfRequests * limit` on each request.
+
+```json
+{
+  "dmChatId": 2,
+  "offset": 0
+}
+```
+
+**Received Data:**
+
+DM chat history consists of messages only, unlike a group, it contains no activity. Therefore, all data should be treated as a message data, and be used to render the message snippet.
+
+You should know that, if the client is the sender (`clientId = sender.id`), you should render its message snippet different from that of its partner. Basically, you don't include read receipts on partner's message snippet, but you do on client's message snippet.
+
+```json
+[
+  {
+    "id": 2,
+    "sender": {
+      "id": 4,
+      "username": "samuel",
+      "profile_picture_url": "someurl.jpg"
+    },
+    "content": {
+      "type": "text",
+      "props": {
+        "textContent": "Hey bro!"
+      }
+    },
+    "delivery_status": "read",
+    "created_at": "${dateTimeString}", 
+    "edited": false,
+    "edited_at": "${dateTimeString}", 
+    "reactions": [
+      {
+        "reaction": "${reactionCodePoint}",
+        "reactor": {
+          "id": 4,
+          "username": "samuel",
+          "profile_picture_url": "someurl.jpg"
+        }
+      }
+    ]
+  }
+]
+```
+
+### Get Group Chat History
+
+**URL:** `ws://localhost:8000/api/app/dm_chat/chat_history`
+
+**Sent Header:** `Authorization: Bearer ${authJwt}`
+
+**Sent Data:**
+
+The `offset` is how we implement infinite scrolling or pagination. An `offset = 0` returns the latest messages in the history. The default `limit = 50`; you won't need to change it, therefore, it is not allowed to be set.
+
+I don't think I have to explain how infinite scrolling works, nevertheless, just do `offset = numberOfRequests * limit` on each request.
+
+```json
+{
+  "groupChatId": 2,
+  "offset": 0
+}
+```
+
+**Received Data:**
+
+Group chat history consists of messages and activity. The type of data (wheter a "message" or an "activity") is determined by the data's `type` property. A data of a certain type has its associated properties to be used to render the corresponding snippet.
+
+You should know that, if the client is the sender (`clientId = sender.id`), you should render its message snippet different from that of other group members. Basically, you don't include read receipts on other group members' message snippet, but you do on client's message snippet.
+
+In "activity" history type, the structure of `activity_info` is based on `activity_type`. These data should be used to render the activity message appropriately. The sample data below represents an activity that should reads *"dave joined"*.
+
+```json
+[
+  {
+    "type": "message",
+    "id": 2,
+    "sender": {
+      "id": 4,
+      "username": "samuel",
+      "profile_picture_url": "someurl.jpg"
+    },
+    "content": {
+      "type": "text",
+      "props": {
+        "textContent": "Hey bro!"
+      }
+    },
+    "delivery_status": "read",
+    "created_at": "${dateTimeString}", 
+    "edited": false,
+    "edited_at": "${dateTimeString}", 
+    "reactions": [
+      {
+        "reaction": "${reactionCodePoint}",
+        "reactor": {
+          "id": 4,
+          "username": "samuel",
+          "profile_picture_url": "someurl.jpg"
+        }
+      }
+    ]
+  },
+  {
+    "type": "activity",
+    "activity_type": "user_joined",
+    "activity_info": {
+      "username": "dave"
+    }
+  }
+]
+```
+
+### Open DM Messaging Stream
+
+
+### Open Group Messaging Stream
