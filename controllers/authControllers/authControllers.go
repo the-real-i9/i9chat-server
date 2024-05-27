@@ -12,7 +12,7 @@ import (
 
 var RequestNewAccount = websocket.New(func(c *websocket.Conn) {
 	var body struct {
-		Email string `json:"email"`
+		Email string
 	}
 
 	for {
@@ -57,7 +57,7 @@ var VerifyEmail = websocket.New(func(c *websocket.Conn) {
 	}
 
 	var body struct {
-		Code int `json:"code"`
+		Code int
 	}
 
 	for {
@@ -101,9 +101,9 @@ var RegisterUser = websocket.New(func(c *websocket.Conn) {
 	}
 
 	var body struct {
-		Username    string `json:"username"`
-		Password    string `json:"password"`
-		Geolocation string `json:"geolocation"`
+		Username    string
+		Password    string
+		Geolocation string
 	}
 
 	for {
@@ -138,8 +138,8 @@ var RegisterUser = websocket.New(func(c *websocket.Conn) {
 
 var Signin = websocket.New(func(c *websocket.Conn) {
 	var body struct {
-		EmailOrUsername string `json:"emailOrUsername"`
-		Password        string `json:"password"`
+		EmailOrUsername string
+		Password        string
 	}
 
 	for {
