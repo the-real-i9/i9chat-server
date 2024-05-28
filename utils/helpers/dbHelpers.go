@@ -74,14 +74,14 @@ func QueryRowsFields(sql string, params ...any) ([]map[string]any, error) {
 	return res, nil
 }
 
-func BatchQuery[T any](sqls []string, params [][]any) (*T, error) {
-	var res *T
+func BatchQuery[T any](sqls []string, params [][]any) ([]*T, error) {
+	var res = make([]*T, len(sqls))
 
 	batch := &pgx.Batch{}
 
 	for i, sql := range sqls {
 		batch.Queue(sql, params[i]...).QueryRow(func(row pgx.Row) error {
-			return row.Scan(res)
+			return row.Scan(res[i])
 		})
 	}
 

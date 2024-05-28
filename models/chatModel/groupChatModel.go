@@ -132,13 +132,15 @@ func (gpc GroupChat) BatchUpdateGroupChatMessageDeliveryStatus(receiverId int, s
 		params = append(params, []any{gpc.Id, data.MsgId, receiverId, status, data.At})
 	}
 
-	result, err := helpers.BatchQuery[map[string]any](sqls, params)
+	resultList, err := helpers.BatchQuery[map[string]any](sqls, params)
 	if err != nil {
 		log.Println(fmt.Errorf("DMChatModel.go: BatchUpdateGroupChatMessageDeliveryStatus: %s", err))
 		return nil, helpers.ErrInternalServerError
 	}
 
-	return *result, nil
+	lastResult := resultList[len(resultList)]
+
+	return *lastResult, nil
 
 }
 
