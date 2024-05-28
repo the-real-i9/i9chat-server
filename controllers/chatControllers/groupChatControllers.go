@@ -45,16 +45,16 @@ var GetGroupChatHistory = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 	}
 })
 
+// this goroutine receives message acknowlegement for sent messages,
+// and in turn changes the delivery status of messages sent by the child goroutine
 var OpenGroupMessagingStream = helpers.WSHandlerProtected(func(c *websocket.Conn) {
-	// this goroutine receives message acknowlegement for sent messages
-	// and in turn changes the delivery status of messages sent by the child goroutine
 	var user appTypes.JWTUserData
 
 	helpers.MapToStruct(c.Locals("auth").(map[string]any), &user)
 
 	var groupChatId int
 
-	fmt.Sscanf(c.Query("chat_id"), "%d", &groupChatId)
+	fmt.Sscanf(c.Params("group_chat_id"), "%d", &groupChatId)
 
 	var myMailbox = make(chan map[string]any, 2)
 
@@ -73,10 +73,10 @@ var OpenGroupMessagingStream = helpers.WSHandlerProtected(func(c *websocket.Conn
 	/* ---- stream group chat message events pending dispatch to the channel ---- */
 	// observe that this happens once every new connection
 	// A "What did I miss?" sort of query
-	if event_data_kvps, err := (userService.User{Id: user.UserId}).GetGroupChatMessageEventsPendingReceipt(groupChatId); err == nil {
-		for _, evk := range event_data_kvps {
-			evk := *evk
-			myMailbox <- evk
+	if eventDataList, err := (userService.User{Id: user.UserId}).GetGroupChatMessageEventsPendingReceipt(groupChatId); err == nil {
+		for _, eventData := range eventDataList {
+			eventData := *eventData
+			myMailbox <- eventData
 		}
 	}
 

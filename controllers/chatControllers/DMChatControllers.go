@@ -45,16 +45,16 @@ var GetDMChatHistory = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 	}
 })
 
+// this handler receives message acknowlegement for sent messages,
+// and in turn changes the delivery status of messages sent by the child goroutine
 var OpenDMMessagingStream = helpers.WSHandlerProtected(func(c *websocket.Conn) {
-	// this handler receives message acknowlegement for sent messages
-	// and in turn changes the delivery status of messages sent by the child goroutine
 	var user appTypes.JWTUserData
 
 	helpers.MapToStruct(c.Locals("auth").(map[string]any), &user)
 
 	var dmChatId int
 
-	fmt.Sscanf(c.Query("chat_id"), "%d", &dmChatId)
+	fmt.Sscanf(c.Params("dm_chat_id"), "%d", &dmChatId)
 
 	var myMailbox = make(chan map[string]any, 3)
 
@@ -73,10 +73,10 @@ var OpenDMMessagingStream = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 	/* ---- stream dm chat message events pending dispatch to the channel ---- */
 	// observe that this happens once every new connection
 	// A "What did I miss?" sort of query
-	if event_data_kvps, err := (userService.User{Id: user.UserId}).GetDMChatMessageEventsPendingReceipt(dmChatId); err == nil {
-		for _, evk := range event_data_kvps {
-			evk := *evk
-			myMailbox <- evk
+	if eventDataList, err := (userService.User{Id: user.UserId}).GetDMChatMessageEventsPendingReceipt(dmChatId); err == nil {
+		for _, eventData := range eventDataList {
+			eventData := *eventData
+			myMailbox <- eventData
 		}
 	}
 

@@ -8,5 +8,5 @@ import (
 
 func InitGroupChat(router fiber.Router) {
 	router.Get("/chat_history", chatControllers.GetGroupChatHistory)
-	router.Get("/open_dm_messaging_stream", chatControllers.OpenGroupMessagingStream)
+	router.Get("/open_dm_messaging_stream/:group_chat_id", chatControllers.OpenGroupMessagingStream)
 }
