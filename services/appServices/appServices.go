@@ -58,7 +58,9 @@ func handleAudioMsg(userId int, props map[string]any) map[string]any {
 
 	helpers.MapToStruct(props, &ad)
 
-	audioUrl, _ := helpers.UploadFile(fmt.Sprintf("audios/user-%d/aud-%d.mp3", userId, time.Now().UnixNano()), ad.AudioData)
+	audioUrl, _ := helpers.UploadFile(fmt.Sprintf("audio messages/user-%d/aud-%d.mp3", userId, time.Now().UnixNano()), ad.AudioData)
+
+	delete(props, "audioData")
 
 	props["audioUrl"] = audioUrl
 
@@ -67,12 +69,14 @@ func handleAudioMsg(userId int, props map[string]any) map[string]any {
 
 func handleVideoMsg(userId int, props map[string]any) map[string]any {
 	var vd struct {
-		Video []byte
+		VideoData []byte
 	}
 
 	helpers.MapToStruct(props, &vd)
 
-	videoUrl, _ := helpers.UploadFile(fmt.Sprintf("videos/user-%d/vid-%d.mp4", userId, time.Now().UnixNano()), vd.Video)
+	videoUrl, _ := helpers.UploadFile(fmt.Sprintf("video messages/user-%d/vid-%d.mp4", userId, time.Now().UnixNano()), vd.VideoData)
+
+	delete(props, "videoData")
 
 	props["videoUrl"] = videoUrl
 
@@ -81,14 +85,32 @@ func handleVideoMsg(userId int, props map[string]any) map[string]any {
 
 func handleImageMsg(userId int, props map[string]any) map[string]any {
 	var id struct {
-		Image []byte
+		ImageData []byte
 	}
 
 	helpers.MapToStruct(props, &id)
 
-	imageUrl, _ := helpers.UploadFile(fmt.Sprintf("images/user-%d/img-%d.jpg", userId, time.Now().UnixNano()), id.Image)
+	imageUrl, _ := helpers.UploadFile(fmt.Sprintf("image messages/user-%d/img-%d.jpg", userId, time.Now().UnixNano()), id.ImageData)
+
+	delete(props, "imageData")
 
 	props["imageUrl"] = imageUrl
+
+	return map[string]any{"type": "image", "props": props}
+}
+
+func handleFileMsg(userId int, props map[string]any) map[string]any {
+	var fd struct {
+		FileData []byte
+	}
+
+	helpers.MapToStruct(props, &fd)
+
+	fileUrl, _ := helpers.UploadFile(fmt.Sprintf("file messages/user-%d/img-%d.jpg", userId, time.Now().UnixNano()), fd.FileData)
+
+	delete(props, "fileData")
+
+	props["fileUrl"] = fileUrl
 
 	return map[string]any{"type": "image", "props": props}
 }
@@ -110,6 +132,8 @@ func MessageBinaryToUrl(userId int, msgBody map[string]any) map[string]any {
 		return handleVideoMsg(userId, msg.Props)
 	case "image":
 		return handleImageMsg(userId, msg.Props)
+	case "file":
+		return handleFileMsg(userId, msg.Props)
 	default:
 		return msgBody
 	}
