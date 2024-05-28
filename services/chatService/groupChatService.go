@@ -166,8 +166,8 @@ func (gpc GroupChat) broadcastMessageDeliveryStatusUpdate(clientId int, ackDatas
 				msgId := data.MsgId
 				go appObservers.DMChatSessionObserver{}.Send(
 					fmt.Sprintf("user-%d--groupchat-%d", mId, gpc.Id),
-					map[string]any{"msgId": msgId, "key": "delivery_status", "value": status},
-					"message update",
+					map[string]any{"msgId": msgId, "status": status},
+					"delivery status update",
 				)
 			}
 		}
@@ -181,7 +181,7 @@ func (gpc GroupChat) BatchUpdateGroupChatMessageDeliveryStatus(receiverId int, s
 	}
 
 	// The idea is that, the delivery status of a group message changes
-	// if all members have acknowledged the message as "delivered" or "seen",
+	// when all members have acknowledged the message as "delivered" or "seen",
 	// this is set in the overall_delivery_status, after a certain number of members acknowledges delivery.
 
 	// should_broadcast tells us if we should broadcast the overall_delivery_status

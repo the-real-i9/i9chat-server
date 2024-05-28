@@ -34,8 +34,8 @@ func BatchUpdateDMChatMessageDeliveryStatus(receiverId int, status string, ackDa
 			go func() {
 				appObservers.DMChatSessionObserver{}.Send(
 					fmt.Sprintf("user-%d--dmchat-%d", data.SenderId, data.DmChatId),
-					map[string]any{"msgId": data.MsgId, "key": "delivery_status", "value": status},
-					"message update",
+					map[string]any{"msgId": data.MsgId, "status": status},
+					"delivery status update",
 				)
 			}()
 		}
@@ -82,8 +82,8 @@ func (dmcm DMChatMessage) UpdateDeliveryStatus(receiverId int, status string, up
 
 		go appObservers.DMChatSessionObserver{}.Send(
 			fmt.Sprintf("user-%d--dmchat-%d", dmcm.SenderId, dmcm.DmChatId),
-			map[string]any{"msgId": dmcm.Id, "key": "delivery_status", "value": status},
-			"message update",
+			map[string]any{"msgId": dmcm.Id, "status": status},
+			"delivery status update",
 		)
 	}
 
