@@ -32,6 +32,9 @@ The are two **formats of received data** :
     }
   ```
 
+---
+The structure of a message's content, sent and received during interaction, is fully described [here](#message-content).
+
 ## API Endpoints
 
 All communication is implemented with WebSocket, therefore, all URLs are of the `ws://` protocol. Futhermore, all sent/received data are of the JSON data type.
@@ -605,7 +608,7 @@ Each type of `action` has its associated data.
 
 - Second, to send acknowledgement for received messages
 
-    The value of `status` can either be `delivered` or `read`. The property `at` indicates the time of delivery.
+    The value of `status` can either be `delivered` or `seen`. The property `at` indicates the time of delivery.
 
     ```json
     {
@@ -663,8 +666,6 @@ The client is expected to perform an "optimistic UI" rendering with the data use
 ### Open Group Chat Stream
 
 This stream (endpoint) should open (be accessed) as soon as the client is online, and remain open until the client goes offline, after which it is closed. This, basically, is how the client lets the server know they are online or offline.
-
-> Note! The structure of a chat message is defined in the "Send message" endpoint section.
 
 **URL:** `ws://localhost:8000/api/app/user/open_group_chat_stream`
 
@@ -740,7 +741,7 @@ Each type of `action` has its associated data.
 
 - First, to create a new Group chat, send:
 
-    The `pictureData` is a binary data represented as a `uint8` integer array, as described earlier. The data will be uploaded to a cloud storage and replaces with the result URL.
+    The `pictureData` is a binary data represented as a `uint8` integer array, as described earlier. The data will be uploaded to a cloud storage and replaced with the result URL.
 
     The `initUsers` is a 2D-array containing the `[id, username]` of the initial participants with which the group will be created.
 
@@ -762,7 +763,7 @@ Each type of `action` has its associated data.
 
 - Second, to send acknowledgement for received messages
 
-    The value of `status` can either be `delivered` or `read`. The property `at` indicates the time of delivery.
+    The value of `status` can either be `delivered` or `seen`. The property `at` indicates the time of delivery.
 
     Seeing we're dealing with a group, it is more efficient to acknowledge messages in batch rather than singly. Also, observe that you can only acknowledge messages for a single group at a time.
 
@@ -770,7 +771,7 @@ Each type of `action` has its associated data.
     {
       "action": "acknowledge messages",
       "data": {
-        "status": "read",
+        "status": "seen",
         "groupChatId": 4,
         "msgAckDatas": [
           {
@@ -840,7 +841,7 @@ You should know that, if the client is the sender (`clientId = sender.id`), you 
         "textContent": "Hey bro!"
       }
     },
-    "delivery_status": "read",
+    "delivery_status": "seen",
     "created_at": "${dateTimeString}", 
     "edited": false,
     "edited_at": "${dateTimeString}", 
@@ -901,7 +902,7 @@ In "activity" history type, the structure of `activity_info` is based on `activi
         "textContent": "Hey bro!"
       }
     },
-    "delivery_status": "read",
+    "delivery_status": "seen",
     "created_at": "${dateTimeString}", 
     "edited": false,
     "edited_at": "${dateTimeString}", 
@@ -928,5 +929,174 @@ In "activity" history type, the structure of `activity_info` is based on `activi
 
 ### Open DM Messaging Stream
 
+This stream (endpoint) is where the client *sends messages* and *receives delivery acknowledgements* for a particular DM chat (identified by the parameter, `:dm_chat_id`, at the last segment of the URL).
+
+This stream (endpoint) should be opened (accessed) as soon as the client enters a DM chat session, and closed when the client leaves this session off to another, whose stream also opens for messaging.
+
+**URL:** `ws://localhost:8000/api/app/dm_chat/open_dm_messaging_stream/:dm_chat_id`.
+
+*`:dm_chat_id` must be replaced with the target DM chat's unique id in the URL (`..._stream/5`, where `5` is the target DM chat's unique id).*
+
+**Sent Header:** `Authorization: Bearer ${authJwt}`
+
+**Received Event:** (*Study carefully!!*)
+
+This stream receives only one type of event sent from the server, *whenever the client receives a message delivery acknowledgement for one of its messages.*
+
+> More events may be supported in the near future, a "message edit" event, for example.
+
+At every opening of the stream (when the client enters a DM chat session), all events pending receipt and associated data are first streamed to the client.
+
+Below is the event, associated data, and recommended listeners:
+
+```json
+{
+  "event": "delivery status update",
+  "data": {
+    "msgId": 5,
+    "status": "seen"
+  }
+}
+```
+
+The DM chat messaging interface (where message is sent) should listen for this event, find the target message through `msgId`, and update the read receipt accordingly.
+
+**Sent Data:**
+
+The data sent through this stream is *a message*.
+
+> Note! Messages are not received on this stream, the receipt of messages has been [discussed](#open-dm-chat-stream).
+
+The value of `at` specifies the time the message was created.
+
+```json
+{
+  "msg": {
+    "type": "text",
+    "props": {
+      "textContent": "Hi! How're you doing?"
+    }
+  },
+  "at": "${datetimeString}"
+}
+```
+
+Below, the structure(s) of `msg` content is described in detail.
+
+#### Message Content
+
+A message can be one of the following types: `text`, `voice`, `image`, `audio`, `video`, `file`.
+
+The `props` property of a message data, holds the properties associated with a message of a particular type.
+
+Messages that include the binary data for their type, have a `uint8` integer array representation of the data. This binary data representation will be uploaded to a cloud storage, and the `{type}Data` property is replaced with `{type}Url` which holds the resulting URL from the upload.
+
+The data format for each type of message is described below:
+
+- Type: `text`
+
+  ```json
+  {
+    "type": "text",
+    "props": {
+      "textContent": "Hi! How're you doing?"
+    }
+  }
+  ```
+
+- Type: `voice`
+
+  The value of `duration` is specified in seconds. Below is a `200` duration sec.
+
+  ```json
+  {
+    "type": "voice",
+    "props": {
+      "voiceData": [97, 98, 99, 100, 101, 102, 103, 104, 105],
+      "duration": 200
+    }
+  }
+  ```
+
+- Type: `image`
+
+  The value of `size` is specified in bytes.
+
+  ```json
+  {
+    "type": "image",
+    "props": {
+      "imageData": [97, 98, 99, 100, 101, 102, 103, 104, 105],
+      "mimeType": "image/png",
+      "caption": "This is an image",
+      "size": 4076
+    }
+  }
+  ```
+
+- Type: `audio`
+
+  The value of `size` is specified in bytes.
+
+  ```json
+  {
+    "type": "audio",
+    "props": {
+      "auioData": [97, 98, 99, 100, 101, 102, 103, 104, 105],
+      "mimeType": "audio/mp3",
+      "caption": "Enjoy the music",
+      "size": 4076
+    }
+  }
+  ```
+
+- Type: `video`
+
+  The value of `size` is specified in bytes.
+
+  ```json
+  {
+    "type": "video",
+    "props": {
+      "videoData": [97, 98, 99, 100, 101, 102, 103, 104, 105],
+      "mimeType": "video/mp4",
+      "caption": "Blockbuster baby!",
+      "size": 4076
+    }
+  }
+  ```
+
+- Type: `file`
+
+  The value of `size` is specified in bytes.
+
+  ```json
+  {
+    "type": "file",
+    "props": {
+      "fileData": [97, 98, 99, 100, 101, 102, 103, 104, 105],
+      "mimeType": "application/octet-stream",
+      "caption": "This is a text file",
+      "size": 4076,
+      "extension": "txt"
+    }
+  }
+  ```
+
+**Received Data:**
+
+The data received in response to the client's sent message, is the `id` of the message.
+
+```json
+{
+  "new_msg_id": 5,
+}
+```
+
+The client is expected to perform an "optimistic UI rendering" of the message snippet with the data it uses to create the message, and set the message's `id` to the the one received in response, as soon as it is received. The full data needed for rendering on the partner's end is sent to it.
+
+The `delivery status update` event described above, is how you recieve delivery status updates in order to update the current read receipt. It goes from `sent`, to `delivered`, and, finally, to `seen`.
+
 
 ### Open Group Messaging Stream
+
