@@ -654,7 +654,7 @@ The only data received is the servers's response to the client's `create new cha
 
 > Recall that, the partner with which the client has initiated this new chat will receive thier own data in a `new chat` event (as described above). This happens immediately provided the partner is online, else, the event is queued as part of the "dm chat events pending receipt" for the user, which will be streamed to them as soon as they come online.
 
-The client is expected to perform an "optimistic UI" rendering with the data used to create the DM chat, hence, only the needful data is returned.
+The client is expected to perform "optimistic UI" rendering with the data used to create the DM chat, hence, only the needful data is returned.
 
 ```json
 {
@@ -793,7 +793,7 @@ The only data received is the servers's response to the client's `create new cha
 
 > Recall that, all participants included in the creation of the group chat will receive their own data in a `new chat` event (as described above). This happens immediately provided the participant is online, else, the event is queued as part of the "group chat events pending receipt" for the user, which will be streamed to them as soon as they come online.
 
-The client is expected to perform an "optimistic UI" rendering with data it uses to create the group chat, hence, only the needful data is returned.
+The client is expected to perform "optimistic UI" rendering with data it uses to create the group chat, hence, only the needful data is returned.
 
 ```json
 {
@@ -861,7 +861,7 @@ You should know that, if the client is the sender (`clientId = sender.id`), you 
 
 ### Get Group Chat History
 
-**URL:** `ws://localhost:8000/api/app/dm_chat/chat_history`
+**URL:** `ws://localhost:8000/api/app/group_chat/chat_history`
 
 **Sent Header:** `Authorization: Bearer ${authJwt}`
 
@@ -929,7 +929,7 @@ In "activity" history type, the structure of `activity_info` is based on `activi
 
 ### Open DM Messaging Stream
 
-This stream (endpoint) is where the client *sends messages* and *receives delivery acknowledgements* for a particular DM chat (identified by the parameter, `:dm_chat_id`, at the last segment of the URL).
+This stream (endpoint) is where the client *sends messages* and *receives delivery acknowledgements* for a particular DM chat (identified by the `:dm_chat_id` parameter at the last segment of the URL).
 
 This stream (endpoint) should be opened (accessed) as soon as the client enters a DM chat session, and closed when the client leaves this session off to another, whose stream also opens for messaging.
 
@@ -945,7 +945,7 @@ This stream receives only one type of event sent from the server, *whenever the 
 
 > More events may be supported in the near future, a "message edit" event, for example.
 
-At every opening of the stream (when the client enters a DM chat session), all events pending receipt and associated data are first streamed to the client.
+At every opening of the stream (perhaps, when the client enters a DM chat session), all events pending receipt and associated data are first streamed to the client.
 
 Below is the event, associated data, and recommended listeners:
 
@@ -959,7 +959,7 @@ Below is the event, associated data, and recommended listeners:
 }
 ```
 
-The DM chat messaging interface (where message is sent) should listen for this event, find the target message through `msgId`, and update the read receipt accordingly.
+The DM chat messaging interface (the page where message is exchanged) should listen for this event, find the target message through `msgId`, and update the read receipt accordingly.
 
 **Sent Data:**
 
@@ -1093,10 +1093,74 @@ The data received in response to the client's sent message, is the `id` of the m
 }
 ```
 
-The client is expected to perform an "optimistic UI rendering" of the message snippet with the data it uses to create the message, and set the message's `id` to the the one received in response, as soon as it is received. The full data needed for rendering on the partner's end is sent to it.
+The client is expected to perform "optimistic UI rendering" of the message snippet with the data it uses to create the message and set the message's `id` to the the one received in response, as soon as it is received. The full data needed for rendering on the partner's end is sent to it.
 
 The `delivery status update` event described above, is how you recieve delivery status updates in order to update the current read receipt. It goes from `sent`, to `delivered`, and, finally, to `seen`.
 
-
 ### Open Group Messaging Stream
 
+This stream (endpoint) is where the client *sends messages* and *receives delivery acknowledgements* for a particular Group chat (identified by the `:group_chat_id` parameter at the last segment of the URL).
+
+This stream (endpoint) should be opened (accessed) as soon as the client enters a Group chat session, and closed when the client leaves this session off to another, whose stream also opens for messaging.
+
+**URL:** `ws://localhost:8000/api/app/group_chat/open_group_messaging_stream/:group_chat_id`.
+
+*`:group_chat_id` must be replaced with the target Group chat's unique id in the URL (`..._stream/5`, where `5` is the target Group chat's unique id).*
+
+**Sent Header:** `Authorization: Bearer ${authJwt}`
+
+**Received Event:** (*Study carefully!!*)
+
+This stream receives only one type of event sent from the server, *whenever the client receives a message delivery acknowledgement for one of its messages.*
+
+> More events may be supported in the near future, a "message edit" event, for example.
+
+At every opening of the stream (perhaps, when the client enters a Group chat session), all events pending receipt and associated data are first streamed to the client.
+
+Below is the event, associated data, and recommended listeners:
+
+```json
+{
+  "event": "delivery status update",
+  "data": {
+    "msgId": 5,
+    "status": "delivered"
+  }
+}
+```
+
+The Group chat messaging interface (the page where message is exchanged) should listen for this event, find the target message through `msgId`, and update the read receipt accordingly.
+
+> Updating a group chat's message receipt is a bit different from that of a DM. For a group, a message's read receipt is updated when a particular delivery status is true for all valid members of the group.
+
+**Sent Data:**
+
+The data sent through this stream is *a message*.
+
+> Note! Messages are not received on this stream, the receipt of messages has been [discussed](#open-group-chat-stream).
+
+The value of `at` specifies the time the message was created.
+
+```json
+{
+  "msg": {
+    "type": "text",
+    "props": {
+      "textContent": "Hi! How're you doing?"
+    }
+  },
+  "at": "${datetimeString}"
+}
+```
+
+**Received Data:**
+
+The data received in response to the client's sent message, is the `id` of the message.
+
+```json
+{
+  "new_msg_id": 5,
+}
+```
+
+The client is expected to perform "optimistic UI rendering" of the message snippet with the data it uses to create the message and set the message's `id` to the the one received in response, as soon as it is received. The full data needed for rendering on the other group members' end is sent to them.
