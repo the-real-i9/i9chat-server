@@ -75,12 +75,13 @@ This category includes endpoints handling user actions.
 
 ### Chat Actions
 
-This category includes endpoints handling chat session operations.
+This category includes endpoints handling DM or Group chat operations.
 
 - [Get DM chat history](#get-dm-chat-history)
 - [Get Group chat history](#get-group-chat-history)
 - [Open DM Messaging Stream](#open-dm-messaging-stream)
 - [Open Group Messaging Stream](#open-group-messaging-stream)
+- [Execute Group Action](#execute-group-action)
 
 ## Endpoints and Usage
 
@@ -474,20 +475,24 @@ A list consisting all user's DM and Group chats in descending order by time upda
   "body": [
     {
       "type": "dm",
-      "chat_id": 1,
+      "id": 1,
       "partner": {
-        "user_id": 4,
+        "id": 4,
         "username": "risotto",
-        "profile_pic_url": "someurl.jpg"
+        "profile_pic_url": "someurl.jpg",
+        "presence": "online",
+        "last_seen": null
       },
+      "unread_messages_count": 5,
       "updated_at": "${some date}"
     },
     {
       "type": "group",
-      "chat_id": 2,
+      "id": 2,
       "name": "Class of 2018",
       "description": "Still wondering what we are...",
       "picture_url": "someurl.jpg",
+      "unread_messages_count": 5,
       "updated_at": "${some date}"
     }
   ],
@@ -510,7 +515,7 @@ This stream receives "events" sent from the server.
 
 At every opening of the stream (when user comes online), all events pending receipt and associated data are first streamed to the client.
 
-The events, associated data, recommended listeners, and additional information (if any) are discussed below:
+The events, associated data, suggested listeners, and additional information (if any) are discussed below:
 
 - The `new chat` event:
 
@@ -677,7 +682,7 @@ This stream receives "events" sent from the server.
 
 At every opening of the stream (when user comes online), all events pending receipt and associated data are first streamed to the client.
 
-The events, associated data, recommended listeners, and additional information (if any) are discussed below:
+The events, associated data, suggested listeners, and additional information (if any) are discussed below:
 
 - The `new chat` event:
 
@@ -732,6 +737,126 @@ The events, associated data, recommended listeners, and additional information (
 
     **But,** if the target group chat is open, this new message is appended to the chat history list, rather than updating the chat snippet's "unread messages count" `+1`. Other chat snippet updates (listed above) are done.
   - The application should send acknowledgement for this new message. How to achieve this is described later in this section.
+
+- The `new activity` event:
+
+  - Received when a special activity occurs in one of your group chats. All members of the group, except the one that triggers the activity, will receive this event.
+
+    ```json
+    {
+      "event": "new activity",
+      "data": {
+        "group_chat_id": 5,
+        "activity_type": "user_added",
+        "activity_info": {
+          "added_by": "samuel",
+          "new_users": ["dave", "bridget", "calvin"]
+        }
+      }
+    }
+    ```
+
+#### Group Activities
+
+Let's look into the different group `activity_type`s and their associated `activity_info`:
+
+- Type: `group_name_changed`
+  
+  ```json
+  {
+    "changed_by": "samuel",
+    "new_group_name": "Class of 2020"
+  }
+  ```
+
+  Reads: *"samuel changed group's name to 'Class of 2020'"* (Just an example)
+
+- Type: `group_description_changed`
+  
+  ```json
+  {
+    "changed_by": "dave",
+    "new_group_description": "Go Nerds!"
+  }
+  ```
+
+  Reads: *"dave changed group's description to 'Go Nerds!'"*
+
+- Type: `group_picture_changed`
+  
+  ```json
+  {
+    "changed_by": "dave",
+  }
+  ```
+
+  Reads: *"dave changed group's picture"*
+
+- Type: `users_added`
+  
+  ```json
+  {
+    "added_by": "samuel",
+    "new_users": ["dave", "bridget", "calvin"]
+  }
+  ```
+
+  Reads: *"samuel changed group's description to 'Go Nerds!'"*
+
+- Type: `user_removed`
+  
+  ```json
+  {
+    "removed_by": "samuel",
+    "username": "jenkins"
+  }
+  ```
+
+  Reads: *"samuel removed jenkins"*
+
+- Type: `user_joined`
+  
+  ```json
+  {
+    "username": "reactXn"
+  }
+  ```
+
+  Reads: *"reactXn joined"*
+
+- Type: `user_left`
+  
+  ```json
+  {
+    "username": "zuck"
+  }
+  ```
+
+  Reads: *"zuck left"*
+
+- Type: `user_made_group_admin`
+  
+  ```json
+  {
+    "made_by": "zuck",
+    "username": "elon"
+  }
+  ```
+
+  Reads: *"zuck made elon admin"*
+
+- Type: `user_removed_from_group_admins`
+  
+  ```json
+  {
+    "removed_by": "elon",
+    "username": "zuck"
+  }
+  ```
+
+  Reads: *"elon removed zuck from admin"*
+
+> **Note:** If an activity was [triggered by the client](#execute-group-action), they will not receive its event, rather they are expected to perform "optimistic UI rendering"; replacing their username with `You`, where applicable. For instance, if the client's name is "samuel", it will read *"You changed group's name to..."*
 
 **Sent Data:**
 
@@ -827,36 +952,40 @@ DM chat history consists of messages only, unlike a group, it contains no activi
 You should know that, if the client is the sender (`clientId = sender.id`), you should render its message snippet different from that of its partner. Basically, you don't include read receipts on partner's message snippet, but you do on client's message snippet.
 
 ```json
-[
-  {
-    "id": 2,
-    "sender": {
-      "id": 4,
-      "username": "samuel",
-      "profile_picture_url": "someurl.jpg"
-    },
-    "content": {
-      "type": "text",
-      "props": {
-        "textContent": "Hey bro!"
-      }
-    },
-    "delivery_status": "seen",
-    "created_at": "${dateTimeString}", 
-    "edited": false,
-    "edited_at": "${dateTimeString}", 
-    "reactions": [
-      {
-        "reaction": "${reactionCodePoint}",
-        "reactor": {
-          "id": 4,
-          "username": "samuel",
-          "profile_picture_url": "someurl.jpg"
+{
+  "statusCode": 200,
+  "body": [
+    {
+      "id": 2,
+      "sender": {
+        "id": 4,
+        "username": "samuel",
+        "profile_picture_url": "someurl.jpg"
+      },
+      "content": {
+        "type": "text",
+        "props": {
+          "textContent": "Hey bro!"
         }
-      }
-    ]
-  }
-]
+      },
+      "delivery_status": "seen",
+      "created_at": "${dateTimeString}", 
+      "edited": false,
+      "edited_at": "${dateTimeString}", 
+      "reactions": [
+        {
+          "reaction": "${reactionCodePoint}",
+          "reactor": {
+            "id": 4,
+            "username": "samuel",
+            "profile_picture_url": "someurl.jpg"
+          }
+        }
+      ]
+    }
+  ]
+}
+
 ```
 
 ### Get Group Chat History
@@ -887,44 +1016,47 @@ You should know that, if the client is the sender (`clientId = sender.id`), you 
 In "activity" history type, the structure of `activity_info` is based on `activity_type`. These data should be used to render the activity message appropriately. The sample data below represents an activity that should reads *"dave joined"*.
 
 ```json
-[
-  {
-    "type": "message",
-    "id": 2,
-    "sender": {
-      "id": 4,
-      "username": "samuel",
-      "profile_picture_url": "someurl.jpg"
-    },
-    "content": {
-      "type": "text",
-      "props": {
-        "textContent": "Hey bro!"
-      }
-    },
-    "delivery_status": "seen",
-    "created_at": "${dateTimeString}", 
-    "edited": false,
-    "edited_at": "${dateTimeString}", 
-    "reactions": [
-      {
-        "reaction": "${reactionCodePoint}",
-        "reactor": {
-          "id": 4,
-          "username": "samuel",
-          "profile_picture_url": "someurl.jpg"
+{
+  "statusCode": 200,
+  "body": [
+    {
+      "type": "message",
+      "id": 2,
+      "sender": {
+        "id": 4,
+        "username": "samuel",
+        "profile_picture_url": "someurl.jpg"
+      },
+      "content": {
+        "type": "text",
+        "props": {
+          "textContent": "Hey bro!"
         }
+      },
+      "delivery_status": "seen",
+      "created_at": "${dateTimeString}", 
+      "edited": false,
+      "edited_at": "${dateTimeString}", 
+      "reactions": [
+        {
+          "reaction": "${reactionCodePoint}",
+          "reactor": {
+            "id": 4,
+            "username": "samuel",
+            "profile_picture_url": "someurl.jpg"
+          }
+        }
+      ]
+    },
+    {
+      "type": "activity",
+      "activity_type": "user_joined",
+      "activity_info": {
+        "username": "dave"
       }
-    ]
-  },
-  {
-    "type": "activity",
-    "activity_type": "user_joined",
-    "activity_info": {
-      "username": "dave"
     }
-  }
-]
+  ]
+}
 ```
 
 ### Open DM Messaging Stream
@@ -933,7 +1065,7 @@ This stream (endpoint) is where the client *sends messages* and *receives delive
 
 This stream (endpoint) should be opened (accessed) as soon as the client enters a DM chat session, and closed when the client leaves this session off to another, whose stream also opens for messaging.
 
-**URL:** `ws://localhost:8000/api/app/dm_chat/open_dm_messaging_stream/:dm_chat_id`.
+**URL:** `ws://localhost:8000/api/app/dm_chat/open_messaging_stream/:dm_chat_id`.
 
 *`:dm_chat_id` must be replaced with the target DM chat's unique id in the URL (`..._stream/5`, where `5` is the target DM chat's unique id).*
 
@@ -947,7 +1079,7 @@ This stream receives only one type of event sent from the server, *whenever the 
 
 At every opening of the stream (perhaps, when the client enters a DM chat session), all events pending receipt and associated data are first streamed to the client.
 
-Below is the event, associated data, and recommended listeners:
+Below is the event, associated data, and suggested listeners:
 
 ```json
 {
@@ -1103,7 +1235,7 @@ This stream (endpoint) is where the client *sends messages* and *receives delive
 
 This stream (endpoint) should be opened (accessed) as soon as the client enters a Group chat session, and closed when the client leaves this session off to another, whose stream also opens for messaging.
 
-**URL:** `ws://localhost:8000/api/app/group_chat/open_group_messaging_stream/:group_chat_id`.
+**URL:** `ws://localhost:8000/api/app/group_chat/open_messaging_stream/:group_chat_id`.
 
 *`:group_chat_id` must be replaced with the target Group chat's unique id in the URL (`..._stream/5`, where `5` is the target Group chat's unique id).*
 
@@ -1117,7 +1249,7 @@ This stream receives only one type of event sent from the server, *whenever the 
 
 At every opening of the stream (perhaps, when the client enters a Group chat session), all events pending receipt and associated data are first streamed to the client.
 
-Below is the event, associated data, and recommended listeners:
+Below is the event, associated data, and suggested listeners:
 
 ```json
 {
@@ -1164,3 +1296,140 @@ The data received in response to the client's sent message, is the `id` of the m
 ```
 
 The client is expected to perform "optimistic UI rendering" of the message snippet with the data it uses to create the message and set the message's `id` to the the one received in response, as soon as it is received. The full data needed for rendering on the other group members' end is sent to them.
+
+### Execute Group Action
+
+Several special actions occur in a group. Examples include, changing a group's name, description or picture, adding or removing user(s) to/from a group etc.
+
+Actions executed in a group result into a `new activity` event being sent to group members.
+
+**URL:** `ws://localhost:8000/api/app/group_chat/execute_action`.
+
+**Sent Header:** `Authorization: Bearer ${authJwt}`
+
+**Sent Data:**
+
+```json
+{
+  "action": "change_name",
+  "data": {
+    "groupChatId": 5,
+    "newName": "Class of 2021"
+  }
+}
+```
+
+**Received Data:** (Success)
+
+```json
+{
+  "statusCode": 200,
+  "body": {
+    "msg": "Operation Successful"
+  }
+}
+```
+
+#### Group Actions
+
+Let's look into the different `action`s that can be executed in a group and their associated `data`:
+
+- Action: `change_name`
+
+  ```json
+  {
+    "groupChatId": 5,
+    "newName": "Class of 2021"
+  }
+  ```
+  
+- Action: `change_description`
+
+  ```json
+  {
+    "groupChatId": 5,
+    "newDescription": "We're the greatest!"
+  }
+  ```
+
+- Action: `change_picture`
+
+  `newPictureData` is a `uint8` integer array binary data representation of the new picture.
+
+  ```json
+  {
+    "groupChatId": 5,
+    "newPictureData": [97, 98, 99, 100, 101, 102, 104, 105]
+  }
+  ```
+
+- Action: `add_users`
+
+  The value of `newUsers` is a 2D-array consisting of the `[id, usersame]` of the users.
+
+  ```json
+  {
+    "groupChatId": 5,
+    "newUsers": [
+      [10, "king"],
+      [11, "queen"]
+      [13, "pawn"]
+    ]
+  }
+  ```
+
+- Action: `remove_user`
+
+  The value of `user` is the `[id, username]` of the user to remove.
+
+  ```json
+  {
+    "groupChatId": 5,
+    "user": [4, "smokey"]
+  }
+  ```
+
+- Action: `join`
+
+  Obviously, the user joining the group is the client.
+
+  ```json
+  {
+    "groupChatId": 5,
+  }
+  ```
+
+- Action: `leave`
+
+  Obviously, the user leaving the group is the client.
+
+  ```json
+  {
+    "groupChatId": 5,
+  }
+  ```
+
+- Action: `make_user_admin`
+
+  The value of `user` is the `[id, username]` of the user to make group admin.
+
+  ```json
+  {
+    "groupChatId": 5,
+    "user": [5, "knignt"]
+  }
+  ```
+
+- Action: `remove_user_from_admins`
+
+  The value of `user` is the `[id, username]` of the user to remove from group admins.
+
+  ```json
+  {
+    "groupChatId": 5,
+    "user": [6, "bishop"]
+  }
+  ```
+
+---
+*Happy Coding!!!* ✨
