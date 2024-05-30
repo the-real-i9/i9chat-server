@@ -63,7 +63,7 @@ func (gpc GroupChat) AddUsers(admin []string, newUsers [][]appTypes.String) (map
 	return data, nil
 }
 
-func (gpc GroupChat) RemoveUser(admin []string, user []string) (map[string]any, error) {
+func (gpc GroupChat) RemoveUser(admin []string, user []appTypes.String) (map[string]any, error) {
 	data, err := helpers.QueryRowFields("SELECT member_ids AS memberIds, activity_data AS activityData remove_user_to_group($1, $2, $3)", gpc.Id, admin, user)
 	if err != nil {
 		log.Println(fmt.Errorf("groupChatModel.go: GroupChat_RemoveUser: %s", err))
@@ -93,7 +93,7 @@ func (gpc GroupChat) Leave(user []string) (map[string]any, error) {
 	return data, nil
 }
 
-func (gpc GroupChat) MakeUserAdmin(admin []string, user []string) (map[string]any, error) {
+func (gpc GroupChat) MakeUserAdmin(admin []string, user []appTypes.String) (map[string]any, error) {
 	data, err := helpers.QueryRowFields("SELECT member_ids AS memberIds, activity_data AS activityData make_user_group_admin($1, $2, $3)", gpc.Id, admin, user)
 	if err != nil {
 		log.Println(fmt.Errorf("groupChatModel.go: GroupChat_MakeUserAdmin: %s", err))
@@ -103,7 +103,7 @@ func (gpc GroupChat) MakeUserAdmin(admin []string, user []string) (map[string]an
 	return data, nil
 }
 
-func (gpc GroupChat) RemoveUserFromAdmins(admin []string, user []string) (map[string]any, error) {
+func (gpc GroupChat) RemoveUserFromAdmins(admin []string, user []appTypes.String) (map[string]any, error) {
 	data, err := helpers.QueryRowFields("SELECT member_ids AS memberIds, activity_data AS activityData remove_user_from_group_admins($1, $2, $3)", gpc.Id, admin, user)
 	if err != nil {
 		log.Println(fmt.Errorf("groupChatModel.go: GroupChat_RemoveUserFromAdmins: %s", err))

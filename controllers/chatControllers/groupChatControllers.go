@@ -36,7 +36,10 @@ var GetGroupChatHistory = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 	if app_err != nil {
 		w_err = c.WriteJSON(helpers.ErrResp(fiber.StatusUnprocessableEntity, app_err))
 	} else {
-		w_err = c.WriteJSON(map[string]any{"chat_history": groupChatHistory})
+		w_err = c.WriteJSON(map[string]any{
+			"statusCode": 200,
+			"body":       groupChatHistory,
+		})
 	}
 
 	if w_err != nil {
@@ -125,15 +128,15 @@ func sendGroupChatMessages(c *websocket.Conn, user appTypes.JWTUserData, groupCh
 	}
 }
 
-var PerformGroupOperation = helpers.WSHandlerProtected(func(c *websocket.Conn) {
+var ExecuteGroupAction = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 	var user appTypes.JWTUserData
 
 	helpers.MapToStruct(c.Locals("auth").(map[string]any), &user)
 
-	type operation string
-	type handler func(client []string, data map[string]any)
+	type action string
+	type handler func(client []string, data map[string]any) error
 
-	operationToHandlerMap := map[operation]handler{
+	operationToHandlerMap := map[action]handler{
 		"change_name":             changeGroupName,
 		"change_description":      changeGroupDescription,
 		"change_picture":          changeGroupPicture,
@@ -147,8 +150,8 @@ var PerformGroupOperation = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 
 	for {
 		var body struct {
-			Operation operation
-			Data      map[string]any
+			Action action
+			Data   map[string]any
 		}
 
 		if r_err := c.ReadJSON(&body); r_err != nil {
@@ -158,16 +161,28 @@ var PerformGroupOperation = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 
 		client := []string{fmt.Sprint(user.UserId), user.Username}
 
-		go operationToHandlerMap[body.Operation](client, body.Data)
+		app_err := operationToHandlerMap[body.Action](client, body.Data)
 
-		if w_err := c.WriteJSON(map[string]any{"code": 200, "msg": "Operation Successful"}); w_err != nil {
+		var w_err error
+		if app_err != nil {
+			w_err = c.WriteJSON(helpers.ErrResp(fiber.StatusUnprocessableEntity, fmt.Errorf("operation failed: %s", app_err)))
+		} else {
+			w_err = c.WriteJSON(map[string]any{
+				"statusCode": 200,
+				"body": map[string]any{
+					"msg": "Operation Successful",
+				},
+			})
+		}
+
+		if w_err != nil {
 			// log.Println(w_err)
 			break
 		}
 	}
 })
 
-func changeGroupName(client []string, data map[string]any) {
+func changeGroupName(client []string, data map[string]any) error {
 	var d struct {
 		GroupChatId int
 		NewName     string
@@ -175,11 +190,11 @@ func changeGroupName(client []string, data map[string]any) {
 
 	helpers.MapToStruct(data, &d)
 
-	chatService.GroupChat{Id: d.GroupChatId}.ChangeName(client, d.NewName)
+	return chatService.GroupChat{Id: d.GroupChatId}.ChangeName(client, d.NewName)
 
 }
 
-func changeGroupDescription(client []string, data map[string]any) {
+func changeGroupDescription(client []string, data map[string]any) error {
 	var d struct {
 		GroupChatId    int
 		NewDescription string
@@ -187,10 +202,10 @@ func changeGroupDescription(client []string, data map[string]any) {
 
 	helpers.MapToStruct(data, &d)
 
-	chatService.GroupChat{Id: d.GroupChatId}.ChangeDescription(client, d.NewDescription)
+	return chatService.GroupChat{Id: d.GroupChatId}.ChangeDescription(client, d.NewDescription)
 }
 
-func changeGroupPicture(client []string, data map[string]any) {
+func changeGroupPicture(client []string, data map[string]any) error {
 	var d struct {
 		GroupChatId    int
 		NewPictureData []byte
@@ -198,10 +213,10 @@ func changeGroupPicture(client []string, data map[string]any) {
 
 	helpers.MapToStruct(data, &d)
 
-	chatService.GroupChat{Id: d.GroupChatId}.ChangePicture(client, d.NewPictureData)
+	return chatService.GroupChat{Id: d.GroupChatId}.ChangePicture(client, d.NewPictureData)
 }
 
-func addUsersToGroup(client []string, data map[string]any) {
+func addUsersToGroup(client []string, data map[string]any) error {
 	var d struct {
 		GroupChatId int
 		NewUsers    [][]appTypes.String
@@ -209,58 +224,58 @@ func addUsersToGroup(client []string, data map[string]any) {
 
 	helpers.MapToStruct(data, &d)
 
-	chatService.GroupChat{Id: d.GroupChatId}.AddUsers(client, d.NewUsers)
+	return chatService.GroupChat{Id: d.GroupChatId}.AddUsers(client, d.NewUsers)
 }
 
-func removeUserFromGroup(client []string, data map[string]any) {
+func removeUserFromGroup(client []string, data map[string]any) error {
 	var d struct {
 		GroupChatId int
-		User        []string
+		User        []appTypes.String
 	}
 
 	helpers.MapToStruct(data, &d)
 
-	chatService.GroupChat{Id: d.GroupChatId}.RemoveUser(client, d.User)
+	return chatService.GroupChat{Id: d.GroupChatId}.RemoveUser(client, d.User)
 }
 
-func joinGroup(client []string, data map[string]any) {
-	var d struct {
-		GroupChatId int
-	}
-
-	helpers.MapToStruct(data, &d)
-
-	chatService.GroupChat{Id: d.GroupChatId}.Join(client)
-}
-
-func leaveGroup(client []string, data map[string]any) {
+func joinGroup(client []string, data map[string]any) error {
 	var d struct {
 		GroupChatId int
 	}
 
 	helpers.MapToStruct(data, &d)
 
-	chatService.GroupChat{Id: d.GroupChatId}.Leave(client)
+	return chatService.GroupChat{Id: d.GroupChatId}.Join(client)
 }
 
-func makeUserGroupAdmin(client []string, data map[string]any) {
+func leaveGroup(client []string, data map[string]any) error {
 	var d struct {
 		GroupChatId int
-		User        []string
 	}
 
 	helpers.MapToStruct(data, &d)
 
-	chatService.GroupChat{Id: d.GroupChatId}.MakeUserAdmin(client, d.User)
+	return chatService.GroupChat{Id: d.GroupChatId}.Leave(client)
 }
 
-func removeUserFromGroupAdmins(client []string, data map[string]any) {
+func makeUserGroupAdmin(client []string, data map[string]any) error {
 	var d struct {
 		GroupChatId int
-		User        []string
+		User        []appTypes.String
 	}
 
 	helpers.MapToStruct(data, &d)
 
-	chatService.GroupChat{Id: d.GroupChatId}.RemoveUserFromAdmins(client, d.User)
+	return chatService.GroupChat{Id: d.GroupChatId}.MakeUserAdmin(client, d.User)
+}
+
+func removeUserFromGroupAdmins(client []string, data map[string]any) error {
+	var d struct {
+		GroupChatId int
+		User        []appTypes.String
+	}
+
+	helpers.MapToStruct(data, &d)
+
+	return chatService.GroupChat{Id: d.GroupChatId}.RemoveUserFromAdmins(client, d.User)
 }

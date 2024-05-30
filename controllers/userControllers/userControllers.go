@@ -33,7 +33,7 @@ var ChangeProfilePicture = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 
 		var w_err error
 		if app_err := (userService.User{Id: user.UserId}).ChangeProfilePicture(body.PictureData); app_err != nil {
-			w_err = c.WriteJSON(helpers.ErrResp(fiber.StatusUnprocessableEntity, fmt.Errorf("Operation failed: %s", app_err)))
+			w_err = c.WriteJSON(helpers.ErrResp(fiber.StatusUnprocessableEntity, fmt.Errorf("operation failed: %s", app_err)))
 		} else {
 			w_err = c.WriteJSON(map[string]any{
 				"statusCode": fiber.StatusOK,
@@ -340,10 +340,9 @@ func createNewGroupChatAndAckMessages(c *websocket.Conn, user appTypes.JWTUserDa
 	}
 }
 
+// This handler merely get chats as is from the database, no updates accounted for yet.
+// After closing this,  we must immediately access "Init[DM|Group]ChatStream"
 var GetMyChats = helpers.WSHandlerProtected(func(c *websocket.Conn) {
-	// This handler merely get chats as is from the database, no updates accounted for yet
-	// After this guy closes:
-	// We must "Init[DM|Group]ChatStream"
 
 	var user appTypes.JWTUserData
 
@@ -353,7 +352,7 @@ var GetMyChats = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 
 	var w_err error
 	if app_err != nil {
-		w_err = c.WriteJSON(helpers.ErrResp(500, app_err))
+		w_err = c.WriteJSON(helpers.ErrResp(fiber.StatusInternalServerError, app_err))
 	} else {
 		w_err = c.WriteJSON(map[string]any{
 			"statusCode": fiber.StatusOK,

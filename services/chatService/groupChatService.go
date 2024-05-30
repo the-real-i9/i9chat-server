@@ -16,23 +16,23 @@ func broadcastNewGroup(initUsers [][]appTypes.String, newGroupData map[string]an
 	}
 }
 
-func uploadGroupPicture(pictureData []byte) string {
+func uploadGroupPicture(pictureData []byte) (string, error) {
 	if len(pictureData) < 1 {
-		return ""
+		return "", fmt.Errorf("upload error: no picture data")
 	}
 	picPath := fmt.Sprintf("group_chat_pictures/group_chat_pic_%d.jpg", time.Now().UnixNano())
 
 	picUrl, err := helpers.UploadFile(picPath, pictureData)
 
 	if err != nil {
-		return ""
+		return "", err
 	}
 
-	return picUrl
+	return picUrl, nil
 }
 
 func NewGroupChat(name string, description string, pictureData []byte, creator []string, initUsers [][]appTypes.String) (map[string]any, error) {
-	picUrl := uploadGroupPicture(pictureData)
+	picUrl, _ := uploadGroupPicture(pictureData)
 
 	data, err := chatModel.NewGroupChat(name, description, picUrl, creator, initUsers)
 	if err != nil {
@@ -55,76 +55,121 @@ type GroupChat struct {
 	Id int
 }
 
-func (gpc GroupChat) broadcastActivity(modelResp map[string]any) {
+func (gpc GroupChat) broadcastActivity(dbResp map[string]any) {
 	var respData struct {
 		MemberIds    []int
 		ActivityData map[string]any
 	}
 
-	helpers.MapToStruct(modelResp, &respData)
+	helpers.MapToStruct(dbResp, &respData)
 
 	for _, mId := range respData.MemberIds {
 		go appObservers.GroupChatObserver{}.Send(fmt.Sprintf("user-%d", mId), respData.ActivityData, "new activity")
 	}
 }
 
-func (gpc GroupChat) ChangeName(admin []string, newName string) {
-	if resp, err := (chatModel.GroupChat{Id: gpc.Id}).ChangeName(admin, newName); err == nil {
-		go gpc.broadcastActivity(resp)
+func (gpc GroupChat) ChangeName(admin []string, newName string) error {
+	dbResp, err := chatModel.GroupChat{Id: gpc.Id}.ChangeName(admin, newName)
+	if err != nil {
+		return err
 	}
+
+	go gpc.broadcastActivity(dbResp)
+
+	return nil
 }
 
-func (gpc GroupChat) ChangeDescription(admin []string, newDescription string) {
-	if resp, err := (chatModel.GroupChat{Id: gpc.Id}).ChangeDescription(admin, newDescription); err == nil {
-		go gpc.broadcastActivity(resp)
+func (gpc GroupChat) ChangeDescription(admin []string, newDescription string) error {
+	dbResp, err := chatModel.GroupChat{Id: gpc.Id}.ChangeDescription(admin, newDescription)
+	if err != nil {
+		return err
 	}
+
+	go gpc.broadcastActivity(dbResp)
+
+	return nil
 }
 
-func (gpc GroupChat) ChangePicture(admin []string, newPictureData []byte) {
-	newPicUrl := uploadGroupPicture(newPictureData)
-	if newPicUrl == "" {
-		return
+func (gpc GroupChat) ChangePicture(admin []string, newPictureData []byte) error {
+	newPicUrl, err := uploadGroupPicture(newPictureData)
+	if err != nil {
+		return err
 	}
 
-	if resp, err := (chatModel.GroupChat{Id: gpc.Id}).ChangePicture(admin, newPicUrl); err == nil {
-		go gpc.broadcastActivity(resp)
+	dbResp, err := chatModel.GroupChat{Id: gpc.Id}.ChangePicture(admin, newPicUrl)
+	if err != nil {
+		return err
 	}
+
+	go gpc.broadcastActivity(dbResp)
+
+	return nil
 }
 
-func (gpc GroupChat) AddUsers(admin []string, newUsers [][]appTypes.String) {
-	if resp, err := (chatModel.GroupChat{Id: gpc.Id}).AddUsers(admin, newUsers); err == nil {
-		go gpc.broadcastActivity(resp)
+func (gpc GroupChat) AddUsers(admin []string, newUsers [][]appTypes.String) error {
+	dbResp, err := chatModel.GroupChat{Id: gpc.Id}.AddUsers(admin, newUsers)
+	if err != nil {
+		return err
 	}
+
+	go gpc.broadcastActivity(dbResp)
+
+	return nil
 }
 
-func (gpc GroupChat) RemoveUser(admin []string, user []string) {
-	if resp, err := (chatModel.GroupChat{Id: gpc.Id}).RemoveUser(admin, user); err == nil {
-		go gpc.broadcastActivity(resp)
+func (gpc GroupChat) RemoveUser(admin []string, user []appTypes.String) error {
+	dbResp, err := chatModel.GroupChat{Id: gpc.Id}.RemoveUser(admin, user)
+	if err != nil {
+		return err
 	}
+
+	go gpc.broadcastActivity(dbResp)
+
+	return nil
 }
 
-func (gpc GroupChat) Join(newUser []string) {
-	if resp, err := (chatModel.GroupChat{Id: gpc.Id}).Join(newUser); err == nil {
-		go gpc.broadcastActivity(resp)
+func (gpc GroupChat) Join(newUser []string) error {
+	dbResp, err := chatModel.GroupChat{Id: gpc.Id}.Join(newUser)
+	if err != nil {
+		return err
 	}
+
+	go gpc.broadcastActivity(dbResp)
+
+	return nil
 }
 
-func (gpc GroupChat) Leave(user []string) {
-	if resp, err := (chatModel.GroupChat{Id: gpc.Id}).Leave(user); err == nil {
-		go gpc.broadcastActivity(resp)
+func (gpc GroupChat) Leave(user []string) error {
+	dbResp, err := chatModel.GroupChat{Id: gpc.Id}.Leave(user)
+	if err != nil {
+		return err
 	}
+
+	go gpc.broadcastActivity(dbResp)
+
+	return nil
 }
 
-func (gpc GroupChat) MakeUserAdmin(admin []string, user []string) {
-	if resp, err := (chatModel.GroupChat{Id: gpc.Id}).MakeUserAdmin(admin, user); err == nil {
-		go gpc.broadcastActivity(resp)
+func (gpc GroupChat) MakeUserAdmin(admin []string, user []appTypes.String) error {
+	dbResp, err := chatModel.GroupChat{Id: gpc.Id}.MakeUserAdmin(admin, user)
+	if err != nil {
+		return err
 	}
+
+	go gpc.broadcastActivity(dbResp)
+
+	return nil
 }
 
-func (gpc GroupChat) RemoveUserFromAdmins(admin []string, user []string) {
-	if resp, err := (chatModel.GroupChat{Id: gpc.Id}).RemoveUserFromAdmins(admin, user); err == nil {
-		go gpc.broadcastActivity(resp)
+func (gpc GroupChat) RemoveUserFromAdmins(admin []string, user []appTypes.String) error {
+	dbResp, err := chatModel.GroupChat{Id: gpc.Id}.RemoveUserFromAdmins(admin, user)
+	if err != nil {
+		return err
 	}
+
+	go gpc.broadcastActivity(dbResp)
+
+	return nil
 }
 
 func (gpc GroupChat) broadcastMessage(memberIds []int, msgData map[string]any) {
@@ -175,7 +220,7 @@ func (gpc GroupChat) broadcastMessageDeliveryStatusUpdate(clientId int, ackDatas
 }
 
 func (gpc GroupChat) BatchUpdateGroupChatMessageDeliveryStatus(receiverId int, status string, ackDatas []*appTypes.GroupChatMsgAckData) {
-	result, err := (chatModel.GroupChat{Id: gpc.Id}).BatchUpdateGroupChatMessageDeliveryStatus(receiverId, status, ackDatas)
+	result, err := chatModel.GroupChat{Id: gpc.Id}.BatchUpdateGroupChatMessageDeliveryStatus(receiverId, status, ackDatas)
 	if err != nil {
 		return
 	}
