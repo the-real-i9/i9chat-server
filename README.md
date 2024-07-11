@@ -1138,7 +1138,7 @@ The data format for each type of message is described below:
 
 - Type: `voice`
 
-  The value of `duration` is specified in seconds. Below is a `200` duration sec.
+  The value of `duration` is specified in seconds.
 
   ```json
   {
