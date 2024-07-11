@@ -2,8 +2,8 @@
 -- PostgreSQL database dump
 --
 
--- Dumped from database version 16.1
--- Dumped by pg_dump version 16.1
+-- Dumped from database version 16.3 (Ubuntu 16.3-1.pgdg22.04+1)
+-- Dumped by pg_dump version 16.3 (Ubuntu 16.3-1.pgdg22.04+1)
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
@@ -123,7 +123,7 @@ BEGIN
   
   -- create group_chat_activity_log for group description change
   INSERT INTO group_chat_activity_log (group_chat_id, activity_type, activity_info)
-  VALUES (in_group_chat_id, 'admin_changed_group_description', json_build_object('admin_name', in_admin[2], 'new_group_description', in_new_description))
+  VALUES (in_group_chat_id, 'group_description_changed', json_build_object('changed_by', in_admin[2], 'new_group_description', in_new_description))
   RETURNING json_build_object('group_chat_id', group_chat_id, 'activity_type', activity_type, 'activity_info', activity_info) INTO activity_data;
   
   SELECT array_agg(member_id) FROM group_chat_membership 
@@ -160,7 +160,7 @@ BEGIN
   
   -- create group_chat_activity_log for group name change
   INSERT INTO group_chat_activity_log (group_chat_id, activity_type, activity_info)
-  VALUES (in_group_chat_id, 'admin_changed_group_name', json_build_object('admin_name', in_admin[2], 'new_group_name', in_new_name))
+  VALUES (in_group_chat_id, 'group_name_changed', json_build_object('changed_by', in_admin[2], 'new_group_name', in_new_name))
   RETURNING json_build_object('group_chat_id', group_chat_id, 'activity_type', activity_type, 'activity_info', activity_info) INTO activity_data;
   
   SELECT array_agg(member_id) FROM group_chat_membership 
@@ -197,7 +197,7 @@ BEGIN
   
   -- create group_chat_activity_log for group picture change
   INSERT INTO group_chat_activity_log (group_chat_id, activity_type, activity_info)
-  VALUES (in_group_chat_id, 'admin_changed_group_picture', json_build_object('admin_name', in_admin[2]))
+  VALUES (in_group_chat_id, 'group_picture_changed', json_build_object('changed_by', in_admin[2]))
   RETURNING json_build_object('group_chat_id', group_chat_id, 'activity_type', activity_type, 'activity_info', activity_info) INTO activity_data;
   
   SELECT array_agg(member_id) FROM group_chat_membership 

@@ -93,8 +93,8 @@ var OpenDMMessagingStream = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 	}
 })
 
+// this goroutine sends messages
 func sendDMChatMessages(c *websocket.Conn, user appTypes.JWTUserData, dmChatId int, endSession func()) {
-	// this goroutine sends messages
 	var body struct {
 		Msg map[string]any
 		At  time.Time
