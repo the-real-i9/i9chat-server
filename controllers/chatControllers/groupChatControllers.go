@@ -2,12 +2,13 @@ package chatControllers
 
 import (
 	"fmt"
+	user "i9chat/models/userModel"
 	"i9chat/services/appObservers"
 	"i9chat/services/appServices"
 	"i9chat/services/chatService"
-	"i9chat/services/userService"
 	"i9chat/utils/appTypes"
 	"i9chat/utils/helpers"
+	"log"
 	"time"
 
 	"github.com/gofiber/contrib/websocket"
@@ -15,9 +16,9 @@ import (
 )
 
 var GetGroupChatHistory = helpers.WSHandlerProtected(func(c *websocket.Conn) {
-	var user appTypes.JWTUserData
+	var clientUser appTypes.ClientUser
 
-	helpers.MapToStruct(c.Locals("auth").(map[string]any), &user)
+	helpers.MapToStruct(c.Locals("auth").(map[string]any), &clientUser)
 
 	var body struct {
 		GroupChatId int
@@ -26,7 +27,7 @@ var GetGroupChatHistory = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 
 	r_err := c.ReadJSON(&body)
 	if r_err != nil {
-		// log.Println(r_err)
+		log.Println(r_err)
 		return
 	}
 
@@ -43,7 +44,7 @@ var GetGroupChatHistory = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 	}
 
 	if w_err != nil {
-		// log.Println(w_err)
+		log.Println(w_err)
 		return
 	}
 })
@@ -51,9 +52,9 @@ var GetGroupChatHistory = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 // this goroutine receives message acknowlegement for sent messages,
 // and in turn changes the delivery status of messages sent by the child goroutine
 var OpenGroupMessagingStream = helpers.WSHandlerProtected(func(c *websocket.Conn) {
-	var user appTypes.JWTUserData
+	var clientUser appTypes.ClientUser
 
-	helpers.MapToStruct(c.Locals("auth").(map[string]any), &user)
+	helpers.MapToStruct(c.Locals("auth").(map[string]any), &clientUser)
 
 	var groupChatId int
 
@@ -61,7 +62,7 @@ var OpenGroupMessagingStream = helpers.WSHandlerProtected(func(c *websocket.Conn
 
 	var myMailbox = make(chan map[string]any, 2)
 
-	mailboxKey := fmt.Sprintf("user-%d--groupchat-%d", user.UserId, groupChatId)
+	mailboxKey := fmt.Sprintf("user-%d--groupchat-%d", clientUser.Id, groupChatId)
 
 	gcso := appObservers.GroupChatSessionObserver{}
 
@@ -71,12 +72,12 @@ var OpenGroupMessagingStream = helpers.WSHandlerProtected(func(c *websocket.Conn
 		gcso.Unsubscribe(mailboxKey)
 	}
 
-	go sendGroupChatMessages(c, user, groupChatId, endSession)
+	go sendGroupChatMessages(c, clientUser, groupChatId, endSession)
 
 	/* ---- stream group chat message events pending dispatch to the channel ---- */
 	// observe that this happens once every new connection
 	// A "What did I miss?" sort of query
-	if eventDataList, err := (userService.User{Id: user.UserId}).GetGroupChatMessageEventsPendingReceipt(groupChatId); err == nil {
+	if eventDataList, err := user.GetGroupChatMessageEventsPendingReceipt(clientUser.Id, groupChatId); err == nil {
 		for _, eventData := range eventDataList {
 			eventData := *eventData
 			myMailbox <- eventData
@@ -86,14 +87,14 @@ var OpenGroupMessagingStream = helpers.WSHandlerProtected(func(c *websocket.Conn
 	for data := range myMailbox {
 		w_err := c.WriteJSON(data)
 		if w_err != nil {
-			// log.Println(w_err)
+			log.Println(w_err)
 			endSession()
 			return
 		}
 	}
 })
 
-func sendGroupChatMessages(c *websocket.Conn, user appTypes.JWTUserData, groupChatId int, endSession func()) {
+func sendGroupChatMessages(c *websocket.Conn, clientUser appTypes.ClientUser, groupChatId int, endSession func()) {
 	// this goroutine sends messages
 	var body struct {
 		Msg map[string]any
@@ -103,13 +104,13 @@ func sendGroupChatMessages(c *websocket.Conn, user appTypes.JWTUserData, groupCh
 	for {
 		r_err := c.ReadJSON(&body)
 		if r_err != nil {
-			// log.Println(r_err)
+			log.Println(r_err)
 			return
 		}
 
 		data, app_err := chatService.GroupChat{Id: groupChatId}.SendMessage(
-			user.UserId,
-			appServices.MessageBinaryToUrl(user.UserId, body.Msg),
+			clientUser.Id,
+			appServices.MessageBinaryToUrl(clientUser.Id, body.Msg),
 			body.At,
 		)
 
@@ -121,7 +122,7 @@ func sendGroupChatMessages(c *websocket.Conn, user appTypes.JWTUserData, groupCh
 		}
 
 		if w_err != nil {
-			// log.Println(w_err)
+			log.Println(w_err)
 			endSession()
 			return
 		}
@@ -129,12 +130,12 @@ func sendGroupChatMessages(c *websocket.Conn, user appTypes.JWTUserData, groupCh
 }
 
 var ExecuteGroupAction = helpers.WSHandlerProtected(func(c *websocket.Conn) {
-	var user appTypes.JWTUserData
+	var clientUser appTypes.ClientUser
 
-	helpers.MapToStruct(c.Locals("auth").(map[string]any), &user)
+	helpers.MapToStruct(c.Locals("auth").(map[string]any), &clientUser)
 
 	type action string
-	type handler func(client []string, data map[string]any) error
+	type handler func(clientUser []string, data map[string]any) error
 
 	operationToHandlerMap := map[action]handler{
 		"change_name":             changeGroupName,
@@ -155,13 +156,11 @@ var ExecuteGroupAction = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 		}
 
 		if r_err := c.ReadJSON(&body); r_err != nil {
-			// log.Println(r_err)
+			log.Println(r_err)
 			break
 		}
 
-		client := []string{fmt.Sprint(user.UserId), user.Username}
-
-		app_err := operationToHandlerMap[body.Action](client, body.Data)
+		app_err := operationToHandlerMap[body.Action]([]string{fmt.Sprint(clientUser.Id), clientUser.Username}, body.Data)
 
 		var w_err error
 		if app_err != nil {
@@ -176,13 +175,13 @@ var ExecuteGroupAction = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 		}
 
 		if w_err != nil {
-			// log.Println(w_err)
+			log.Println(w_err)
 			break
 		}
 	}
 })
 
-func changeGroupName(client []string, data map[string]any) error {
+func changeGroupName(clientUser []string, data map[string]any) error {
 	var d struct {
 		GroupChatId int
 		NewName     string
@@ -190,11 +189,11 @@ func changeGroupName(client []string, data map[string]any) error {
 
 	helpers.MapToStruct(data, &d)
 
-	return chatService.GroupChat{Id: d.GroupChatId}.ChangeName(client, d.NewName)
+	return chatService.GroupChat{Id: d.GroupChatId}.ChangeName(clientUser, d.NewName)
 
 }
 
-func changeGroupDescription(client []string, data map[string]any) error {
+func changeGroupDescription(clientUser []string, data map[string]any) error {
 	var d struct {
 		GroupChatId    int
 		NewDescription string
@@ -202,10 +201,10 @@ func changeGroupDescription(client []string, data map[string]any) error {
 
 	helpers.MapToStruct(data, &d)
 
-	return chatService.GroupChat{Id: d.GroupChatId}.ChangeDescription(client, d.NewDescription)
+	return chatService.GroupChat{Id: d.GroupChatId}.ChangeDescription(clientUser, d.NewDescription)
 }
 
-func changeGroupPicture(client []string, data map[string]any) error {
+func changeGroupPicture(clientUser []string, data map[string]any) error {
 	var d struct {
 		GroupChatId    int
 		NewPictureData []byte
@@ -213,10 +212,10 @@ func changeGroupPicture(client []string, data map[string]any) error {
 
 	helpers.MapToStruct(data, &d)
 
-	return chatService.GroupChat{Id: d.GroupChatId}.ChangePicture(client, d.NewPictureData)
+	return chatService.GroupChat{Id: d.GroupChatId}.ChangePicture(clientUser, d.NewPictureData)
 }
 
-func addUsersToGroup(client []string, data map[string]any) error {
+func addUsersToGroup(clientUser []string, data map[string]any) error {
 	var d struct {
 		GroupChatId int
 		NewUsers    [][]appTypes.String
@@ -224,10 +223,10 @@ func addUsersToGroup(client []string, data map[string]any) error {
 
 	helpers.MapToStruct(data, &d)
 
-	return chatService.GroupChat{Id: d.GroupChatId}.AddUsers(client, d.NewUsers)
+	return chatService.GroupChat{Id: d.GroupChatId}.AddUsers(clientUser, d.NewUsers)
 }
 
-func removeUserFromGroup(client []string, data map[string]any) error {
+func removeUserFromGroup(clientUser []string, data map[string]any) error {
 	var d struct {
 		GroupChatId int
 		User        []appTypes.String
@@ -235,41 +234,30 @@ func removeUserFromGroup(client []string, data map[string]any) error {
 
 	helpers.MapToStruct(data, &d)
 
-	return chatService.GroupChat{Id: d.GroupChatId}.RemoveUser(client, d.User)
+	return chatService.GroupChat{Id: d.GroupChatId}.RemoveUser(clientUser, d.User)
 }
 
-func joinGroup(client []string, data map[string]any) error {
+func joinGroup(clientUser []string, data map[string]any) error {
 	var d struct {
 		GroupChatId int
 	}
 
 	helpers.MapToStruct(data, &d)
 
-	return chatService.GroupChat{Id: d.GroupChatId}.Join(client)
+	return chatService.GroupChat{Id: d.GroupChatId}.Join(clientUser)
 }
 
-func leaveGroup(client []string, data map[string]any) error {
+func leaveGroup(clientUser []string, data map[string]any) error {
 	var d struct {
 		GroupChatId int
 	}
 
 	helpers.MapToStruct(data, &d)
 
-	return chatService.GroupChat{Id: d.GroupChatId}.Leave(client)
+	return chatService.GroupChat{Id: d.GroupChatId}.Leave(clientUser)
 }
 
-func makeUserGroupAdmin(client []string, data map[string]any) error {
-	var d struct {
-		GroupChatId int
-		User        []appTypes.String
-	}
-
-	helpers.MapToStruct(data, &d)
-
-	return chatService.GroupChat{Id: d.GroupChatId}.MakeUserAdmin(client, d.User)
-}
-
-func removeUserFromGroupAdmins(client []string, data map[string]any) error {
+func makeUserGroupAdmin(clientUser []string, data map[string]any) error {
 	var d struct {
 		GroupChatId int
 		User        []appTypes.String
@@ -277,5 +265,16 @@ func removeUserFromGroupAdmins(client []string, data map[string]any) error {
 
 	helpers.MapToStruct(data, &d)
 
-	return chatService.GroupChat{Id: d.GroupChatId}.RemoveUserFromAdmins(client, d.User)
+	return chatService.GroupChat{Id: d.GroupChatId}.MakeUserAdmin(clientUser, d.User)
+}
+
+func removeUserFromGroupAdmins(clientUser []string, data map[string]any) error {
+	var d struct {
+		GroupChatId int
+		User        []appTypes.String
+	}
+
+	helpers.MapToStruct(data, &d)
+
+	return chatService.GroupChat{Id: d.GroupChatId}.RemoveUserFromAdmins(clientUser, d.User)
 }

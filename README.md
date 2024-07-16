@@ -949,7 +949,7 @@ I don't think I have to explain how infinite scrolling works, nevertheless, just
 
 DM chat history consists of messages only, unlike a group, it contains no activity. Therefore, all data should be treated as a message data, and be used to render the message snippet.
 
-You should know that, if the client is the sender (`clientId = sender.id`), you should render its message snippet different from that of its partner. Basically, you don't include read receipts on partner's message snippet, but you do on client's message snippet.
+You should know that, if the client is the sender (`clientUserId = sender.id`), you should render its message snippet different from that of its partner. Basically, you don't include read receipts on partner's message snippet, but you do on client's message snippet.
 
 ```json
 {
@@ -1011,7 +1011,7 @@ I don't think I have to explain how infinite scrolling works, nevertheless, just
 
 Group chat history consists of messages and activity. The type of data (wheter a "message" or an "activity") is determined by the data's `type` property. A data of a certain type has its associated properties to be used to render the corresponding snippet.
 
-You should know that, if the client is the sender (`clientId = sender.id`), you should render its message snippet different from that of other group members. Basically, you don't include read receipts on other group members' message snippet, but you do on client's message snippet.
+You should know that, if the client is the sender (`clientUserId = sender.id`), you should render its message snippet different from that of other group members. Basically, you don't include read receipts on other group members' message snippet, but you do on client's message snippet.
 
 In "activity" history type, the structure of `activity_info` is based on `activity_type`. These data should be used to render the activity message appropriately. The sample data below represents an activity that should reads *"dave joined"*.
 

@@ -4,7 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"i9chat/models/appModel"
-	"i9chat/models/userModel"
+	user "i9chat/models/userModel"
 	"i9chat/services/appServices"
 	"i9chat/utils/helpers"
 	"log"
@@ -57,7 +57,7 @@ func VerifyEmail(sessionId string, inputVerfCode int, email string) error {
 	return nil
 }
 
-func RegisterUser(sessionId string, email string, username string, password string, geolocation string) (map[string]any, string, error) {
+func RegisterUser(sessionId string, email string, username string, password string, geolocation string) (*user.User, string, error) {
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
 		log.Println(fmt.Errorf("authServices.go: RegisterUser: %s", err))
@@ -73,17 +73,10 @@ func RegisterUser(sessionId string, email string, username string, password stri
 		return nil, "", fmt.Errorf("username error: username '%s' is unavailable", username)
 	}
 
-	userData, err := userModel.NewUser(email, username, string(hashedPassword), geolocation)
+	user, err := user.New(email, username, string(hashedPassword), geolocation)
 	if err != nil {
 		return nil, "", err
 	}
-
-	var user struct {
-		Id       int
-		Username string
-	}
-
-	helpers.MapToStruct(userData, &user)
 
 	authJwt := helpers.JwtSign(map[string]any{
 		"userId":   user.Id,
@@ -92,16 +85,16 @@ func RegisterUser(sessionId string, email string, username string, password stri
 
 	appModel.EndSignupSession(sessionId)
 
-	return userData, authJwt, nil
+	return user, authJwt, nil
 }
 
-func Signin(emailOrUsername string, password string) (map[string]any, string, error) {
-	userData, err := userModel.GetUser(emailOrUsername)
+func Signin(emailOrUsername string, password string) (*user.User, string, error) {
+	user, err := user.FindOne(emailOrUsername)
 	if err != nil {
 		return nil, "", err
 	}
 
-	if userData == nil {
+	if user == nil {
 		return nil, "", fmt.Errorf("signin error: incorrect email/username or password")
 	}
 
@@ -121,17 +114,10 @@ func Signin(emailOrUsername string, password string) (map[string]any, string, er
 		}
 	}
 
-	var user struct {
-		Id       int
-		Username string
-	}
-
-	helpers.MapToStruct(userData, &user)
-
 	authJwt := helpers.JwtSign(map[string]any{
 		"userId":   user.Id,
 		"username": user.Username,
 	}, os.Getenv("AUTH_JWT_SECRET"), time.Now().UTC().Add(365*24*time.Hour))
 
-	return userData, authJwt, nil
+	return user, authJwt, nil
 }

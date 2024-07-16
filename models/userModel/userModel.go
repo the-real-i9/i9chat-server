@@ -1,21 +1,23 @@
-package userModel
+package user
 
 import (
 	"fmt"
 	"i9chat/utils/helpers"
 	"log"
-	"time"
+
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 type User struct {
-	Id                int
-	Username          string
-	ProfilePictureUrl string    `db:"profile_picture_url"`
-	LastSeen          time.Time `db:"last_seen"`
-	Location          string
+	Id                int              `json:"id"`
+	Username          string           `json:"username"`
+	ProfilePictureUrl string           `db:"profile_picture_url" json:"profile_picture_url"`
+	Presence          string           `json:"presence"`
+	LastSeen          pgtype.Timestamp `db:"last_seen" json:"last_seen"`
+	Location          pgtype.Circle    `json:"location"`
 }
 
-func NewUser(email string, username string, password string, geolocation string) (*User, error) {
+func New(email string, username string, password string, geolocation string) (*User, error) {
 
 	user, err := helpers.QueryRowType[User]("SELECT * FROM new_user($1, $2, $3, $4)", email, username, password, geolocation)
 
@@ -27,21 +29,21 @@ func NewUser(email string, username string, password string, geolocation string)
 	return user, nil
 }
 
-func GetUser(uniqueId string) (map[string]any, error) {
+func FindOne(uniqueId string) (*User, error) {
 
-	user, err := helpers.QueryRowFields("SELECT * FROM get_user($1)", uniqueId)
+	user, err := helpers.QueryRowType[User]("SELECT * FROM get_user($1)", uniqueId)
 
 	if err != nil {
-		log.Println(fmt.Errorf("userModel.go: GetUser: %s", err))
+		log.Println(fmt.Errorf("userModel.go: FindOne: %s", err))
 		return nil, helpers.ErrInternalServerError
 	}
 
 	return user, nil
 }
 
-func FindNearbyUsers(clientId int, liveLocation string) ([]map[string]any, error) {
+func FindNearby(clientUserId int, liveLocation string) ([]*User, error) {
 
-	nearbyUsers, err := helpers.QueryRowsFields("SELECT * FROM find_nearby_users($1, $2)", clientId, liveLocation)
+	nearbyUsers, err := helpers.QueryRowsType[User]("SELECT * FROM find_nearby_users($1, $2)", clientUserId, liveLocation)
 
 	if err != nil {
 		log.Println(fmt.Errorf("userModel.go: FindNearbyUsers: %s", err))
@@ -51,9 +53,9 @@ func FindNearbyUsers(clientId int, liveLocation string) ([]map[string]any, error
 	return nearbyUsers, nil
 }
 
-func SearchUser(clientId int, searchQuery string) ([]map[string]any, error) {
+func Search(clientUserId int, searchQuery string) ([]*User, error) {
 
-	matchUsers, err := helpers.QueryRowsFields("SELECT * FROM search_user($1, $2)", clientId, searchQuery)
+	matchUsers, err := helpers.QueryRowsType[User]("SELECT * FROM search_user($1, $2)", clientUserId, searchQuery)
 
 	if err != nil {
 		log.Println(fmt.Errorf("userModel.go: SearchUser: %s", err))
@@ -63,9 +65,9 @@ func SearchUser(clientId int, searchQuery string) ([]map[string]any, error) {
 	return matchUsers, nil
 }
 
-func GetAllUsers(clientId int) ([]map[string]any, error) {
+func GetAll(clientUserId int) ([]*User, error) {
 
-	allUsers, err := helpers.QueryRowsFields("SELECT * FROM get_all_users($1)", clientId)
+	allUsers, err := helpers.QueryRowsType[User]("SELECT * FROM get_all_users($1)", clientUserId)
 
 	if err != nil {
 		log.Println(fmt.Errorf("userModel.go: GetAllUsers: %s", err))
@@ -75,8 +77,8 @@ func GetAllUsers(clientId int) ([]map[string]any, error) {
 	return allUsers, nil
 }
 
-func (user User) GetMyChats() ([]*map[string]any, error) {
-	myChats, err := helpers.QueryRowsField[map[string]any]("SELECT chat FROM get_my_chats($1)", user.Id)
+func GetChats(userId int) ([]*map[string]any, error) {
+	myChats, err := helpers.QueryRowsField[map[string]any]("SELECT chat FROM get_my_chats($1)", userId)
 
 	if err != nil {
 		log.Println(fmt.Errorf("userModel.go: User_GetMyChats: %s", err))
@@ -86,9 +88,9 @@ func (user User) GetMyChats() ([]*map[string]any, error) {
 	return myChats, nil
 }
 
-func (user User) Edit(fieldValuePair [][]string) (map[string]any, error) {
+func EditProfile(userId int, fieldValuePair [][]string) (*User, error) {
 
-	updatedUser, err := helpers.QueryRowFields("SELECT * FROM edit_user($1, $2)", user.Id, fieldValuePair)
+	updatedUser, err := helpers.QueryRowType[User]("SELECT * FROM edit_user($1, $2)", userId, fieldValuePair)
 
 	if err != nil {
 		log.Println(fmt.Errorf("userModel.go: User_Edit: %s", err))
@@ -98,9 +100,9 @@ func (user User) Edit(fieldValuePair [][]string) (map[string]any, error) {
 	return updatedUser, nil
 }
 
-func (user User) SwitchPresence(presence string, lastSeen time.Time) error {
+func SwitchPresence(userId int, presence string, lastSeen pgtype.Timestamp) error {
 
-	_, err := helpers.QueryRowField[bool](`SELECT switch_user_presence($1, $2, $3)`, user.Id, presence, lastSeen)
+	_, err := helpers.QueryRowField[bool](`SELECT switch_user_presence($1, $2, $3)`, userId, presence, lastSeen)
 
 	if err != nil {
 		log.Println(fmt.Errorf("userModel.go: User_SwitchPresence: %s", err))
@@ -110,9 +112,9 @@ func (user User) SwitchPresence(presence string, lastSeen time.Time) error {
 	return nil
 }
 
-func (user User) UpdateLocation(newGeolocation string) error {
+func UpdateLocation(userId int, newGeolocation string) error {
 
-	_, err := helpers.QueryRowField[bool]("SELECT update_user_location($1, $2, $3)", user.Id, newGeolocation)
+	_, err := helpers.QueryRowField[bool]("SELECT update_user_location($1, $2, $3)", userId, newGeolocation)
 
 	if err != nil {
 		log.Println(fmt.Errorf("userModel.go: User_UpdateLocation: %s", err))
@@ -122,9 +124,9 @@ func (user User) UpdateLocation(newGeolocation string) error {
 	return nil
 }
 
-func (user User) GetDMChatEventsPendingReceipt() ([]*map[string]any, error) {
+func GetDMChatEventsPendingReceipt(userId int) ([]*map[string]any, error) {
 
-	data, err := helpers.QueryRowsField[map[string]any]("SELECT event_data_kvp FROM get_dm_chat_events_pending_receipt($1)", user.Id)
+	data, err := helpers.QueryRowsField[map[string]any]("SELECT event_data_kvp FROM get_dm_chat_events_pending_receipt($1)", userId)
 
 	if err != nil {
 		log.Println(fmt.Errorf("userModel.go: User_GetDMChatEventsPendingReceipt: %s", err))
@@ -134,9 +136,9 @@ func (user User) GetDMChatEventsPendingReceipt() ([]*map[string]any, error) {
 	return data, nil
 }
 
-func (user User) GetGroupChatEventsPendingReceipt() ([]*map[string]any, error) {
+func GetGroupChatEventsPendingReceipt(userId int) ([]*map[string]any, error) {
 
-	data, err := helpers.QueryRowsField[map[string]any]("SELECT event_data_kvp FROM get_group_chat_events_pending_receipt($1)", user.Id)
+	data, err := helpers.QueryRowsField[map[string]any]("SELECT event_data_kvp FROM get_group_chat_events_pending_receipt($1)", userId)
 
 	if err != nil {
 		log.Println(fmt.Errorf("userModel.go: User_GetGroupChatEventsPendingReceipt: %s", err))
@@ -146,9 +148,9 @@ func (user User) GetGroupChatEventsPendingReceipt() ([]*map[string]any, error) {
 	return data, nil
 }
 
-func (user User) GetDMChatMessageEventsPendingReceipt(dmChatId int) ([]*map[string]any, error) {
+func GetDMChatMessageEventsPendingReceipt(userId int, dmChatId int) ([]*map[string]any, error) {
 
-	data, err := helpers.QueryRowsField[map[string]any]("SELECT event_data_kvp FROM get_dm_chat_message_events_pending_receipt($1, $2)", user.Id, dmChatId)
+	data, err := helpers.QueryRowsField[map[string]any]("SELECT event_data_kvp FROM get_dm_chat_message_events_pending_receipt($1, $2)", userId, dmChatId)
 
 	if err != nil {
 		log.Println(fmt.Errorf("userModel.go: User_GetDMChatEventsPendingReceipt: %s", err))
@@ -158,9 +160,9 @@ func (user User) GetDMChatMessageEventsPendingReceipt(dmChatId int) ([]*map[stri
 	return data, nil
 }
 
-func (user User) GetGroupChatMessageEventsPendingReceipt(groupChatId int) ([]*map[string]any, error) {
+func GetGroupChatMessageEventsPendingReceipt(userId int, groupChatId int) ([]*map[string]any, error) {
 
-	data, err := helpers.QueryRowsField[map[string]any]("SELECT event_data_kvp FROM get_group_chat_message_events_pending_receipt($1, $2)", user.Id, groupChatId)
+	data, err := helpers.QueryRowsField[map[string]any]("SELECT event_data_kvp FROM get_group_chat_message_events_pending_receipt($1, $2)", userId, groupChatId)
 
 	if err != nil {
 		log.Println(fmt.Errorf("userModel.go: User_GetGroupChatEventsPendingReceipt: %s", err))

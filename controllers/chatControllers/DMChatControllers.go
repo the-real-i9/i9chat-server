@@ -2,12 +2,13 @@ package chatControllers
 
 import (
 	"fmt"
+	user "i9chat/models/userModel"
 	"i9chat/services/appObservers"
 	"i9chat/services/appServices"
 	"i9chat/services/chatService"
-	"i9chat/services/userService"
 	"i9chat/utils/appTypes"
 	"i9chat/utils/helpers"
+	"log"
 	"time"
 
 	"github.com/gofiber/contrib/websocket"
@@ -15,9 +16,9 @@ import (
 )
 
 var GetDMChatHistory = helpers.WSHandlerProtected(func(c *websocket.Conn) {
-	var user appTypes.JWTUserData
+	var clientUser appTypes.ClientUser
 
-	helpers.MapToStruct(c.Locals("auth").(map[string]any), &user)
+	helpers.MapToStruct(c.Locals("auth").(map[string]any), &clientUser)
 
 	var body struct {
 		DmChatId int
@@ -26,7 +27,7 @@ var GetDMChatHistory = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 
 	r_err := c.ReadJSON(&body)
 	if r_err != nil {
-		// log.Println(r_err)
+		log.Println(r_err)
 		return
 	}
 
@@ -43,7 +44,7 @@ var GetDMChatHistory = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 	}
 
 	if w_err != nil {
-		// log.Println(w_err)
+		log.Println(w_err)
 		return
 	}
 })
@@ -51,9 +52,9 @@ var GetDMChatHistory = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 // this handler receives message acknowlegement for sent messages,
 // and in turn changes the delivery status of messages sent by the child goroutine
 var OpenDMMessagingStream = helpers.WSHandlerProtected(func(c *websocket.Conn) {
-	var user appTypes.JWTUserData
+	var clientUser appTypes.ClientUser
 
-	helpers.MapToStruct(c.Locals("auth").(map[string]any), &user)
+	helpers.MapToStruct(c.Locals("auth").(map[string]any), &clientUser)
 
 	var dmChatId int
 
@@ -61,7 +62,7 @@ var OpenDMMessagingStream = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 
 	var myMailbox = make(chan map[string]any, 3)
 
-	mailboxKey := fmt.Sprintf("user-%d--dmchat-%d", user.UserId, dmChatId)
+	mailboxKey := fmt.Sprintf("user-%d--dmchat-%d", clientUser.Id, dmChatId)
 
 	dcso := appObservers.DMChatSessionObserver{}
 
@@ -71,12 +72,12 @@ var OpenDMMessagingStream = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 		dcso.Unsubscribe(mailboxKey)
 	}
 
-	go sendDMChatMessages(c, user, dmChatId, endSession)
+	go sendDMChatMessages(c, clientUser, dmChatId, endSession)
 
 	/* ---- stream dm chat message events pending dispatch to the channel ---- */
 	// observe that this happens once every new connection
 	// A "What did I miss?" sort of query
-	if eventDataList, err := (userService.User{Id: user.UserId}).GetDMChatMessageEventsPendingReceipt(dmChatId); err == nil {
+	if eventDataList, err := user.GetDMChatMessageEventsPendingReceipt(clientUser.Id, dmChatId); err == nil {
 		for _, eventData := range eventDataList {
 			eventData := *eventData
 			myMailbox <- eventData
@@ -86,7 +87,7 @@ var OpenDMMessagingStream = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 	for data := range myMailbox {
 		w_err := c.WriteJSON(data)
 		if w_err != nil {
-			// log.Println(w_err)
+			log.Println(w_err)
 			endSession()
 			return
 		}
@@ -94,7 +95,7 @@ var OpenDMMessagingStream = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 })
 
 // this goroutine sends messages
-func sendDMChatMessages(c *websocket.Conn, user appTypes.JWTUserData, dmChatId int, endSession func()) {
+func sendDMChatMessages(c *websocket.Conn, clientUser appTypes.ClientUser, dmChatId int, endSession func()) {
 	var body struct {
 		Msg map[string]any
 		At  time.Time
@@ -103,14 +104,14 @@ func sendDMChatMessages(c *websocket.Conn, user appTypes.JWTUserData, dmChatId i
 	for {
 		r_err := c.ReadJSON(&body)
 		if r_err != nil {
-			// log.Println(r_err)
+			log.Println(r_err)
 			endSession()
 			return
 		}
 
 		data, app_err := chatService.DMChat{Id: dmChatId}.SendMessage(
-			user.UserId,
-			appServices.MessageBinaryToUrl(user.UserId, body.Msg),
+			clientUser.Id,
+			appServices.MessageBinaryToUrl(clientUser.Id, body.Msg),
 			body.At,
 		)
 
@@ -122,7 +123,7 @@ func sendDMChatMessages(c *websocket.Conn, user appTypes.JWTUserData, dmChatId i
 		}
 
 		if w_err != nil {
-			// log.Println(w_err)
+			log.Println(w_err)
 			endSession()
 			return
 		}

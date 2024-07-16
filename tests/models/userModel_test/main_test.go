@@ -1,4 +1,4 @@
-package tests
+package userModel_test
 
 import (
 	"i9chat/utils/helpers"
@@ -13,10 +13,6 @@ func TestMain(m *testing.M) {
 	}
 
 	if err := helpers.InitDBPool(); err != nil {
-		log.Fatal(err)
-	}
-
-	if err := helpers.InitGCSClient(); err != nil {
 		log.Fatal(err)
 	}
 

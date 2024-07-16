@@ -10,8 +10,8 @@ type SignupSessionData struct {
 	Email     string
 }
 
-type JWTUserData struct {
-	UserId   int
+type ClientUser struct {
+	Id       int
 	Username string
 }
 

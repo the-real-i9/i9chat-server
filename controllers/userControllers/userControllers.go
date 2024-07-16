@@ -2,6 +2,7 @@ package userControllers
 
 import (
 	"fmt"
+	user "i9chat/models/userModel"
 	"i9chat/services/appObservers"
 	"i9chat/services/appServices"
 	"i9chat/services/chatService"
@@ -13,12 +14,13 @@ import (
 
 	"github.com/gofiber/contrib/websocket"
 	"github.com/gofiber/fiber/v2"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 var ChangeProfilePicture = helpers.WSHandlerProtected(func(c *websocket.Conn) {
-	var user appTypes.JWTUserData
+	var clientUser appTypes.ClientUser
 
-	helpers.MapToStruct(c.Locals("auth").(map[string]any), &user)
+	helpers.MapToStruct(c.Locals("auth").(map[string]any), &clientUser)
 
 	var body struct {
 		PictureData []byte
@@ -27,12 +29,12 @@ var ChangeProfilePicture = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 	for {
 		r_err := c.ReadJSON(&body)
 		if r_err != nil {
-			// log.Println(r_err)
+			log.Println(r_err)
 			break
 		}
 
 		var w_err error
-		if app_err := (userService.User{Id: user.UserId}).ChangeProfilePicture(body.PictureData); app_err != nil {
+		if app_err := userService.ChangeMyProfilePicture(clientUser.Id, body.PictureData); app_err != nil {
 			w_err = c.WriteJSON(helpers.ErrResp(fiber.StatusUnprocessableEntity, fmt.Errorf("operation failed: %s", app_err)))
 		} else {
 			w_err = c.WriteJSON(map[string]any{
@@ -44,7 +46,7 @@ var ChangeProfilePicture = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 		}
 
 		if w_err != nil {
-			// log.Println(w_err)
+			log.Println(w_err)
 			break
 		}
 	}
@@ -56,9 +58,9 @@ var ChangeProfilePicture = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 //
 // 2. Lets the client: "initiate a new dm chat" and "acknowledge received dm messages"
 var OpenDMChatStream = helpers.WSHandlerProtected(func(c *websocket.Conn) {
-	var user appTypes.JWTUserData
+	var clientUser appTypes.ClientUser
 
-	helpers.MapToStruct(c.Locals("auth").(map[string]any), &user)
+	helpers.MapToStruct(c.Locals("auth").(map[string]any), &clientUser)
 
 	// a channel for streaming data to client
 	var myMailbox = make(chan map[string]any, 5)
@@ -67,7 +69,7 @@ var OpenDMChatStream = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 	// myMailbox is passed by reference to an observer keeping several mailboxes wanting to receive updates
 	dco := appObservers.DMChatObserver{}
 
-	mailboxKey := fmt.Sprintf("user-%d", user.UserId)
+	mailboxKey := fmt.Sprintf("user-%d", clientUser.Id)
 
 	dco.Subscribe(mailboxKey, myMailbox)
 
@@ -75,12 +77,12 @@ var OpenDMChatStream = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 		dco.Unsubscribe(mailboxKey)
 	}
 
-	go createNewDMChatAndAckMessages(c, user, endSession)
+	go createNewDMChatAndAckMessages(c, clientUser, endSession)
 
 	/* ---- stream chat events pending dispatch to the myMailbox ---- */
 	// this excecutes once every connection restoration
 	// "What did I miss?" - When the client comes online they get a report of all missed data (while offline)
-	if eventDataList, err := (userService.User{Id: user.UserId}).GetDMChatEventsPendingReceipt(); err == nil {
+	if eventDataList, err := user.GetDMChatEventsPendingReceipt(clientUser.Id); err == nil {
 		for _, eventData := range eventDataList {
 			eventData := *eventData
 			myMailbox <- eventData
@@ -91,7 +93,7 @@ var OpenDMChatStream = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 	for data := range myMailbox {
 		w_err := c.WriteJSON(data)
 		if w_err != nil {
-			// log.Println(w_err)
+			log.Println(w_err)
 			endSession()
 			return
 		}
@@ -103,7 +105,7 @@ var OpenDMChatStream = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 // + initating new dm chats
 //
 // + sending acknowledgements for received dm messages
-func createNewDMChatAndAckMessages(c *websocket.Conn, user appTypes.JWTUserData, endSession func()) {
+func createNewDMChatAndAckMessages(c *websocket.Conn, clientUser appTypes.ClientUser, endSession func()) {
 	var body struct {
 		Action string
 		Data   map[string]any
@@ -129,7 +131,7 @@ func createNewDMChatAndAckMessages(c *websocket.Conn, user appTypes.JWTUserData,
 	for {
 		r_err := c.ReadJSON(&body)
 		if r_err != nil {
-			// log.Println(r_err)
+			log.Println(r_err)
 			endSession()
 			return
 		}
@@ -141,9 +143,9 @@ func createNewDMChatAndAckMessages(c *websocket.Conn, user appTypes.JWTUserData,
 			var w_err error
 
 			data, app_err := chatService.NewDMChat(
-				user.UserId,
+				clientUser.Id,
 				newChatBody.PartnerId,
-				appServices.MessageBinaryToUrl(user.UserId, newChatBody.InitMsg),
+				appServices.MessageBinaryToUrl(clientUser.Id, newChatBody.InitMsg),
 				newChatBody.CreatedAt,
 			)
 			if app_err != nil {
@@ -168,7 +170,7 @@ func createNewDMChatAndAckMessages(c *websocket.Conn, user appTypes.JWTUserData,
 				Id:       ackMsgBody.MsgId,
 				DmChatId: ackMsgBody.DmChatId,
 				SenderId: ackMsgBody.SenderId,
-			}.UpdateDeliveryStatus(user.UserId, ackMsgBody.Status, ackMsgBody.At)
+			}.UpdateDeliveryStatus(clientUser.Id, ackMsgBody.Status, ackMsgBody.At)
 		}
 
 		// acknowledge messages in batch
@@ -176,7 +178,7 @@ func createNewDMChatAndAckMessages(c *websocket.Conn, user appTypes.JWTUserData,
 
 			helpers.MapToStruct(body.Data, &batchAckMsgBody)
 
-			go chatService.BatchUpdateDMChatMessageDeliveryStatus(user.UserId, batchAckMsgBody.Status, batchAckMsgBody.MsgAckDatas)
+			go chatService.BatchUpdateDMChatMessageDeliveryStatus(clientUser.Id, batchAckMsgBody.Status, batchAckMsgBody.MsgAckDatas)
 		}
 
 		if body.Action == "create new chat" {
@@ -196,7 +198,7 @@ func createNewDMChatAndAckMessages(c *websocket.Conn, user appTypes.JWTUserData,
 
 		} else {
 			if w_err := c.WriteJSON(helpers.ErrResp(fiber.StatusUnprocessableEntity, fmt.Errorf("invalid 'action' value"))); w_err != nil {
-				// log.Println(w_err)
+				log.Println(w_err)
 				endSession()
 				return
 			}
@@ -210,9 +212,9 @@ func createNewDMChatAndAckMessages(c *websocket.Conn, user appTypes.JWTUserData,
 //
 // 2. Lets the client: "initiate a new group chat" and "acknowledge received group messages"
 var OpenGroupChatStream = helpers.WSHandlerProtected(func(c *websocket.Conn) {
-	var user appTypes.JWTUserData
+	var clientUser appTypes.ClientUser
 
-	helpers.MapToStruct(c.Locals("auth").(map[string]any), &user)
+	helpers.MapToStruct(c.Locals("auth").(map[string]any), &clientUser)
 
 	// a channel for streaming data to client
 	var myMailbox = make(chan map[string]any, 5)
@@ -221,7 +223,7 @@ var OpenGroupChatStream = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 	// myMailbox is passed by reference to an observer keeping several mailboxes wanting to receive updates
 	gco := appObservers.GroupChatObserver{}
 
-	mailboxKey := fmt.Sprintf("user-%d", user.UserId)
+	mailboxKey := fmt.Sprintf("user-%d", clientUser.Id)
 
 	gco.Subscribe(mailboxKey, myMailbox)
 
@@ -229,12 +231,12 @@ var OpenGroupChatStream = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 		gco.Unsubscribe(mailboxKey)
 	}
 
-	go createNewGroupChatAndAckMessages(c, user, endSession)
+	go createNewGroupChatAndAckMessages(c, clientUser, endSession)
 
 	/* ---- stream chat events pending dispatch to the myMailbox ---- */
 	// this excecutes once every connection restoration
 	// "What did I miss?" - When the client comes online they get a report of all missed data (while offline)
-	if eventDataList, err := (userService.User{Id: user.UserId}).GetGroupChatEventsPendingReceipt(); err == nil {
+	if eventDataList, err := user.GetGroupChatEventsPendingReceipt(clientUser.Id); err == nil {
 		for _, eventData := range eventDataList {
 			eventData := *eventData
 			myMailbox <- eventData
@@ -245,7 +247,7 @@ var OpenGroupChatStream = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 	for data := range myMailbox {
 		w_err := c.WriteJSON(data)
 		if w_err != nil {
-			// log.Println(w_err)
+			log.Println(w_err)
 			endSession()
 			return
 		}
@@ -257,7 +259,7 @@ var OpenGroupChatStream = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 // + initating new group chats
 //
 // + sending acknowledgement for received group messages
-func createNewGroupChatAndAckMessages(c *websocket.Conn, user appTypes.JWTUserData, endSession func()) {
+func createNewGroupChatAndAckMessages(c *websocket.Conn, clientUser appTypes.ClientUser, endSession func()) {
 	var body struct {
 		Action string
 		Data   map[string]any
@@ -281,7 +283,7 @@ func createNewGroupChatAndAckMessages(c *websocket.Conn, user appTypes.JWTUserDa
 	for {
 		r_err := c.ReadJSON(&body)
 		if r_err != nil {
-			// log.Println(r_err)
+			log.Println(r_err)
 			endSession()
 			return
 		}
@@ -296,7 +298,7 @@ func createNewGroupChatAndAckMessages(c *websocket.Conn, user appTypes.JWTUserDa
 				newChatBody.Name,
 				newChatBody.Description,
 				newChatBody.PictureData,
-				[]string{fmt.Sprint(user.UserId), user.Username},
+				[]string{fmt.Sprint(clientUser.Id), clientUser.Username},
 				newChatBody.InitUsers,
 			)
 			if app_err != nil {
@@ -306,7 +308,7 @@ func createNewGroupChatAndAckMessages(c *websocket.Conn, user appTypes.JWTUserDa
 			}
 
 			if w_err != nil {
-				// log.Println(w_err)
+				log.Println(w_err)
 			}
 
 			return nil
@@ -317,7 +319,7 @@ func createNewGroupChatAndAckMessages(c *websocket.Conn, user appTypes.JWTUserDa
 
 			helpers.MapToStruct(body.Data, &ackMsgsBody)
 
-			go chatService.GroupChat{Id: ackMsgsBody.GroupChatId}.BatchUpdateGroupChatMessageDeliveryStatus(user.UserId, ackMsgsBody.Status, ackMsgsBody.MsgAckDatas)
+			go chatService.GroupChat{Id: ackMsgsBody.GroupChatId}.BatchUpdateGroupChatMessageDeliveryStatus(clientUser.Id, ackMsgsBody.Status, ackMsgsBody.MsgAckDatas)
 		}
 
 		if body.Action == "create new chat" {
@@ -332,7 +334,7 @@ func createNewGroupChatAndAckMessages(c *websocket.Conn, user appTypes.JWTUserDa
 			acknowledgeMessages()
 		} else {
 			if w_err := c.WriteJSON(helpers.ErrResp(fiber.StatusUnprocessableEntity, fmt.Errorf("invalid 'action' value"))); w_err != nil {
-				// log.Println(w_err)
+				log.Println(w_err)
 				endSession()
 				return
 			}
@@ -344,11 +346,11 @@ func createNewGroupChatAndAckMessages(c *websocket.Conn, user appTypes.JWTUserDa
 // After closing this,  we must immediately access "Init[DM|Group]ChatStream"
 var GetMyChats = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 
-	var user appTypes.JWTUserData
+	var clientUser appTypes.ClientUser
 
-	helpers.MapToStruct(c.Locals("auth").(map[string]any), &user)
+	helpers.MapToStruct(c.Locals("auth").(map[string]any), &clientUser)
 
-	myChats, app_err := userService.User{Id: user.UserId}.GetMyChats()
+	myChats, app_err := user.GetChats(clientUser.Id)
 
 	var w_err error
 	if app_err != nil {
@@ -361,17 +363,17 @@ var GetMyChats = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 	}
 
 	if w_err != nil {
-		// log.Println(w_err)
+		log.Println(w_err)
 		return
 	}
 })
 
 var GetAllUsers = helpers.WSHandlerProtected(func(c *websocket.Conn) {
-	var user appTypes.JWTUserData
+	var clientUser appTypes.ClientUser
 
-	helpers.MapToStruct(c.Locals("auth").(map[string]any), &user)
+	helpers.MapToStruct(c.Locals("auth").(map[string]any), &clientUser)
 
-	allUsers, app_err := userService.GetAllUsers(user.UserId)
+	allUsers, app_err := user.GetAll(clientUser.Id)
 
 	var w_err error
 	if app_err != nil {
@@ -384,15 +386,15 @@ var GetAllUsers = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 	}
 
 	if w_err != nil {
-		// log.Println(w_err)
+		log.Println(w_err)
 		return
 	}
 })
 
 var SearchUser = helpers.WSHandlerProtected(func(c *websocket.Conn) {
-	var user appTypes.JWTUserData
+	var clientUser appTypes.ClientUser
 
-	helpers.MapToStruct(c.Locals("auth").(map[string]any), &user)
+	helpers.MapToStruct(c.Locals("auth").(map[string]any), &clientUser)
 
 	var body struct {
 		Query string
@@ -404,7 +406,7 @@ var SearchUser = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 			return
 		}
 
-		searchResult, app_err := userService.SearchUser(user.UserId, body.Query)
+		searchResult, app_err := user.Search(clientUser.Id, body.Query)
 
 		var w_err error
 		if app_err != nil {
@@ -417,16 +419,16 @@ var SearchUser = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 		}
 
 		if w_err != nil {
-			// log.Println(w_err)
+			log.Println(w_err)
 			return
 		}
 	}
 })
 
 var FindNearbyUsers = helpers.WSHandlerProtected(func(c *websocket.Conn) {
-	var user appTypes.JWTUserData
+	var clientUser appTypes.ClientUser
 
-	helpers.MapToStruct(c.Locals("auth").(map[string]any), &user)
+	helpers.MapToStruct(c.Locals("auth").(map[string]any), &clientUser)
 
 	var body struct {
 		LiveLocation string
@@ -438,7 +440,7 @@ var FindNearbyUsers = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 			return
 		}
 
-		nearbyUsers, app_err := userService.FindNearbyUsers(user.UserId, body.LiveLocation)
+		nearbyUsers, app_err := user.FindNearby(clientUser.Id, body.LiveLocation)
 
 		var w_err error
 		if app_err != nil {
@@ -451,20 +453,20 @@ var FindNearbyUsers = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 		}
 
 		if w_err != nil {
-			// log.Println(w_err)
+			log.Println(w_err)
 			return
 		}
 	}
 })
 
 var SwitchMyPresence = helpers.WSHandlerProtected(func(c *websocket.Conn) {
-	var user appTypes.JWTUserData
+	var clientUser appTypes.ClientUser
 
-	helpers.MapToStruct(c.Locals("auth").(map[string]any), &user)
+	helpers.MapToStruct(c.Locals("auth").(map[string]any), &clientUser)
 
 	var body struct {
 		Presence string
-		LastSeen time.Time
+		LastSeen pgtype.Timestamp
 	}
 
 	for {
@@ -473,7 +475,7 @@ var SwitchMyPresence = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 			return
 		}
 
-		app_err := userService.User{Id: user.UserId}.SwitchPresence(body.Presence, body.LastSeen)
+		app_err := userService.SwitchMyPresence(clientUser.Id, body.Presence, body.LastSeen)
 
 		var w_err error
 		if app_err != nil {
@@ -488,16 +490,16 @@ var SwitchMyPresence = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 		}
 
 		if w_err != nil {
-			// log.Println(w_err)
+			log.Println(w_err)
 			return
 		}
 	}
 })
 
 var UpdateMyGeolocation = helpers.WSHandlerProtected(func(c *websocket.Conn) {
-	var user appTypes.JWTUserData
+	var clientUser appTypes.ClientUser
 
-	helpers.MapToStruct(c.Locals("auth").(map[string]any), &user)
+	helpers.MapToStruct(c.Locals("auth").(map[string]any), &clientUser)
 
 	var body struct {
 		NewGeolocation string
@@ -509,7 +511,7 @@ var UpdateMyGeolocation = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 			return
 		}
 
-		app_err := userService.User{Id: user.UserId}.UpdateLocation(body.NewGeolocation)
+		app_err := user.UpdateLocation(clientUser.Id, body.NewGeolocation)
 
 		var w_err error
 		if app_err != nil {
@@ -524,7 +526,7 @@ var UpdateMyGeolocation = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 		}
 
 		if w_err != nil {
-			// log.Println(w_err)
+			log.Println(w_err)
 			return
 		}
 	}

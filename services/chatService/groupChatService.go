@@ -202,8 +202,8 @@ func (gpc GroupChat) GetChatHistory(offset int) ([]*map[string]any, error) {
 	return chatModel.GroupChat{Id: gpc.Id}.GetChatHistory(offset)
 }
 
-func (gpc GroupChat) broadcastMessageDeliveryStatusUpdate(clientId int, ackDatas []*appTypes.GroupChatMsgAckData, status string) {
-	memberIds, err := helpers.QueryRowsField[int]("SELECT member_id FROM group_chat_membership WHERE group_chat_id = $1 AND member_id != $2 AND deleted = false", gpc.Id, clientId)
+func (gpc GroupChat) broadcastMessageDeliveryStatusUpdate(clientUserId int, ackDatas []*appTypes.GroupChatMsgAckData, status string) {
+	memberIds, err := helpers.QueryRowsField[int]("SELECT member_id FROM group_chat_membership WHERE group_chat_id = $1 AND member_id != $2 AND deleted = false", gpc.Id, clientUserId)
 	if err == nil {
 		for _, mId := range memberIds {
 			mId := *mId
