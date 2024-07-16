@@ -74,6 +74,34 @@ func QueryRowsFields(sql string, params ...any) ([]map[string]any, error) {
 	return res, nil
 }
 
+func QueryRowType[T any](sql string, params ...any) (*T, error) {
+	rows, _ := dbPool.Query(context.Background(), sql, params...)
+
+	res, err := pgx.CollectOneRow(rows, pgx.RowToAddrOfStructByName[T])
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, err
+	}
+
+	return res, nil
+}
+
+func QueryRowsType[T any](sql string, params ...any) ([]*T, error) {
+	rows, _ := dbPool.Query(context.Background(), sql, params...)
+
+	res, err := pgx.CollectRows(rows, pgx.RowToAddrOfStructByName[T])
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, err
+	}
+
+	return res, nil
+}
+
 func BatchQuery[T any](sqls []string, params [][]any) ([]*T, error) {
 	var res = make([]*T, len(sqls))
 

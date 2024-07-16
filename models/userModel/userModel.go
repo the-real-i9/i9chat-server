@@ -7,9 +7,17 @@ import (
 	"time"
 )
 
-func NewUser(email string, username string, password string, geolocation string) (map[string]any, error) {
+type User struct {
+	Id                int
+	Username          string
+	ProfilePictureUrl string    `db:"profile_picture_url"`
+	LastSeen          time.Time `db:"last_seen"`
+	Location          string
+}
 
-	user, err := helpers.QueryRowFields("SELECT * FROM new_user($1, $2, $3, $4)", email, username, password, geolocation)
+func NewUser(email string, username string, password string, geolocation string) (*User, error) {
+
+	user, err := helpers.QueryRowType[User]("SELECT * FROM new_user($1, $2, $3, $4)", email, username, password, geolocation)
 
 	if err != nil {
 		log.Println(fmt.Errorf("userModel.go: NewUser: %s", err))
@@ -65,10 +73,6 @@ func GetAllUsers(clientId int) ([]map[string]any, error) {
 	}
 
 	return allUsers, nil
-}
-
-type User struct {
-	Id int
 }
 
 func (user User) GetMyChats() ([]*map[string]any, error) {
