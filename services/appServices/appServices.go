@@ -3,7 +3,6 @@ package appServices
 import (
 	"crypto/tls"
 	"fmt"
-	"i9chat/models/appModel"
 	"i9chat/utils/helpers"
 	"log"
 	"os"
@@ -30,10 +29,6 @@ func SendMail(email string, subject string, body string) {
 		log.Println(err)
 		return
 	}
-}
-
-func EndSignupSession(sessionId string) {
-	appModel.EndSignupSession(sessionId)
 }
 
 func handleVoiceMsg(userId int, props map[string]any) map[string]any {
