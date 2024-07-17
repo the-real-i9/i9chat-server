@@ -1,11 +1,12 @@
-package chatControllers
+package dmChatControllers
 
 import (
 	"fmt"
+	dmChat "i9chat/models/chatModel/dmChatModel"
 	user "i9chat/models/userModel"
 	"i9chat/services/appObservers"
 	"i9chat/services/appServices"
-	"i9chat/services/chatService"
+	"i9chat/services/chatService/dmChatService"
 	"i9chat/utils/appTypes"
 	"i9chat/utils/helpers"
 	"log"
@@ -15,13 +16,13 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
-var GetDMChatHistory = helpers.WSHandlerProtected(func(c *websocket.Conn) {
+var GetChatHistory = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 	var clientUser appTypes.ClientUser
 
 	helpers.MapToStruct(c.Locals("auth").(map[string]any), &clientUser)
 
 	var body struct {
-		DmChatId int
+		DMChatId int
 		Offset   int
 	}
 
@@ -31,7 +32,7 @@ var GetDMChatHistory = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 		return
 	}
 
-	dmChatHistory, app_err := chatService.DMChat{Id: body.DmChatId}.GetChatHistory(body.Offset)
+	dmChatMessages, app_err := dmChat.GetChatHistory(body.DMChatId, body.Offset)
 
 	var w_err error
 	if app_err != nil {
@@ -39,7 +40,7 @@ var GetDMChatHistory = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 	} else {
 		w_err = c.WriteJSON(map[string]any{
 			"statusCode": 200,
-			"body":       dmChatHistory,
+			"body":       dmChatMessages,
 		})
 	}
 
@@ -51,7 +52,7 @@ var GetDMChatHistory = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 
 // this handler receives message acknowlegement for sent messages,
 // and in turn changes the delivery status of messages sent by the child goroutine
-var OpenDMMessagingStream = helpers.WSHandlerProtected(func(c *websocket.Conn) {
+var OpenMessagingStream = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 	var clientUser appTypes.ClientUser
 
 	helpers.MapToStruct(c.Locals("auth").(map[string]any), &clientUser)
@@ -109,7 +110,8 @@ func sendDMChatMessages(c *websocket.Conn, clientUser appTypes.ClientUser, dmCha
 			return
 		}
 
-		data, app_err := chatService.DMChat{Id: dmChatId}.SendMessage(
+		senderData, app_err := dmChatService.SendMessage(
+			dmChatId,
 			clientUser.Id,
 			appServices.MessageBinaryToUrl(clientUser.Id, body.Msg),
 			body.At,
@@ -119,7 +121,7 @@ func sendDMChatMessages(c *websocket.Conn, clientUser appTypes.ClientUser, dmCha
 		if app_err != nil {
 			w_err = c.WriteJSON(helpers.ErrResp(fiber.StatusUnprocessableEntity, app_err))
 		} else {
-			w_err = c.WriteJSON(data)
+			w_err = c.WriteJSON(senderData)
 		}
 
 		if w_err != nil {

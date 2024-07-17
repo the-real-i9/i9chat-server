@@ -5,7 +5,8 @@ import (
 	user "i9chat/models/userModel"
 	"i9chat/services/appObservers"
 	"i9chat/services/appServices"
-	"i9chat/services/chatService"
+	"i9chat/services/chatService/dmChatService"
+	"i9chat/services/chatService/groupChatService"
 	"i9chat/services/userService"
 	"i9chat/utils/appTypes"
 	"i9chat/utils/helpers"
@@ -120,7 +121,7 @@ func createNewDMChatAndAckMessages(c *websocket.Conn, clientUser appTypes.Client
 	// For DM Chat, we allowed options for both single and batch acknowledgements
 	var ackMsgBody struct {
 		Status string
-		appTypes.DMChatMsgAckData
+		*appTypes.DMChatMsgAckData
 	}
 
 	var batchAckMsgBody struct {
@@ -142,7 +143,7 @@ func createNewDMChatAndAckMessages(c *websocket.Conn, clientUser appTypes.Client
 
 			var w_err error
 
-			data, app_err := chatService.NewDMChat(
+			initiatorData, app_err := dmChatService.NewDMChat(
 				clientUser.Id,
 				newChatBody.PartnerId,
 				appServices.MessageBinaryToUrl(clientUser.Id, newChatBody.InitMsg),
@@ -151,7 +152,7 @@ func createNewDMChatAndAckMessages(c *websocket.Conn, clientUser appTypes.Client
 			if app_err != nil {
 				w_err = c.WriteJSON(helpers.ErrResp(fiber.StatusUnprocessableEntity, app_err))
 			} else {
-				w_err = c.WriteJSON(data)
+				w_err = c.WriteJSON(initiatorData)
 			}
 
 			if w_err != nil {
@@ -166,11 +167,7 @@ func createNewDMChatAndAckMessages(c *websocket.Conn, clientUser appTypes.Client
 
 			helpers.MapToStruct(body.Data, &ackMsgBody)
 
-			go chatService.DMChatMessage{
-				Id:       ackMsgBody.MsgId,
-				DmChatId: ackMsgBody.DmChatId,
-				SenderId: ackMsgBody.SenderId,
-			}.UpdateDeliveryStatus(clientUser.Id, ackMsgBody.Status, ackMsgBody.At)
+			go dmChatService.UpdateMessageDeliveryStatus(ackMsgBody.DMChatId, ackMsgBody.MsgId, ackMsgBody.SenderId, clientUser.Id, ackMsgBody.Status, ackMsgBody.At)
 		}
 
 		// acknowledge messages in batch
@@ -178,7 +175,7 @@ func createNewDMChatAndAckMessages(c *websocket.Conn, clientUser appTypes.Client
 
 			helpers.MapToStruct(body.Data, &batchAckMsgBody)
 
-			go chatService.BatchUpdateDMChatMessageDeliveryStatus(clientUser.Id, batchAckMsgBody.Status, batchAckMsgBody.MsgAckDatas)
+			go dmChatService.BatchUpdateMessageDeliveryStatus(clientUser.Id, batchAckMsgBody.Status, batchAckMsgBody.MsgAckDatas)
 		}
 
 		if body.Action == "create new chat" {
@@ -294,7 +291,7 @@ func createNewGroupChatAndAckMessages(c *websocket.Conn, clientUser appTypes.Cli
 
 			var w_err error
 
-			data, app_err := chatService.NewGroupChat(
+			data, app_err := groupChatService.NewGroupChat(
 				newChatBody.Name,
 				newChatBody.Description,
 				newChatBody.PictureData,
@@ -319,7 +316,7 @@ func createNewGroupChatAndAckMessages(c *websocket.Conn, clientUser appTypes.Cli
 
 			helpers.MapToStruct(body.Data, &ackMsgsBody)
 
-			go chatService.GroupChat{Id: ackMsgsBody.GroupChatId}.BatchUpdateGroupChatMessageDeliveryStatus(clientUser.Id, ackMsgsBody.Status, ackMsgsBody.MsgAckDatas)
+			go groupChatService.BatchUpdateMessageDeliveryStatus(ackMsgsBody.GroupChatId, clientUser.Id, ackMsgsBody.Status, ackMsgsBody.MsgAckDatas)
 		}
 
 		if body.Action == "create new chat" {

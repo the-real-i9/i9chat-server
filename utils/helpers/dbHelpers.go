@@ -77,7 +77,7 @@ func QueryRowsFields(sql string, params ...any) ([]map[string]any, error) {
 func QueryRowType[T any](sql string, params ...any) (*T, error) {
 	rows, _ := dbPool.Query(context.Background(), sql, params...)
 
-	res, err := pgx.CollectOneRow(rows, pgx.RowToAddrOfStructByName[T])
+	res, err := pgx.CollectOneRow(rows, pgx.RowToAddrOfStructByNameLax[T])
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, nil
@@ -91,7 +91,7 @@ func QueryRowType[T any](sql string, params ...any) (*T, error) {
 func QueryRowsType[T any](sql string, params ...any) ([]*T, error) {
 	rows, _ := dbPool.Query(context.Background(), sql, params...)
 
-	res, err := pgx.CollectRows(rows, pgx.RowToAddrOfStructByName[T])
+	res, err := pgx.CollectRows(rows, pgx.RowToAddrOfStructByNameLax[T])
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, nil

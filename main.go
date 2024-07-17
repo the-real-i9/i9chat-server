@@ -2,7 +2,8 @@ package main
 
 import (
 	"i9chat/routes/authRoutes"
-	"i9chat/routes/chatRoutes"
+	"i9chat/routes/chatRoutes/dmChatRoutes"
+	"i9chat/routes/chatRoutes/groupChatRoutes"
 	"i9chat/routes/userRoutes"
 	"i9chat/utils/helpers"
 	"log"
@@ -38,8 +39,8 @@ func main() {
 
 	app.Route("/api/app/user", userRoutes.Init)
 
-	app.Route("/api/app/dm_chat", chatRoutes.InitDMChat)
-	app.Route("/api/app/group_chat", chatRoutes.InitGroupChat)
+	app.Route("/api/app/dm_chat", dmChatRoutes.Init)
+	app.Route("/api/app/group_chat", groupChatRoutes.Init)
 
 	log.Fatalln(app.Listen("localhost:8000"))
 }

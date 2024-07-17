@@ -12,9 +12,9 @@ type User struct {
 	Id                int              `json:"id"`
 	Username          string           `json:"username"`
 	ProfilePictureUrl string           `db:"profile_picture_url" json:"profile_picture_url"`
-	Presence          string           `json:"presence"`
-	LastSeen          pgtype.Timestamp `db:"last_seen" json:"last_seen"`
-	Location          pgtype.Circle    `json:"location"`
+	Presence          string           `json:"presence,omitempty"`
+	LastSeen          pgtype.Timestamp `db:"last_seen" json:"last_seen,omitempty"`
+	Location          pgtype.Circle    `json:"location,omitempty"`
 }
 
 func New(email string, username string, password string, geolocation string) (*User, error) {

@@ -17,7 +17,7 @@ type ClientUser struct {
 
 type DMChatMsgAckData struct {
 	MsgId    int
-	DmChatId int
+	DMChatId int
 	SenderId int
 	At       time.Time
 }

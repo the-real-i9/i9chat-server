@@ -25,7 +25,8 @@ CREATE TYPE public.i9c_user_t AS (
 	username character varying,
 	profile_picture_url character varying,
 	presence character varying,
-	last_seen timestamp without time zone
+	last_seen timestamp without time zone,
+	location circle
 );
 
 
@@ -50,7 +51,7 @@ ALTER FUNCTION public.account_exists(email_or_username character varying, OUT ex
 -- Name: add_users_to_group(integer, character varying[], character varying[]); Type: FUNCTION; Schema: public; Owner: postgres
 --
 
-CREATE FUNCTION public.add_users_to_group(in_group_chat_id integer, in_admin character varying[], in_users character varying[], OUT member_ids integer[], OUT activity_data json) RETURNS record
+CREATE FUNCTION public.add_users_to_group(in_group_chat_id integer, in_admin character varying[], in_users character varying[], OUT members_ids integer[], OUT activity_data json) RETURNS record
     LANGUAGE plpgsql
     AS $$
 DECLARE
@@ -91,20 +92,20 @@ BEGIN
   
   SELECT array_agg(member_id) FROM group_chat_membership 
   WHERE group_chat_id = in_group_chat_id AND member_id != in_admin[1] AND deleted = false
-  INTO member_ids;
+  INTO members_ids;
   
   RETURN;
 END;
 $$;
 
 
-ALTER FUNCTION public.add_users_to_group(in_group_chat_id integer, in_admin character varying[], in_users character varying[], OUT member_ids integer[], OUT activity_data json) OWNER TO postgres;
+ALTER FUNCTION public.add_users_to_group(in_group_chat_id integer, in_admin character varying[], in_users character varying[], OUT members_ids integer[], OUT activity_data json) OWNER TO postgres;
 
 --
 -- Name: change_group_description(integer, character varying[], character varying); Type: FUNCTION; Schema: public; Owner: postgres
 --
 
-CREATE FUNCTION public.change_group_description(in_group_chat_id integer, in_admin character varying[], in_new_description character varying, OUT member_ids integer[], OUT activity_data json) RETURNS record
+CREATE FUNCTION public.change_group_description(in_group_chat_id integer, in_admin character varying[], in_new_description character varying, OUT members_ids integer[], OUT activity_data json) RETURNS record
     LANGUAGE plpgsql
     AS $$
 BEGIN
@@ -128,20 +129,20 @@ BEGIN
   
   SELECT array_agg(member_id) FROM group_chat_membership 
   WHERE group_chat_id = in_group_chat_id AND member_id != in_admin[1] AND deleted = false
-  INTO member_ids;
+  INTO members_ids;
   
   RETURN;
 END;
 $$;
 
 
-ALTER FUNCTION public.change_group_description(in_group_chat_id integer, in_admin character varying[], in_new_description character varying, OUT member_ids integer[], OUT activity_data json) OWNER TO postgres;
+ALTER FUNCTION public.change_group_description(in_group_chat_id integer, in_admin character varying[], in_new_description character varying, OUT members_ids integer[], OUT activity_data json) OWNER TO postgres;
 
 --
 -- Name: change_group_name(integer, character varying[], character varying); Type: FUNCTION; Schema: public; Owner: postgres
 --
 
-CREATE FUNCTION public.change_group_name(in_group_chat_id integer, in_admin character varying[], in_new_name character varying, OUT member_ids integer[], OUT activity_data json) RETURNS record
+CREATE FUNCTION public.change_group_name(in_group_chat_id integer, in_admin character varying[], in_new_name character varying, OUT members_ids integer[], OUT activity_data json) RETURNS record
     LANGUAGE plpgsql
     AS $$
 BEGIN
@@ -165,20 +166,20 @@ BEGIN
   
   SELECT array_agg(member_id) FROM group_chat_membership 
   WHERE group_chat_id = in_group_chat_id AND member_id != in_admin[1] AND deleted = false
-  INTO member_ids;
+  INTO members_ids;
   
   RETURN;
 END;
 $$;
 
 
-ALTER FUNCTION public.change_group_name(in_group_chat_id integer, in_admin character varying[], in_new_name character varying, OUT member_ids integer[], OUT activity_data json) OWNER TO postgres;
+ALTER FUNCTION public.change_group_name(in_group_chat_id integer, in_admin character varying[], in_new_name character varying, OUT members_ids integer[], OUT activity_data json) OWNER TO postgres;
 
 --
 -- Name: change_group_picture(integer, character varying[], character varying); Type: FUNCTION; Schema: public; Owner: postgres
 --
 
-CREATE FUNCTION public.change_group_picture(in_group_chat_id integer, in_admin character varying[], in_new_picture_url character varying, OUT member_ids integer[], OUT activity_data json) RETURNS record
+CREATE FUNCTION public.change_group_picture(in_group_chat_id integer, in_admin character varying[], in_new_picture_url character varying, OUT members_ids integer[], OUT activity_data json) RETURNS record
     LANGUAGE plpgsql
     AS $$
 BEGIN
@@ -202,14 +203,14 @@ BEGIN
   
   SELECT array_agg(member_id) FROM group_chat_membership 
   WHERE group_chat_id = in_group_chat_id AND member_id != in_admin[1] AND deleted = false
-  INTO member_ids;
+  INTO members_ids;
   
   RETURN;
 END;
 $$;
 
 
-ALTER FUNCTION public.change_group_picture(in_group_chat_id integer, in_admin character varying[], in_new_picture_url character varying, OUT member_ids integer[], OUT activity_data json) OWNER TO postgres;
+ALTER FUNCTION public.change_group_picture(in_group_chat_id integer, in_admin character varying[], in_new_picture_url character varying, OUT members_ids integer[], OUT activity_data json) OWNER TO postgres;
 
 --
 -- Name: edit_user(integer, character varying[]); Type: FUNCTION; Schema: public; Owner: postgres
@@ -233,7 +234,7 @@ BEGIN
   
   update_sets := LEFT(update_sets, LENGTH(update_sets) - 2);
   
-  RETURN QUERY EXECUTE 'UPDATE i9c_user SET ' || update_sets || ' WHERE id = $1 RETURNING id, username, profile_picture_url, presence, last_seen' USING in_user_id;
+  RETURN QUERY EXECUTE 'UPDATE i9c_user SET ' || update_sets || ' WHERE id = $1 RETURNING id, username, profile_picture_url, presence, last_seen, location' USING in_user_id;
   
   RETURN;
 END;
@@ -268,7 +269,7 @@ CREATE FUNCTION public.find_nearby_users(in_client_id integer, in_user_live_loca
     LANGUAGE plpgsql
     AS $$
 BEGIN
-  RETURN QUERY SELECT id, username, profile_picture_url, presence, last_seen 
+  RETURN QUERY SELECT id, username, profile_picture_url, presence, last_seen, location 
                FROM i9c_user 
 			   WHERE in_user_live_location @> point(location) AND deleted = false AND id != in_client_id;
   
@@ -288,7 +289,7 @@ CREATE FUNCTION public.get_all_users(in_client_id integer) RETURNS SETOF public.
     AS $$
 BEGIN
   RETURN QUERY 
-    SELECT id, username, profile_picture_url, presence, last_seen
+    SELECT id, username, profile_picture_url, presence, last_seen, location
 	FROM i9c_user 
 	WHERE id != in_client_id;
   
@@ -531,7 +532,7 @@ CREATE FUNCTION public.get_user(unique_identifier anycompatible) RETURNS SETOF p
     LANGUAGE plpgsql
     AS $$
 BEGIN
-  RETURN QUERY SELECT id, username, profile_picture_url, presence, last_seen FROM i9c_user 
+  RETURN QUERY SELECT id, username, profile_picture_url, presence, last_seen, location FROM i9c_user 
   WHERE unique_identifier::varchar = ANY(ARRAY[id::varchar, email, username]) AND deleted = false;
   
   RETURN;
@@ -562,7 +563,7 @@ ALTER FUNCTION public.get_user_password(unique_identifier anycompatible, OUT pas
 -- Name: join_group(integer, character varying[]); Type: FUNCTION; Schema: public; Owner: postgres
 --
 
-CREATE FUNCTION public.join_group(in_group_chat_id integer, in_user character varying[], OUT member_ids integer[], OUT activity_data json) RETURNS record
+CREATE FUNCTION public.join_group(in_group_chat_id integer, in_user character varying[], OUT members_ids integer[], OUT activity_data json) RETURNS record
     LANGUAGE plpgsql
     AS $$
 BEGIN 
@@ -586,20 +587,20 @@ BEGIN
   
   SELECT array_agg(member_id) FROM group_chat_membership 
   WHERE group_chat_id = in_group_chat_id AND member_id != in_admin[1] AND deleted = false
-  INTO member_ids;
+  INTO members_ids;
   
   RETURN;
 END;
 $$;
 
 
-ALTER FUNCTION public.join_group(in_group_chat_id integer, in_user character varying[], OUT member_ids integer[], OUT activity_data json) OWNER TO postgres;
+ALTER FUNCTION public.join_group(in_group_chat_id integer, in_user character varying[], OUT members_ids integer[], OUT activity_data json) OWNER TO postgres;
 
 --
 -- Name: leave_group(integer, character varying[]); Type: FUNCTION; Schema: public; Owner: postgres
 --
 
-CREATE FUNCTION public.leave_group(in_group_chat_id integer, in_user character varying[], OUT member_ids integer[], OUT activity_data json) RETURNS record
+CREATE FUNCTION public.leave_group(in_group_chat_id integer, in_user character varying[], OUT members_ids integer[], OUT activity_data json) RETURNS record
     LANGUAGE plpgsql
     AS $$
 BEGIN 
@@ -625,20 +626,20 @@ BEGIN
   
   SELECT array_agg(member_id) FROM group_chat_membership 
   WHERE group_chat_id = in_group_chat_id AND member_id != in_admin[1] AND deleted = false
-  INTO member_ids;
+  INTO members_ids;
   
   RETURN;
 END;
 $$;
 
 
-ALTER FUNCTION public.leave_group(in_group_chat_id integer, in_user character varying[], OUT member_ids integer[], OUT activity_data json) OWNER TO postgres;
+ALTER FUNCTION public.leave_group(in_group_chat_id integer, in_user character varying[], OUT members_ids integer[], OUT activity_data json) OWNER TO postgres;
 
 --
 -- Name: make_user_group_admin(integer, character varying[], character varying[]); Type: FUNCTION; Schema: public; Owner: postgres
 --
 
-CREATE FUNCTION public.make_user_group_admin(in_group_chat_id integer, in_admin character varying[], in_user character varying[], OUT member_ids integer[], OUT activity_data json) RETURNS record
+CREATE FUNCTION public.make_user_group_admin(in_group_chat_id integer, in_admin character varying[], in_user character varying[], OUT members_ids integer[], OUT activity_data json) RETURNS record
     LANGUAGE plpgsql
     AS $$
 BEGIN
@@ -662,14 +663,14 @@ BEGIN
   
   SELECT array_agg(member_id) FROM group_chat_membership 
   WHERE group_chat_id = in_group_chat_id AND member_id != in_admin[1] AND deleted = false
-  INTO member_ids;
+  INTO members_ids;
   
   RETURN;
 END;
 $$;
 
 
-ALTER FUNCTION public.make_user_group_admin(in_group_chat_id integer, in_admin character varying[], in_user character varying[], OUT member_ids integer[], OUT activity_data json) OWNER TO postgres;
+ALTER FUNCTION public.make_user_group_admin(in_group_chat_id integer, in_admin character varying[], in_user character varying[], OUT members_ids integer[], OUT activity_data json) OWNER TO postgres;
 
 --
 -- Name: new_dm_chat(integer, integer, json, timestamp without time zone); Type: FUNCTION; Schema: public; Owner: postgres
@@ -731,7 +732,7 @@ ALTER FUNCTION public.new_dm_chat(in_initiator_id integer, in_partner_id integer
 -- Name: new_group_chat(character varying, character varying, character varying, character varying[], character varying[]); Type: FUNCTION; Schema: public; Owner: postgres
 --
 
-CREATE FUNCTION public.new_group_chat(in_name character varying, in_description character varying, in_picture_url character varying, in_creator character varying[], in_init_users character varying[], OUT creator_resp_data json, OUT new_members_resp_data json) RETURNS record
+CREATE FUNCTION public.new_group_chat(in_name character varying, in_description character varying, in_picture_url character varying, in_creator character varying[], in_init_users character varying[], OUT creator_resp_data json, OUT init_member_resp_data json) RETURNS record
     LANGUAGE plpgsql
     AS $$
 DECLARE
@@ -776,10 +777,11 @@ BEGIN
   VALUES (new_group_chat_id, 'users_added', json_build_object('added_by', in_creator[2], 'new_users', iusers_usernames));
   
   creator_resp_data := json_build_object('new_group_chat_id', new_group_chat_id);
-  new_members_resp_data := json_build_object(
+  init_member_resp_data := json_build_object(
 	  'type', 'group',
 	  'group_chat_id', new_group_chat_id,
 	  'name', in_name,
+	  'description', in_description,
 	  'picture_url', in_picture_url
   )
   
@@ -788,7 +790,7 @@ END;
 $$;
 
 
-ALTER FUNCTION public.new_group_chat(in_name character varying, in_description character varying, in_picture_url character varying, in_creator character varying[], in_init_users character varying[], OUT creator_resp_data json, OUT new_members_resp_data json) OWNER TO postgres;
+ALTER FUNCTION public.new_group_chat(in_name character varying, in_description character varying, in_picture_url character varying, in_creator character varying[], in_init_users character varying[], OUT creator_resp_data json, OUT init_member_resp_data json) OWNER TO postgres;
 
 --
 -- Name: new_signup_session(character varying, integer); Type: FUNCTION; Schema: public; Owner: postgres
@@ -821,7 +823,7 @@ CREATE FUNCTION public.new_user(in_email character varying, in_username characte
 BEGIN
   RETURN QUERY INSERT INTO i9c_user (email, username, password, location) 
   VALUES (in_email, in_username, in_password, in_location)
-  RETURNING id, username, profile_picture_url, presence, last_seen;
+  RETURNING id, username, profile_picture_url, presence, last_seen, location;
   
   RETURN;
 END;
@@ -870,7 +872,7 @@ ALTER FUNCTION public.react_to_group_chat_message(in_group_chat_id integer, in_m
 -- Name: remove_user_from_group(integer, character varying[], character varying[]); Type: FUNCTION; Schema: public; Owner: postgres
 --
 
-CREATE FUNCTION public.remove_user_from_group(in_group_chat_id integer, in_admin character varying[], in_user character varying[], OUT member_ids integer[], OUT activity_data json) RETURNS record
+CREATE FUNCTION public.remove_user_from_group(in_group_chat_id integer, in_admin character varying[], in_user character varying[], OUT members_ids integer[], OUT activity_data json) RETURNS record
     LANGUAGE plpgsql
     AS $$
 BEGIN
@@ -904,20 +906,20 @@ BEGIN
   
   SELECT array_agg(member_id) FROM group_chat_membership 
   WHERE group_chat_id = in_group_chat_id AND member_id != in_admin[1] AND deleted = false
-  INTO member_ids;
+  INTO members_ids;
   
   RETURN;
 END;
 $$;
 
 
-ALTER FUNCTION public.remove_user_from_group(in_group_chat_id integer, in_admin character varying[], in_user character varying[], OUT member_ids integer[], OUT activity_data json) OWNER TO postgres;
+ALTER FUNCTION public.remove_user_from_group(in_group_chat_id integer, in_admin character varying[], in_user character varying[], OUT members_ids integer[], OUT activity_data json) OWNER TO postgres;
 
 --
 -- Name: remove_user_from_group_admins(integer, character varying[], character varying[]); Type: FUNCTION; Schema: public; Owner: postgres
 --
 
-CREATE FUNCTION public.remove_user_from_group_admins(in_group_chat_id integer, in_admin character varying[], in_user character varying[], OUT member_ids integer[], OUT activity_data json) RETURNS record
+CREATE FUNCTION public.remove_user_from_group_admins(in_group_chat_id integer, in_admin character varying[], in_user character varying[], OUT members_ids integer[], OUT activity_data json) RETURNS record
     LANGUAGE plpgsql
     AS $$
 BEGIN
@@ -941,14 +943,14 @@ BEGIN
   
   SELECT array_agg(member_id) FROM group_chat_membership 
   WHERE group_chat_id = in_group_chat_id AND member_id != in_admin[1] AND deleted = false
-  INTO member_ids;
+  INTO members_ids;
   
   RETURN;
 END;
 $$;
 
 
-ALTER FUNCTION public.remove_user_from_group_admins(in_group_chat_id integer, in_admin character varying[], in_user character varying[], OUT member_ids integer[], OUT activity_data json) OWNER TO postgres;
+ALTER FUNCTION public.remove_user_from_group_admins(in_group_chat_id integer, in_admin character varying[], in_user character varying[], OUT members_ids integer[], OUT activity_data json) OWNER TO postgres;
 
 --
 -- Name: search_user(integer, text); Type: FUNCTION; Schema: public; Owner: postgres
@@ -959,7 +961,7 @@ CREATE FUNCTION public.search_user(in_client_id integer, search_query text) RETU
     AS $$
 BEGIN
   RETURN QUERY 
-    SELECT id, username, profile_picture_url, presence, last_seen
+    SELECT id, username, profile_picture_url, presence, last_seen, location
 	FROM i9c_user 
 	WHERE username LIKE format('%%%s%%', search_query) AND deleted = false AND id != in_client_id;
   
@@ -1004,8 +1006,7 @@ BEGIN
 	  'msg_id', new_msg_id,
 	  'dm_chat_id', in_dm_chat_id,
 	  'sender', sender_info,
-	  'content', in_msg_content,
-	  'reactions', ARRAY[]::json[]
+	  'content', in_msg_content
   );
   
   RETURN;
@@ -1019,7 +1020,7 @@ ALTER FUNCTION public.send_dm_chat_message(in_dm_chat_id integer, in_sender_id i
 -- Name: send_group_chat_message(integer, integer, json, timestamp without time zone); Type: FUNCTION; Schema: public; Owner: postgres
 --
 
-CREATE FUNCTION public.send_group_chat_message(in_group_chat_id integer, in_sender_id integer, in_msg_content json, in_created_at timestamp without time zone, OUT sender_resp_data json, OUT members_resp_data json, OUT member_ids integer[]) RETURNS record
+CREATE FUNCTION public.send_group_chat_message(in_group_chat_id integer, in_sender_id integer, in_msg_content json, in_created_at timestamp without time zone, OUT sender_resp_data json, OUT member_resp_data json, OUT members_ids integer[]) RETURNS record
     LANGUAGE plpgsql
     AS $$
 DECLARE
@@ -1043,7 +1044,7 @@ BEGIN
   
   SELECT array_agg(member_id) FROM group_chat_membership
   WHERE member_id != in_sender_id AND group_chat_id = in_group_chat_id AND deleted = false
-  INTO member_ids;
+  INTO members_ids;
   
   SELECT json_build_object (
 	  'id', id,
@@ -1052,12 +1053,11 @@ BEGIN
   ) FROM i9c_user WHERE id = in_sender_id INTO sender_info;
   
   sender_resp_data := json_build_object('new_msg_id', new_msg_id);
-  members_resp_data := json_build_object(
+  member_resp_data := json_build_object(
 	  'msg_id', new_msg_id,
 	  'group_chat_id', in_group_chat_id,
 	  'sender', sender_info,
-	  'content', in_msg_content,
-	  'reactions', ARRAY[]::json[]
+	  'content', in_msg_content
   );
   
   RETURN;
@@ -1065,7 +1065,7 @@ END;
 $$;
 
 
-ALTER FUNCTION public.send_group_chat_message(in_group_chat_id integer, in_sender_id integer, in_msg_content json, in_created_at timestamp without time zone, OUT sender_resp_data json, OUT members_resp_data json, OUT member_ids integer[]) OWNER TO postgres;
+ALTER FUNCTION public.send_group_chat_message(in_group_chat_id integer, in_sender_id integer, in_msg_content json, in_created_at timestamp without time zone, OUT sender_resp_data json, OUT member_resp_data json, OUT members_ids integer[]) OWNER TO postgres;
 
 --
 -- Name: signup_session_email_verified(uuid); Type: FUNCTION; Schema: public; Owner: postgres

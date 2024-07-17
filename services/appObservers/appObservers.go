@@ -8,7 +8,7 @@ import (
 type Observer interface {
 	Subscribe(key string, mailbox chan<- map[string]any)
 	Unsubscribe(key string)
-	Send(key string, data map[string]any, event string)
+	Send(key string, data any, event string)
 }
 
 // New Observers
@@ -30,7 +30,7 @@ func (DMChatObserver) Unsubscribe(key string) {
 	delete(dmChatObserver, key)
 }
 
-func (DMChatObserver) Send(key string, data map[string]any, event string) { // call in a new goroutine
+func (DMChatObserver) Send(key string, data any, event string) { // call in a new goroutine
 	if mailbox, found := dmChatObserver[key]; found {
 		mailbox <- map[string]any{"event": event, "data": data}
 	} else {
@@ -46,7 +46,7 @@ func (DMChatObserver) Send(key string, data map[string]any, event string) { // c
 	}
 }
 
-func (DMChatObserver) SendPresenceUpdate(key string, data map[string]any, event string) {
+func (DMChatObserver) SendPresenceUpdate(key string, data any, event string) {
 	if mailbox, found := dmChatObserver[key]; found {
 		mailbox <- map[string]any{"event": event, "data": data}
 	}
@@ -65,7 +65,7 @@ func (GroupChatObserver) Unsubscribe(key string) {
 	delete(groupChatObserver, key)
 }
 
-func (GroupChatObserver) Send(key string, data map[string]any, event string) { // call in a new goroutine
+func (GroupChatObserver) Send(key string, data any, event string) { // call in a new goroutine
 	if mailbox, found := groupChatObserver[key]; found {
 		mailbox <- map[string]any{"event": event, "data": data}
 	} else {
@@ -93,7 +93,7 @@ func (DMChatSessionObserver) Unsubscribe(key string) {
 	delete(dMChatSessionObserver, key)
 }
 
-func (DMChatSessionObserver) Send(key string, data map[string]any, event string) { // call in a new goroutine
+func (DMChatSessionObserver) Send(key string, data any, event string) { // call in a new goroutine
 	if mailbox, found := dMChatSessionObserver[key]; found {
 		mailbox <- map[string]any{"event": event, "data": data}
 	} else {
@@ -125,7 +125,7 @@ func (GroupChatSessionObserver) Unsubscribe(key string) {
 	delete(groupChatSessionObserver, key)
 }
 
-func (GroupChatSessionObserver) Send(key string, data map[string]any, event string) { // call in a new goroutine
+func (GroupChatSessionObserver) Send(key string, data any, event string) { // call in a new goroutine
 	if mailbox, found := groupChatSessionObserver[key]; found {
 		mailbox <- map[string]any{"event": event, "data": data}
 	} else {
