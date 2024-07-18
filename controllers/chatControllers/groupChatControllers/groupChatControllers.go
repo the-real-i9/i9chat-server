@@ -17,9 +17,6 @@ import (
 )
 
 var GetChatHistory = helpers.WSHandlerProtected(func(c *websocket.Conn) {
-	var clientUser appTypes.ClientUser
-
-	helpers.MapToStruct(c.Locals("auth").(map[string]any), &clientUser)
 
 	var body struct {
 		GroupChatId int
@@ -53,9 +50,7 @@ var GetChatHistory = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 // this goroutine receives message acknowlegement for sent messages,
 // and in turn changes the delivery status of messages sent by the child goroutine
 var OpenMessagingStream = helpers.WSHandlerProtected(func(c *websocket.Conn) {
-	var clientUser appTypes.ClientUser
-
-	helpers.MapToStruct(c.Locals("auth").(map[string]any), &clientUser)
+	clientUser := c.Locals("auth").(*appTypes.ClientUser)
 
 	var groupChatId int
 
@@ -95,7 +90,7 @@ var OpenMessagingStream = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 	}
 })
 
-func sendMessages(c *websocket.Conn, clientUser appTypes.ClientUser, groupChatId int, endSession func()) {
+func sendMessages(c *websocket.Conn, clientUser *appTypes.ClientUser, groupChatId int, endSession func()) {
 	// this goroutine sends messages
 	var body struct {
 		Msg map[string]any
@@ -132,9 +127,7 @@ func sendMessages(c *websocket.Conn, clientUser appTypes.ClientUser, groupChatId
 }
 
 var ExecuteAction = helpers.WSHandlerProtected(func(c *websocket.Conn) {
-	var clientUser appTypes.ClientUser
-
-	helpers.MapToStruct(c.Locals("auth").(map[string]any), &clientUser)
+	clientUser := c.Locals("auth").(*appTypes.ClientUser)
 
 	type action string
 	type handler func(clientUser []string, data map[string]any) error

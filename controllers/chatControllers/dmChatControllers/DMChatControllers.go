@@ -17,9 +17,6 @@ import (
 )
 
 var GetChatHistory = helpers.WSHandlerProtected(func(c *websocket.Conn) {
-	var clientUser appTypes.ClientUser
-
-	helpers.MapToStruct(c.Locals("auth").(map[string]any), &clientUser)
 
 	var body struct {
 		DMChatId int
@@ -53,9 +50,7 @@ var GetChatHistory = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 // this handler receives message acknowlegement for sent messages,
 // and in turn changes the delivery status of messages sent by the child goroutine
 var OpenMessagingStream = helpers.WSHandlerProtected(func(c *websocket.Conn) {
-	var clientUser appTypes.ClientUser
-
-	helpers.MapToStruct(c.Locals("auth").(map[string]any), &clientUser)
+	clientUser := c.Locals("auth").(*appTypes.ClientUser)
 
 	var dmChatId int
 
@@ -96,7 +91,7 @@ var OpenMessagingStream = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 })
 
 // this goroutine sends messages
-func sendDMChatMessages(c *websocket.Conn, clientUser appTypes.ClientUser, dmChatId int, endSession func()) {
+func sendDMChatMessages(c *websocket.Conn, clientUser *appTypes.ClientUser, dmChatId int, endSession func()) {
 	var body struct {
 		Msg map[string]any
 		At  time.Time

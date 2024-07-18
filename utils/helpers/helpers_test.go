@@ -7,14 +7,18 @@ import (
 )
 
 func TestJwt(t *testing.T) {
-	token := JwtSign(map[string]any{"a": 5}, "some secret", time.Now().Add(1*time.Hour))
+	token := JwtSign(struct{ A int }{A: 5}, "some secret", time.Now().Add(1*time.Hour))
 
-	data, err := JwtVerify(token, "some secret")
+	data, err := JwtVerify[struct{ A int }]("Bearer "+token, "some secret")
+
+	b := map[string]any{"auth": data}
 
 	if err != nil {
 		t.Errorf("%s", err)
 		return
 	}
 
-	fmt.Println(data)
+	x := b["auth"].(*struct{ A int })
+
+	fmt.Println(x)
 }

@@ -10,51 +10,41 @@ import (
 	"github.com/gofiber/contrib/websocket"
 )
 
-var nilSsd = appTypes.SignupSessionData{}
-
-func CheckAccountRequested(c *websocket.Conn) (appTypes.SignupSessionData, error) {
+func CheckAccountRequested(c *websocket.Conn) (*appTypes.SignupSessionData, error) {
 	signupSessionJwt := c.Headers("Authorization")
 
 	if signupSessionJwt == "" {
-		return nilSsd, fmt.Errorf("authorization error: authorization token required")
+		return nil, fmt.Errorf("authorization error: authorization token required")
 	}
 
-	sessData, err := helpers.JwtVerify(signupSessionJwt, os.Getenv("SIGNUP_SESSION_JWT_SECRET"))
+	sessionData, err := helpers.JwtVerify[appTypes.SignupSessionData](signupSessionJwt, os.Getenv("SIGNUP_SESSION_JWT_SECRET"))
 	if err != nil {
-		return nilSsd, err
+		return nil, err
 	}
-
-	var sessionData appTypes.SignupSessionData
-
-	helpers.MapToStruct(sessData, &sessionData)
 
 	return sessionData, nil
 }
 
-func CheckEmailVerified(c *websocket.Conn) (appTypes.SignupSessionData, error) {
+func CheckEmailVerified(c *websocket.Conn) (*appTypes.SignupSessionData, error) {
 	signupSessionJwt := c.Headers("Authorization")
 
 	if signupSessionJwt == "" {
-		return nilSsd, fmt.Errorf("authorization error: authorization token required")
+		return nil, fmt.Errorf("authorization error: authorization token required")
 	}
 
-	sessData, err := helpers.JwtVerify(signupSessionJwt, os.Getenv("SIGNUP_SESSION_JWT_SECRET"))
+	sessionData, err := helpers.JwtVerify[appTypes.SignupSessionData](signupSessionJwt, os.Getenv("SIGNUP_SESSION_JWT_SECRET"))
 	if err != nil {
-		return nilSsd, err
+		return nil, err
 	}
-
-	var sessionData appTypes.SignupSessionData
-
-	helpers.MapToStruct(sessData, &sessionData)
 
 	isVerified, err := helpers.QueryRowField[bool]("SELECT is_verified FROM signup_session_email_verified($1)", sessionData.SessionId)
 	if err != nil {
 		log.Println(fmt.Errorf("middlewares: CheckEmailVerified: isVerified: db error: %s", err))
-		return nilSsd, helpers.ErrInternalServerError
+		return nil, helpers.ErrInternalServerError
 	}
 
 	if !*isVerified {
-		return nilSsd, fmt.Errorf("signup error: your email '%s' has not been verified", sessionData.Email)
+		return nil, fmt.Errorf("signup error: your email '%s' has not been verified", sessionData.Email)
 	}
 
 	return sessionData, nil

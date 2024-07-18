@@ -6,6 +6,7 @@ import (
 	"i9chat/models/appModel"
 	user "i9chat/models/userModel"
 	"i9chat/services/appServices"
+	"i9chat/utils/appTypes"
 	"i9chat/utils/helpers"
 	"log"
 	"math/rand"
@@ -34,9 +35,9 @@ func RequestNewAccount(email string) (string, error) {
 		return "", err
 	}
 
-	signupSessionJwt := helpers.JwtSign(map[string]any{
-		"sessionId": sessionId,
-		"email":     email,
+	signupSessionJwt := helpers.JwtSign(appTypes.SignupSessionData{
+		SessionId: sessionId,
+		Email:     email,
 	}, os.Getenv("SIGNUP_SESSION_JWT_SECRET"), expires)
 
 	return signupSessionJwt, nil
@@ -78,9 +79,9 @@ func RegisterUser(sessionId string, email string, username string, password stri
 		return nil, "", err
 	}
 
-	authJwt := helpers.JwtSign(map[string]any{
-		"userId":   user.Id,
-		"username": user.Username,
+	authJwt := helpers.JwtSign(appTypes.ClientUser{
+		Id:       user.Id,
+		Username: user.Username,
 	}, os.Getenv("AUTH_JWT_SECRET"), time.Now().UTC().Add(365*24*time.Hour)) // 1 year
 
 	appModel.EndSignupSession(sessionId)
@@ -114,9 +115,9 @@ func Signin(emailOrUsername string, password string) (*user.User, string, error)
 		}
 	}
 
-	authJwt := helpers.JwtSign(map[string]any{
-		"userId":   user.Id,
-		"username": user.Username,
+	authJwt := helpers.JwtSign(appTypes.ClientUser{
+		Id:       user.Id,
+		Username: user.Username,
 	}, os.Getenv("AUTH_JWT_SECRET"), time.Now().UTC().Add(365*24*time.Hour))
 
 	return user, authJwt, nil

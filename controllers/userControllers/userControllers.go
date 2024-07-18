@@ -19,9 +19,7 @@ import (
 )
 
 var ChangeProfilePicture = helpers.WSHandlerProtected(func(c *websocket.Conn) {
-	var clientUser appTypes.ClientUser
-
-	helpers.MapToStruct(c.Locals("auth").(map[string]any), &clientUser)
+	clientUser := c.Locals("auth").(*appTypes.ClientUser)
 
 	var body struct {
 		PictureData []byte
@@ -59,9 +57,7 @@ var ChangeProfilePicture = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 //
 // 2. Lets the client: "initiate a new dm chat" and "acknowledge received dm messages"
 var OpenDMChatStream = helpers.WSHandlerProtected(func(c *websocket.Conn) {
-	var clientUser appTypes.ClientUser
-
-	helpers.MapToStruct(c.Locals("auth").(map[string]any), &clientUser)
+	clientUser := c.Locals("auth").(*appTypes.ClientUser)
 
 	// a channel for streaming data to client
 	var myMailbox = make(chan map[string]any, 5)
@@ -106,7 +102,7 @@ var OpenDMChatStream = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 // + initating new dm chats
 //
 // + sending acknowledgements for received dm messages
-func createNewDMChatAndAckMessages(c *websocket.Conn, clientUser appTypes.ClientUser, endSession func()) {
+func createNewDMChatAndAckMessages(c *websocket.Conn, clientUser *appTypes.ClientUser, endSession func()) {
 	var body struct {
 		Action string
 		Data   map[string]any
@@ -209,9 +205,7 @@ func createNewDMChatAndAckMessages(c *websocket.Conn, clientUser appTypes.Client
 //
 // 2. Lets the client: "initiate a new group chat" and "acknowledge received group messages"
 var OpenGroupChatStream = helpers.WSHandlerProtected(func(c *websocket.Conn) {
-	var clientUser appTypes.ClientUser
-
-	helpers.MapToStruct(c.Locals("auth").(map[string]any), &clientUser)
+	clientUser := c.Locals("auth").(*appTypes.ClientUser)
 
 	// a channel for streaming data to client
 	var myMailbox = make(chan map[string]any, 5)
@@ -256,7 +250,7 @@ var OpenGroupChatStream = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 // + initating new group chats
 //
 // + sending acknowledgement for received group messages
-func createNewGroupChatAndAckMessages(c *websocket.Conn, clientUser appTypes.ClientUser, endSession func()) {
+func createNewGroupChatAndAckMessages(c *websocket.Conn, clientUser *appTypes.ClientUser, endSession func()) {
 	var body struct {
 		Action string
 		Data   map[string]any
@@ -343,9 +337,7 @@ func createNewGroupChatAndAckMessages(c *websocket.Conn, clientUser appTypes.Cli
 // After closing this,  we must immediately access "Init[DM|Group]ChatStream"
 var GetMyChats = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 
-	var clientUser appTypes.ClientUser
-
-	helpers.MapToStruct(c.Locals("auth").(map[string]any), &clientUser)
+	clientUser := c.Locals("auth").(*appTypes.ClientUser)
 
 	myChats, app_err := user.GetChats(clientUser.Id)
 
@@ -366,9 +358,7 @@ var GetMyChats = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 })
 
 var GetAllUsers = helpers.WSHandlerProtected(func(c *websocket.Conn) {
-	var clientUser appTypes.ClientUser
-
-	helpers.MapToStruct(c.Locals("auth").(map[string]any), &clientUser)
+	clientUser := c.Locals("auth").(*appTypes.ClientUser)
 
 	allUsers, app_err := user.GetAll(clientUser.Id)
 
@@ -389,9 +379,7 @@ var GetAllUsers = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 })
 
 var SearchUser = helpers.WSHandlerProtected(func(c *websocket.Conn) {
-	var clientUser appTypes.ClientUser
-
-	helpers.MapToStruct(c.Locals("auth").(map[string]any), &clientUser)
+	clientUser := c.Locals("auth").(*appTypes.ClientUser)
 
 	var body struct {
 		Query string
@@ -423,9 +411,7 @@ var SearchUser = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 })
 
 var FindNearbyUsers = helpers.WSHandlerProtected(func(c *websocket.Conn) {
-	var clientUser appTypes.ClientUser
-
-	helpers.MapToStruct(c.Locals("auth").(map[string]any), &clientUser)
+	clientUser := c.Locals("auth").(*appTypes.ClientUser)
 
 	var body struct {
 		LiveLocation string
@@ -457,9 +443,7 @@ var FindNearbyUsers = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 })
 
 var SwitchMyPresence = helpers.WSHandlerProtected(func(c *websocket.Conn) {
-	var clientUser appTypes.ClientUser
-
-	helpers.MapToStruct(c.Locals("auth").(map[string]any), &clientUser)
+	clientUser := c.Locals("auth").(*appTypes.ClientUser)
 
 	var body struct {
 		Presence string
@@ -494,9 +478,7 @@ var SwitchMyPresence = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 })
 
 var UpdateMyGeolocation = helpers.WSHandlerProtected(func(c *websocket.Conn) {
-	var clientUser appTypes.ClientUser
-
-	helpers.MapToStruct(c.Locals("auth").(map[string]any), &clientUser)
+	clientUser := c.Locals("auth").(*appTypes.ClientUser)
 
 	var body struct {
 		NewGeolocation string

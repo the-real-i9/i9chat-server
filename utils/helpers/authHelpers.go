@@ -6,6 +6,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"i9chat/utils/appTypes"
 	"os"
 	"strings"
 	"time"
@@ -14,15 +15,15 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
-func JwtSign(userData map[string]any, secret string, expires time.Time) string {
+func JwtSign(data any, secret string, expires time.Time) string {
 	// base64-encode header
 	header := map[string]string{"alg": "HS256", "typ": "JWT"}
 	byteHeader, _ := json.Marshal(header)
 	encodedHeader := base64.RawURLEncoding.EncodeToString(byteHeader)
 
-	// base64-encode header
+	// base64-encode payload
 	payload := map[string]any{
-		"data": userData,
+		"data": data,
 		"exp":  expires,
 	}
 
@@ -53,7 +54,7 @@ func parseJwtString(jwt string) (encodedHeader, encodedPayload, signature string
 	return jwtParts[0], jwtParts[1], jwtParts[2], nil
 }
 
-func JwtVerify(jwt string, secret string) (map[string]any, error) {
+func JwtVerify[T any](jwt string, secret string) (*T, error) {
 
 	encodedHeader, encodedPayload, signature, p_err := parseJwtString(jwt)
 	if p_err != nil {
@@ -77,11 +78,14 @@ func JwtVerify(jwt string, secret string) (map[string]any, error) {
 	decPay, _ := base64.RawURLEncoding.DecodeString(encodedPayload)
 
 	var decodedPayload struct {
-		Data map[string]any
+		Data *T
 		Exp  time.Time
 	}
 
-	json.Unmarshal(decPay, &decodedPayload)
+	err := json.Unmarshal(decPay, &decodedPayload)
+	if err != nil {
+		return nil, fmt.Errorf("%s %s", "authorization error:", err)
+	}
 
 	// check jwt expiration
 	if decodedPayload.Exp.Before(time.Now()) {
@@ -103,7 +107,7 @@ func WSHandlerProtected(handler func(*websocket.Conn), config ...websocket.Confi
 			return
 		}
 
-		userData, err := JwtVerify(authJwt, os.Getenv("AUTH_JWT_SECRET"))
+		userData, err := JwtVerify[appTypes.ClientUser](authJwt, os.Getenv("AUTH_JWT_SECRET"))
 		if err != nil {
 			w_err := c.WriteJSON(ErrResp(fiber.StatusUnauthorized, err))
 			if w_err != nil {
