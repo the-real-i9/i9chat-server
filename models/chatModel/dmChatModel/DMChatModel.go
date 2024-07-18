@@ -35,7 +35,7 @@ type NewDMChat struct {
 func New(initiatorId int, partnerId int, initMsgContent map[string]any, createdAt time.Time) (*NewDMChat, error) {
 	newDMChat, err := helpers.QueryRowType[NewDMChat]("SELECT initiator_resp_data AS ird, partner_resp_data AS prd FROM new_dm_chat($1, $2, $3, $4)", initiatorId, partnerId, initMsgContent, createdAt)
 	if err != nil {
-		log.Println(fmt.Errorf("DMChatModel.go: NewDMChat: %s", err))
+		log.Println(fmt.Errorf("DMChatModel.go: New: %s", err))
 		return nil, helpers.ErrInternalServerError
 	}
 
@@ -62,7 +62,7 @@ type NewMessage struct {
 func SendMessage(dmChatId, senderId int, msgContent map[string]any, createdAt time.Time) (*NewMessage, error) {
 	newMessage, err := helpers.QueryRowType[NewMessage]("SELECT sender_resp_data AS srd, receiver_resp_data AS rrd, receiver_id FROM send_dm_chat_message($1, $2, $3, $4)", dmChatId, senderId, msgContent, createdAt)
 	if err != nil {
-		log.Println(fmt.Errorf("DMChatModel.go: DMChat_SendMessage: %s", err))
+		log.Println(fmt.Errorf("DMChatModel.go: SendMessage: %s", err))
 		return nil, helpers.ErrInternalServerError
 	}
 

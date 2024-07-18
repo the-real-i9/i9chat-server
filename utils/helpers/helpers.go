@@ -16,8 +16,8 @@ import (
 
 var ErrInternalServerError = errors.New("internal server error: check logger")
 
-func LoadEnv() error {
-	dotenv, err := os.Open(".env")
+func LoadEnv(envPath string) error {
+	dotenv, err := os.Open(envPath)
 	if err != nil {
 		return err
 	}

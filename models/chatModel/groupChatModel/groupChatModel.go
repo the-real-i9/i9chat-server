@@ -32,7 +32,7 @@ type NewGroupChat struct {
 func New(name string, description string, pictureUrl string, creator []string, initUsers [][]appTypes.String) (*NewGroupChat, error) {
 	newGroupChat, err := helpers.QueryRowType[NewGroupChat]("SELECT creator_resp_data AS crd, init_member_resp_data AS imrd FROM new_group_chat($1, $2, $3, $4, $5)", name, description, pictureUrl, creator, initUsers)
 	if err != nil {
-		log.Println(fmt.Errorf("groupChatModel.go: NewGroupChat: %s", err))
+		log.Println(fmt.Errorf("groupChatModel.go: New: %s", err))
 		return nil, helpers.ErrInternalServerError
 	}
 

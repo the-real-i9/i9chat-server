@@ -13,7 +13,7 @@ import (
 )
 
 func main() {
-	if err := helpers.LoadEnv(); err != nil {
+	if err := helpers.LoadEnv(".env"); err != nil {
 		log.Fatal(err)
 	}
 
@@ -42,5 +42,8 @@ func main() {
 	app.Route("/api/app/dm_chat", dmChatRoutes.Init)
 	app.Route("/api/app/group_chat", groupChatRoutes.Init)
 
+	log.Println("Server listening on ws://localhost:8000")
+
 	log.Fatalln(app.Listen("localhost:8000"))
+
 }
