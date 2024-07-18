@@ -11,7 +11,7 @@ import (
 
 var dbPool *pgxpool.Pool
 
-func InitDBPool() error {
+func initDBPool() error {
 	pool, err := pgxpool.New(context.Background(), os.Getenv("PGDATABASE_URL"))
 	if err != nil {
 		return err
@@ -39,34 +39,6 @@ func QueryRowsField[T any](sql string, params ...any) ([]*T, error) {
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return make([]*T, 0), nil
-		}
-		return nil, err
-	}
-
-	return res, nil
-}
-
-func QueryRowFields(sql string, params ...any) (map[string]any, error) {
-	rows, _ := dbPool.Query(context.Background(), sql, params...)
-
-	res, err := pgx.CollectOneRow(rows, pgx.RowToMap)
-	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, nil
-		}
-		return nil, err
-	}
-
-	return res, nil
-}
-
-func QueryRowsFields(sql string, params ...any) ([]map[string]any, error) {
-	rows, _ := dbPool.Query(context.Background(), sql, params...)
-
-	res, err := pgx.CollectRows(rows, pgx.RowToMap)
-	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return make([]map[string]any, 0), nil
 		}
 		return nil, err
 	}

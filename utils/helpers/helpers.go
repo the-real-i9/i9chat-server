@@ -6,17 +6,19 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"i9chat/utils/appTypes"
 	"log"
 	"os"
 	"strings"
 
 	"cloud.google.com/go/storage"
+	"github.com/go-playground/validator/v10"
 	"google.golang.org/api/option"
 )
 
 var ErrInternalServerError = errors.New("internal server error: check logger")
 
-func LoadEnv(envPath string) error {
+func loadEnv(envPath string) error {
 	dotenv, err := os.Open(envPath)
 	if err != nil {
 		return err
@@ -41,7 +43,7 @@ func LoadEnv(envPath string) error {
 
 var GCSClient *storage.Client
 
-func InitGCSClient() error {
+func initGCSClient() error {
 	stClient, err := storage.NewClient(context.Background(), option.WithCredentialsFile("i9apps-storage.json"))
 	if err != nil {
 		return err
@@ -58,12 +60,12 @@ func MapToStruct(val map[string]any, structData any) {
 	json.Unmarshal(bt, structData)
 }
 
-func ErrResp(code int, err error) map[string]any {
+func ErrResp(code int, err error) appTypes.WSResp {
 	if errors.Is(err, ErrInternalServerError) {
-		return map[string]any{"statusCode": 500, "error": ErrInternalServerError.Error()}
+		return appTypes.WSResp{StatusCode: 500, Error: ErrInternalServerError}
 	}
 
-	return map[string]any{"statusCode": code, "error": err.Error()}
+	return appTypes.WSResp{StatusCode: code, Error: err}
 }
 
 func UploadFile(filePath string, data []byte) (string, error) {
@@ -79,4 +81,28 @@ func UploadFile(filePath string, data []byte) (string, error) {
 	}
 
 	return fileUrl, nil
+}
+
+var Validate *validator.Validate
+
+func InitValidator() {
+	Validate = validator.New(validator.WithRequiredStructEnabled())
+}
+
+func InitApp(envPath string) error {
+	if err := loadEnv(envPath); err != nil {
+		return err
+	}
+
+	if err := initDBPool(); err != nil {
+		return err
+	}
+
+	if err := initGCSClient(); err != nil {
+		return err
+	}
+
+	InitValidator()
+
+	return nil
 }

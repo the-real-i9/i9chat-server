@@ -13,15 +13,7 @@ import (
 )
 
 func main() {
-	if err := helpers.LoadEnv(".env"); err != nil {
-		log.Fatal(err)
-	}
-
-	if err := helpers.InitDBPool(); err != nil {
-		log.Fatal(err)
-	}
-
-	if err := helpers.InitGCSClient(); err != nil {
+	if err := helpers.InitApp(".env"); err != nil {
 		log.Fatal(err)
 	}
 

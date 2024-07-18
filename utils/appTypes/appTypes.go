@@ -30,7 +30,7 @@ type GroupChatMsgAckData struct {
 type WSResp struct {
 	StatusCode int
 	Body       any
-	Error      string
+	Error      error
 }
 
 type String string
