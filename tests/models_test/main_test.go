@@ -1,4 +1,4 @@
-package userModel_test
+package models_test
 
 import (
 	"i9chat/utils/helpers"

@@ -1,4 +1,4 @@
-package authRoutes_test
+package routes_test
 
 import (
 	"i9chat/tests/testdata"
@@ -10,12 +10,12 @@ import (
 	"github.com/fasthttp/websocket"
 )
 
-const pathPrefix string = "ws://localhost:8000/api/auth"
+const authPathPrefix string = "ws://localhost:8000/api/auth"
 
 func XTestRequestNewAccount(t *testing.T) {
 	wsd := &websocket.Dialer{}
 
-	connStream, _, err := wsd.Dial(pathPrefix+"/signup/request_new_account", nil)
+	connStream, _, err := wsd.Dial(authPathPrefix+"/signup/request_new_account", nil)
 	if err != nil {
 		t.Error(err)
 		return
@@ -47,7 +47,7 @@ func XTestVerifyEmail(t *testing.T) {
 	reqH := http.Header{}
 	reqH.Set("Authorization", testdata.SignupSessionJwt)
 
-	connStream, _, err := wsd.Dial(pathPrefix+"/signup/verify_email", reqH)
+	connStream, _, err := wsd.Dial(authPathPrefix+"/signup/verify_email", reqH)
 	if err != nil {
 		t.Error(err)
 		return
@@ -79,7 +79,7 @@ func XTestRegisterUser(t *testing.T) {
 	reqH := http.Header{}
 	reqH.Set("Authorization", testdata.SignupSessionJwt)
 
-	connStream, _, err := wsd.Dial(pathPrefix+"/signup/register_user", reqH)
+	connStream, _, err := wsd.Dial(authPathPrefix+"/signup/register_user", reqH)
 	if err != nil {
 		t.Error(err)
 		return
@@ -117,7 +117,7 @@ func XTestRegisterUser(t *testing.T) {
 func XTestSignin(t *testing.T) {
 	wsd := &websocket.Dialer{}
 
-	connStream, _, err := wsd.Dial(pathPrefix+"/signin", nil)
+	connStream, _, err := wsd.Dial(authPathPrefix+"/signin", nil)
 	if err != nil {
 		t.Error(err)
 		return

@@ -1,4 +1,4 @@
-package userRoutes_test
+package routes_test
 
 import (
 	"i9chat/tests/testdata"
@@ -10,14 +10,14 @@ import (
 	"github.com/fasthttp/websocket"
 )
 
-const pathPrefix string = "ws://localhost:8000/api/app/user"
+const userPathPrefix string = "ws://localhost:8000/api/app/user"
 
 func XTestGetAllUsers(t *testing.T) {
 	wsd := websocket.Dialer{}
 
 	reqH := http.Header{"Authorization": {testdata.I9xAuthJwt}}
 
-	connStream, _, err := wsd.Dial(pathPrefix+"/all_users", reqH)
+	connStream, _, err := wsd.Dial(userPathPrefix+"/all_users", reqH)
 	if err != nil {
 		t.Error(err)
 		return
@@ -46,7 +46,7 @@ func XTestGetMyChats(t *testing.T) {
 
 	reqH := http.Header{"Authorization": {testdata.I9xAuthJwt}}
 
-	connStream, _, err := wsd.Dial(pathPrefix+"/my_chats", reqH)
+	connStream, _, err := wsd.Dial(userPathPrefix+"/my_chats", reqH)
 	if err != nil {
 		t.Error(err)
 		return
