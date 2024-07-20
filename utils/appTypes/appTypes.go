@@ -28,9 +28,9 @@ type GroupChatMsgAckData struct {
 }
 
 type WSResp struct {
-	StatusCode int
-	Body       any
-	Error      error
+	StatusCode int    `json:"statusCode"`
+	Body       any    `json:"body"`
+	Error      string `json:"error"`
 }
 
 type String string

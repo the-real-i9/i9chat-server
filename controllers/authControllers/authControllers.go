@@ -65,7 +65,7 @@ var VerifyEmail = websocket.New(func(c *websocket.Conn) {
 	}
 
 	var body struct {
-		Code int `validate:"required,len=6"`
+		Code int `validate:"required,min=6"`
 	}
 
 	var w_err error
@@ -115,9 +115,9 @@ var RegisterUser = websocket.New(func(c *websocket.Conn) {
 	}
 
 	var body struct {
-		Username    string `validate:"required,min=6"`
-		Password    string
-		Geolocation string
+		Username    string `validate:"required,min=3,alphanumunicode"`
+		Password    string `validate:"required,min=8"`
+		Geolocation string `validate:"required"`
 	}
 
 	var w_err error
@@ -159,8 +159,8 @@ var RegisterUser = websocket.New(func(c *websocket.Conn) {
 
 var Signin = websocket.New(func(c *websocket.Conn) {
 	var body struct {
-		EmailOrUsername string
-		Password        string
+		EmailOrUsername string `validate:"required,email|alphanumunicode,min=6"`
+		Password        string `validate:"required"`
 	}
 
 	var w_err error

@@ -62,10 +62,10 @@ func MapToStruct(val map[string]any, structData any) {
 
 func ErrResp(code int, err error) appTypes.WSResp {
 	if errors.Is(err, ErrInternalServerError) {
-		return appTypes.WSResp{StatusCode: 500, Error: ErrInternalServerError}
+		return appTypes.WSResp{StatusCode: 500, Error: ErrInternalServerError.Error()}
 	}
 
-	return appTypes.WSResp{StatusCode: code, Error: err}
+	return appTypes.WSResp{StatusCode: code, Error: err.Error()}
 }
 
 func UploadFile(filePath string, data []byte) (string, error) {
