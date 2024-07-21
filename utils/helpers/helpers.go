@@ -12,7 +12,6 @@ import (
 	"strings"
 
 	"cloud.google.com/go/storage"
-	"github.com/go-playground/validator/v10"
 	"google.golang.org/api/option"
 )
 
@@ -83,12 +82,6 @@ func UploadFile(filePath string, data []byte) (string, error) {
 	return fileUrl, nil
 }
 
-var Validate *validator.Validate
-
-func InitValidator() {
-	Validate = validator.New(validator.WithRequiredStructEnabled())
-}
-
 func InitApp(envPath string) error {
 	if err := loadEnv(envPath); err != nil {
 		return err
@@ -101,8 +94,6 @@ func InitApp(envPath string) error {
 	if err := initGCSClient(); err != nil {
 		return err
 	}
-
-	InitValidator()
 
 	return nil
 }

@@ -13,9 +13,7 @@ import (
 )
 
 var RequestNewAccount = websocket.New(func(c *websocket.Conn) {
-	var body struct {
-		Email string `validate:"required,email"`
-	}
+	var body requestNewAccountBody
 
 	var w_err error
 
@@ -31,7 +29,8 @@ var RequestNewAccount = websocket.New(func(c *websocket.Conn) {
 			break
 		}
 
-		if val_err := helpers.Validate.Struct(body); val_err != nil {
+		if val_err := body.Validate(); val_err != nil {
+
 			w_err = c.WriteJSON(helpers.ErrResp(fiber.StatusUnprocessableEntity, val_err))
 			continue
 		}
@@ -64,9 +63,7 @@ var VerifyEmail = websocket.New(func(c *websocket.Conn) {
 		return
 	}
 
-	var body struct {
-		Code int `validate:"required,min=6"`
-	}
+	var body verifyEmailBody
 
 	var w_err error
 
@@ -82,7 +79,7 @@ var VerifyEmail = websocket.New(func(c *websocket.Conn) {
 			break
 		}
 
-		if val_err := helpers.Validate.Struct(body); val_err != nil {
+		if val_err := body.Validate(); val_err != nil {
 			w_err = c.WriteJSON(helpers.ErrResp(fiber.StatusUnprocessableEntity, val_err))
 			continue
 		}
@@ -114,11 +111,7 @@ var RegisterUser = websocket.New(func(c *websocket.Conn) {
 		return
 	}
 
-	var body struct {
-		Username    string `validate:"required,min=3,alphanumunicode"`
-		Password    string `validate:"required,min=8"`
-		Geolocation string `validate:"required"`
-	}
+	var body registerUserBody
 
 	var w_err error
 
@@ -134,7 +127,7 @@ var RegisterUser = websocket.New(func(c *websocket.Conn) {
 			break
 		}
 
-		if val_err := helpers.Validate.Struct(body); val_err != nil {
+		if val_err := body.Validate(); val_err != nil {
 			w_err = c.WriteJSON(helpers.ErrResp(fiber.StatusUnprocessableEntity, val_err))
 			continue
 		}
@@ -158,10 +151,7 @@ var RegisterUser = websocket.New(func(c *websocket.Conn) {
 })
 
 var Signin = websocket.New(func(c *websocket.Conn) {
-	var body struct {
-		EmailOrUsername string `validate:"required,email|alphanumunicode,min=6"`
-		Password        string `validate:"required"`
-	}
+	var body signInBody
 
 	var w_err error
 
@@ -177,7 +167,7 @@ var Signin = websocket.New(func(c *websocket.Conn) {
 			break
 		}
 
-		if val_err := helpers.Validate.Struct(body); val_err != nil {
+		if val_err := body.Validate(); val_err != nil {
 			w_err = c.WriteJSON(helpers.ErrResp(fiber.StatusUnprocessableEntity, val_err))
 			continue
 		}
