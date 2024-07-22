@@ -35,9 +35,9 @@ var GetChatHistory = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 	if app_err != nil {
 		w_err = c.WriteJSON(helpers.ErrResp(fiber.StatusUnprocessableEntity, app_err))
 	} else {
-		w_err = c.WriteJSON(map[string]any{
-			"statusCode": 200,
-			"body":       groupChatHistory,
+		w_err = c.WriteJSON(appTypes.WSResp{
+			StatusCode: 200,
+			Body:       groupChatHistory,
 		})
 	}
 
@@ -161,9 +161,9 @@ var ExecuteAction = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 		if app_err != nil {
 			w_err = c.WriteJSON(helpers.ErrResp(fiber.StatusUnprocessableEntity, fmt.Errorf("operation failed: %s", app_err)))
 		} else {
-			w_err = c.WriteJSON(map[string]any{
-				"statusCode": 200,
-				"body": map[string]any{
+			w_err = c.WriteJSON(appTypes.WSResp{
+				StatusCode: 200,
+				Body: map[string]any{
 					"msg": "Operation Successful",
 				},
 			})

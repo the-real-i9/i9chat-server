@@ -35,9 +35,9 @@ var GetChatHistory = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 	if app_err != nil {
 		w_err = c.WriteJSON(helpers.ErrResp(fiber.StatusUnprocessableEntity, app_err))
 	} else {
-		w_err = c.WriteJSON(map[string]any{
-			"statusCode": 200,
-			"body":       dmChatMessages,
+		w_err = c.WriteJSON(appTypes.WSResp{
+			StatusCode: 200,
+			Body:       dmChatMessages,
 		})
 	}
 

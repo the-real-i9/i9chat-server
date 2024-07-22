@@ -14,7 +14,6 @@ import (
 
 	"github.com/gofiber/contrib/websocket"
 	"github.com/gofiber/fiber/v2"
-	"github.com/jackc/pgx/v5/pgtype"
 )
 
 var ChangeProfilePicture = helpers.WSHandlerProtected(func(c *websocket.Conn) {
@@ -110,7 +109,7 @@ var OpenDMChatStream = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 func createNewDMChatAndAckMessages(c *websocket.Conn, clientUser *appTypes.ClientUser, endSession func()) {
 	var body openDMChatStreamBody
 
-	var newChatBody newChatBodyT
+	var newChatBody newDMChatBodyT
 
 	// For DM Chat, we allowed options for both single and batch acknowledgements
 	var ackMsgBody ackMsgBodyT
@@ -259,39 +258,42 @@ var OpenGroupChatStream = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 //
 // + sending acknowledgement for received group messages
 func createNewGroupChatAndAckMessages(c *websocket.Conn, clientUser *appTypes.ClientUser, endSession func()) {
-	var body struct {
-		Action string
-		Data   map[string]any
-	}
+	var body openGroupChatStreamBody
 
-	var newChatBody struct {
-		Name        string
-		Description string
-		PictureData []byte
-		InitUsers   [][]appTypes.String
-	}
+	var newChatBody newGroupChatBodyT
 
 	// For Group chat, messages should be acknowledged in batches,
 	// and it's only for a single group chat at a time
-	var ackMsgsBody struct {
-		Status      string
-		GroupChatId int
-		MsgAckDatas []*appTypes.GroupChatMsgAckData
-	}
+	var ackMsgsBody ackMsgsBodyT
+
+	var w_err error
 
 	for {
+		if w_err != nil {
+			log.Println(w_err)
+			endSession()
+			break
+		}
+
 		r_err := c.ReadJSON(&body)
 		if r_err != nil {
 			log.Println(r_err)
 			endSession()
-			return
+			break
+		}
+
+		if val_err := body.Validate(); val_err != nil {
+			w_err = c.WriteJSON(helpers.ErrResp(fiber.StatusUnprocessableEntity, val_err))
+			continue
 		}
 
 		createNewChat := func() error {
 
 			helpers.MapToStruct(body.Data, &newChatBody)
 
-			var w_err error
+			if val_err := newChatBody.Validate(); val_err != nil {
+				return c.WriteJSON(helpers.ErrResp(fiber.StatusUnprocessableEntity, val_err))
+			}
 
 			data, app_err := groupChatService.NewGroupChat(
 				newChatBody.Name,
@@ -301,48 +303,42 @@ func createNewGroupChatAndAckMessages(c *websocket.Conn, clientUser *appTypes.Cl
 				newChatBody.InitUsers,
 			)
 			if app_err != nil {
-				w_err = c.WriteJSON(helpers.ErrResp(fiber.StatusUnprocessableEntity, app_err))
-			} else {
-				w_err = c.WriteJSON(data)
+				return c.WriteJSON(helpers.ErrResp(fiber.StatusUnprocessableEntity, app_err))
 			}
 
-			if w_err != nil {
-				log.Println(w_err)
+			return c.WriteJSON(data)
+		}
+
+		// For Group chat, messages can only be acknowledged in batches,
+		acknowledgeMessages := func() error {
+
+			helpers.MapToStruct(body.Data, &ackMsgsBody)
+
+			if val_err := ackMsgsBody.Validate(); val_err != nil {
+				return c.WriteJSON(helpers.ErrResp(fiber.StatusUnprocessableEntity, val_err))
 			}
+
+			go groupChatService.BatchUpdateMessageDeliveryStatus(ackMsgsBody.GroupChatId, clientUser.Id, ackMsgsBody.Status, ackMsgsBody.MsgAckDatas)
 
 			return nil
 		}
 
-		// For Group chat, messages can only be acknowledged in batches,
-		acknowledgeMessages := func() {
-
-			helpers.MapToStruct(body.Data, &ackMsgsBody)
-
-			go groupChatService.BatchUpdateMessageDeliveryStatus(ackMsgsBody.GroupChatId, clientUser.Id, ackMsgsBody.Status, ackMsgsBody.MsgAckDatas)
-		}
-
 		if body.Action == "create new chat" {
 
-			if err := createNewChat(); err != nil {
-				log.Println(err)
-				endSession()
-				return
-			}
+			w_err = createNewChat()
+
 		} else if body.Action == "acknowledge messages" {
 
-			acknowledgeMessages()
+			w_err = acknowledgeMessages()
+
 		} else {
-			if w_err := c.WriteJSON(helpers.ErrResp(fiber.StatusUnprocessableEntity, fmt.Errorf("invalid 'action' value"))); w_err != nil {
-				log.Println(w_err)
-				endSession()
-				return
-			}
+			w_err = c.WriteJSON(helpers.ErrResp(fiber.StatusUnprocessableEntity, fmt.Errorf("invalid 'action' value")))
 		}
 	}
 }
 
 // This handler merely get chats as is from the database, no updates accounted for yet.
-// After closing this,  we must immediately access "Init[DM|Group]ChatStream"
+// After closing this,  we must immediately access "Open[DM|Group]ChatStream"
 var GetMyChats = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 
 	clientUser := c.Locals("auth").(*appTypes.ClientUser)
@@ -353,9 +349,9 @@ var GetMyChats = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 	if app_err != nil {
 		w_err = c.WriteJSON(helpers.ErrResp(fiber.StatusInternalServerError, app_err))
 	} else {
-		w_err = c.WriteJSON(map[string]any{
-			"statusCode": fiber.StatusOK,
-			"body":       myChats,
+		w_err = c.WriteJSON(appTypes.WSResp{
+			StatusCode: fiber.StatusOK,
+			Body:       myChats,
 		})
 	}
 
@@ -374,9 +370,9 @@ var GetAllUsers = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 	if app_err != nil {
 		w_err = c.WriteJSON(helpers.ErrResp(fiber.StatusUnprocessableEntity, app_err))
 	} else {
-		w_err = c.WriteJSON(map[string]any{
-			"statusCode": fiber.StatusOK,
-			"body":       allUsers,
+		w_err = c.WriteJSON(appTypes.WSResp{
+			StatusCode: fiber.StatusOK,
+			Body:       allUsers,
 		})
 	}
 
@@ -393,7 +389,14 @@ var SearchUser = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 		Query string
 	}
 
+	var w_err error
+
 	for {
+		if w_err != nil {
+			log.Println(w_err)
+			return
+		}
+
 		r_err := c.ReadJSON(&body)
 		if r_err != nil {
 			return
@@ -401,120 +404,130 @@ var SearchUser = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 
 		searchResult, app_err := user.Search(clientUser.Id, body.Query)
 
-		var w_err error
 		if app_err != nil {
 			w_err = c.WriteJSON(helpers.ErrResp(fiber.StatusUnprocessableEntity, app_err))
-		} else {
-			w_err = c.WriteJSON(map[string]any{
-				"statusCode": 200,
-				"body":       searchResult,
-			})
+			continue
 		}
 
-		if w_err != nil {
-			log.Println(w_err)
-			return
-		}
+		w_err = c.WriteJSON(appTypes.WSResp{
+			StatusCode: 200,
+			Body:       searchResult,
+		})
 	}
 })
 
 var FindNearbyUsers = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 	clientUser := c.Locals("auth").(*appTypes.ClientUser)
 
-	var body struct {
-		LiveLocation string
-	}
+	var body findNearbyUsersBody
+
+	var w_err error
 
 	for {
+		if w_err != nil {
+			log.Println(w_err)
+			return
+		}
+
 		r_err := c.ReadJSON(&body)
 		if r_err != nil {
 			return
 		}
 
+		if val_err := body.Validate(); val_err != nil {
+			w_err = c.WriteJSON(helpers.ErrResp(fiber.StatusUnprocessableEntity, val_err))
+			continue
+		}
+
 		nearbyUsers, app_err := user.FindNearby(clientUser.Id, body.LiveLocation)
 
-		var w_err error
 		if app_err != nil {
 			w_err = c.WriteJSON(helpers.ErrResp(fiber.StatusUnprocessableEntity, app_err))
-		} else {
-			w_err = c.WriteJSON(map[string]any{
-				"statusCode": 200,
-				"body":       nearbyUsers,
-			})
+			continue
 		}
 
-		if w_err != nil {
-			log.Println(w_err)
-			return
-		}
+		w_err = c.WriteJSON(appTypes.WSResp{
+			StatusCode: 200,
+			Body:       nearbyUsers,
+		})
 	}
 })
 
 var SwitchMyPresence = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 	clientUser := c.Locals("auth").(*appTypes.ClientUser)
 
-	var body struct {
-		Presence string
-		LastSeen pgtype.Timestamp
-	}
+	var body switchMyPresenceBody
+
+	var w_err error
 
 	for {
+		if w_err != nil {
+			log.Println(w_err)
+			return
+		}
+
 		r_err := c.ReadJSON(&body)
 		if r_err != nil {
 			return
 		}
 
+		if val_err := body.Validate(); val_err != nil {
+			w_err = c.WriteJSON(helpers.ErrResp(fiber.StatusUnprocessableEntity, val_err))
+			continue
+		}
+
 		app_err := userService.SwitchMyPresence(clientUser.Id, body.Presence, body.LastSeen)
 
-		var w_err error
 		if app_err != nil {
 			w_err = c.WriteJSON(helpers.ErrResp(fiber.StatusUnprocessableEntity, app_err))
-		} else {
-			w_err = c.WriteJSON(map[string]any{
-				"statusCode": 200,
-				"body": map[string]any{
-					"msg": "Operation Successful",
-				},
-			})
+			continue
 		}
 
-		if w_err != nil {
-			log.Println(w_err)
-			return
-		}
+		w_err = c.WriteJSON(appTypes.WSResp{
+			StatusCode: 200,
+			Body: map[string]any{
+				"msg": "Operation Successful",
+			},
+		})
+
 	}
 })
 
 var UpdateMyGeolocation = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 	clientUser := c.Locals("auth").(*appTypes.ClientUser)
 
-	var body struct {
-		NewGeolocation string
-	}
+	var body updateMyGeolocationBody
+
+	var w_err error
 
 	for {
+		if w_err != nil {
+			log.Println(w_err)
+			return
+		}
+
 		r_err := c.ReadJSON(&body)
 		if r_err != nil {
 			return
 		}
 
+		if val_err := body.Validate(); val_err != nil {
+			w_err = c.WriteJSON(helpers.ErrResp(fiber.StatusUnprocessableEntity, val_err))
+			continue
+		}
+
 		app_err := user.UpdateLocation(clientUser.Id, body.NewGeolocation)
 
-		var w_err error
 		if app_err != nil {
 			w_err = c.WriteJSON(helpers.ErrResp(fiber.StatusUnprocessableEntity, app_err))
-		} else {
-			w_err = c.WriteJSON(map[string]any{
-				"statusCode": 200,
-				"body": map[string]any{
-					"msg": "Operation Successful",
-				},
-			})
+			continue
 		}
 
-		if w_err != nil {
-			log.Println(w_err)
-			return
-		}
+		w_err = c.WriteJSON(appTypes.WSResp{
+			StatusCode: 200,
+			Body: map[string]any{
+				"msg": "Operation Successful",
+			},
+		})
 	}
 })
