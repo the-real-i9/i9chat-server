@@ -9,8 +9,6 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-var dbPool *pgxpool.Pool
-
 func initDBPool() error {
 	pool, err := pgxpool.New(context.Background(), os.Getenv("PGDATABASE_URL"))
 	if err != nil {

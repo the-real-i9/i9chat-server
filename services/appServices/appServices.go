@@ -33,80 +33,80 @@ func SendMail(email string, subject string, body string) {
 
 func handleVoiceMsg(userId int, props map[string]any) map[string]any {
 	var vd struct {
-		VoiceData []byte
+		Data []byte
 	}
 
 	helpers.MapToStruct(props, &vd)
 
-	voiceUrl, _ := helpers.UploadFile(fmt.Sprintf("voice messages/user-%d/voice-%d.ogg", userId, time.Now().UnixNano()), vd.VoiceData)
+	voiceUrl, _ := helpers.UploadFile(fmt.Sprintf("voice messages/user-%d/voice-%d.ogg", userId, time.Now().UnixNano()), vd.Data)
 
-	delete(props, "voiceData")
+	delete(props, "data")
 
-	props["voiceUrl"] = voiceUrl
+	props["url"] = voiceUrl
 
 	return map[string]any{"type": "voice", "props": props}
 }
 
 func handleAudioMsg(userId int, props map[string]any) map[string]any {
 	var ad struct {
-		AudioData []byte
+		Data []byte
 	}
 
 	helpers.MapToStruct(props, &ad)
 
-	audioUrl, _ := helpers.UploadFile(fmt.Sprintf("audio messages/user-%d/aud-%d.mp3", userId, time.Now().UnixNano()), ad.AudioData)
+	audioUrl, _ := helpers.UploadFile(fmt.Sprintf("audio messages/user-%d/aud-%d.mp3", userId, time.Now().UnixNano()), ad.Data)
 
-	delete(props, "audioData")
+	delete(props, "data")
 
-	props["audioUrl"] = audioUrl
+	props["url"] = audioUrl
 
 	return map[string]any{"type": "audio", "props": props}
 }
 
 func handleVideoMsg(userId int, props map[string]any) map[string]any {
 	var vd struct {
-		VideoData []byte
+		Data []byte
 	}
 
 	helpers.MapToStruct(props, &vd)
 
-	videoUrl, _ := helpers.UploadFile(fmt.Sprintf("video messages/user-%d/vid-%d.mp4", userId, time.Now().UnixNano()), vd.VideoData)
+	videoUrl, _ := helpers.UploadFile(fmt.Sprintf("video messages/user-%d/vid-%d.mp4", userId, time.Now().UnixNano()), vd.Data)
 
-	delete(props, "videoData")
+	delete(props, "data")
 
-	props["videoUrl"] = videoUrl
+	props["url"] = videoUrl
 
 	return map[string]any{"type": "video", "props": props}
 }
 
 func handleImageMsg(userId int, props map[string]any) map[string]any {
 	var id struct {
-		ImageData []byte
+		Data []byte
 	}
 
 	helpers.MapToStruct(props, &id)
 
-	imageUrl, _ := helpers.UploadFile(fmt.Sprintf("image messages/user-%d/img-%d.jpg", userId, time.Now().UnixNano()), id.ImageData)
+	imageUrl, _ := helpers.UploadFile(fmt.Sprintf("image messages/user-%d/img-%d.jpg", userId, time.Now().UnixNano()), id.Data)
 
-	delete(props, "imageData")
+	delete(props, "data")
 
-	props["imageUrl"] = imageUrl
+	props["url"] = imageUrl
 
 	return map[string]any{"type": "image", "props": props}
 }
 
 func handleFileMsg(userId int, props map[string]any) map[string]any {
 	var fd struct {
-		FileData []byte
+		Data []byte
 	}
 
 	helpers.MapToStruct(props, &fd)
 
-	fileUrl, _ := helpers.UploadFile(fmt.Sprintf("file messages/user-%d/img-%d.jpg", userId, time.Now().UnixNano()), fd.FileData)
+	fileUrl, _ := helpers.UploadFile(fmt.Sprintf("file messages/user-%d/img-%d.jpg", userId, time.Now().UnixNano()), fd.Data)
 
-	delete(props, "fileData")
+	delete(props, "data")
 
-	props["fileUrl"] = fileUrl
+	props["url"] = fileUrl
 
 	return map[string]any{"type": "image", "props": props}
 }

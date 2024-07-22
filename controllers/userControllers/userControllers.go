@@ -11,7 +11,6 @@ import (
 	"i9chat/utils/appTypes"
 	"i9chat/utils/helpers"
 	"log"
-	"time"
 
 	"github.com/gofiber/contrib/websocket"
 	"github.com/gofiber/fiber/v2"
@@ -21,33 +20,39 @@ import (
 var ChangeProfilePicture = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 	clientUser := c.Locals("auth").(*appTypes.ClientUser)
 
-	var body struct {
-		PictureData []byte
-	}
+	var body changeProfilePictureBody
+
+	var w_err error
 
 	for {
+		if w_err != nil {
+			log.Println(w_err)
+			break
+		}
+
 		r_err := c.ReadJSON(&body)
 		if r_err != nil {
 			log.Println(r_err)
 			break
 		}
 
-		var w_err error
-		if app_err := userService.ChangeMyProfilePicture(clientUser.Id, body.PictureData); app_err != nil {
-			w_err = c.WriteJSON(helpers.ErrResp(fiber.StatusUnprocessableEntity, fmt.Errorf("operation failed: %s", app_err)))
-		} else {
-			w_err = c.WriteJSON(map[string]any{
-				"statusCode": fiber.StatusOK,
-				"body": map[string]any{
-					"msg": "Operation Successful",
-				},
-			})
+		if val_err := body.Validate(); val_err != nil {
+			w_err = c.WriteJSON(helpers.ErrResp(fiber.StatusUnprocessableEntity, val_err))
+			continue
 		}
 
-		if w_err != nil {
-			log.Println(w_err)
-			break
+		if app_err := userService.ChangeMyProfilePicture(clientUser.Id, body.PictureData); app_err != nil {
+			w_err = c.WriteJSON(helpers.ErrResp(fiber.StatusUnprocessableEntity, fmt.Errorf("operation failed: %s", app_err)))
+			continue
 		}
+
+		w_err = c.WriteJSON(appTypes.WSResp{
+			StatusCode: fiber.StatusOK,
+			Body: map[string]any{
+				"msg": "Operation Successful",
+			},
+		})
+
 	}
 })
 
@@ -92,7 +97,7 @@ var OpenDMChatStream = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 		if w_err != nil {
 			log.Println(w_err)
 			endSession()
-			return
+			break
 		}
 	}
 })
@@ -103,41 +108,43 @@ var OpenDMChatStream = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 //
 // + sending acknowledgements for received dm messages
 func createNewDMChatAndAckMessages(c *websocket.Conn, clientUser *appTypes.ClientUser, endSession func()) {
-	var body struct {
-		Action string
-		Data   map[string]any
-	}
+	var body openDMChatStreamBody
 
-	var newChatBody struct {
-		PartnerId int
-		InitMsg   map[string]any
-		CreatedAt time.Time
-	}
+	var newChatBody newChatBodyT
 
 	// For DM Chat, we allowed options for both single and batch acknowledgements
-	var ackMsgBody struct {
-		Status string
-		*appTypes.DMChatMsgAckData
-	}
+	var ackMsgBody ackMsgBodyT
 
-	var batchAckMsgBody struct {
-		Status      string
-		MsgAckDatas []*appTypes.DMChatMsgAckData
-	}
+	var batchAckMsgBody batchAckMsgBodyT
+
+	var w_err error
 
 	for {
+		if w_err != nil {
+			log.Println(w_err)
+			endSession()
+			break
+		}
+
 		r_err := c.ReadJSON(&body)
 		if r_err != nil {
 			log.Println(r_err)
 			endSession()
-			return
+			break
+		}
+
+		if val_err := body.Validate(); val_err != nil {
+			w_err = c.WriteJSON(helpers.ErrResp(fiber.StatusUnprocessableEntity, val_err))
+			continue
 		}
 
 		createNewChat := func() error {
 
 			helpers.MapToStruct(body.Data, &newChatBody)
 
-			var w_err error
+			if val_err := newChatBody.Validate(); val_err != nil {
+				return c.WriteJSON(helpers.ErrResp(fiber.StatusUnprocessableEntity, val_err))
+			}
 
 			initiatorData, app_err := dmChatService.NewDMChat(
 				clientUser.Id,
@@ -145,56 +152,57 @@ func createNewDMChatAndAckMessages(c *websocket.Conn, clientUser *appTypes.Clien
 				appServices.MessageBinaryToUrl(clientUser.Id, newChatBody.InitMsg),
 				newChatBody.CreatedAt,
 			)
+
 			if app_err != nil {
-				w_err = c.WriteJSON(helpers.ErrResp(fiber.StatusUnprocessableEntity, app_err))
-			} else {
-				w_err = c.WriteJSON(initiatorData)
+				return c.WriteJSON(helpers.ErrResp(fiber.StatusUnprocessableEntity, app_err))
 			}
 
-			if w_err != nil {
-				return w_err
+			return c.WriteJSON(initiatorData)
+
+		}
+
+		// acknowledge messages singly
+		acknowledgeMessage := func() error {
+
+			helpers.MapToStruct(body.Data, &ackMsgBody)
+
+			if val_err := ackMsgBody.Validate(); val_err != nil {
+				return c.WriteJSON(helpers.ErrResp(fiber.StatusUnprocessableEntity, val_err))
 			}
+
+			go dmChatService.UpdateMessageDeliveryStatus(ackMsgBody.DMChatId, ackMsgBody.MsgId, ackMsgBody.SenderId, clientUser.Id, ackMsgBody.Status, ackMsgBody.At)
 
 			return nil
 		}
 
-		// acknowledge messages singly
-		acknowledgeMessage := func() {
-
-			helpers.MapToStruct(body.Data, &ackMsgBody)
-
-			go dmChatService.UpdateMessageDeliveryStatus(ackMsgBody.DMChatId, ackMsgBody.MsgId, ackMsgBody.SenderId, clientUser.Id, ackMsgBody.Status, ackMsgBody.At)
-		}
-
 		// acknowledge messages in batch
-		batchAcknowledgeMessages := func() {
+		batchAcknowledgeMessages := func() error {
 
 			helpers.MapToStruct(body.Data, &batchAckMsgBody)
 
+			if val_err := batchAckMsgBody.Validate(); val_err != nil {
+				return c.WriteJSON(helpers.ErrResp(fiber.StatusUnprocessableEntity, val_err))
+			}
+
 			go dmChatService.BatchUpdateMessageDeliveryStatus(clientUser.Id, batchAckMsgBody.Status, batchAckMsgBody.MsgAckDatas)
+
+			return nil
 		}
 
 		if body.Action == "create new chat" {
 
-			if err := createNewChat(); err != nil {
-				log.Println(err)
-				endSession()
-				return
-			}
+			w_err = createNewChat()
+
 		} else if body.Action == "acknowledge message" {
 
-			acknowledgeMessage()
+			w_err = acknowledgeMessage()
 
 		} else if body.Action == "batch acknowledge messages" {
 
-			batchAcknowledgeMessages()
+			w_err = batchAcknowledgeMessages()
 
 		} else {
-			if w_err := c.WriteJSON(helpers.ErrResp(fiber.StatusUnprocessableEntity, fmt.Errorf("invalid 'action' value"))); w_err != nil {
-				log.Println(w_err)
-				endSession()
-				return
-			}
+			w_err = c.WriteJSON(helpers.ErrResp(fiber.StatusUnprocessableEntity, fmt.Errorf("invalid 'action' value")))
 		}
 	}
 }

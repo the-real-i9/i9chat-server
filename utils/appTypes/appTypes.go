@@ -3,6 +3,8 @@ package appTypes
 import (
 	"bytes"
 	"time"
+
+	validation "github.com/go-ozzo/ozzo-validation/v4"
 )
 
 type SignupSessionData struct {
@@ -16,10 +18,19 @@ type ClientUser struct {
 }
 
 type DMChatMsgAckData struct {
-	MsgId    int
-	DMChatId int
-	SenderId int
-	At       time.Time
+	MsgId    int       `json:"msgId"`
+	DMChatId int       `json:"dmChatId"`
+	SenderId int       `json:"senderId"`
+	At       time.Time `json:"at"`
+}
+
+func (d DMChatMsgAckData) Validate() error {
+	return validation.ValidateStruct(&d,
+		validation.Field(&d.MsgId, validation.Required, validation.Min(0).Error("invalid negative value")),
+		validation.Field(&d.DMChatId, validation.Required, validation.Min(0).Error("invalid negative value")),
+		validation.Field(&d.SenderId, validation.Required, validation.Min(0).Error("invalid negative value")),
+		validation.Field(&d.At, validation.Required, validation.Max(time.Now()).Error("invalid future time")),
+	)
 }
 
 type GroupChatMsgAckData struct {

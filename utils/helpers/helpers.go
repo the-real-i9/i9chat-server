@@ -15,8 +15,6 @@ import (
 	"google.golang.org/api/option"
 )
 
-var ErrInternalServerError = errors.New("internal server error: check logger")
-
 func loadEnv(envPath string) error {
 	dotenv, err := os.Open(envPath)
 	if err != nil {
@@ -39,8 +37,6 @@ func loadEnv(envPath string) error {
 
 	return nil
 }
-
-var GCSClient *storage.Client
 
 func initGCSClient() error {
 	stClient, err := storage.NewClient(context.Background(), option.WithCredentialsFile("i9apps-storage.json"))
