@@ -247,7 +247,7 @@ var OpenGroupChatStream = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 		if w_err != nil {
 			log.Println(w_err)
 			endSession()
-			return
+			break
 		}
 	}
 })
