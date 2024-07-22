@@ -7,7 +7,6 @@ import (
 	"time"
 
 	validation "github.com/go-ozzo/ozzo-validation/v4"
-	"github.com/go-ozzo/ozzo-validation/v4/is"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
@@ -114,24 +113,15 @@ func (b newGroupChatBodyT) Validate() error {
 	return validation.ValidateStruct(&b,
 		validation.Field(&b.Name, validation.Required),
 		validation.Field(&b.Description, validation.Required),
-		validation.Field(&b.PictureData, validation.Required, validation.Length(1, 2*1024*1024).Error("picture size too large")),
+		validation.Field(&b.PictureData,
+			validation.Required,
+			validation.Length(1, 2*1024*1024).Error("maximum picture size of 2mb exceeded"),
+		),
 		validation.Field(&b.InitUsers,
 			validation.Required,
 			validation.Each(
 				validation.Length(2, 2).Error(`invalid format; should be: [{userId}, {username}] e.g. [2, "kenny"]`),
-				validation.By(func(value any) error {
-					user := value.([]appTypes.String)
-
-					if err := validation.Validate(user[0], validation.Required, is.Int.Error("invalid non-integer value")); err != nil {
-						return err
-					}
-
-					if err := validation.Validate(user[1], validation.Required); err != nil {
-						return err
-					}
-
-					return nil
-				}),
+				validation.By(helpers.UserSliceRule),
 			),
 		),
 	)

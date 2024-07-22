@@ -10,7 +10,6 @@ import (
 	"i9chat/utils/appTypes"
 	"i9chat/utils/helpers"
 	"log"
-	"time"
 
 	"github.com/gofiber/contrib/websocket"
 	"github.com/gofiber/fiber/v2"
@@ -18,32 +17,38 @@ import (
 
 var GetChatHistory = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 
-	var body struct {
-		GroupChatId int
-		Offset      int
-	}
-
-	r_err := c.ReadJSON(&body)
-	if r_err != nil {
-		log.Println(r_err)
-		return
-	}
-
-	groupChatHistory, app_err := groupChat.GetChatHistory(body.GroupChatId, body.Offset)
+	var body getChatHistoryBody
 
 	var w_err error
-	if app_err != nil {
-		w_err = c.WriteJSON(helpers.ErrResp(fiber.StatusUnprocessableEntity, app_err))
-	} else {
+
+	for {
+		if w_err != nil {
+			log.Println(w_err)
+			return
+		}
+
+		r_err := c.ReadJSON(&body)
+		if r_err != nil {
+			log.Println(r_err)
+			return
+		}
+
+		if val_err := body.Validate(); val_err != nil {
+			w_err = c.WriteJSON(helpers.ErrResp(fiber.StatusUnprocessableEntity, val_err))
+			continue
+		}
+
+		groupChatHistory, app_err := groupChat.GetChatHistory(body.GroupChatId, body.Offset)
+
+		if app_err != nil {
+			w_err = c.WriteJSON(helpers.ErrResp(fiber.StatusUnprocessableEntity, app_err))
+			continue
+		}
+
 		w_err = c.WriteJSON(appTypes.WSResp{
 			StatusCode: 200,
 			Body:       groupChatHistory,
 		})
-	}
-
-	if w_err != nil {
-		log.Println(w_err)
-		return
 	}
 })
 
@@ -92,16 +97,26 @@ var OpenMessagingStream = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 
 func sendMessages(c *websocket.Conn, clientUser *appTypes.ClientUser, groupChatId int, endSession func()) {
 	// this goroutine sends messages
-	var body struct {
-		Msg map[string]any
-		At  time.Time
-	}
+	var body openMessagingStreamBody
+
+	var w_err error
 
 	for {
+		if w_err != nil {
+			log.Println(w_err)
+			endSession()
+			break
+		}
+
 		r_err := c.ReadJSON(&body)
 		if r_err != nil {
 			log.Println(r_err)
-			return
+			break
+		}
+
+		if val_err := body.Validate(); val_err != nil {
+			w_err = c.WriteJSON(helpers.ErrResp(fiber.StatusUnprocessableEntity, val_err))
+			continue
 		}
 
 		senderData, app_err := groupChatService.SendMessage(
@@ -111,43 +126,41 @@ func sendMessages(c *websocket.Conn, clientUser *appTypes.ClientUser, groupChatI
 			body.At,
 		)
 
-		var w_err error
 		if app_err != nil {
 			w_err = c.WriteJSON(helpers.ErrResp(fiber.StatusUnprocessableEntity, app_err))
-		} else {
-			w_err = c.WriteJSON(senderData)
+			continue
 		}
 
-		if w_err != nil {
-			log.Println(w_err)
-			endSession()
-			return
-		}
+		w_err = c.WriteJSON(senderData)
+
 	}
 }
 
 var ExecuteAction = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 	clientUser := c.Locals("auth").(*appTypes.ClientUser)
 
-	type action string
 	type handler func(clientUser []string, data map[string]any) error
 
-	operationToHandlerMap := map[action]handler{
-		"change_name":             changeGroupName,
-		"change_description":      changeGroupDescription,
-		"change_picture":          changeGroupPicture,
-		"add_users":               addUsersToGroup,
-		"remove_user":             removeUserFromGroup,
+	actionToHandlerMap := map[action]handler{
+		"change name":             changeGroupName,
+		"change description":      changeGroupDescription,
+		"change picture":          changeGroupPicture,
+		"add users":               addUsersToGroup,
+		"remove user":             removeUserFromGroup,
 		"join":                    joinGroup,
 		"leave":                   leaveGroup,
-		"make_user_admin":         makeUserGroupAdmin,
-		"remove_user_from_admins": removeUserFromGroupAdmins,
+		"make user admin":         makeUserGroupAdmin,
+		"remove user from admins": removeUserFromGroupAdmins,
 	}
 
+	var body executeActionBody
+
+	var w_err error
+
 	for {
-		var body struct {
-			Action action
-			Data   map[string]any
+		if w_err != nil {
+			log.Println(w_err)
+			break
 		}
 
 		if r_err := c.ReadJSON(&body); r_err != nil {
@@ -155,121 +168,127 @@ var ExecuteAction = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 			break
 		}
 
-		app_err := operationToHandlerMap[body.Action]([]string{fmt.Sprint(clientUser.Id), clientUser.Username}, body.Data)
+		app_err := actionToHandlerMap[body.Action]([]string{fmt.Sprint(clientUser.Id), clientUser.Username}, body.Data)
 
-		var w_err error
 		if app_err != nil {
-			w_err = c.WriteJSON(helpers.ErrResp(fiber.StatusUnprocessableEntity, fmt.Errorf("operation failed: %s", app_err)))
-		} else {
-			w_err = c.WriteJSON(appTypes.WSResp{
-				StatusCode: 200,
-				Body: map[string]any{
-					"msg": "Operation Successful",
-				},
-			})
+			w_err = c.WriteJSON(helpers.ErrResp(fiber.StatusUnprocessableEntity, fmt.Errorf("action failed: %s", app_err)))
+			continue
 		}
 
-		if w_err != nil {
-			log.Println(w_err)
-			break
-		}
+		w_err = c.WriteJSON(appTypes.WSResp{
+			StatusCode: 200,
+			Body: map[string]any{
+				"msg": "Action executed",
+			},
+		})
 	}
 })
 
 func changeGroupName(clientUser []string, data map[string]any) error {
-	var d struct {
-		GroupChatId int
-		NewName     string
-	}
+	var d changeGroupNameT
 
 	helpers.MapToStruct(data, &d)
+
+	if val_err := d.Validate(); val_err != nil {
+		return val_err
+	}
 
 	return groupChatService.ChangeGroupName(d.GroupChatId, clientUser, d.NewName)
 
 }
 
 func changeGroupDescription(clientUser []string, data map[string]any) error {
-	var d struct {
-		GroupChatId    int
-		NewDescription string
-	}
+	var d changeGroupDescriptionT
 
 	helpers.MapToStruct(data, &d)
+
+	if val_err := d.Validate(); val_err != nil {
+		return val_err
+	}
 
 	return groupChatService.ChangeGroupDescription(d.GroupChatId, clientUser, d.NewDescription)
 }
 
 func changeGroupPicture(clientUser []string, data map[string]any) error {
-	var d struct {
-		GroupChatId    int
-		NewPictureData []byte
-	}
+	var d changeGroupPictureT
 
 	helpers.MapToStruct(data, &d)
+
+	if val_err := d.Validate(); val_err != nil {
+		return val_err
+	}
 
 	return groupChatService.ChangeGroupPicture(d.GroupChatId, clientUser, d.NewPictureData)
 }
 
 func addUsersToGroup(clientUser []string, data map[string]any) error {
-	var d struct {
-		GroupChatId int
-		NewUsers    [][]appTypes.String
-	}
+	var d addUsersToGroupT
 
 	helpers.MapToStruct(data, &d)
+
+	if val_err := d.Validate(); val_err != nil {
+		return val_err
+	}
 
 	return groupChatService.AddUsersToGroup(d.GroupChatId, clientUser, d.NewUsers)
 }
 
 func removeUserFromGroup(clientUser []string, data map[string]any) error {
-	var d struct {
-		GroupChatId int
-		User        []appTypes.String
-	}
+	var d actOnSingleUserT
 
 	helpers.MapToStruct(data, &d)
+
+	if val_err := d.Validate(); val_err != nil {
+		return val_err
+	}
 
 	return groupChatService.RemoveUserFromGroup(d.GroupChatId, clientUser, d.User)
 }
 
 func joinGroup(clientUser []string, data map[string]any) error {
-	var d struct {
-		GroupChatId int
-	}
+	var d joinLeaveGroupT
 
 	helpers.MapToStruct(data, &d)
+
+	if val_err := d.Validate(); val_err != nil {
+		return val_err
+	}
 
 	return groupChatService.JoinGroup(d.GroupChatId, clientUser)
 }
 
 func leaveGroup(clientUser []string, data map[string]any) error {
-	var d struct {
-		GroupChatId int
-	}
+	var d joinLeaveGroupT
 
 	helpers.MapToStruct(data, &d)
+
+	if val_err := d.Validate(); val_err != nil {
+		return val_err
+	}
 
 	return groupChatService.LeaveGroup(d.GroupChatId, clientUser)
 }
 
 func makeUserGroupAdmin(clientUser []string, data map[string]any) error {
-	var d struct {
-		GroupChatId int
-		User        []appTypes.String
-	}
+	var d actOnSingleUserT
 
 	helpers.MapToStruct(data, &d)
+
+	if val_err := d.Validate(); val_err != nil {
+		return val_err
+	}
 
 	return groupChatService.MakeUserGroupAdmin(d.GroupChatId, clientUser, d.User)
 }
 
 func removeUserFromGroupAdmins(clientUser []string, data map[string]any) error {
-	var d struct {
-		GroupChatId int
-		User        []appTypes.String
-	}
+	var d actOnSingleUserT
 
 	helpers.MapToStruct(data, &d)
+
+	if val_err := d.Validate(); val_err != nil {
+		return val_err
+	}
 
 	return groupChatService.RemoveUserFromGroupAdmins(d.GroupChatId, clientUser, d.User)
 }
