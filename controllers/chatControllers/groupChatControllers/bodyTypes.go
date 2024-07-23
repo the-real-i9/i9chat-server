@@ -25,10 +25,17 @@ type openMessagingStreamBody struct {
 	At  time.Time      `json:"at"`
 }
 
-func (b openMessagingStreamBody) Validate() error {
-	return validation.ValidateStruct(&b,
-		validation.Field(&b.Msg, helpers.MsgContentRule(b.Msg["type"].(string))...),
-		validation.Field(&b.At,
+func (ob openMessagingStreamBody) Validate() error {
+	var vb struct {
+		Msg appTypes.MsgContent `json:"msg"`
+		At  time.Time           `json:"at"`
+	}
+
+	helpers.ToStruct(ob, &vb)
+
+	return validation.ValidateStruct(&vb,
+		validation.Field(&vb.Msg, validation.Required),
+		validation.Field(&vb.At,
 			validation.Required,
 			validation.Max(time.Now()).Error("invalid future time"),
 		),

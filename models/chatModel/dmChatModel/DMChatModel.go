@@ -18,7 +18,7 @@ type InitiatorData struct {
 }
 
 type PartnerData struct {
-	Type     string    `json:"typm"`
+	Type     string    `json:"type"`
 	DMChatId int       `db:"dm_chat_id" json:"dm_chat_id"`
 	Partner  user.User `json:"partner"`
 	InitMsg  struct {
@@ -47,7 +47,8 @@ type SenderData struct {
 }
 
 type ReceiverData struct {
-	MsgId    int            `db:"msg_id" json:"msg_im"`
+	In       string         `db:"in" json:"in"`
+	MsgId    int            `db:"msg_id" json:"msg_id"`
 	DMChatId int            `db:"dm_chat_id" json:"dm_chat_id"`
 	Sender   user.User      `json:"sender"`
 	Content  map[string]any `json:"content"`

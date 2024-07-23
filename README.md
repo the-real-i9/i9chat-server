@@ -751,7 +751,7 @@ The events, associated data, suggested listeners, and additional information (if
 
     ```json
     {
-      "event": "new activity",
+      "event": "new group activity",
       "data": {
         "group_chat_id": 5,
         "activity_type": "user_added",

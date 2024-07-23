@@ -14,7 +14,7 @@ type Observer interface {
 
 // New Observers
 // DMChatObserver - Events: ("new chat" | "new message"). dmChatId: (n)
-// GroupChatObserver - Events: ("new chat" | "new message" | "new activity"). groupChatId: (n)
+// GroupChatObserver - Events: ("new chat" | "new message" | "new group activity"). groupChatId: (n)
 // DMChatActiveSessionObserver - Events: ("message update"). dmChatId: (n)
 // GroupChatSessionObserver - Events: ("message update"). groupChatId: (n)
 

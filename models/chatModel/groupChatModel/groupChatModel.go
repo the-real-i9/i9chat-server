@@ -139,6 +139,7 @@ type SenderData struct {
 }
 
 type MemberData struct {
+	In          string         `db:"in" json:"in"`
 	MsgId       int            `db:"msg_id" json:"msg_id"`
 	GroupChatId int            `db:"group_chat_id" json:"group_chat_id"`
 	Sender      user.User      `json:"sender"`

@@ -41,32 +41,40 @@ func (b openDMChatStreamBody) Validate() error {
 	)
 }
 
-type newDMChatBodyT struct {
+type newDMChatDataT struct {
 	PartnerId int            `json:"partnerId"`
 	InitMsg   map[string]any `json:"initMsg"`
 	CreatedAt time.Time      `json:"createdAt"`
 }
 
-func (b newDMChatBodyT) Validate() error {
-	return validation.ValidateStruct(&b,
-		validation.Field(&b.PartnerId,
+func (ob newDMChatDataT) Validate() error {
+	var vb struct {
+		PartnerId int                 `json:"partnerId"`
+		InitMsg   appTypes.MsgContent `json:"initMsg"`
+		CreatedAt time.Time           `json:"createdAt"`
+	}
+
+	helpers.ToStruct(ob, &vb)
+
+	return validation.ValidateStruct(&vb,
+		validation.Field(&vb.PartnerId,
 			validation.Required,
 			validation.Min(1).Error("invalid value"),
 		),
-		validation.Field(&b.InitMsg, helpers.MsgContentRule(b.InitMsg["type"].(string))...),
-		validation.Field(&b.CreatedAt,
+		validation.Field(&vb.InitMsg, validation.Required),
+		validation.Field(&vb.CreatedAt,
 			validation.Required,
 			validation.Max(time.Now()).Error("invalid future time"),
 		),
 	)
 }
 
-type ackMsgBodyT struct {
+type ackMsgDataT struct {
 	Status string `json:"status"`
 	*appTypes.DMChatMsgAckData
 }
 
-func (b ackMsgBodyT) Validate() error {
+func (b ackMsgDataT) Validate() error {
 	return validation.ValidateStruct(&b,
 		validation.Field(&b.Status,
 			validation.Required,
@@ -76,12 +84,12 @@ func (b ackMsgBodyT) Validate() error {
 	)
 }
 
-type batchAckMsgBodyT struct {
+type batchAckMsgDataT struct {
 	Status      string                       `json:"status"`
 	MsgAckDatas []*appTypes.DMChatMsgAckData `json:"msgAckDatas"`
 }
 
-func (b batchAckMsgBodyT) Validate() error {
+func (b batchAckMsgDataT) Validate() error {
 	return validation.ValidateStruct(&b,
 		validation.Field(&b.Status,
 			validation.Required,
@@ -106,14 +114,14 @@ func (b openGroupChatStreamBody) Validate() error {
 	)
 }
 
-type newGroupChatBodyT struct {
+type newGroupChatDataT struct {
 	Name        string              `json:"name"`
 	Description string              `json:"description"`
 	PictureData []byte              `json:"pictureData"`
 	InitUsers   [][]appTypes.String `json:"initUsers"`
 }
 
-func (b newGroupChatBodyT) Validate() error {
+func (b newGroupChatDataT) Validate() error {
 	return validation.ValidateStruct(&b,
 		validation.Field(&b.Name, validation.Required),
 		validation.Field(&b.Description, validation.Required),
@@ -131,13 +139,13 @@ func (b newGroupChatBodyT) Validate() error {
 	)
 }
 
-type ackMsgsBodyT struct {
+type ackMsgsDataT struct {
 	Status      string                          `json:"status"`
 	GroupChatId int                             `json:"groupChatId"`
 	MsgAckDatas []*appTypes.GroupChatMsgAckData `json:"msgAckDatas"`
 }
 
-func (b ackMsgsBodyT) Validate() error {
+func (b ackMsgsDataT) Validate() error {
 	return validation.ValidateStruct(&b,
 		validation.Field(&b.Status,
 			validation.Required,

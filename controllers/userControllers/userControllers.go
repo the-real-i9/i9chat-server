@@ -67,7 +67,7 @@ var OpenDMChatStream = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 	var myMailbox = make(chan map[string]any, 5)
 
 	// subscribe to receiving chat updates
-	// myMailbox is passed by reference to an observer keeping several mailboxes wanting to receive updates
+	// myMailbox is passed by reference to an observer keeping several mailboxes wanting to receive new DM chat updates
 	dco := appObservers.DMChatObserver{}
 
 	mailboxKey := fmt.Sprintf("user-%d", clientUser.Id)
@@ -113,12 +113,12 @@ func createNewDMChatAndAckMessages(c *websocket.Conn, clientUser *appTypes.Clien
 	for {
 		var body openDMChatStreamBody
 
-		var newChatBody newDMChatBodyT
+		var newChatData newDMChatDataT
 
 		// For DM Chat, we allowed options for both single and batch acknowledgements
-		var ackMsgBody ackMsgBodyT
+		var ackMsgData ackMsgDataT
 
-		var batchAckMsgBody batchAckMsgBodyT
+		var batchAckMsgData batchAckMsgDataT
 
 		if w_err != nil {
 			log.Println(w_err)
@@ -140,17 +140,17 @@ func createNewDMChatAndAckMessages(c *websocket.Conn, clientUser *appTypes.Clien
 
 		createNewChat := func() error {
 
-			helpers.MapToStruct(body.Data, &newChatBody)
+			helpers.MapToStruct(body.Data, &newChatData)
 
-			if val_err := newChatBody.Validate(); val_err != nil {
+			if val_err := newChatData.Validate(); val_err != nil {
 				return c.WriteJSON(helpers.ErrResp(fiber.StatusUnprocessableEntity, val_err))
 			}
 
 			initiatorData, app_err := dmChatService.NewDMChat(
 				clientUser.Id,
-				newChatBody.PartnerId,
-				appServices.MessageBinaryToUrl(clientUser.Id, newChatBody.InitMsg),
-				newChatBody.CreatedAt,
+				newChatData.PartnerId,
+				appServices.MessageBinaryToUrl(clientUser.Id, newChatData.InitMsg),
+				newChatData.CreatedAt,
 			)
 
 			if app_err != nil {
@@ -164,13 +164,13 @@ func createNewDMChatAndAckMessages(c *websocket.Conn, clientUser *appTypes.Clien
 		// acknowledge messages singly
 		acknowledgeMessage := func() error {
 
-			helpers.MapToStruct(body.Data, &ackMsgBody)
+			helpers.MapToStruct(body.Data, &ackMsgData)
 
-			if val_err := ackMsgBody.Validate(); val_err != nil {
+			if val_err := ackMsgData.Validate(); val_err != nil {
 				return c.WriteJSON(helpers.ErrResp(fiber.StatusUnprocessableEntity, val_err))
 			}
 
-			go dmChatService.UpdateMessageDeliveryStatus(ackMsgBody.DMChatId, ackMsgBody.MsgId, ackMsgBody.SenderId, clientUser.Id, ackMsgBody.Status, ackMsgBody.At)
+			go dmChatService.UpdateMessageDeliveryStatus(ackMsgData.DMChatId, ackMsgData.MsgId, ackMsgData.SenderId, clientUser.Id, ackMsgData.Status, ackMsgData.At)
 
 			return nil
 		}
@@ -178,13 +178,13 @@ func createNewDMChatAndAckMessages(c *websocket.Conn, clientUser *appTypes.Clien
 		// acknowledge messages in batch
 		batchAcknowledgeMessages := func() error {
 
-			helpers.MapToStruct(body.Data, &batchAckMsgBody)
+			helpers.MapToStruct(body.Data, &batchAckMsgData)
 
-			if val_err := batchAckMsgBody.Validate(); val_err != nil {
+			if val_err := batchAckMsgData.Validate(); val_err != nil {
 				return c.WriteJSON(helpers.ErrResp(fiber.StatusUnprocessableEntity, val_err))
 			}
 
-			go dmChatService.BatchUpdateMessageDeliveryStatus(clientUser.Id, batchAckMsgBody.Status, batchAckMsgBody.MsgAckDatas)
+			go dmChatService.BatchUpdateMessageDeliveryStatus(clientUser.Id, batchAckMsgData.Status, batchAckMsgData.MsgAckDatas)
 
 			return nil
 		}
@@ -265,11 +265,11 @@ func createNewGroupChatAndAckMessages(c *websocket.Conn, clientUser *appTypes.Cl
 	for {
 		var body openGroupChatStreamBody
 
-		var newChatBody newGroupChatBodyT
+		var newChatData newGroupChatDataT
 
 		// For Group chat, messages should be acknowledged in batches,
 		// and it's only for a single group chat at a time
-		var ackMsgsBody ackMsgsBodyT
+		var ackMsgsData ackMsgsDataT
 
 		if w_err != nil {
 			log.Println(w_err)
@@ -291,18 +291,18 @@ func createNewGroupChatAndAckMessages(c *websocket.Conn, clientUser *appTypes.Cl
 
 		createNewChat := func() error {
 
-			helpers.MapToStruct(body.Data, &newChatBody)
+			helpers.MapToStruct(body.Data, &newChatData)
 
-			if val_err := newChatBody.Validate(); val_err != nil {
+			if val_err := newChatData.Validate(); val_err != nil {
 				return c.WriteJSON(helpers.ErrResp(fiber.StatusUnprocessableEntity, val_err))
 			}
 
 			data, app_err := groupChatService.NewGroupChat(
-				newChatBody.Name,
-				newChatBody.Description,
-				newChatBody.PictureData,
+				newChatData.Name,
+				newChatData.Description,
+				newChatData.PictureData,
 				[]string{fmt.Sprint(clientUser.Id), clientUser.Username},
-				newChatBody.InitUsers,
+				newChatData.InitUsers,
 			)
 			if app_err != nil {
 				return c.WriteJSON(helpers.ErrResp(fiber.StatusUnprocessableEntity, app_err))
@@ -314,13 +314,13 @@ func createNewGroupChatAndAckMessages(c *websocket.Conn, clientUser *appTypes.Cl
 		// For Group chat, messages can only be acknowledged in batches,
 		acknowledgeMessages := func() error {
 
-			helpers.MapToStruct(body.Data, &ackMsgsBody)
+			helpers.MapToStruct(body.Data, &ackMsgsData)
 
-			if val_err := ackMsgsBody.Validate(); val_err != nil {
+			if val_err := ackMsgsData.Validate(); val_err != nil {
 				return c.WriteJSON(helpers.ErrResp(fiber.StatusUnprocessableEntity, val_err))
 			}
 
-			go groupChatService.BatchUpdateMessageDeliveryStatus(ackMsgsBody.GroupChatId, clientUser.Id, ackMsgsBody.Status, ackMsgsBody.MsgAckDatas)
+			go groupChatService.BatchUpdateMessageDeliveryStatus(ackMsgsData.GroupChatId, clientUser.Id, ackMsgsData.Status, ackMsgsData.MsgAckDatas)
 
 			return nil
 		}

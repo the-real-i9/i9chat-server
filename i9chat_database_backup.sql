@@ -88,7 +88,7 @@ BEGIN
   -- create group_chat_activity_log for users added
   INSERT INTO group_chat_activity_log (group_chat_id, activity_type, activity_info)
   VALUES (in_group_chat_id, 'users_added', json_build_object('added_by', in_admin[2], 'new_users', nusers_usernames))
-  RETURNING json_build_object('group_chat_id', group_chat_id, 'activity_type', activity_type, 'activity_info', activity_info) INTO activity_data;
+  RETURNING json_build_object('in', 'group chat', 'group_chat_id', group_chat_id, 'activity_type', activity_type, 'activity_info', activity_info) INTO activity_data;
   
   SELECT array_agg(member_id) FROM group_chat_membership 
   WHERE group_chat_id = in_group_chat_id AND member_id != in_admin[1] AND deleted = false
@@ -125,7 +125,7 @@ BEGIN
   -- create group_chat_activity_log for group description change
   INSERT INTO group_chat_activity_log (group_chat_id, activity_type, activity_info)
   VALUES (in_group_chat_id, 'group_description_changed', json_build_object('changed_by', in_admin[2], 'new_group_description', in_new_description))
-  RETURNING json_build_object('group_chat_id', group_chat_id, 'activity_type', activity_type, 'activity_info', activity_info) INTO activity_data;
+  RETURNING json_build_object('in', 'group chat', 'group_chat_id', group_chat_id, 'activity_type', activity_type, 'activity_info', activity_info) INTO activity_data;
   
   SELECT array_agg(member_id) FROM group_chat_membership 
   WHERE group_chat_id = in_group_chat_id AND member_id != in_admin[1] AND deleted = false
@@ -162,7 +162,7 @@ BEGIN
   -- create group_chat_activity_log for group name change
   INSERT INTO group_chat_activity_log (group_chat_id, activity_type, activity_info)
   VALUES (in_group_chat_id, 'group_name_changed', json_build_object('changed_by', in_admin[2], 'new_group_name', in_new_name))
-  RETURNING json_build_object('group_chat_id', group_chat_id, 'activity_type', activity_type, 'activity_info', activity_info) INTO activity_data;
+  RETURNING json_build_object('in', 'group chat', 'group_chat_id', group_chat_id, 'activity_type', activity_type, 'activity_info', activity_info) INTO activity_data;
   
   SELECT array_agg(member_id) FROM group_chat_membership 
   WHERE group_chat_id = in_group_chat_id AND member_id != in_admin[1] AND deleted = false
@@ -199,7 +199,7 @@ BEGIN
   -- create group_chat_activity_log for group picture change
   INSERT INTO group_chat_activity_log (group_chat_id, activity_type, activity_info)
   VALUES (in_group_chat_id, 'group_picture_changed', json_build_object('changed_by', in_admin[2]))
-  RETURNING json_build_object('group_chat_id', group_chat_id, 'activity_type', activity_type, 'activity_info', activity_info) INTO activity_data;
+  RETURNING json_build_object('in', 'group chat', 'group_chat_id', group_chat_id, 'activity_type', activity_type, 'activity_info', activity_info) INTO activity_data;
   
   SELECT array_agg(member_id) FROM group_chat_membership 
   WHERE group_chat_id = in_group_chat_id AND member_id != in_admin[1] AND deleted = false
@@ -583,7 +583,7 @@ BEGIN
   -- create group_chat_activity_log for user joined
   INSERT INTO group_chat_activity_log (group_chat_id, activity_type, activity_info)
   VALUES (in_group_chat_id, 'user_joined', json_build_object('username', in_user[2]))
-  RETURNING json_build_object('group_chat_id', group_chat_id, 'activity_type', activity_type, 'activity_info', activity_info) INTO activity_data;
+  RETURNING json_build_object('in', 'group chat', 'group_chat_id', group_chat_id, 'activity_type', activity_type, 'activity_info', activity_info) INTO activity_data;
   
   SELECT array_agg(member_id) FROM group_chat_membership 
   WHERE group_chat_id = in_group_chat_id AND member_id != in_admin[1] AND deleted = false
@@ -622,7 +622,7 @@ BEGIN
   -- create group_chat_activity_log for user left
   INSERT INTO group_chat_activity_log (group_chat_id, activity_type, activity_info)
   VALUES (in_group_chat_id, 'user_left', json_build_object('username', in_user[2]))
-  RETURNING json_build_object('group_chat_id', group_chat_id, 'activity_type', activity_type, 'activity_info', activity_info) INTO activity_data;
+  RETURNING json_build_object('in', 'group chat', 'group_chat_id', group_chat_id, 'activity_type', activity_type, 'activity_info', activity_info) INTO activity_data;
   
   SELECT array_agg(member_id) FROM group_chat_membership 
   WHERE group_chat_id = in_group_chat_id AND member_id != in_admin[1] AND deleted = false
@@ -659,7 +659,7 @@ BEGIN
   -- create group_chat_activity_log for make admin
   INSERT INTO group_chat_activity_log (group_chat_id, activity_type, activity_info)
   VALUES (in_group_chat_id, 'user_made_group_admin', json_build_object('made_by', in_admin[2], 'username', in_user[2]))
-  RETURNING json_build_object('group_chat_id', group_chat_id, 'activity_type', activity_type, 'activity_info', activity_info) INTO activity_data;
+  RETURNING json_build_object('in', 'group chat', 'group_chat_id', group_chat_id, 'activity_type', activity_type, 'activity_info', activity_info) INTO activity_data;
   
   SELECT array_agg(member_id) FROM group_chat_membership 
   WHERE group_chat_id = in_group_chat_id AND member_id != in_admin[1] AND deleted = false
@@ -902,7 +902,7 @@ BEGIN
   -- create group_chat_activity_log for the user removed
   INSERT INTO group_chat_activity_log (group_chat_id, activity_type, activity_info)
   VALUES (in_group_chat_id, 'user_removed', json_build_object('removed_by', in_admin[2], 'username', in_user[2]))
-  RETURNING json_build_object('group_chat_id', group_chat_id, 'activity_type', activity_type, 'activity_info', activity_info) INTO activity_data;
+  RETURNING json_build_object('in', 'group chat', 'group_chat_id', group_chat_id, 'activity_type', activity_type, 'activity_info', activity_info) INTO activity_data;
   
   SELECT array_agg(member_id) FROM group_chat_membership 
   WHERE group_chat_id = in_group_chat_id AND member_id != in_admin[1] AND deleted = false
@@ -939,7 +939,7 @@ BEGIN
   -- create group_chat_activity_log for remove admin
   INSERT INTO group_chat_activity_log (group_chat_id, activity_type, activity_info)
   VALUES (in_group_chat_id, 'user_removed_from_group_admins', json_build_object('removed_by', in_admin[2], 'username', in_user[2]))
-  RETURNING json_build_object('group_chat_id', group_chat_id, 'activity_type', activity_type, 'activity_info', activity_info) INTO activity_data;
+  RETURNING json_build_object('in', 'group chat', 'group_chat_id', group_chat_id, 'activity_type', activity_type, 'activity_info', activity_info) INTO activity_data;
   
   SELECT array_agg(member_id) FROM group_chat_membership 
   WHERE group_chat_id = in_group_chat_id AND member_id != in_admin[1] AND deleted = false
@@ -1003,6 +1003,7 @@ BEGIN
   
   sender_resp_data := json_build_object('new_msg_id', new_msg_id);
   receiver_resp_data := json_build_object(
+	  'in', 'dm chat',
 	  'msg_id', new_msg_id,
 	  'dm_chat_id', in_dm_chat_id,
 	  'sender', sender_info,
@@ -1054,6 +1055,7 @@ BEGIN
   
   sender_resp_data := json_build_object('new_msg_id', new_msg_id);
   member_resp_data := json_build_object(
+	  'in', 'group chat',
 	  'msg_id', new_msg_id,
 	  'group_chat_id', in_group_chat_id,
 	  'sender', sender_info,

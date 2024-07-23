@@ -55,6 +55,12 @@ func MapToStruct(val map[string]any, structData any) {
 	json.Unmarshal(bt, structData)
 }
 
+func ToStruct(val any, structData any) {
+	bt, _ := json.Marshal(val)
+
+	json.Unmarshal(bt, structData)
+}
+
 func ErrResp(code int, err error) appTypes.WSResp {
 	if errors.Is(err, ErrInternalServerError) {
 		return appTypes.WSResp{StatusCode: 500, Error: ErrInternalServerError.Error()}

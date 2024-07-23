@@ -12,7 +12,7 @@ import (
 func broadcastNewGroup(initMembers [][]appTypes.String, initMemberData *groupChat.InitMemberData) {
 	for _, initMember := range initMembers {
 		initMemberId := initMember[0]
-		go appObservers.GroupChatObserver{}.Send(fmt.Sprintf("user-%s", initMemberId), initMemberData, "new group chat")
+		go appObservers.GroupChatObserver{}.Send(fmt.Sprintf("user-%s", initMemberId), initMemberData, "new chat")
 	}
 }
 
@@ -47,7 +47,7 @@ func NewGroupChat(name string, description string, pictureData []byte, creator [
 func broadcastActivity(newActivity *groupChat.NewActivity) {
 
 	for _, mId := range newActivity.MembersIds {
-		go appObservers.GroupChatObserver{}.Send(fmt.Sprintf("user-%d", mId), newActivity.ActivityInfo, "new group activity")
+		go appObservers.GroupChatObserver{}.Send(fmt.Sprintf("user-%d", mId), newActivity.ActivityInfo, "new activity")
 	}
 }
 
@@ -158,7 +158,7 @@ func RemoveUserFromGroupAdmins(groupChatId int, clientUser []string, user []appT
 func broadcastNewMessage(membersIds []int, memberData *groupChat.MemberData) {
 	for _, mId := range membersIds {
 		memberId := mId
-		go appObservers.GroupChatObserver{}.Send(fmt.Sprintf("user-%d", memberId), memberData, "new group message")
+		go appObservers.GroupChatObserver{}.Send(fmt.Sprintf("user-%d", memberId), memberData, "new message")
 	}
 }
 

@@ -8,5 +8,5 @@ import (
 
 func Init(router fiber.Router) {
 	router.Get("/chat_history", dcc.GetChatHistory)
-	router.Get("/open_messaging_stream/:dm_chat_id", dcc.OpenMessagingStream)
+	router.Get("/:dm_chat_id/open_messaging_stream", dcc.OpenMessagingStream)
 }

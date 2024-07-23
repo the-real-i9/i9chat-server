@@ -52,7 +52,7 @@ var GetChatHistory = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 	}
 })
 
-// this handler receives message acknowlegement for sent messages,
+// this handler receives message acknowlegement for messages sent in an active chat,
 // and in turn changes the delivery status of messages sent by the child goroutine
 var OpenMessagingStream = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 	clientUser := c.Locals("auth").(*appTypes.ClientUser)
