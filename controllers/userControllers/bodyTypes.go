@@ -103,10 +103,10 @@ func (b openGroupChatStreamBody) Validate() error {
 }
 
 type newGroupChatBodyT struct {
-	Name        string `json:"name"`
-	Description string `json:"description"`
-	PictureData []byte `json:"pictureData"`
-	InitUsers   [][]appTypes.String
+	Name        string              `json:"name"`
+	Description string              `json:"description"`
+	PictureData []byte              `json:"pictureData"`
+	InitUsers   [][]appTypes.String `json:"initUsers"`
 }
 
 func (b newGroupChatBodyT) Validate() error {
@@ -145,7 +145,7 @@ func (b ackMsgsBodyT) Validate() error {
 }
 
 type findNearbyUsersBody struct {
-	LiveLocation string
+	LiveLocation string `json:"liveLocation"`
 }
 
 func (b findNearbyUsersBody) Validate() error {
@@ -158,7 +158,7 @@ func (b findNearbyUsersBody) Validate() error {
 }
 
 type updateMyGeolocationBody struct {
-	NewGeolocation string
+	NewGeolocation string `json:"newGeolocation"`
 }
 
 func (b updateMyGeolocationBody) Validate() error {
@@ -171,8 +171,8 @@ func (b updateMyGeolocationBody) Validate() error {
 }
 
 type switchMyPresenceBody struct {
-	Presence string
-	LastSeen pgtype.Timestamp
+	Presence string           `json:"presence"`
+	LastSeen pgtype.Timestamp `json:"lastSeen"`
 }
 
 func (b switchMyPresenceBody) Validate() error {

@@ -19,11 +19,11 @@ import (
 var ChangeProfilePicture = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 	clientUser := c.Locals("auth").(*appTypes.ClientUser)
 
-	var body changeProfilePictureBody
-
 	var w_err error
 
 	for {
+		var body changeProfilePictureBody
+
 		if w_err != nil {
 			log.Println(w_err)
 			break
@@ -107,18 +107,19 @@ var OpenDMChatStream = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 //
 // + sending acknowledgements for received dm messages
 func createNewDMChatAndAckMessages(c *websocket.Conn, clientUser *appTypes.ClientUser, endSession func()) {
-	var body openDMChatStreamBody
-
-	var newChatBody newDMChatBodyT
-
-	// For DM Chat, we allowed options for both single and batch acknowledgements
-	var ackMsgBody ackMsgBodyT
-
-	var batchAckMsgBody batchAckMsgBodyT
 
 	var w_err error
 
 	for {
+		var body openDMChatStreamBody
+
+		var newChatBody newDMChatBodyT
+
+		// For DM Chat, we allowed options for both single and batch acknowledgements
+		var ackMsgBody ackMsgBodyT
+
+		var batchAckMsgBody batchAckMsgBodyT
+
 		if w_err != nil {
 			log.Println(w_err)
 			endSession()
@@ -258,17 +259,18 @@ var OpenGroupChatStream = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 //
 // + sending acknowledgement for received group messages
 func createNewGroupChatAndAckMessages(c *websocket.Conn, clientUser *appTypes.ClientUser, endSession func()) {
-	var body openGroupChatStreamBody
-
-	var newChatBody newGroupChatBodyT
-
-	// For Group chat, messages should be acknowledged in batches,
-	// and it's only for a single group chat at a time
-	var ackMsgsBody ackMsgsBodyT
 
 	var w_err error
 
 	for {
+		var body openGroupChatStreamBody
+
+		var newChatBody newGroupChatBodyT
+
+		// For Group chat, messages should be acknowledged in batches,
+		// and it's only for a single group chat at a time
+		var ackMsgsBody ackMsgsBodyT
+
 		if w_err != nil {
 			log.Println(w_err)
 			endSession()
@@ -385,21 +387,22 @@ var GetAllUsers = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 var SearchUser = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 	clientUser := c.Locals("auth").(*appTypes.ClientUser)
 
-	var body struct {
-		Query string
-	}
-
 	var w_err error
 
 	for {
+		var body struct {
+			Query string
+		}
+
 		if w_err != nil {
 			log.Println(w_err)
-			return
+			break
 		}
 
 		r_err := c.ReadJSON(&body)
 		if r_err != nil {
-			return
+			log.Println(r_err)
+			break
 		}
 
 		searchResult, app_err := user.Search(clientUser.Id, body.Query)
@@ -419,19 +422,20 @@ var SearchUser = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 var FindNearbyUsers = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 	clientUser := c.Locals("auth").(*appTypes.ClientUser)
 
-	var body findNearbyUsersBody
-
 	var w_err error
 
 	for {
+		var body findNearbyUsersBody
+
 		if w_err != nil {
 			log.Println(w_err)
-			return
+			break
 		}
 
 		r_err := c.ReadJSON(&body)
 		if r_err != nil {
-			return
+			log.Println(r_err)
+			break
 		}
 
 		if val_err := body.Validate(); val_err != nil {
@@ -456,19 +460,20 @@ var FindNearbyUsers = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 var SwitchMyPresence = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 	clientUser := c.Locals("auth").(*appTypes.ClientUser)
 
-	var body switchMyPresenceBody
-
 	var w_err error
 
 	for {
+		var body switchMyPresenceBody
+
 		if w_err != nil {
 			log.Println(w_err)
-			return
+			break
 		}
 
 		r_err := c.ReadJSON(&body)
 		if r_err != nil {
-			return
+			log.Println(r_err)
+			break
 		}
 
 		if val_err := body.Validate(); val_err != nil {
@@ -503,12 +508,13 @@ var UpdateMyGeolocation = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 	for {
 		if w_err != nil {
 			log.Println(w_err)
-			return
+			break
 		}
 
 		r_err := c.ReadJSON(&body)
 		if r_err != nil {
-			return
+			log.Println(r_err)
+			break
 		}
 
 		if val_err := body.Validate(); val_err != nil {

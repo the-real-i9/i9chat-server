@@ -27,7 +27,7 @@ The are two **formats of received data** :
 
   ```txt
     {
-      "statusCode": 4xx,
+      "statusCode": 4xx | 5xx,
       "error": "reason for error"
     }
   ```
@@ -37,7 +37,7 @@ The structure of a message's content, sent and received during interaction, is f
 
 ## API Endpoints
 
-All communication is implemented with WebSocket, therefore, all URLs are of the `ws://` protocol. Futhermore, all sent/received data are of the JSON data type.
+All communication is implemented with WebSocket, therefore, all URLs are of the `wss://` protocol. Futhermore, all sent/received data are of the JSON data type.
 
 The endpoint usage instructions follow a defined pattern:
 
@@ -91,7 +91,7 @@ Creating an account (Sign up) is divided into three steps. Each step is uniquely
 
 Here, the client submits their email and a verification code is sent to it.
 
-**URL:** `ws://localhost:8000/api/auth/signup/request_new_account`
+**URL:** `wss://localhost:8000/api/auth/signup/request_new_account`
 
 **Sent Data:**
 
@@ -130,7 +130,7 @@ Finally, close the open connection and navigate the user to the email verificati
 
 Here, the client provides the verification code sent to the email in the previous step. Any attempt to access these steps out of order will result in an error.
 
-**URL:** `ws://localhost:8000/api/auth/signup/verify_email`
+**URL:** `wss://localhost:8000/api/auth/signup/verify_email`
 
 **Sent Header:** `Authorization: Bearer ${signupSessionJwt}`
 
@@ -161,20 +161,21 @@ Here, the client provides the verification code sent to the email in the previou
   "error": "Incorrect verification code. Check your email or re-submit your email",
   "error": "Verification code has expired. Re-submit your email"
 }
-// Note: The duplicated `error` keys here are just to provide the two possible errors you can get.
 ```
+
+Note: The duplicated `error` keys here are just to specify the two possible error messages you can get.
 
 ### Sign up: Register User - (Step 3)
 
 Here, the client provides the user's account information to be used for registration.
 
-**URL:** `ws://localhost:8000/api/auth/signup/register_user`
+**URL:** `wss://localhost:8000/api/auth/signup/register_user`
 
 **Sent Header:** `Authorization: Bearer ${signupSessionJwt}`
 
 **Sent Data:**
 
-Note: `geolocation` data should not be provided explicitly by the user, rather it should be provided somehow by the client application.
+Note: `geolocation` data should not be provided explicitly by the user, rather it should be provided by the client application. The value format is a circle specified as: `pointX, pointY, radiusR`.
 
 ```json
 {
@@ -211,7 +212,7 @@ Note: `geolocation` data should not be provided explicitly by the user, rather i
 
 ### Sign in
 
-**URL:** `ws://localhost:8000/api/auth/signin`
+**URL:** `wss://localhost:8000/api/auth/signin`
 
 **Sent Data:**
 
@@ -249,7 +250,7 @@ Note: `geolocation` data should not be provided explicitly by the user, rather i
 
 ### Change profile picture
 
-**URL:** `ws://localhost:8000/api/app/user/change_profile_picture`
+**URL:** `wss://localhost:8000/api/app/user/change_profile_picture`
 
 **Sent Header:** `Authorization: Bearer ${authJwt}`
 
@@ -285,7 +286,7 @@ The value `pictureData` is of a binary data representation, a `uint8` array, pre
 
 ### Update Client's Geolocation
 
-**URL:** `ws://localhost:8000/api/app/user/update_my_geolocation`
+**URL:** `wss://localhost:8000/api/app/user/update_my_geolocation`
 
 **Sent Header:** `Authorization: Bearer ${authJwt}`
 
@@ -293,7 +294,7 @@ The value `pictureData` is of a binary data representation, a `uint8` array, pre
 
 Clients should be able to update their current location if, perhaps, they move to a new place and want to be seen nearby.
 
-Format: `latitude, longitude, center` or `(latitude, longitude), center`
+Format (Circle): `pointX, pointY, radiusR`.
 
 ```json
 {
@@ -316,7 +317,7 @@ Format: `latitude, longitude, center` or `(latitude, longitude), center`
 
 The client application should detect and update the client's presence on the server.
 
-**URL:** `ws://localhost:8000/api/app/user/switch_my_presence`
+**URL:** `wss://localhost:8000/api/app/user/switch_my_presence`
 
 **Sent Header:** `Authorization: Bearer ${authJwt}`
 
@@ -324,7 +325,7 @@ The client application should detect and update the client's presence on the ser
 
 The value of `presence` is either `online` or `offline`.
 
-If `presence`'s value is `offline`, then the value of `lastSeen` should be the time the client went offline, else the value of `lastSeen` should be `null`.
+If `presence`'s value is `offline`, then the value of `lastSeen` should be the time the client went offline, otherwise it must not be specified.
 
 ```json
 {
@@ -334,7 +335,6 @@ If `presence`'s value is `offline`, then the value of `lastSeen` should be the t
 
 {
   "presence": "online",
-  "lastSeen": null
 }
 ```
 
@@ -353,7 +353,7 @@ If `presence`'s value is `offline`, then the value of `lastSeen` should be the t
 
 For some reason you might want to get all users, perhaps, to start a new dm chat, create a group or add participants.
 
-**URL:** `ws://localhost:8000/api/app/user/all_users`
+**URL:** `wss://localhost:8000/api/app/user/all_users`
 
 **Sent Header:** `Authorization: Bearer ${authJwt}`
 
@@ -364,22 +364,14 @@ For some reason you might want to get all users, perhaps, to start a new dm chat
   "statusCode": 200,
   "body":  [
     {
-      "type": "dm",
-      "chat_id": 1,
-      "partner": {
-        "user_id": 4,
-        "username": "risotto",
-        "profile_pic_url": "someurl.jpg"
-      },
-      "updated_at": "${some date}"
+      "user_id": 4,
+      "username": "david",
+      "profile_pic_url": "someurl.jpg"
     },
     {
-      "type": "group",
-      "chat_id": 2,
-      "name": "Class of 2018",
-      "description": "Still wondering what we are...",
-      "picture_url": "someurl.jpg",
-      "updated_at": "${some date}"
+      "user_id": 5,
+      "username": "daemon",
+      "profile_pic_url": "someurl.jpg"
     }
   ],
 }
@@ -389,7 +381,7 @@ For some reason you might want to get all users, perhaps, to start a new dm chat
 
 For some reason you might want to search user, perhaps, to start a new dm chat, narrow the search result when creating a group or adding participants.
 
-**URL:** `ws://localhost:8000/api/app/user/search_user`
+**URL:** `wss://localhost:8000/api/app/user/search_user`
 
 **Sent Header:** `Authorization: Bearer ${authJwt}`
 
@@ -423,7 +415,7 @@ For some reason you might want to search user, perhaps, to start a new dm chat, 
 
 ### Find Nearby Users
 
-**URL:** `ws://localhost:8000/api/app/user/find_nearby_users`
+**URL:** `wss://localhost:8000/api/app/user/find_nearby_users`
 
 **Sent Header:** `Authorization: Bearer ${authJwt}`
 
@@ -461,7 +453,7 @@ The client application should provide a location value at present time: `latitud
 
 Access this endpoint provided the client's chat list is not previously cached. After which you must access the endpoints: `.../open_dm_chat_stream` and `.../open_group_chat_stream` below.
 
-**URL:** `ws://localhost:8000/api/app/user/my_chats`
+**URL:** `wss://localhost:8000/api/app/user/my_chats`
 
 **Sent Header:** `Authorization: Bearer ${authJwt}`
 
@@ -505,7 +497,7 @@ This stream (endpoint) should open (be accessed) as soon as the client is online
 
 > Note! The structure of a chat message is defined in the "Send message" endpoint section.
 
-**URL:** `ws://localhost:8000/api/app/user/open_dm_chat_stream`
+**URL:** `wss://localhost:8000/api/app/user/open_dm_chat_stream`
 
 **Sent Header:** `Authorization: Bearer ${authJwt}`
 
@@ -672,7 +664,7 @@ The client is expected to perform "optimistic UI" rendering with the data used t
 
 This stream (endpoint) should open (be accessed) as soon as the client is online, and remain open until the client goes offline, after which it is closed. This, basically, is how the client lets the server know they are online or offline.
 
-**URL:** `ws://localhost:8000/api/app/user/open_group_chat_stream`
+**URL:** `wss://localhost:8000/api/app/user/open_group_chat_stream`
 
 **Sent Header:** `Authorization: Bearer ${authJwt}`
 
@@ -928,7 +920,7 @@ The client is expected to perform "optimistic UI" rendering with data it uses to
 
 ### Get DM Chat History
 
-**URL:** `ws://localhost:8000/api/app/dm_chat/chat_history`
+**URL:** `wss://localhost:8000/api/app/dm_chat/chat_history`
 
 **Sent Header:** `Authorization: Bearer ${authJwt}`
 
@@ -990,7 +982,7 @@ You should know that, if the client is the sender (`clientUserId = sender.id`), 
 
 ### Get Group Chat History
 
-**URL:** `ws://localhost:8000/api/app/group_chat/chat_history`
+**URL:** `wss://localhost:8000/api/app/group_chat/chat_history`
 
 **Sent Header:** `Authorization: Bearer ${authJwt}`
 
@@ -1065,7 +1057,7 @@ This stream (endpoint) is where the client *sends messages* and *receives delive
 
 This stream (endpoint) should be opened (accessed) as soon as the client enters a DM chat session, and closed when the client leaves this session off to another, whose stream also opens for messaging.
 
-**URL:** `ws://localhost:8000/api/app/dm_chat/open_messaging_stream/:dm_chat_id`.
+**URL:** `wss://localhost:8000/api/app/dm_chat/open_messaging_stream/:dm_chat_id`.
 
 *`:dm_chat_id` must be replaced with the target DM chat's unique id in the URL (`..._stream/5`, where `5` is the target DM chat's unique id).*
 
@@ -1235,7 +1227,7 @@ This stream (endpoint) is where the client *sends messages* and *receives delive
 
 This stream (endpoint) should be opened (accessed) as soon as the client enters a Group chat session, and closed when the client leaves this session off to another, whose stream also opens for messaging.
 
-**URL:** `ws://localhost:8000/api/app/group_chat/open_messaging_stream/:group_chat_id`.
+**URL:** `wss://localhost:8000/api/app/group_chat/open_messaging_stream/:group_chat_id`.
 
 *`:group_chat_id` must be replaced with the target Group chat's unique id in the URL (`..._stream/5`, where `5` is the target Group chat's unique id).*
 
@@ -1303,7 +1295,7 @@ Several special actions occur in a group. Examples include, changing a group's n
 
 Actions executed in a group result into a `new activity` event being sent to group members.
 
-**URL:** `ws://localhost:8000/api/app/group_chat/execute_action`.
+**URL:** `wss://localhost:8000/api/app/group_chat/execute_action`.
 
 **Sent Header:** `Authorization: Bearer ${authJwt}`
 

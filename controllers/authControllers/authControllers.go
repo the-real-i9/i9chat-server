@@ -13,11 +13,12 @@ import (
 )
 
 var RequestNewAccount = websocket.New(func(c *websocket.Conn) {
-	var body requestNewAccountBody
 
 	var w_err error
 
 	for {
+		var body requestNewAccountBody
+
 		if w_err != nil {
 			log.Println(w_err)
 			break
@@ -63,11 +64,11 @@ var VerifyEmail = websocket.New(func(c *websocket.Conn) {
 		return
 	}
 
-	var body verifyEmailBody
-
 	var w_err error
 
 	for {
+		var body verifyEmailBody
+
 		if w_err != nil {
 			log.Println(w_err)
 			break
@@ -111,11 +112,11 @@ var RegisterUser = websocket.New(func(c *websocket.Conn) {
 		return
 	}
 
-	var body registerUserBody
-
 	var w_err error
 
 	for {
+		var body registerUserBody
+
 		if w_err != nil {
 			log.Println(w_err)
 			break
@@ -151,11 +152,12 @@ var RegisterUser = websocket.New(func(c *websocket.Conn) {
 })
 
 var Signin = websocket.New(func(c *websocket.Conn) {
-	var body signInBody
 
 	var w_err error
 
 	for {
+		var body signInBody
+
 		if w_err != nil {
 			log.Println(w_err)
 			break

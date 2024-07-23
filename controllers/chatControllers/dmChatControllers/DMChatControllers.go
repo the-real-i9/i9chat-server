@@ -17,11 +17,11 @@ import (
 
 var GetChatHistory = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 
-	var body getChatHistoryBody
-
 	var w_err error
 
 	for {
+		var body getChatHistoryBody
+
 		if w_err != nil {
 			log.Println(w_err)
 			return
@@ -97,11 +97,12 @@ var OpenMessagingStream = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 
 // this goroutine sends messages
 func sendMessages(c *websocket.Conn, clientUser *appTypes.ClientUser, dmChatId int, endSession func()) {
-	var body openMessagingStreamBody
 
 	var w_err error
 
 	for {
+		var body openMessagingStreamBody
+
 		if w_err != nil {
 			log.Println(w_err)
 			endSession()

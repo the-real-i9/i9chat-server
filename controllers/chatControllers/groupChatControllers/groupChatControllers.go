@@ -17,11 +17,11 @@ import (
 
 var GetChatHistory = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 
-	var body getChatHistoryBody
-
 	var w_err error
 
 	for {
+		var body getChatHistoryBody
+
 		if w_err != nil {
 			log.Println(w_err)
 			return
@@ -97,11 +97,12 @@ var OpenMessagingStream = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 
 func sendMessages(c *websocket.Conn, clientUser *appTypes.ClientUser, groupChatId int, endSession func()) {
 	// this goroutine sends messages
-	var body openMessagingStreamBody
 
 	var w_err error
 
 	for {
+		var body openMessagingStreamBody
+
 		if w_err != nil {
 			log.Println(w_err)
 			endSession()
@@ -153,11 +154,11 @@ var ExecuteAction = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 		"remove user from admins": removeUserFromGroupAdmins,
 	}
 
-	var body executeActionBody
-
 	var w_err error
 
 	for {
+		var body executeActionBody
+
 		if w_err != nil {
 			log.Println(w_err)
 			break

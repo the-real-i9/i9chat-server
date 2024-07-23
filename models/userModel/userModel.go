@@ -114,7 +114,7 @@ func SwitchPresence(userId int, presence string, lastSeen pgtype.Timestamp) erro
 
 func UpdateLocation(userId int, newGeolocation string) error {
 
-	_, err := helpers.QueryRowField[bool]("SELECT update_user_location($1, $2, $3)", userId, newGeolocation)
+	_, err := helpers.QueryRowField[bool]("SELECT update_user_location($1, $2)", userId, newGeolocation)
 
 	if err != nil {
 		log.Println(fmt.Errorf("userModel.go: UpdateLocation: %s", err))
