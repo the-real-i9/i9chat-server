@@ -362,16 +362,21 @@ For some reason you might want to get all users, perhaps, to start a new dm chat
 ```json
 {
   "statusCode": 200,
-  "body":  [
+  "body": [
     {
-      "user_id": 4,
-      "username": "david",
-      "profile_pic_url": "someurl.jpg"
-    },
-    {
-      "user_id": 5,
-      "username": "daemon",
-      "profile_pic_url": "someurl.jpg"
+      "id": 4,
+      "username": "butcher",
+      "profile_picture_url": "",
+      "presence": "online",
+      "last_seen": null,
+      "location": {
+        "P": {
+          "X": 0,
+          "Y": 1
+        },
+        "R": 6,
+        "Valid": true
+      }
     }
   ],
 }
@@ -389,7 +394,7 @@ For some reason you might want to search user, perhaps, to start a new dm chat, 
 
 ```json
 {
-  "query": "da"
+  "query": "cher"
 }
 ```
 
@@ -398,16 +403,21 @@ For some reason you might want to search user, perhaps, to start a new dm chat, 
 ```json
 {
   "statusCode": 200,
-  "body":  [
+  "body": [
     {
-      "user_id": 4,
-      "username": "david",
-      "profile_pic_url": "someurl.jpg"
-    },
-    {
-      "user_id": 5,
-      "username": "daemon",
-      "profile_pic_url": "someurl.jpg"
+      "id": 4,
+      "username": "butcher",
+      "profile_picture_url": "",
+      "presence": "online",
+      "last_seen": null,
+      "location": {
+        "P": {
+          "X": 0,
+          "Y": 1
+        },
+        "R": 6,
+        "Valid": true
+      }
     }
   ],
 }
@@ -421,11 +431,11 @@ For some reason you might want to search user, perhaps, to start a new dm chat, 
 
 **Sent Data:**
 
-The client application should provide a location value at present time: `latitude, longitude, center` or `(latitude, longitude), center`
+The client application should provide a location (circle) value at present time: `pointX, pointY, radiusR`.
 
 ```json
 {
-  "liveLocation": "5, 2, 4"
+  "liveLocation": "0, 1, 2"
 }
 ```
 
@@ -434,16 +444,21 @@ The client application should provide a location value at present time: `latitud
 ```json
 {
   "statusCode": 200,
-  "body":  [
+  "body": [
     {
-      "user_id": 4,
-      "username": "david",
-      "profile_pic_url": "someurl.jpg"
-    },
-    {
-      "user_id": 5,
-      "username": "daemon",
-      "profile_pic_url": "someurl.jpg"
+      "id": 4,
+      "username": "butcher",
+      "profile_picture_url": "",
+      "presence": "online",
+      "last_seen": null,
+      "location": {
+        "P": {
+          "X": 0,
+          "Y": 1
+        },
+        "R": 6,
+        "Valid": true
+      }
     }
   ],
 }

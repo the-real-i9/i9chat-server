@@ -348,18 +348,28 @@ var GetMyChats = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 	myChats, app_err := user.GetChats(clientUser.Id)
 
 	var w_err error
-	if app_err != nil {
-		w_err = c.WriteJSON(helpers.ErrResp(fiber.StatusInternalServerError, app_err))
-	} else {
+
+	for {
+		if w_err != nil {
+			log.Println(w_err)
+			break
+		}
+
+		if app_err != nil {
+			w_err = c.WriteJSON(helpers.ErrResp(fiber.StatusInternalServerError, app_err))
+			continue
+		}
+
 		w_err = c.WriteJSON(appTypes.WSResp{
 			StatusCode: fiber.StatusOK,
 			Body:       myChats,
 		})
-	}
 
-	if w_err != nil {
-		log.Println(w_err)
-		return
+		var body struct{}
+		if r_err := c.ReadJSON(&body); r_err != nil {
+			log.Println(r_err)
+			break
+		}
 	}
 })
 
@@ -369,18 +379,28 @@ var GetAllUsers = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 	allUsers, app_err := user.GetAll(clientUser.Id)
 
 	var w_err error
-	if app_err != nil {
-		w_err = c.WriteJSON(helpers.ErrResp(fiber.StatusUnprocessableEntity, app_err))
-	} else {
+
+	for {
+		if w_err != nil {
+			log.Println(w_err)
+			break
+		}
+
+		if app_err != nil {
+			w_err = c.WriteJSON(helpers.ErrResp(fiber.StatusUnprocessableEntity, app_err))
+			continue
+		}
+
 		w_err = c.WriteJSON(appTypes.WSResp{
 			StatusCode: fiber.StatusOK,
 			Body:       allUsers,
 		})
-	}
 
-	if w_err != nil {
-		log.Println(w_err)
-		return
+		var body struct{}
+		if r_err := c.ReadJSON(&body); r_err != nil {
+			log.Println(r_err)
+			break
+		}
 	}
 })
 

@@ -19,6 +19,10 @@ func (b changeProfilePictureBody) Validate() error {
 		validation.Field(&b.PictureData,
 			validation.Required,
 		),
+		validation.Field(&b.PictureData,
+			validation.Required,
+			validation.Length(1, 2*1024*1024).Error("maximum picture size of 2mb exceeded"),
+		),
 	)
 }
 
