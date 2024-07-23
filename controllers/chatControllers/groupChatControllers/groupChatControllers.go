@@ -59,7 +59,13 @@ var OpenMessagingStream = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 
 	var groupChatId int
 
-	fmt.Sscanf(c.Params("group_chat_id"), "%d", &groupChatId)
+	_, param_err := fmt.Sscanf(c.Params("group_chat_id"), "%d", &groupChatId)
+	if param_err != nil {
+		if w_err := c.WriteJSON(helpers.ErrResp(fiber.StatusBadRequest, fmt.Errorf("parameter group_chat_id is not a number"))); w_err != nil {
+			log.Println(w_err)
+		}
+		return
+	}
 
 	var myMailbox = make(chan map[string]any, 2)
 

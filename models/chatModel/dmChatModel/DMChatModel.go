@@ -86,9 +86,9 @@ type messageReaction struct {
 }
 
 type Message struct {
-	Id             int               `json:"id"`
+	Id             int               `db:"msg_id" json:"msg_id"`
 	Sender         user.User         `json:"sender"`
-	Content        map[string]any    `json:"content"`
+	MsgContent     map[string]any    `db:"msg_content" json:"msg_content"`
 	DeliveryStatus string            `db:"delivery_status" json:"delivery_status"`
 	CreatedAt      pgtype.Timestamp  `db:"created_at" json:"created_at"`
 	Edited         bool              `json:"edited"`
@@ -98,8 +98,8 @@ type Message struct {
 
 func GetChatHistory(dmChatId, offset int) ([]*Message, error) {
 	messages, err := helpers.QueryRowsType[Message](`
-	SELECT message FROM (
-		SELECT message, created_at FROM get_dm_chat_history($1) 
+	SELECT * FROM (
+		SELECT * FROM get_dm_chat_history($1) 
 		LIMIT 50 OFFSET $2
 	) ORDER BY created_at ASC`, dmChatId, offset)
 	if err != nil {

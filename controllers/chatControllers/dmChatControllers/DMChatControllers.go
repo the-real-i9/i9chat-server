@@ -59,7 +59,13 @@ var OpenMessagingStream = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 
 	var dmChatId int
 
-	fmt.Sscanf(c.Params("dm_chat_id"), "%d", &dmChatId)
+	_, param_err := fmt.Sscanf(c.Params("dm_chat_id"), "%d", &dmChatId)
+	if param_err != nil {
+		if w_err := c.WriteJSON(helpers.ErrResp(fiber.StatusBadRequest, fmt.Errorf("parameter dm_chat_id is not a number"))); w_err != nil {
+			log.Println(w_err)
+		}
+		return
+	}
 
 	var myMailbox = make(chan map[string]any, 3)
 

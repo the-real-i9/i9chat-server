@@ -16,7 +16,7 @@ type getChatHistoryBody struct {
 func (b getChatHistoryBody) Validate() error {
 	return validation.ValidateStruct(&b,
 		validation.Field(&b.DMChatId, validation.Required, validation.Min(1).Error("invalid value")),
-		validation.Field(&b.Offset, validation.Required, validation.Min(0).Error("invalid negative offset")),
+		validation.Field(&b.Offset, validation.Min(0).Error("invalid negative offset")),
 	)
 }
 
