@@ -79,7 +79,15 @@ func BatchQuery[T any](sqls []string, params [][]any) ([]*T, error) {
 
 	for i, sql := range sqls {
 		batch.Queue(sql, params[i]...).QueryRow(func(row pgx.Row) error {
-			return row.Scan(res[i])
+			var sr *T
+
+			if err := row.Scan(sr); err != nil {
+				return err
+			}
+
+			res[i] = sr
+
+			return nil
 		})
 	}
 
