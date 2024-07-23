@@ -81,8 +81,8 @@ func ReactToMessage(dmChatId, msgId, reactorId int, reaction rune) error {
 }
 
 type messageReaction struct {
-	Reaction rune      `json:"reaction,omitempty"`
-	Reactor  user.User `json:"reactor,omitempty"`
+	Reaction rune       `json:"reaction,omitempty"`
+	Reactor  *user.User `json:"reactor,omitempty"`
 }
 
 type Message struct {
@@ -92,7 +92,7 @@ type Message struct {
 	DeliveryStatus string            `db:"delivery_status" json:"delivery_status"`
 	CreatedAt      pgtype.Timestamp  `db:"created_at" json:"created_at"`
 	Edited         bool              `json:"edited"`
-	EditedAt       pgtype.Timestamp  `db:"edited_at" json:"edited_at"`
+	EditedAt       *pgtype.Timestamp `db:"edited_at" json:"edited_at,omitempty"`
 	Reactions      []messageReaction `json:"reactions"`
 }
 

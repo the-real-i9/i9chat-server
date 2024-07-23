@@ -198,8 +198,8 @@ func BatchUpdateMessageDeliveryStatus(groupChatId int, receiverId int, status st
 }
 
 type messageReaction struct {
-	Reaction rune      `json:"reaction,omitempty"`
-	Reactor  user.User `json:"reactor,omitempty"`
+	Reaction rune       `json:"reaction,omitempty"`
+	Reactor  *user.User `json:"reactor,omitempty"`
 }
 
 type HistoryItem struct {
@@ -207,12 +207,12 @@ type HistoryItem struct {
 
 	// if Type = "message"
 	Id             int               `json:"id,omitempty"`
-	Sender         user.User         `json:"sender,omitempty"`
+	Sender         *user.User        `json:"sender,omitempty"`
 	Content        map[string]any    `json:"content,omitempty"`
 	DeliveryStatus string            `db:"delivery_status" json:"delivery_status,omitempty"`
-	CreatedAt      pgtype.Timestamp  `db:"created_at" json:"created_at,omitempty"`
+	CreatedAt      *pgtype.Timestamp `db:"created_at" json:"created_at,omitempty"`
 	Edited         bool              `json:"edited,omitempty"`
-	EditedAt       pgtype.Timestamp  `db:"edited_at" json:"edited_at,omitempty"`
+	EditedAt       *pgtype.Timestamp `db:"edited_at" json:"edited_at,omitempty"`
 	Reactions      []messageReaction `json:"reactions,omitempty"`
 
 	// if Type = "activity"
