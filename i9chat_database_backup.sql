@@ -324,24 +324,24 @@ ALTER FUNCTION public.get_dm_chat_events_pending_receipt(in_user_id integer) OWN
 -- Name: get_dm_chat_history(integer); Type: FUNCTION; Schema: public; Owner: postgres
 --
 
-CREATE FUNCTION public.get_dm_chat_history(in_dm_chat_id integer) RETURNS TABLE(message json, created_at timestamp without time zone)
+CREATE FUNCTION public.get_dm_chat_history(in_dm_chat_id integer) RETURNS TABLE(msg_id integer, sender json, msg_content json, edited boolean, delivery_status character varying, created_at timestamp without time zone, edited_at timestamp without time zone, reactions json)
     LANGUAGE plpgsql
     AS $$
 BEGIN
   RETURN QUERY 
-  SELECT json_build_object(
-	  'id', dcm.id,
-	  'sender', json_build_object(
+  SELECT dcm.id,
+	json_build_object(
 		  'id', sender.id,
 		  'username', sender.username,
 		  'profile_picture_url', sender.profile_picture_url
-	  ),
-	  'content', dcm.msg_content,
-	  'edited', dcm.edited,
-	  'delivery_status', dcm.delivery_status,
-	  'created_at', dcm.created_at,
-	  'edited_at', dcm.edited_at,
-	  'reactions', json_agg(
+	  ) AS sender,
+	  dcm.msg_content,
+	  dcm.edited,
+	  dcm.delivery_status,
+	  dcm.created_at,
+	  dcm.edited_at,
+	  CASE WHEN COUNT(dcmr.reaction)::int > 0 THEN
+	  json_agg(
 		  json_build_object(
 			  'reaction', dcmr.reaction,
 			  'reactor', json_build_object(
@@ -350,11 +350,11 @@ BEGIN
 				  'profile_picture_url', reactor.profile_picture_url
 			  )
 		  )
-	  )
-  ) AS msg, dcm.created_at FROM dm_chat_message dcm
+	) ELSE '[]'::json END AS reactions
+  FROM dm_chat_message dcm
   INNER JOIN i9c_user sender ON sender.id = dcm.sender_id
   LEFT JOIN dm_chat_message_reaction dcmr ON dcmr.message_id = dcm.id AND dcmr.deleted = false
-  INNER JOIN i9c_user reactor ON reactor.id = dcmr.reactor_id
+  LEFT JOIN i9c_user reactor ON reactor.id = dcmr.reactor_id
   WHERE dcm.dm_chat_id = in_dm_chat_id AND dcm.deleted = false
   GROUP BY dcm.id, sender.id
   ORDER BY dcm.created_at DESC;
