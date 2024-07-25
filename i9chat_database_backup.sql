@@ -410,46 +410,55 @@ ALTER FUNCTION public.get_group_chat_events_pending_receipt(in_user_id integer) 
 -- Name: get_group_chat_history(integer); Type: FUNCTION; Schema: public; Owner: postgres
 --
 
-CREATE FUNCTION public.get_group_chat_history(in_group_chat_id integer) RETURNS TABLE(history_item jsonb, time_created timestamp without time zone)
+CREATE FUNCTION public.get_group_chat_history(in_group_chat_id integer) RETURNS TABLE(type text, id integer, sender jsonb, msg_content jsonb, edited boolean, delivery_status character varying, created_at timestamp without time zone, edited_at timestamp without time zone, reactions jsonb, activity_type character varying, activity_info jsonb)
     LANGUAGE plpgsql
     AS $$
 BEGIN
   RETURN QUERY 
-  SELECT jsonb_build_object(
-	  'type', 'message',
-	  'id', gcm.id,
-	  'sender', jsonb_build_object(
+  SELECT 'message' AS type,
+	  gcm.id,
+	  jsonb_build_object(
 		  'id', sender.id,
 		  'username', sender.username,
 		  'profile_picture_url', sender.profile_picture_url
-	  ),
-	  'content', gcm.msg_content,
-	  'edited', gcm.edited,
-	  'delivery_status', gcm.delivery_status,
-	  'created_at', gcm.created_at,
-	  'edited_at', gcm.edited_at,
-	  'reactions', jsonb_agg(
+	  ) AS sender,
+	  gcm.msg_content::jsonb,
+	  gcm.edited,
+	  gcm.delivery_status,
+	  gcm.created_at,
+	  gcm.edited_at,
+	  CASE WHEN COUNT(gcmr.reaction)::int > 0 THEN
+	  jsonb_agg(
 		  jsonb_build_object(
 			  'reaction', gcmr.reaction,
-			  'reactor', jsonb_build_object(
+			  'reactor', json_build_object(
 				  'id', reactor.id,
 				  'username', reactor.username,
 				  'profile_picture_url', reactor.profile_picture_url
 			  )
 		  )
-	  )
-  ) AS hitem, gcm.created_at FROM group_chat_message gcm
+	) ELSE '[]'::jsonb END AS reactions,
+	null AS activity_type,
+	null::jsonb AS activity_info
+  FROM group_chat_message gcm
   INNER JOIN i9c_user sender ON sender.id = gcm.sender_id
   LEFT JOIN group_chat_message_reaction gcmr ON gcmr.message_id = gcm.id AND gcmr.deleted = false
-  INNER JOIN i9c_user reactor ON reactor.id = gcmr.reactor_id
+  LEFT JOIN i9c_user reactor ON reactor.id = gcmr.reactor_id
   WHERE gcm.group_chat_id = in_group_chat_id AND gcm.deleted = false
   GROUP BY gcm.id, sender.id
   UNION
-  SELECT jsonb_build_object(
-	  'type', 'activity',
-	  'activity_type', gcal.activity_type,
-	  'activity_info', gcal.activity_info
-  ) AS hitem, gcal.created_at FROM group_chat_activity_log gcal
+  SELECT 'activity' AS type,
+	null AS id,
+	null::jsonb AS sender,
+	null::jsonb AS msg_content,
+	null AS edited,
+	null AS delivery_status,
+	gcal.created_at,
+	null AS edited_at,
+	null::jsonb AS reactions,
+	gcal.activity_type,
+	gcal.activity_info::jsonb
+  FROM group_chat_activity_log gcal
   WHERE group_chat_id = in_group_chat_id
   ORDER BY created_at DESC;
   

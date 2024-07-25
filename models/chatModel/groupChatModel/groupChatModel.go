@@ -222,10 +222,10 @@ type HistoryItem struct {
 
 func GetChatHistory(groupChatId, offset int) ([]*HistoryItem, error) {
 	history, err := helpers.QueryRowsType[HistoryItem](`
-	SELECT history_item FROM (
-		SELECT history_item, time_created FROM get_group_chat_history($1)
+	SELECT * FROM (
+		SELECT * FROM get_group_chat_history($1)
 		LIMIT 50 OFFSET $2
-	) ORDER BY time_created ASC`, groupChatId, offset)
+	) ORDER BY created_at ASC`, groupChatId, offset)
 	if err != nil {
 		log.Println(fmt.Errorf("groupChatModel.go: GetChatHistory: %s", err))
 		return nil, helpers.ErrInternalServerError
