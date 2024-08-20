@@ -2,6 +2,7 @@ package dmChat
 
 import (
 	"fmt"
+	"i9chat/globals"
 	user "i9chat/models/userModel"
 	"i9chat/utils/appTypes"
 	"i9chat/utils/helpers"
@@ -36,7 +37,7 @@ func New(initiatorId int, partnerId int, initMsgContent map[string]any, createdA
 	newDMChat, err := helpers.QueryRowType[NewDMChat]("SELECT initiator_resp_data AS ird, partner_resp_data AS prd FROM new_dm_chat($1, $2, $3, $4)", initiatorId, partnerId, initMsgContent, createdAt)
 	if err != nil {
 		log.Println(fmt.Errorf("DMChatModel.go: New: %s", err))
-		return nil, helpers.ErrInternalServerError
+		return nil, globals.ErrInternalServerError
 	}
 
 	return newDMChat, nil
@@ -64,7 +65,7 @@ func SendMessage(dmChatId, senderId int, msgContent map[string]any, createdAt ti
 	newMessage, err := helpers.QueryRowType[NewMessage]("SELECT sender_resp_data AS srd, receiver_resp_data AS rrd, receiver_id FROM send_dm_chat_message($1, $2, $3, $4)", dmChatId, senderId, msgContent, createdAt)
 	if err != nil {
 		log.Println(fmt.Errorf("DMChatModel.go: SendMessage: %s", err))
-		return nil, helpers.ErrInternalServerError
+		return nil, globals.ErrInternalServerError
 	}
 
 	return newMessage, nil
@@ -74,7 +75,7 @@ func ReactToMessage(dmChatId, msgId, reactorId int, reaction rune) error {
 	_, err := helpers.QueryRowField[bool]("SELECT react_to_dm_chat_message($1, $2, $3, $4)", dmChatId, msgId, reactorId, strconv.QuoteRuneToASCII(reaction))
 	if err != nil {
 		log.Println(fmt.Errorf("DMChatModel.go: ReactToMessage: %s", err))
-		return helpers.ErrInternalServerError
+		return globals.ErrInternalServerError
 	}
 
 	return nil
@@ -104,7 +105,7 @@ func GetChatHistory(dmChatId, offset int) ([]*Message, error) {
 	) ORDER BY created_at ASC`, dmChatId, offset)
 	if err != nil {
 		log.Println(fmt.Errorf("DMChatModel.go: GetChatHistory: %s", err))
-		return nil, helpers.ErrInternalServerError
+		return nil, globals.ErrInternalServerError
 	}
 
 	return messages, nil
@@ -122,7 +123,7 @@ func BatchUpdateMessageDeliveryStatus(receiverId int, status string, ackDatas []
 	_, err := helpers.BatchQuery[bool](sqls, params)
 	if err != nil {
 		log.Println(fmt.Errorf("DMChatModel.go: BatchUpdateMessageDeliveryStatus: %s", err))
-		return helpers.ErrInternalServerError
+		return globals.ErrInternalServerError
 	}
 
 	return nil
@@ -132,7 +133,7 @@ func UpdateMessageDeliveryStatus(dmChatId, msgId, receiverId int, status string,
 	_, err := helpers.QueryRowField[bool]("SELECT update_dm_chat_message_delivery_status($1, $2, $3, $4, $5)", dmChatId, msgId, receiverId, status, updatedAt)
 	if err != nil {
 		log.Println(fmt.Errorf("DMChatModel.go: UpdateMessageDeliveryStatus: %s", err))
-		return helpers.ErrInternalServerError
+		return globals.ErrInternalServerError
 	}
 
 	return nil

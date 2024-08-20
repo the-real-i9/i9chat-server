@@ -2,6 +2,7 @@ package appModel
 
 import (
 	"fmt"
+	"i9chat/globals"
 	"i9chat/utils/helpers"
 	"log"
 )
@@ -11,7 +12,7 @@ func AccountExists(emailOrUsername string) (bool, error) {
 
 	if err != nil {
 		log.Println(fmt.Errorf("appModel.go: AccountExists: %s", err))
-		return false, helpers.ErrInternalServerError
+		return false, globals.ErrInternalServerError
 	}
 
 	return *exist, nil
@@ -22,7 +23,7 @@ func NewSignupSession(email string, verfCode int) (string, error) {
 
 	if err != nil {
 		log.Println(fmt.Errorf("appModel.go: NewSignupSession: %s", err))
-		return "", helpers.ErrInternalServerError
+		return "", globals.ErrInternalServerError
 	}
 
 	return *sessionId, nil
@@ -33,7 +34,7 @@ func VerifyEmail(sessionId string, verfCode int) (bool, error) {
 
 	if err != nil {
 		log.Println(fmt.Errorf("appModel.go: VerifyEmail: %s", err))
-		return false, helpers.ErrInternalServerError
+		return false, globals.ErrInternalServerError
 	}
 
 	return *isSuccess, nil

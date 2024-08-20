@@ -2,6 +2,7 @@ package user
 
 import (
 	"fmt"
+	"i9chat/globals"
 	"i9chat/utils/helpers"
 	"log"
 
@@ -23,7 +24,7 @@ func New(email string, username string, password string, geolocation string) (*U
 
 	if err != nil {
 		log.Println(fmt.Errorf("userModel.go: NewUser: %s", err))
-		return nil, helpers.ErrInternalServerError
+		return nil, globals.ErrInternalServerError
 	}
 
 	return user, nil
@@ -35,7 +36,7 @@ func FindOne(uniqueId string) (*User, error) {
 
 	if err != nil {
 		log.Println(fmt.Errorf("userModel.go: FindOne: %s", err))
-		return nil, helpers.ErrInternalServerError
+		return nil, globals.ErrInternalServerError
 	}
 
 	return user, nil
@@ -47,7 +48,7 @@ func FindNearby(clientUserId int, liveLocation string) ([]*User, error) {
 
 	if err != nil {
 		log.Println(fmt.Errorf("userModel.go: FindNearbyUsers: %s", err))
-		return nil, helpers.ErrInternalServerError
+		return nil, globals.ErrInternalServerError
 	}
 
 	return nearbyUsers, nil
@@ -59,7 +60,7 @@ func Search(clientUserId int, searchQuery string) ([]*User, error) {
 
 	if err != nil {
 		log.Println(fmt.Errorf("userModel.go: Search: %s", err))
-		return nil, helpers.ErrInternalServerError
+		return nil, globals.ErrInternalServerError
 	}
 
 	return matchUsers, nil
@@ -71,7 +72,7 @@ func GetAll(clientUserId int) ([]*User, error) {
 
 	if err != nil {
 		log.Println(fmt.Errorf("userModel.go: GetAll: %s", err))
-		return nil, helpers.ErrInternalServerError
+		return nil, globals.ErrInternalServerError
 	}
 
 	return allUsers, nil
@@ -82,7 +83,7 @@ func GetChats(userId int) ([]*map[string]any, error) {
 
 	if err != nil {
 		log.Println(fmt.Errorf("userModel.go: GetChats: %s", err))
-		return nil, helpers.ErrInternalServerError
+		return nil, globals.ErrInternalServerError
 	}
 
 	return myChats, nil
@@ -106,7 +107,7 @@ func SwitchPresence(userId int, presence string, lastSeen pgtype.Timestamp) erro
 
 	if err != nil {
 		log.Println(fmt.Errorf("userModel.go: SwitchPresence: %s", err))
-		return helpers.ErrInternalServerError
+		return globals.ErrInternalServerError
 	}
 
 	return nil
@@ -118,7 +119,7 @@ func UpdateLocation(userId int, newGeolocation string) error {
 
 	if err != nil {
 		log.Println(fmt.Errorf("userModel.go: UpdateLocation: %s", err))
-		return helpers.ErrInternalServerError
+		return globals.ErrInternalServerError
 	}
 
 	return nil
@@ -130,7 +131,7 @@ func GetDMChatEventsPendingReceipt(userId int) ([]*map[string]any, error) {
 
 	if err != nil {
 		log.Println(fmt.Errorf("userModel.go: GetDMChatEventsPendingReceipt: %s", err))
-		return nil, helpers.ErrInternalServerError
+		return nil, globals.ErrInternalServerError
 	}
 
 	return data, nil
@@ -142,7 +143,7 @@ func GetGroupChatEventsPendingReceipt(userId int) ([]*map[string]any, error) {
 
 	if err != nil {
 		log.Println(fmt.Errorf("userModel.go: GetGroupChatEventsPendingReceipt: %s", err))
-		return nil, helpers.ErrInternalServerError
+		return nil, globals.ErrInternalServerError
 	}
 
 	return data, nil
@@ -154,7 +155,7 @@ func GetDMChatMessageEventsPendingReceipt(userId int, dmChatId int) ([]*map[stri
 
 	if err != nil {
 		log.Println(fmt.Errorf("userModel.go: GetDMChatEventsPendingReceipt: %s", err))
-		return nil, helpers.ErrInternalServerError
+		return nil, globals.ErrInternalServerError
 	}
 
 	return data, nil
@@ -166,7 +167,7 @@ func GetGroupChatMessageEventsPendingReceipt(userId int, groupChatId int) ([]*ma
 
 	if err != nil {
 		log.Println(fmt.Errorf("userModel.go: GetGroupChatEventsPendingReceipt: %s", err))
-		return nil, helpers.ErrInternalServerError
+		return nil, globals.ErrInternalServerError
 	}
 
 	return data, nil

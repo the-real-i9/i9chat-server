@@ -2,6 +2,7 @@ package userService
 
 import (
 	"fmt"
+	"i9chat/globals"
 	user "i9chat/models/userModel"
 	"i9chat/services/appObservers"
 	"i9chat/utils/helpers"
@@ -52,7 +53,7 @@ func ChangeMyProfilePicture(clientUserId int, pictureData []byte) error {
 	_, ed_err := user.EditProfile(clientUserId, [][]string{{"profile_picture_url", newPicUrl}})
 	if ed_err != nil {
 		log.Println(fmt.Errorf("userService.go: ChangeProfilePicture: %s", ed_err))
-		return helpers.ErrInternalServerError
+		return globals.ErrInternalServerError
 	}
 
 	return nil

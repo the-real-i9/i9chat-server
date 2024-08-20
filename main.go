@@ -1,11 +1,11 @@
 package main
 
 import (
+	"i9chat/initializers"
 	"i9chat/routes/authRoutes"
 	"i9chat/routes/chatRoutes/dmChatRoutes"
 	"i9chat/routes/chatRoutes/groupChatRoutes"
 	"i9chat/routes/userRoutes"
-	"i9chat/utils/helpers"
 	"log"
 
 	"github.com/gofiber/contrib/websocket"
@@ -13,7 +13,7 @@ import (
 )
 
 func init() {
-	if err := helpers.InitApp(); err != nil {
+	if err := initializers.InitApp(); err != nil {
 		log.Fatal(err)
 	}
 }

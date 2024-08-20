@@ -2,6 +2,7 @@ package middlewares
 
 import (
 	"fmt"
+	"i9chat/globals"
 	"i9chat/utils/appTypes"
 	"i9chat/utils/helpers"
 	"log"
@@ -40,7 +41,7 @@ func CheckEmailVerified(c *websocket.Conn) (*appTypes.SignupSessionData, error) 
 	isVerified, err := helpers.QueryRowField[bool]("SELECT is_verified FROM signup_session_email_verified($1)", sessionData.SessionId)
 	if err != nil {
 		log.Println(fmt.Errorf("middlewares: CheckEmailVerified: isVerified: db error: %s", err))
-		return nil, helpers.ErrInternalServerError
+		return nil, globals.ErrInternalServerError
 	}
 
 	if !*isVerified {
