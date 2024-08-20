@@ -12,10 +12,13 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
-func main() {
+func init() {
 	if err := helpers.InitApp(); err != nil {
 		log.Fatal(err)
 	}
+}
+
+func main() {
 
 	app := fiber.New(fiber.Config{DisableStartupMessage: true})
 
