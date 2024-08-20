@@ -8,6 +8,7 @@ require (
 	github.com/gofiber/contrib/websocket v1.3.0
 	github.com/gofiber/fiber/v2 v2.52.5
 	github.com/jackc/pgx/v5 v5.5.4
+	github.com/joho/godotenv v1.5.1
 	golang.org/x/crypto v0.25.0
 	google.golang.org/api v0.167.0
 	gopkg.in/gomail.v2 v2.0.0-20160411212932-81ebce5c23df

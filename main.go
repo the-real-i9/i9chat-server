@@ -13,7 +13,7 @@ import (
 )
 
 func main() {
-	if err := helpers.InitApp(".env"); err != nil {
+	if err := helpers.InitApp(); err != nil {
 		log.Fatal(err)
 	}
 
