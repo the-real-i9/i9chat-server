@@ -2,7 +2,6 @@ package authControllers
 
 import (
 	"fmt"
-	"i9chat/middlewares"
 	"i9chat/services/authServices"
 	"i9chat/utils/appTypes"
 	"i9chat/utils/helpers"
@@ -46,23 +45,15 @@ var RequestNewAccount = websocket.New(func(c *websocket.Conn) {
 		w_err = c.WriteJSON(appTypes.WSResp{
 			StatusCode: fiber.StatusOK,
 			Body: map[string]any{
-				"msg":              "A 6-digit verification code has been sent to " + body.Email,
-				"signupSessionJwt": signupSessionJwt,
+				"msg":           "A 6-digit verification code has been sent to " + body.Email,
+				"session_token": signupSessionJwt,
 			},
 		})
 	}
 })
 
 var VerifyEmail = websocket.New(func(c *websocket.Conn) {
-	sessionData, mid_err := middlewares.CheckAccountRequested(c)
-
-	if mid_err != nil {
-		if w_err := c.WriteJSON(helpers.ErrResp(fiber.StatusUnprocessableEntity, mid_err)); w_err != nil {
-			log.Println(w_err)
-			return
-		}
-		return
-	}
+	sessionData := c.Locals("signupSessionData").(appTypes.SignupSessionData)
 
 	var w_err error
 
@@ -85,7 +76,7 @@ var VerifyEmail = websocket.New(func(c *websocket.Conn) {
 			continue
 		}
 
-		app_err := authServices.VerifyEmail(sessionData.SessionId, body.Code, sessionData.Email)
+		signupSessionJwt, app_err := authServices.VerifyEmail(sessionData.SessionId, body.Code, sessionData.Email)
 
 		if app_err != nil {
 			w_err = c.WriteJSON(helpers.ErrResp(fiber.StatusUnprocessableEntity, app_err))
@@ -95,22 +86,15 @@ var VerifyEmail = websocket.New(func(c *websocket.Conn) {
 		w_err = c.WriteJSON(appTypes.WSResp{
 			StatusCode: fiber.StatusOK,
 			Body: map[string]any{
-				"msg": fmt.Sprintf("Your email '%s' has been verified!", sessionData.Email),
+				"msg":           fmt.Sprintf("Your email '%s' has been verified!", sessionData.Email),
+				"session_token": signupSessionJwt,
 			},
 		})
 	}
 })
 
 var RegisterUser = websocket.New(func(c *websocket.Conn) {
-	sessionData, mid_err := middlewares.CheckEmailVerified(c)
-
-	if mid_err != nil {
-		if w_err := c.WriteJSON(helpers.ErrResp(fiber.StatusUnprocessableEntity, mid_err)); w_err != nil {
-			log.Println(w_err)
-			return
-		}
-		return
-	}
+	sessionData := c.Locals("signupSessionData").(appTypes.SignupSessionData)
 
 	var w_err error
 

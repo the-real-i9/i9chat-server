@@ -1,122 +1,41 @@
 package helpers
 
 import (
-	"crypto/hmac"
-	"crypto/sha256"
-	"encoding/base64"
-	"encoding/json"
-	"fmt"
 	"i9chat/utils/appTypes"
 	"os"
-	"strings"
 	"time"
 
 	"github.com/gofiber/contrib/websocket"
 	"github.com/gofiber/fiber/v2"
+	"github.com/golang-jwt/jwt/v5"
 )
 
 func JwtSign(data any, secret string, expires time.Time) string {
-	// base64-encode header
-	header := map[string]string{"alg": "HS256", "typ": "JWT"}
-	byteHeader, _ := json.Marshal(header)
-	encodedHeader := base64.RawURLEncoding.EncodeToString(byteHeader)
+	// create token -> (header.payload)
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+		"data":  data,
+		"admin": true,
+		"exp":   expires,
+	})
 
-	// base64-encode payload
-	payload := map[string]any{
-		"data": data,
-		"exp":  expires,
+	// sign token with secret -> (header.payload.signature)
+	jwt, err := token.SignedString([]byte(os.Getenv("SIGNUP_SESSION_JWT_SECRET")))
+	if err != nil {
+		panic(err)
 	}
-
-	bytePayload, _ := json.Marshal(payload)
-	encodedPayload := base64.RawURLEncoding.EncodeToString(bytePayload)
-
-	// generate HMAC signature | sign the `header.payload` portion
-	h := hmac.New(sha256.New, []byte(secret))
-	h.Write([]byte(encodedHeader + "." + encodedPayload))
-	hashRes := h.Sum(nil)
-
-	signature := base64.RawURLEncoding.EncodeToString(hashRes[:])
-
-	// construct jwt
-	jwt := fmt.Sprintf("%s.%s.%s", encodedHeader, encodedPayload, signature)
 
 	return jwt
 }
 
-func parseJwtString(jwt string) (encodedHeader, encodedPayload, signature string, err error) {
-	token, found := strings.CutPrefix(jwt, "Bearer ")
-	if !found {
-		return "", "", "", fmt.Errorf("%s", "authorization error: jwt missing bearer prefix")
-	}
-
-	jwtParts := strings.Split(token, ".")
-
-	return jwtParts[0], jwtParts[1], jwtParts[2], nil
-}
-
-func JwtVerify[T any](jwt string, secret string) (*T, error) {
-
-	encodedHeader, encodedPayload, signature, p_err := parseJwtString(jwt)
-	if p_err != nil {
-		return nil, p_err
-	}
-
-	// generate HMAC expected signature | re-sign the `header.payload` portion
-	h := hmac.New(sha256.New, []byte(secret))
-	h.Write([]byte(encodedHeader + "." + encodedPayload))
-	hashRes := h.Sum(nil)
-
-	expectedSignature := base64.RawURLEncoding.EncodeToString(hashRes[:])
-
-	// check jwt validity
-	jwtValid := hmac.Equal([]byte(signature), []byte(expectedSignature))
-	if !jwtValid {
-		return nil, fmt.Errorf("%s", "authorization error: invalid jwt")
-	}
-
-	// decode the payload
-	decPay, _ := base64.RawURLEncoding.DecodeString(encodedPayload)
-
-	var decodedPayload struct {
-		Data *T
-		Exp  time.Time
-	}
-
-	err := json.Unmarshal(decPay, &decodedPayload)
-	if err != nil {
-		return nil, fmt.Errorf("%s %s", "authorization error:", err)
-	}
-
-	// check jwt expiration
-	if decodedPayload.Exp.Before(time.Now()) {
-		return nil, fmt.Errorf("%s", "authorization error: jwt expired")
-	}
-
-	return decodedPayload.Data, nil
-}
-
 func WSHandlerProtected(handler func(*websocket.Conn), config ...websocket.Config) func(*fiber.Ctx) error {
 	return websocket.New(func(c *websocket.Conn) {
-		authJwt := c.Headers("Authorization")
+		jwtData := c.Locals("auth").(*jwt.Token).Claims.(jwt.MapClaims)["data"].(map[string]any)
 
-		if authJwt == "" {
-			w_err := c.WriteJSON(ErrResp(fiber.StatusUnauthorized, fmt.Errorf("authorization error: authorization token required")))
-			if w_err != nil {
-				return
-			}
-			return
-		}
+		var clientUser appTypes.ClientUser
 
-		userData, err := JwtVerify[appTypes.ClientUser](authJwt, os.Getenv("AUTH_JWT_SECRET"))
-		if err != nil {
-			w_err := c.WriteJSON(ErrResp(fiber.StatusUnauthorized, err))
-			if w_err != nil {
-				return
-			}
-			return
-		}
+		MapToStruct(jwtData, &clientUser)
 
-		c.Locals("auth", userData)
+		c.Locals("auth", clientUser)
 
 		handler(c)
 	}, config...)

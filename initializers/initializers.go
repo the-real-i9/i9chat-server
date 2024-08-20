@@ -6,8 +6,6 @@ import (
 	"os"
 
 	"cloud.google.com/go/storage"
-	"github.com/gofiber/fiber/v2/middleware/session"
-	"github.com/gofiber/storage/postgres"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/joho/godotenv"
 	"google.golang.org/api/option"
@@ -22,15 +20,6 @@ func initGCSClient() error {
 	globals.GCSClient = stClient
 
 	return nil
-}
-
-func initSessionStore() {
-	storage := postgres.New(postgres.Config{ConnectionURI: os.Getenv("PGDATABASE_URL"), Table: "ongoing_signup"})
-
-	globals.SignupSessionStore = session.New(session.Config{
-		Storage:    storage,
-		CookiePath: "/api/auth/signup",
-	})
 }
 
 func initDBPool() error {
@@ -56,8 +45,6 @@ func InitApp() error {
 	if err := initGCSClient(); err != nil {
 		return err
 	}
-
-	initSessionStore()
 
 	return nil
 }

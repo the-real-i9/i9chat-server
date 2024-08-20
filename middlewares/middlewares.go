@@ -1,52 +1,41 @@
 package middlewares
 
 import (
-	"fmt"
-	"i9chat/globals"
 	"i9chat/utils/appTypes"
 	"i9chat/utils/helpers"
-	"log"
-	"os"
 
-	"github.com/gofiber/contrib/websocket"
+	"github.com/gofiber/fiber/v2"
+	"github.com/golang-jwt/jwt/v5"
 )
 
-func CheckAccountRequested(c *websocket.Conn) (*appTypes.SignupSessionData, error) {
-	signupSessionJwt := c.Headers("Authorization")
+func VerifyEmail(c *fiber.Ctx) error {
+	jwtData := c.Locals("auth").(*jwt.Token).Claims.(jwt.MapClaims)["data"].(map[string]any)
 
-	if signupSessionJwt == "" {
-		return nil, fmt.Errorf("authorization error: authorization token required")
+	var signupSessionData appTypes.SignupSessionData
+
+	helpers.MapToStruct(jwtData, &signupSessionData)
+
+	if signupSessionData.State != "verify email" {
+		return c.SendStatus(fiber.StatusUnauthorized)
 	}
 
-	sessionData, err := helpers.JwtVerify[appTypes.SignupSessionData](signupSessionJwt, os.Getenv("SIGNUP_SESSION_JWT_SECRET"))
-	if err != nil {
-		return nil, err
-	}
+	c.Locals("signupSessionData", signupSessionData)
 
-	return sessionData, nil
+	return c.Next()
 }
 
-func CheckEmailVerified(c *websocket.Conn) (*appTypes.SignupSessionData, error) {
-	signupSessionJwt := c.Headers("Authorization")
+func RegisterUser(c *fiber.Ctx) error {
+	jwtData := c.Locals("auth").(*jwt.Token).Claims.(jwt.MapClaims)["data"].(map[string]any)
 
-	if signupSessionJwt == "" {
-		return nil, fmt.Errorf("authorization error: authorization token required")
+	var signupSessionData appTypes.SignupSessionData
+
+	helpers.MapToStruct(jwtData, &signupSessionData)
+
+	if signupSessionData.State != "register user" {
+		return c.SendStatus(fiber.StatusUnauthorized)
 	}
 
-	sessionData, err := helpers.JwtVerify[appTypes.SignupSessionData](signupSessionJwt, os.Getenv("SIGNUP_SESSION_JWT_SECRET"))
-	if err != nil {
-		return nil, err
-	}
+	c.Locals("signupSessionData", signupSessionData)
 
-	isVerified, err := helpers.QueryRowField[bool]("SELECT is_verified FROM signup_session_email_verified($1)", sessionData.SessionId)
-	if err != nil {
-		log.Println(fmt.Errorf("middlewares: CheckEmailVerified: isVerified: db error: %s", err))
-		return nil, globals.ErrInternalServerError
-	}
-
-	if !*isVerified {
-		return nil, fmt.Errorf("signup error: your email '%s' has not been verified", sessionData.Email)
-	}
-
-	return sessionData, nil
+	return c.Next()
 }

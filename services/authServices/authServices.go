@@ -39,24 +39,31 @@ func RequestNewAccount(email string) (string, error) {
 	signupSessionJwt := helpers.JwtSign(appTypes.SignupSessionData{
 		SessionId: sessionId,
 		Email:     email,
+		State:     "verify email",
 	}, os.Getenv("SIGNUP_SESSION_JWT_SECRET"), expires)
 
 	return signupSessionJwt, nil
 }
 
-func VerifyEmail(sessionId string, inputVerfCode int, email string) error {
+func VerifyEmail(sessionId string, inputVerfCode int, email string) (string, error) {
 	isSuccess, err := appModel.VerifyEmail(sessionId, inputVerfCode)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	if !isSuccess {
-		return fmt.Errorf("email verification error: incorrect verification code")
+		return "", fmt.Errorf("email verification error: incorrect verification code")
 	}
 
 	go appServices.SendMail(email, "Email Verification Success", fmt.Sprintf("Your email %s has been verified!", email))
 
-	return nil
+	signupSessionJwt := helpers.JwtSign(appTypes.SignupSessionData{
+		SessionId: sessionId,
+		Email:     email,
+		State:     "register user",
+	}, os.Getenv("SIGNUP_SESSION_JWT_SECRET"), time.Now().UTC().Add(1*time.Hour))
+
+	return signupSessionJwt, nil
 }
 
 func RegisterUser(sessionId string, email string, username string, password string, geolocation string) (*user.User, string, error) {

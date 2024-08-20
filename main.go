@@ -7,7 +7,9 @@ import (
 	"i9chat/routes/chatRoutes/groupChatRoutes"
 	"i9chat/routes/userRoutes"
 	"log"
+	"os"
 
+	jwtware "github.com/gofiber/contrib/jwt"
 	"github.com/gofiber/contrib/websocket"
 	"github.com/gofiber/fiber/v2"
 )
@@ -31,6 +33,11 @@ func main() {
 	})
 
 	app.Route("/api/auth", authRoutes.Init)
+
+	app.Use(jwtware.New(jwtware.Config{
+		SigningKey: jwtware.SigningKey{Key: []byte(os.Getenv("AUTH_JWT_SECRET"))},
+		ContextKey: "auth",
+	}))
 
 	app.Route("/api/app/user", userRoutes.Init)
 

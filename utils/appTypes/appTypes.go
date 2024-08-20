@@ -12,6 +12,7 @@ import (
 type SignupSessionData struct {
 	SessionId string
 	Email     string
+	State     string
 }
 
 type ClientUser struct {

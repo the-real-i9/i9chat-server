@@ -5,9 +5,11 @@ go 1.22.0
 require (
 	cloud.google.com/go/storage v1.39.1
 	github.com/go-ozzo/ozzo-validation/v4 v4.3.0
+	github.com/gofiber/contrib/jwt v1.0.10
 	github.com/gofiber/contrib/websocket v1.3.0
 	github.com/gofiber/fiber/v2 v2.52.5
 	github.com/gofiber/storage/postgres v1.3.4
+	github.com/golang-jwt/jwt/v5 v5.2.1
 	github.com/jackc/pgx/v5 v5.5.4
 	github.com/joho/godotenv v1.5.1
 	golang.org/x/crypto v0.25.0
@@ -20,6 +22,7 @@ require (
 	cloud.google.com/go/compute v1.24.0 // indirect
 	cloud.google.com/go/compute/metadata v0.2.3 // indirect
 	cloud.google.com/go/iam v1.1.6 // indirect
+	github.com/MicahParks/keyfunc/v2 v2.1.0 // indirect
 	github.com/andybalholm/brotli v1.1.0 // indirect
 	github.com/asaskevich/govalidator v0.0.0-20200108200545-475eaeb16496 // indirect
 	github.com/fasthttp/websocket v1.5.7 // indirect
