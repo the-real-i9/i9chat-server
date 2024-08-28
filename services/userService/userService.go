@@ -3,9 +3,9 @@ package userService
 import (
 	"fmt"
 	"i9chat/globals"
+	"i9chat/helpers"
 	user "i9chat/models/userModel"
 	"i9chat/services/appObservers"
-	"i9chat/utils/helpers"
 	"log"
 	"time"
 

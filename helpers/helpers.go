@@ -5,8 +5,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"i9chat/appTypes"
 	"i9chat/globals"
-	"i9chat/utils/appTypes"
 )
 
 func MapToStruct(val map[string]any, structData any) {

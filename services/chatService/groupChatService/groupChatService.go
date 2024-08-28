@@ -2,10 +2,10 @@ package groupChatService
 
 import (
 	"fmt"
+	"i9chat/appTypes"
+	"i9chat/helpers"
 	groupChat "i9chat/models/chatModel/groupChatModel"
 	"i9chat/services/appObservers"
-	"i9chat/utils/appTypes"
-	"i9chat/utils/helpers"
 	"time"
 )
 

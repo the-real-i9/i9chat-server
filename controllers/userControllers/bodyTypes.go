@@ -1,8 +1,8 @@
 package userControllers
 
 import (
-	"i9chat/utils/appTypes"
-	"i9chat/utils/helpers"
+	"i9chat/appTypes"
+	"i9chat/helpers"
 	"regexp"
 	"time"
 

@@ -2,10 +2,11 @@ package authControllers
 
 import (
 	"fmt"
+	"i9chat/appTypes"
+	"i9chat/helpers"
 	"i9chat/services/authServices"
-	"i9chat/utils/appTypes"
-	"i9chat/utils/helpers"
 	"log"
+	"os"
 
 	"github.com/gofiber/contrib/websocket"
 	"github.com/gofiber/fiber/v2"
@@ -53,7 +54,22 @@ var RequestNewAccount = websocket.New(func(c *websocket.Conn) {
 })
 
 var VerifyEmail = websocket.New(func(c *websocket.Conn) {
-	sessionData := c.Locals("signupSessionData").(appTypes.SignupSessionData)
+	sessionToken := c.Headers("Authorization")
+
+	sessionData, err := helpers.JwtVerify[appTypes.SignupSessionData](sessionToken, os.Getenv("SIGNUP_SESSION_JWT_SECRET"))
+	if err != nil {
+		if w_err := c.WriteJSON(helpers.ErrResp(fiber.StatusUnauthorized, err)); w_err != nil {
+			log.Println(w_err)
+		}
+		return
+	}
+
+	if sessionData.State != "verify email" {
+		if w_err := c.WriteJSON(helpers.ErrResp(fiber.StatusUnauthorized, fiber.ErrUnauthorized)); w_err != nil {
+			log.Println(w_err)
+		}
+		return
+	}
 
 	var w_err error
 
@@ -94,7 +110,22 @@ var VerifyEmail = websocket.New(func(c *websocket.Conn) {
 })
 
 var RegisterUser = websocket.New(func(c *websocket.Conn) {
-	sessionData := c.Locals("signupSessionData").(appTypes.SignupSessionData)
+	sessionToken := c.Headers("Authorization")
+
+	sessionData, err := helpers.JwtVerify[appTypes.SignupSessionData](sessionToken, os.Getenv("SIGNUP_SESSION_JWT_SECRET"))
+	if err != nil {
+		if w_err := c.WriteJSON(helpers.ErrResp(fiber.StatusUnauthorized, err)); w_err != nil {
+			log.Println(w_err)
+		}
+		return
+	}
+
+	if sessionData.State != "register user" {
+		if w_err := c.WriteJSON(helpers.ErrResp(fiber.StatusUnauthorized, fiber.ErrUnauthorized)); w_err != nil {
+			log.Println(w_err)
+		}
+		return
+	}
 
 	var w_err error
 

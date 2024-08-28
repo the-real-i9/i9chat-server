@@ -2,13 +2,13 @@ package groupChatControllers
 
 import (
 	"fmt"
+	"i9chat/appTypes"
+	"i9chat/helpers"
 	groupChat "i9chat/models/chatModel/groupChatModel"
 	user "i9chat/models/userModel"
 	"i9chat/services/appObservers"
 	"i9chat/services/appServices"
 	"i9chat/services/chatService/groupChatService"
-	"i9chat/utils/appTypes"
-	"i9chat/utils/helpers"
 	"log"
 
 	"github.com/gofiber/contrib/websocket"
@@ -55,7 +55,7 @@ var GetChatHistory = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 // this goroutine receives message acknowlegement for sent messages,
 // and in turn changes the delivery status of messages sent by the child goroutine
 var OpenMessagingStream = helpers.WSHandlerProtected(func(c *websocket.Conn) {
-	clientUser := c.Locals("auth").(*appTypes.ClientUser)
+	clientUser := c.Locals("user").(*appTypes.ClientUser)
 
 	var groupChatId int
 
@@ -144,7 +144,7 @@ func sendMessages(c *websocket.Conn, clientUser *appTypes.ClientUser, groupChatI
 }
 
 var ExecuteAction = helpers.WSHandlerProtected(func(c *websocket.Conn) {
-	clientUser := c.Locals("auth").(*appTypes.ClientUser)
+	clientUser := c.Locals("user").(*appTypes.ClientUser)
 
 	type handler func(clientUser []string, data map[string]any) error
 

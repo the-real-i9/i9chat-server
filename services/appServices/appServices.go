@@ -3,7 +3,7 @@ package appServices
 import (
 	"crypto/tls"
 	"fmt"
-	"i9chat/utils/helpers"
+	"i9chat/helpers"
 	"log"
 	"os"
 	"time"

@@ -1,7 +1,7 @@
 package helpers
 
 import (
-	"i9chat/utils/appTypes"
+	"i9chat/appTypes"
 
 	validation "github.com/go-ozzo/ozzo-validation/v4"
 	"github.com/go-ozzo/ozzo-validation/v4/is"

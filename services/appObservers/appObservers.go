@@ -2,7 +2,7 @@ package appObservers
 
 import (
 	"fmt"
-	"i9chat/utils/helpers"
+	"i9chat/helpers"
 	"sync"
 )
 

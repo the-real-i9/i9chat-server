@@ -2,9 +2,9 @@ package dmChatService
 
 import (
 	"fmt"
+	"i9chat/appTypes"
 	dmChat "i9chat/models/chatModel/dmChatModel"
 	"i9chat/services/appObservers"
-	"i9chat/utils/appTypes"
 	"time"
 )
 

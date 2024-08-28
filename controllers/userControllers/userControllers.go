@@ -2,14 +2,14 @@ package userControllers
 
 import (
 	"fmt"
+	"i9chat/appTypes"
+	"i9chat/helpers"
 	user "i9chat/models/userModel"
 	"i9chat/services/appObservers"
 	"i9chat/services/appServices"
 	"i9chat/services/chatService/dmChatService"
 	"i9chat/services/chatService/groupChatService"
 	"i9chat/services/userService"
-	"i9chat/utils/appTypes"
-	"i9chat/utils/helpers"
 	"log"
 
 	"github.com/gofiber/contrib/websocket"
@@ -17,7 +17,7 @@ import (
 )
 
 var ChangeProfilePicture = helpers.WSHandlerProtected(func(c *websocket.Conn) {
-	clientUser := c.Locals("auth").(*appTypes.ClientUser)
+	clientUser := c.Locals("user").(*appTypes.ClientUser)
 
 	var w_err error
 
@@ -61,7 +61,7 @@ var ChangeProfilePicture = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 //
 // 2. Lets the client: "initiate a new dm chat" and "acknowledge received dm messages"
 var OpenDMChatStream = helpers.WSHandlerProtected(func(c *websocket.Conn) {
-	clientUser := c.Locals("auth").(*appTypes.ClientUser)
+	clientUser := c.Locals("user").(*appTypes.ClientUser)
 
 	// a channel for streaming data to client
 	var myMailbox = make(chan map[string]any, 5)
@@ -213,7 +213,7 @@ func createNewDMChatAndAckMessages(c *websocket.Conn, clientUser *appTypes.Clien
 //
 // 2. Lets the client: "initiate a new group chat" and "acknowledge received group messages"
 var OpenGroupChatStream = helpers.WSHandlerProtected(func(c *websocket.Conn) {
-	clientUser := c.Locals("auth").(*appTypes.ClientUser)
+	clientUser := c.Locals("user").(*appTypes.ClientUser)
 
 	// a channel for streaming data to client
 	var myMailbox = make(chan map[string]any, 5)
@@ -343,7 +343,7 @@ func createNewGroupChatAndAckMessages(c *websocket.Conn, clientUser *appTypes.Cl
 // After closing this,  we must immediately access "Open[DM|Group]ChatStream"
 var GetMyChats = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 
-	clientUser := c.Locals("auth").(*appTypes.ClientUser)
+	clientUser := c.Locals("user").(*appTypes.ClientUser)
 
 	myChats, app_err := user.GetChats(clientUser.Id)
 
@@ -374,7 +374,7 @@ var GetMyChats = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 })
 
 var GetAllUsers = helpers.WSHandlerProtected(func(c *websocket.Conn) {
-	clientUser := c.Locals("auth").(*appTypes.ClientUser)
+	clientUser := c.Locals("user").(*appTypes.ClientUser)
 
 	allUsers, app_err := user.GetAll(clientUser.Id)
 
@@ -405,7 +405,7 @@ var GetAllUsers = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 })
 
 var SearchUser = helpers.WSHandlerProtected(func(c *websocket.Conn) {
-	clientUser := c.Locals("auth").(*appTypes.ClientUser)
+	clientUser := c.Locals("user").(*appTypes.ClientUser)
 
 	var w_err error
 
@@ -440,7 +440,7 @@ var SearchUser = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 })
 
 var FindNearbyUsers = helpers.WSHandlerProtected(func(c *websocket.Conn) {
-	clientUser := c.Locals("auth").(*appTypes.ClientUser)
+	clientUser := c.Locals("user").(*appTypes.ClientUser)
 
 	var w_err error
 
@@ -478,7 +478,7 @@ var FindNearbyUsers = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 })
 
 var SwitchMyPresence = helpers.WSHandlerProtected(func(c *websocket.Conn) {
-	clientUser := c.Locals("auth").(*appTypes.ClientUser)
+	clientUser := c.Locals("user").(*appTypes.ClientUser)
 
 	var w_err error
 
@@ -519,7 +519,7 @@ var SwitchMyPresence = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 })
 
 var UpdateMyGeolocation = helpers.WSHandlerProtected(func(c *websocket.Conn) {
-	clientUser := c.Locals("auth").(*appTypes.ClientUser)
+	clientUser := c.Locals("user").(*appTypes.ClientUser)
 
 	var body updateMyGeolocationBody
 

@@ -1,8 +1,8 @@
 package groupChatControllers
 
 import (
-	"i9chat/utils/appTypes"
-	"i9chat/utils/helpers"
+	"i9chat/appTypes"
+	"i9chat/helpers"
 	"time"
 
 	validation "github.com/go-ozzo/ozzo-validation/v4"

@@ -2,13 +2,13 @@ package dmChatControllers
 
 import (
 	"fmt"
+	"i9chat/appTypes"
+	"i9chat/helpers"
 	dmChat "i9chat/models/chatModel/dmChatModel"
 	user "i9chat/models/userModel"
 	"i9chat/services/appObservers"
 	"i9chat/services/appServices"
 	"i9chat/services/chatService/dmChatService"
-	"i9chat/utils/appTypes"
-	"i9chat/utils/helpers"
 	"log"
 
 	"github.com/gofiber/contrib/websocket"
@@ -55,7 +55,7 @@ var GetChatHistory = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 // this handler receives message acknowlegement for messages sent in an active chat,
 // and in turn changes the delivery status of messages sent by the child goroutine
 var OpenMessagingStream = helpers.WSHandlerProtected(func(c *websocket.Conn) {
-	clientUser := c.Locals("auth").(*appTypes.ClientUser)
+	clientUser := c.Locals("user").(*appTypes.ClientUser)
 
 	var dmChatId int
 

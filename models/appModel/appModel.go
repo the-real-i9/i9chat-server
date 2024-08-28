@@ -3,7 +3,7 @@ package appModel
 import (
 	"fmt"
 	"i9chat/globals"
-	"i9chat/utils/helpers"
+	"i9chat/helpers"
 	"log"
 )
 

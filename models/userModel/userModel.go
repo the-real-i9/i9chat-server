@@ -3,7 +3,7 @@ package user
 import (
 	"fmt"
 	"i9chat/globals"
-	"i9chat/utils/helpers"
+	"i9chat/helpers"
 	"log"
 
 	"github.com/jackc/pgx/v5/pgtype"

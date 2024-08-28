@@ -2,10 +2,10 @@ package dmChat
 
 import (
 	"fmt"
+	"i9chat/appTypes"
 	"i9chat/globals"
+	"i9chat/helpers"
 	user "i9chat/models/userModel"
-	"i9chat/utils/appTypes"
-	"i9chat/utils/helpers"
 	"log"
 	"strconv"
 	"time"
