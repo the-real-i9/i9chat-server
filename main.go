@@ -22,7 +22,7 @@ func main() {
 
 	app := fiber.New(fiber.Config{DisableStartupMessage: true})
 
-	app.Use("/", func(c *fiber.Ctx) error {
+	app.Use(func(c *fiber.Ctx) error {
 		if websocket.IsWebSocketUpgrade(c) {
 			return c.Next()
 		}

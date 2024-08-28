@@ -2,8 +2,8 @@ package groupChat
 
 import (
 	"fmt"
+	"i9chat/appGlobals"
 	"i9chat/appTypes"
-	"i9chat/globals"
 	"i9chat/helpers"
 	user "i9chat/models/userModel"
 	"log"
@@ -34,7 +34,7 @@ func New(name string, description string, pictureUrl string, creator []string, i
 	newGroupChat, err := helpers.QueryRowType[NewGroupChat]("SELECT creator_resp_data AS crd, init_member_resp_data AS imrd FROM new_group_chat($1, $2, $3, $4, $5)", name, description, pictureUrl, creator, initUsers)
 	if err != nil {
 		log.Println(fmt.Errorf("groupChatModel.go: New: %s", err))
-		return nil, globals.ErrInternalServerError
+		return nil, appGlobals.ErrInternalServerError
 	}
 
 	return newGroupChat, nil
@@ -49,7 +49,7 @@ func ChangeName(groupChatId int, admin []string, newName string) (*NewActivity, 
 	newActivity, err := helpers.QueryRowType[NewActivity]("SELECT * change_group_name($1, $2, $3)", groupChatId, admin, newName)
 	if err != nil {
 		log.Println(fmt.Errorf("groupChatModel.go: ChangeName: %s", err))
-		return nil, globals.ErrInternalServerError
+		return nil, appGlobals.ErrInternalServerError
 	}
 
 	return newActivity, nil
@@ -59,7 +59,7 @@ func ChangeDescription(groupChatId int, admin []string, newDescription string) (
 	newActivity, err := helpers.QueryRowType[NewActivity]("SELECT * change_group_description($1, $2, $3)", groupChatId, admin, newDescription)
 	if err != nil {
 		log.Println(fmt.Errorf("groupChatModel.go: ChangeDescription: %s", err))
-		return nil, globals.ErrInternalServerError
+		return nil, appGlobals.ErrInternalServerError
 	}
 
 	return newActivity, nil
@@ -69,7 +69,7 @@ func ChangePicture(groupChatId int, admin []string, newPictureUrl string) (*NewA
 	newActivity, err := helpers.QueryRowType[NewActivity]("SELECT * change_group_picture($1, $2, $3)", groupChatId, admin, newPictureUrl)
 	if err != nil {
 		log.Println(fmt.Errorf("groupChatModel.go: ChangePicture: %s", err))
-		return nil, globals.ErrInternalServerError
+		return nil, appGlobals.ErrInternalServerError
 	}
 
 	return newActivity, nil
@@ -79,7 +79,7 @@ func AddUsers(groupChatId int, admin []string, newUsers [][]appTypes.String) (*N
 	newActivity, err := helpers.QueryRowType[NewActivity]("SELECT * add_users_to_group($1, $2, $3)", groupChatId, admin, newUsers)
 	if err != nil {
 		log.Println(fmt.Errorf("groupChatModel.go: AddUsers: %s", err))
-		return nil, globals.ErrInternalServerError
+		return nil, appGlobals.ErrInternalServerError
 	}
 
 	return newActivity, nil
@@ -89,7 +89,7 @@ func RemoveUser(groupChatId int, admin []string, user []appTypes.String) (*NewAc
 	newActivity, err := helpers.QueryRowType[NewActivity]("SELECT * remove_user_to_group($1, $2, $3)", groupChatId, admin, user)
 	if err != nil {
 		log.Println(fmt.Errorf("groupChatModel.go: RemoveUser: %s", err))
-		return nil, globals.ErrInternalServerError
+		return nil, appGlobals.ErrInternalServerError
 	}
 
 	return newActivity, nil
@@ -99,7 +99,7 @@ func Join(groupChatId int, newUser []string) (*NewActivity, error) {
 	newActivity, err := helpers.QueryRowType[NewActivity]("SELECT * join_group($1, $2)", groupChatId, newUser)
 	if err != nil {
 		log.Println(fmt.Errorf("groupChatModel.go: Join: %s", err))
-		return nil, globals.ErrInternalServerError
+		return nil, appGlobals.ErrInternalServerError
 	}
 
 	return newActivity, nil
@@ -109,7 +109,7 @@ func Leave(groupChatId int, user []string) (*NewActivity, error) {
 	newActivity, err := helpers.QueryRowType[NewActivity]("SELECT * leave_group($1, $2)", groupChatId, user)
 	if err != nil {
 		log.Println(fmt.Errorf("groupChatModel.go: Leave: %s", err))
-		return nil, globals.ErrInternalServerError
+		return nil, appGlobals.ErrInternalServerError
 	}
 
 	return newActivity, nil
@@ -119,7 +119,7 @@ func MakeUserAdmin(groupChatId int, admin []string, user []appTypes.String) (*Ne
 	newActivity, err := helpers.QueryRowType[NewActivity]("SELECT * make_user_group_admin($1, $2, $3)", groupChatId, admin, user)
 	if err != nil {
 		log.Println(fmt.Errorf("groupChatModel.go: MakeUserAdmin: %s", err))
-		return nil, globals.ErrInternalServerError
+		return nil, appGlobals.ErrInternalServerError
 	}
 
 	return newActivity, nil
@@ -129,7 +129,7 @@ func RemoveUserFromAdmins(groupChatId int, admin []string, user []appTypes.Strin
 	newActivity, err := helpers.QueryRowType[NewActivity]("SELECT * remove_user_from_group_admins($1, $2, $3)", groupChatId, admin, user)
 	if err != nil {
 		log.Println(fmt.Errorf("groupChatModel.go: RemoveUserFromAdmins: %s", err))
-		return nil, globals.ErrInternalServerError
+		return nil, appGlobals.ErrInternalServerError
 	}
 
 	return newActivity, nil
@@ -157,7 +157,7 @@ func SendMessage(groupChatId int, senderId int, msgContent map[string]any, creat
 	newMessage, err := helpers.QueryRowType[NewMessage]("SELECT sender_resp_data AS srd, member_resp_data AS mrd, members_ids FROM send_group_chat_message($1, $2, $3, $4)", groupChatId, senderId, msgContent, createdAt)
 	if err != nil {
 		log.Println(fmt.Errorf("groupChatModel.go: SendMessage: %s", err))
-		return nil, globals.ErrInternalServerError
+		return nil, appGlobals.ErrInternalServerError
 	}
 
 	return newMessage, nil
@@ -167,7 +167,7 @@ func ReactToMessage(groupChatId int, msgId, reactorId int, reaction rune) error 
 	_, err := helpers.QueryRowField[bool]("SELECT react_to_group_chat_message($1, $2, $3, $4)", groupChatId, msgId, reactorId, strconv.QuoteRuneToASCII(reaction))
 	if err != nil {
 		log.Println(fmt.Errorf("groupChatModel.go: ReactToMessage: %s", err))
-		return globals.ErrInternalServerError
+		return appGlobals.ErrInternalServerError
 	}
 
 	return nil
@@ -190,7 +190,7 @@ func BatchUpdateMessageDeliveryStatus(groupChatId int, receiverId int, status st
 	resultList, err := helpers.BatchQuery[BatchStatusUpdateResult](sqls, params)
 	if err != nil {
 		log.Println(fmt.Errorf("groupChatModel.go: BatchUpdateMessageDeliveryStatus: %s", err))
-		return nil, globals.ErrInternalServerError
+		return nil, appGlobals.ErrInternalServerError
 	}
 
 	lastResult := resultList[len(resultList)]
@@ -229,7 +229,7 @@ func GetChatHistory(groupChatId, offset int) ([]*HistoryItem, error) {
 	) ORDER BY created_at ASC`, groupChatId, offset)
 	if err != nil {
 		log.Println(fmt.Errorf("groupChatModel.go: GetChatHistory: %s", err))
-		return nil, globals.ErrInternalServerError
+		return nil, appGlobals.ErrInternalServerError
 	}
 
 	return history, nil

@@ -5,8 +5,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"i9chat/appGlobals"
 	"i9chat/appTypes"
-	"i9chat/globals"
 )
 
 func MapToStruct(val map[string]any, structData any) {
@@ -22,8 +22,8 @@ func ToStruct(val any, structData any) {
 }
 
 func ErrResp(code int, err error) appTypes.WSResp {
-	if errors.Is(err, globals.ErrInternalServerError) {
-		return appTypes.WSResp{StatusCode: 500, Error: globals.ErrInternalServerError.Error()}
+	if errors.Is(err, appGlobals.ErrInternalServerError) {
+		return appTypes.WSResp{StatusCode: 500, Error: appGlobals.ErrInternalServerError.Error()}
 	}
 
 	return appTypes.WSResp{StatusCode: code, Error: err.Error()}
@@ -32,7 +32,7 @@ func ErrResp(code int, err error) appTypes.WSResp {
 func UploadFile(filePath string, data []byte) (string, error) {
 	fileUrl := fmt.Sprintf("https://storage.cloud.google.com/i9chat-bucket/%s", filePath)
 
-	stWriter := globals.GCSClient.Bucket("i9chat-bucket").Object(filePath).NewWriter(context.Background())
+	stWriter := appGlobals.GCSClient.Bucket("i9chat-bucket").Object(filePath).NewWriter(context.Background())
 
 	stWriter.Write(data)
 

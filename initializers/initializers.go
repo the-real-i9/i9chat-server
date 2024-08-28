@@ -2,22 +2,21 @@ package initializers
 
 import (
 	"context"
-	"i9chat/globals"
+	"i9chat/appGlobals"
 	"os"
 
 	"cloud.google.com/go/storage"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/joho/godotenv"
-	"google.golang.org/api/option"
 )
 
 func initGCSClient() error {
-	stClient, err := storage.NewClient(context.Background(), option.WithCredentialsFile("i9apps-storage.json"))
+	stClient, err := storage.NewClient(context.Background())
 	if err != nil {
 		return err
 	}
 
-	globals.GCSClient = stClient
+	appGlobals.GCSClient = stClient
 
 	return nil
 }
@@ -27,7 +26,7 @@ func initDBPool() error {
 	if err != nil {
 		return err
 	}
-	globals.DBPool = pool
+	appGlobals.DBPool = pool
 
 	return nil
 }

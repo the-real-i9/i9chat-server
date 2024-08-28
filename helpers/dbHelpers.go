@@ -3,13 +3,13 @@ package helpers
 import (
 	"context"
 	"errors"
-	"i9chat/globals"
+	"i9chat/appGlobals"
 
 	"github.com/jackc/pgx/v5"
 )
 
 func QueryRowField[T any](sql string, params ...any) (*T, error) {
-	rows, _ := globals.DBPool.Query(context.Background(), sql, params...)
+	rows, _ := appGlobals.DBPool.Query(context.Background(), sql, params...)
 
 	res, err := pgx.CollectOneRow(rows, pgx.RowToAddrOf[T])
 	if err != nil {
@@ -20,7 +20,7 @@ func QueryRowField[T any](sql string, params ...any) (*T, error) {
 }
 
 func QueryRowsField[T any](sql string, params ...any) ([]*T, error) {
-	rows, _ := globals.DBPool.Query(context.Background(), sql, params...)
+	rows, _ := appGlobals.DBPool.Query(context.Background(), sql, params...)
 
 	res, err := pgx.CollectRows(rows, pgx.RowToAddrOf[T])
 	if err != nil {
@@ -34,7 +34,7 @@ func QueryRowsField[T any](sql string, params ...any) ([]*T, error) {
 }
 
 func QueryRowType[T any](sql string, params ...any) (*T, error) {
-	rows, _ := globals.DBPool.Query(context.Background(), sql, params...)
+	rows, _ := appGlobals.DBPool.Query(context.Background(), sql, params...)
 
 	res, err := pgx.CollectOneRow(rows, pgx.RowToAddrOfStructByNameLax[T])
 	if err != nil {
@@ -48,7 +48,7 @@ func QueryRowType[T any](sql string, params ...any) (*T, error) {
 }
 
 func QueryRowsType[T any](sql string, params ...any) ([]*T, error) {
-	rows, _ := globals.DBPool.Query(context.Background(), sql, params...)
+	rows, _ := appGlobals.DBPool.Query(context.Background(), sql, params...)
 
 	res, err := pgx.CollectRows(rows, pgx.RowToAddrOfStructByNameLax[T])
 	if err != nil {
@@ -80,7 +80,7 @@ func BatchQuery[T any](sqls []string, params [][]any) ([]*T, error) {
 		})
 	}
 
-	s_err := globals.DBPool.SendBatch(context.Background(), batch).Close()
+	s_err := appGlobals.DBPool.SendBatch(context.Background(), batch).Close()
 
 	return res, s_err
 }

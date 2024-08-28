@@ -17,7 +17,7 @@ SET client_min_messages = warning;
 SET row_security = off;
 
 --
--- Name: i9c_user_t; Type: TYPE; Schema: public; Owner: postgres
+-- Name: i9c_user_t; Type: TYPE; Schema: public; Owner: i9
 --
 
 CREATE TYPE public.i9c_user_t AS (
@@ -30,10 +30,10 @@ CREATE TYPE public.i9c_user_t AS (
 );
 
 
-ALTER TYPE public.i9c_user_t OWNER TO postgres;
+ALTER TYPE public.i9c_user_t OWNER TO i9;
 
 --
--- Name: account_exists(character varying); Type: FUNCTION; Schema: public; Owner: postgres
+-- Name: account_exists(character varying); Type: FUNCTION; Schema: public; Owner: i9
 --
 
 CREATE FUNCTION public.account_exists(email_or_username character varying, OUT exist boolean) RETURNS boolean
@@ -45,10 +45,10 @@ END;
 $$;
 
 
-ALTER FUNCTION public.account_exists(email_or_username character varying, OUT exist boolean) OWNER TO postgres;
+ALTER FUNCTION public.account_exists(email_or_username character varying, OUT exist boolean) OWNER TO i9;
 
 --
--- Name: add_users_to_group(integer, character varying[], character varying[]); Type: FUNCTION; Schema: public; Owner: postgres
+-- Name: add_users_to_group(integer, character varying[], character varying[]); Type: FUNCTION; Schema: public; Owner: i9
 --
 
 CREATE FUNCTION public.add_users_to_group(in_group_chat_id integer, in_admin character varying[], in_users character varying[], OUT members_ids integer[], OUT activity_data json) RETURNS record
@@ -99,10 +99,10 @@ END;
 $$;
 
 
-ALTER FUNCTION public.add_users_to_group(in_group_chat_id integer, in_admin character varying[], in_users character varying[], OUT members_ids integer[], OUT activity_data json) OWNER TO postgres;
+ALTER FUNCTION public.add_users_to_group(in_group_chat_id integer, in_admin character varying[], in_users character varying[], OUT members_ids integer[], OUT activity_data json) OWNER TO i9;
 
 --
--- Name: change_group_description(integer, character varying[], character varying); Type: FUNCTION; Schema: public; Owner: postgres
+-- Name: change_group_description(integer, character varying[], character varying); Type: FUNCTION; Schema: public; Owner: i9
 --
 
 CREATE FUNCTION public.change_group_description(in_group_chat_id integer, in_admin character varying[], in_new_description character varying, OUT members_ids integer[], OUT activity_data json) RETURNS record
@@ -136,10 +136,10 @@ END;
 $$;
 
 
-ALTER FUNCTION public.change_group_description(in_group_chat_id integer, in_admin character varying[], in_new_description character varying, OUT members_ids integer[], OUT activity_data json) OWNER TO postgres;
+ALTER FUNCTION public.change_group_description(in_group_chat_id integer, in_admin character varying[], in_new_description character varying, OUT members_ids integer[], OUT activity_data json) OWNER TO i9;
 
 --
--- Name: change_group_name(integer, character varying[], character varying); Type: FUNCTION; Schema: public; Owner: postgres
+-- Name: change_group_name(integer, character varying[], character varying); Type: FUNCTION; Schema: public; Owner: i9
 --
 
 CREATE FUNCTION public.change_group_name(in_group_chat_id integer, in_admin character varying[], in_new_name character varying, OUT members_ids integer[], OUT activity_data json) RETURNS record
@@ -173,10 +173,10 @@ END;
 $$;
 
 
-ALTER FUNCTION public.change_group_name(in_group_chat_id integer, in_admin character varying[], in_new_name character varying, OUT members_ids integer[], OUT activity_data json) OWNER TO postgres;
+ALTER FUNCTION public.change_group_name(in_group_chat_id integer, in_admin character varying[], in_new_name character varying, OUT members_ids integer[], OUT activity_data json) OWNER TO i9;
 
 --
--- Name: change_group_picture(integer, character varying[], character varying); Type: FUNCTION; Schema: public; Owner: postgres
+-- Name: change_group_picture(integer, character varying[], character varying); Type: FUNCTION; Schema: public; Owner: i9
 --
 
 CREATE FUNCTION public.change_group_picture(in_group_chat_id integer, in_admin character varying[], in_new_picture_url character varying, OUT members_ids integer[], OUT activity_data json) RETURNS record
@@ -210,10 +210,10 @@ END;
 $$;
 
 
-ALTER FUNCTION public.change_group_picture(in_group_chat_id integer, in_admin character varying[], in_new_picture_url character varying, OUT members_ids integer[], OUT activity_data json) OWNER TO postgres;
+ALTER FUNCTION public.change_group_picture(in_group_chat_id integer, in_admin character varying[], in_new_picture_url character varying, OUT members_ids integer[], OUT activity_data json) OWNER TO i9;
 
 --
--- Name: edit_user(integer, character varying[]); Type: FUNCTION; Schema: public; Owner: postgres
+-- Name: edit_user(integer, character varying[]); Type: FUNCTION; Schema: public; Owner: i9
 --
 
 CREATE FUNCTION public.edit_user(in_user_id integer, in_col_updates character varying[]) RETURNS SETOF public.i9c_user_t
@@ -241,10 +241,10 @@ END;
 $_$;
 
 
-ALTER FUNCTION public.edit_user(in_user_id integer, in_col_updates character varying[]) OWNER TO postgres;
+ALTER FUNCTION public.edit_user(in_user_id integer, in_col_updates character varying[]) OWNER TO i9;
 
 --
--- Name: end_signup_session(uuid); Type: FUNCTION; Schema: public; Owner: postgres
+-- Name: end_signup_session(uuid); Type: FUNCTION; Schema: public; Owner: i9
 --
 
 CREATE FUNCTION public.end_signup_session(in_session_id uuid) RETURNS boolean
@@ -259,10 +259,10 @@ END;
 $$;
 
 
-ALTER FUNCTION public.end_signup_session(in_session_id uuid) OWNER TO postgres;
+ALTER FUNCTION public.end_signup_session(in_session_id uuid) OWNER TO i9;
 
 --
--- Name: find_nearby_users(integer, circle); Type: FUNCTION; Schema: public; Owner: postgres
+-- Name: find_nearby_users(integer, circle); Type: FUNCTION; Schema: public; Owner: i9
 --
 
 CREATE FUNCTION public.find_nearby_users(in_client_id integer, in_user_live_location circle) RETURNS SETOF public.i9c_user_t
@@ -278,10 +278,10 @@ END;
 $$;
 
 
-ALTER FUNCTION public.find_nearby_users(in_client_id integer, in_user_live_location circle) OWNER TO postgres;
+ALTER FUNCTION public.find_nearby_users(in_client_id integer, in_user_live_location circle) OWNER TO i9;
 
 --
--- Name: get_all_users(integer); Type: FUNCTION; Schema: public; Owner: postgres
+-- Name: get_all_users(integer); Type: FUNCTION; Schema: public; Owner: i9
 --
 
 CREATE FUNCTION public.get_all_users(in_client_id integer) RETURNS SETOF public.i9c_user_t
@@ -298,10 +298,10 @@ END;
 $$;
 
 
-ALTER FUNCTION public.get_all_users(in_client_id integer) OWNER TO postgres;
+ALTER FUNCTION public.get_all_users(in_client_id integer) OWNER TO i9;
 
 --
--- Name: get_dm_chat_events_pending_receipt(integer); Type: FUNCTION; Schema: public; Owner: postgres
+-- Name: get_dm_chat_events_pending_receipt(integer); Type: FUNCTION; Schema: public; Owner: i9
 --
 
 CREATE FUNCTION public.get_dm_chat_events_pending_receipt(in_user_id integer) RETURNS TABLE(event_data_kvp json)
@@ -318,10 +318,10 @@ END;
 $$;
 
 
-ALTER FUNCTION public.get_dm_chat_events_pending_receipt(in_user_id integer) OWNER TO postgres;
+ALTER FUNCTION public.get_dm_chat_events_pending_receipt(in_user_id integer) OWNER TO i9;
 
 --
--- Name: get_dm_chat_history(integer); Type: FUNCTION; Schema: public; Owner: postgres
+-- Name: get_dm_chat_history(integer); Type: FUNCTION; Schema: public; Owner: i9
 --
 
 CREATE FUNCTION public.get_dm_chat_history(in_dm_chat_id integer) RETURNS TABLE(msg_id integer, sender json, msg_content json, edited boolean, delivery_status character varying, created_at timestamp without time zone, edited_at timestamp without time zone, reactions json)
@@ -364,10 +364,10 @@ END;
 $$;
 
 
-ALTER FUNCTION public.get_dm_chat_history(in_dm_chat_id integer) OWNER TO postgres;
+ALTER FUNCTION public.get_dm_chat_history(in_dm_chat_id integer) OWNER TO i9;
 
 --
--- Name: get_dm_chat_message_events_pending_receipt(integer, integer); Type: FUNCTION; Schema: public; Owner: postgres
+-- Name: get_dm_chat_message_events_pending_receipt(integer, integer); Type: FUNCTION; Schema: public; Owner: i9
 --
 
 CREATE FUNCTION public.get_dm_chat_message_events_pending_receipt(in_user_id integer, in_dm_chat_id integer) RETURNS TABLE(event_data_kvp json)
@@ -384,10 +384,10 @@ END;
 $$;
 
 
-ALTER FUNCTION public.get_dm_chat_message_events_pending_receipt(in_user_id integer, in_dm_chat_id integer) OWNER TO postgres;
+ALTER FUNCTION public.get_dm_chat_message_events_pending_receipt(in_user_id integer, in_dm_chat_id integer) OWNER TO i9;
 
 --
--- Name: get_group_chat_events_pending_receipt(integer); Type: FUNCTION; Schema: public; Owner: postgres
+-- Name: get_group_chat_events_pending_receipt(integer); Type: FUNCTION; Schema: public; Owner: i9
 --
 
 CREATE FUNCTION public.get_group_chat_events_pending_receipt(in_user_id integer) RETURNS TABLE(event_data_kvp json)
@@ -404,10 +404,10 @@ END;
 $$;
 
 
-ALTER FUNCTION public.get_group_chat_events_pending_receipt(in_user_id integer) OWNER TO postgres;
+ALTER FUNCTION public.get_group_chat_events_pending_receipt(in_user_id integer) OWNER TO i9;
 
 --
--- Name: get_group_chat_history(integer); Type: FUNCTION; Schema: public; Owner: postgres
+-- Name: get_group_chat_history(integer); Type: FUNCTION; Schema: public; Owner: i9
 --
 
 CREATE FUNCTION public.get_group_chat_history(in_group_chat_id integer) RETURNS TABLE(type text, id integer, sender jsonb, msg_content jsonb, edited boolean, delivery_status character varying, created_at timestamp without time zone, edited_at timestamp without time zone, reactions jsonb, activity_type character varying, activity_info jsonb)
@@ -467,10 +467,10 @@ END;
 $$;
 
 
-ALTER FUNCTION public.get_group_chat_history(in_group_chat_id integer) OWNER TO postgres;
+ALTER FUNCTION public.get_group_chat_history(in_group_chat_id integer) OWNER TO i9;
 
 --
--- Name: get_group_chat_message_events_pending_receipt(integer, integer); Type: FUNCTION; Schema: public; Owner: postgres
+-- Name: get_group_chat_message_events_pending_receipt(integer, integer); Type: FUNCTION; Schema: public; Owner: i9
 --
 
 CREATE FUNCTION public.get_group_chat_message_events_pending_receipt(in_user_id integer, in_group_chat_id integer) RETURNS TABLE(event_data_kvp json)
@@ -487,10 +487,10 @@ END;
 $$;
 
 
-ALTER FUNCTION public.get_group_chat_message_events_pending_receipt(in_user_id integer, in_group_chat_id integer) OWNER TO postgres;
+ALTER FUNCTION public.get_group_chat_message_events_pending_receipt(in_user_id integer, in_group_chat_id integer) OWNER TO i9;
 
 --
--- Name: get_my_chats(integer); Type: FUNCTION; Schema: public; Owner: postgres
+-- Name: get_my_chats(integer); Type: FUNCTION; Schema: public; Owner: i9
 --
 
 CREATE FUNCTION public.get_my_chats(in_user_id integer) RETURNS TABLE(chat jsonb, last_active timestamp without time zone)
@@ -531,10 +531,10 @@ END;
 $$;
 
 
-ALTER FUNCTION public.get_my_chats(in_user_id integer) OWNER TO postgres;
+ALTER FUNCTION public.get_my_chats(in_user_id integer) OWNER TO i9;
 
 --
--- Name: get_user(anycompatible); Type: FUNCTION; Schema: public; Owner: postgres
+-- Name: get_user(anycompatible); Type: FUNCTION; Schema: public; Owner: i9
 --
 
 CREATE FUNCTION public.get_user(unique_identifier anycompatible) RETURNS SETOF public.i9c_user_t
@@ -549,10 +549,10 @@ END;
 $$;
 
 
-ALTER FUNCTION public.get_user(unique_identifier anycompatible) OWNER TO postgres;
+ALTER FUNCTION public.get_user(unique_identifier anycompatible) OWNER TO i9;
 
 --
--- Name: get_user_password(anycompatible); Type: FUNCTION; Schema: public; Owner: postgres
+-- Name: get_user_password(anycompatible); Type: FUNCTION; Schema: public; Owner: i9
 --
 
 CREATE FUNCTION public.get_user_password(unique_identifier anycompatible, OUT password character varying) RETURNS character varying
@@ -566,10 +566,10 @@ END;
 $$;
 
 
-ALTER FUNCTION public.get_user_password(unique_identifier anycompatible, OUT password character varying) OWNER TO postgres;
+ALTER FUNCTION public.get_user_password(unique_identifier anycompatible, OUT password character varying) OWNER TO i9;
 
 --
--- Name: join_group(integer, character varying[]); Type: FUNCTION; Schema: public; Owner: postgres
+-- Name: join_group(integer, character varying[]); Type: FUNCTION; Schema: public; Owner: i9
 --
 
 CREATE FUNCTION public.join_group(in_group_chat_id integer, in_user character varying[], OUT members_ids integer[], OUT activity_data json) RETURNS record
@@ -603,10 +603,10 @@ END;
 $$;
 
 
-ALTER FUNCTION public.join_group(in_group_chat_id integer, in_user character varying[], OUT members_ids integer[], OUT activity_data json) OWNER TO postgres;
+ALTER FUNCTION public.join_group(in_group_chat_id integer, in_user character varying[], OUT members_ids integer[], OUT activity_data json) OWNER TO i9;
 
 --
--- Name: leave_group(integer, character varying[]); Type: FUNCTION; Schema: public; Owner: postgres
+-- Name: leave_group(integer, character varying[]); Type: FUNCTION; Schema: public; Owner: i9
 --
 
 CREATE FUNCTION public.leave_group(in_group_chat_id integer, in_user character varying[], OUT members_ids integer[], OUT activity_data json) RETURNS record
@@ -642,10 +642,10 @@ END;
 $$;
 
 
-ALTER FUNCTION public.leave_group(in_group_chat_id integer, in_user character varying[], OUT members_ids integer[], OUT activity_data json) OWNER TO postgres;
+ALTER FUNCTION public.leave_group(in_group_chat_id integer, in_user character varying[], OUT members_ids integer[], OUT activity_data json) OWNER TO i9;
 
 --
--- Name: make_user_group_admin(integer, character varying[], character varying[]); Type: FUNCTION; Schema: public; Owner: postgres
+-- Name: make_user_group_admin(integer, character varying[], character varying[]); Type: FUNCTION; Schema: public; Owner: i9
 --
 
 CREATE FUNCTION public.make_user_group_admin(in_group_chat_id integer, in_admin character varying[], in_user character varying[], OUT members_ids integer[], OUT activity_data json) RETURNS record
@@ -679,10 +679,10 @@ END;
 $$;
 
 
-ALTER FUNCTION public.make_user_group_admin(in_group_chat_id integer, in_admin character varying[], in_user character varying[], OUT members_ids integer[], OUT activity_data json) OWNER TO postgres;
+ALTER FUNCTION public.make_user_group_admin(in_group_chat_id integer, in_admin character varying[], in_user character varying[], OUT members_ids integer[], OUT activity_data json) OWNER TO i9;
 
 --
--- Name: new_dm_chat(integer, integer, json, timestamp without time zone); Type: FUNCTION; Schema: public; Owner: postgres
+-- Name: new_dm_chat(integer, integer, json, timestamp without time zone); Type: FUNCTION; Schema: public; Owner: i9
 --
 
 CREATE FUNCTION public.new_dm_chat(in_initiator_id integer, in_partner_id integer, in_init_msg_content json, in_created_at timestamp without time zone, OUT initiator_resp_data json, OUT partner_resp_data json) RETURNS record
@@ -735,10 +735,10 @@ END;
 $$;
 
 
-ALTER FUNCTION public.new_dm_chat(in_initiator_id integer, in_partner_id integer, in_init_msg_content json, in_created_at timestamp without time zone, OUT initiator_resp_data json, OUT partner_resp_data json) OWNER TO postgres;
+ALTER FUNCTION public.new_dm_chat(in_initiator_id integer, in_partner_id integer, in_init_msg_content json, in_created_at timestamp without time zone, OUT initiator_resp_data json, OUT partner_resp_data json) OWNER TO i9;
 
 --
--- Name: new_group_chat(character varying, character varying, character varying, character varying[], character varying[]); Type: FUNCTION; Schema: public; Owner: postgres
+-- Name: new_group_chat(character varying, character varying, character varying, character varying[], character varying[]); Type: FUNCTION; Schema: public; Owner: i9
 --
 
 CREATE FUNCTION public.new_group_chat(in_name character varying, in_description character varying, in_picture_url character varying, in_creator character varying[], in_init_users character varying[], OUT creator_resp_data json, OUT init_member_resp_data json) RETURNS record
@@ -799,10 +799,10 @@ END;
 $$;
 
 
-ALTER FUNCTION public.new_group_chat(in_name character varying, in_description character varying, in_picture_url character varying, in_creator character varying[], in_init_users character varying[], OUT creator_resp_data json, OUT init_member_resp_data json) OWNER TO postgres;
+ALTER FUNCTION public.new_group_chat(in_name character varying, in_description character varying, in_picture_url character varying, in_creator character varying[], in_init_users character varying[], OUT creator_resp_data json, OUT init_member_resp_data json) OWNER TO i9;
 
 --
--- Name: new_signup_session(character varying, integer); Type: FUNCTION; Schema: public; Owner: postgres
+-- Name: new_signup_session(character varying, integer); Type: FUNCTION; Schema: public; Owner: i9
 --
 
 CREATE FUNCTION public.new_signup_session(in_email character varying, in_verification_code integer, OUT session_id uuid) RETURNS uuid
@@ -820,10 +820,10 @@ END;
 $$;
 
 
-ALTER FUNCTION public.new_signup_session(in_email character varying, in_verification_code integer, OUT session_id uuid) OWNER TO postgres;
+ALTER FUNCTION public.new_signup_session(in_email character varying, in_verification_code integer, OUT session_id uuid) OWNER TO i9;
 
 --
--- Name: new_user(character varying, character varying, character varying, circle); Type: FUNCTION; Schema: public; Owner: postgres
+-- Name: new_user(character varying, character varying, character varying, circle); Type: FUNCTION; Schema: public; Owner: i9
 --
 
 CREATE FUNCTION public.new_user(in_email character varying, in_username character varying, in_password character varying, in_location circle) RETURNS SETOF public.i9c_user_t
@@ -839,10 +839,10 @@ END;
 $$;
 
 
-ALTER FUNCTION public.new_user(in_email character varying, in_username character varying, in_password character varying, in_location circle) OWNER TO postgres;
+ALTER FUNCTION public.new_user(in_email character varying, in_username character varying, in_password character varying, in_location circle) OWNER TO i9;
 
 --
--- Name: react_to_dm_chat_message(integer, integer, integer, character varying); Type: FUNCTION; Schema: public; Owner: postgres
+-- Name: react_to_dm_chat_message(integer, integer, integer, character varying); Type: FUNCTION; Schema: public; Owner: i9
 --
 
 CREATE FUNCTION public.react_to_dm_chat_message(in_dm_chat_id integer, in_msg_id integer, in_reactor_id integer, in_reaction character varying) RETURNS boolean
@@ -857,10 +857,10 @@ END;
 $$;
 
 
-ALTER FUNCTION public.react_to_dm_chat_message(in_dm_chat_id integer, in_msg_id integer, in_reactor_id integer, in_reaction character varying) OWNER TO postgres;
+ALTER FUNCTION public.react_to_dm_chat_message(in_dm_chat_id integer, in_msg_id integer, in_reactor_id integer, in_reaction character varying) OWNER TO i9;
 
 --
--- Name: react_to_group_chat_message(integer, integer, integer, character varying); Type: FUNCTION; Schema: public; Owner: postgres
+-- Name: react_to_group_chat_message(integer, integer, integer, character varying); Type: FUNCTION; Schema: public; Owner: i9
 --
 
 CREATE FUNCTION public.react_to_group_chat_message(in_group_chat_id integer, in_msg_id integer, in_reactor_id integer, in_reaction character varying) RETURNS boolean
@@ -875,10 +875,10 @@ END;
 $$;
 
 
-ALTER FUNCTION public.react_to_group_chat_message(in_group_chat_id integer, in_msg_id integer, in_reactor_id integer, in_reaction character varying) OWNER TO postgres;
+ALTER FUNCTION public.react_to_group_chat_message(in_group_chat_id integer, in_msg_id integer, in_reactor_id integer, in_reaction character varying) OWNER TO i9;
 
 --
--- Name: remove_user_from_group(integer, character varying[], character varying[]); Type: FUNCTION; Schema: public; Owner: postgres
+-- Name: remove_user_from_group(integer, character varying[], character varying[]); Type: FUNCTION; Schema: public; Owner: i9
 --
 
 CREATE FUNCTION public.remove_user_from_group(in_group_chat_id integer, in_admin character varying[], in_user character varying[], OUT members_ids integer[], OUT activity_data json) RETURNS record
@@ -922,10 +922,10 @@ END;
 $$;
 
 
-ALTER FUNCTION public.remove_user_from_group(in_group_chat_id integer, in_admin character varying[], in_user character varying[], OUT members_ids integer[], OUT activity_data json) OWNER TO postgres;
+ALTER FUNCTION public.remove_user_from_group(in_group_chat_id integer, in_admin character varying[], in_user character varying[], OUT members_ids integer[], OUT activity_data json) OWNER TO i9;
 
 --
--- Name: remove_user_from_group_admins(integer, character varying[], character varying[]); Type: FUNCTION; Schema: public; Owner: postgres
+-- Name: remove_user_from_group_admins(integer, character varying[], character varying[]); Type: FUNCTION; Schema: public; Owner: i9
 --
 
 CREATE FUNCTION public.remove_user_from_group_admins(in_group_chat_id integer, in_admin character varying[], in_user character varying[], OUT members_ids integer[], OUT activity_data json) RETURNS record
@@ -959,10 +959,10 @@ END;
 $$;
 
 
-ALTER FUNCTION public.remove_user_from_group_admins(in_group_chat_id integer, in_admin character varying[], in_user character varying[], OUT members_ids integer[], OUT activity_data json) OWNER TO postgres;
+ALTER FUNCTION public.remove_user_from_group_admins(in_group_chat_id integer, in_admin character varying[], in_user character varying[], OUT members_ids integer[], OUT activity_data json) OWNER TO i9;
 
 --
--- Name: search_user(integer, text); Type: FUNCTION; Schema: public; Owner: postgres
+-- Name: search_user(integer, text); Type: FUNCTION; Schema: public; Owner: i9
 --
 
 CREATE FUNCTION public.search_user(in_client_id integer, search_query text) RETURNS SETOF public.i9c_user_t
@@ -979,10 +979,10 @@ END;
 $$;
 
 
-ALTER FUNCTION public.search_user(in_client_id integer, search_query text) OWNER TO postgres;
+ALTER FUNCTION public.search_user(in_client_id integer, search_query text) OWNER TO i9;
 
 --
--- Name: send_dm_chat_message(integer, integer, json, timestamp without time zone); Type: FUNCTION; Schema: public; Owner: postgres
+-- Name: send_dm_chat_message(integer, integer, json, timestamp without time zone); Type: FUNCTION; Schema: public; Owner: i9
 --
 
 CREATE FUNCTION public.send_dm_chat_message(in_dm_chat_id integer, in_sender_id integer, in_msg_content json, in_created_at timestamp without time zone, OUT sender_resp_data json, OUT receiver_resp_data json, OUT receiver_id integer) RETURNS record
@@ -1024,10 +1024,10 @@ END;
 $$;
 
 
-ALTER FUNCTION public.send_dm_chat_message(in_dm_chat_id integer, in_sender_id integer, in_msg_content json, in_created_at timestamp without time zone, OUT sender_resp_data json, OUT receiver_resp_data json, OUT receiver_id integer) OWNER TO postgres;
+ALTER FUNCTION public.send_dm_chat_message(in_dm_chat_id integer, in_sender_id integer, in_msg_content json, in_created_at timestamp without time zone, OUT sender_resp_data json, OUT receiver_resp_data json, OUT receiver_id integer) OWNER TO i9;
 
 --
--- Name: send_group_chat_message(integer, integer, json, timestamp without time zone); Type: FUNCTION; Schema: public; Owner: postgres
+-- Name: send_group_chat_message(integer, integer, json, timestamp without time zone); Type: FUNCTION; Schema: public; Owner: i9
 --
 
 CREATE FUNCTION public.send_group_chat_message(in_group_chat_id integer, in_sender_id integer, in_msg_content json, in_created_at timestamp without time zone, OUT sender_resp_data json, OUT member_resp_data json, OUT members_ids integer[]) RETURNS record
@@ -1076,10 +1076,10 @@ END;
 $$;
 
 
-ALTER FUNCTION public.send_group_chat_message(in_group_chat_id integer, in_sender_id integer, in_msg_content json, in_created_at timestamp without time zone, OUT sender_resp_data json, OUT member_resp_data json, OUT members_ids integer[]) OWNER TO postgres;
+ALTER FUNCTION public.send_group_chat_message(in_group_chat_id integer, in_sender_id integer, in_msg_content json, in_created_at timestamp without time zone, OUT sender_resp_data json, OUT member_resp_data json, OUT members_ids integer[]) OWNER TO i9;
 
 --
--- Name: signup_session_email_verified(uuid); Type: FUNCTION; Schema: public; Owner: postgres
+-- Name: signup_session_email_verified(uuid); Type: FUNCTION; Schema: public; Owner: i9
 --
 
 CREATE FUNCTION public.signup_session_email_verified(in_session_id uuid, OUT is_verified boolean) RETURNS boolean
@@ -1095,10 +1095,10 @@ END;
 $$;
 
 
-ALTER FUNCTION public.signup_session_email_verified(in_session_id uuid, OUT is_verified boolean) OWNER TO postgres;
+ALTER FUNCTION public.signup_session_email_verified(in_session_id uuid, OUT is_verified boolean) OWNER TO i9;
 
 --
--- Name: switch_user_presence(integer, character varying, timestamp without time zone); Type: FUNCTION; Schema: public; Owner: postgres
+-- Name: switch_user_presence(integer, character varying, timestamp without time zone); Type: FUNCTION; Schema: public; Owner: i9
 --
 
 CREATE FUNCTION public.switch_user_presence(in_user_id integer, in_presence character varying, in_last_seen timestamp without time zone) RETURNS boolean
@@ -1122,10 +1122,10 @@ end;
 $$;
 
 
-ALTER FUNCTION public.switch_user_presence(in_user_id integer, in_presence character varying, in_last_seen timestamp without time zone) OWNER TO postgres;
+ALTER FUNCTION public.switch_user_presence(in_user_id integer, in_presence character varying, in_last_seen timestamp without time zone) OWNER TO i9;
 
 --
--- Name: update_dm_chat_message_delivery_status(integer, integer, integer, character varying, timestamp without time zone); Type: FUNCTION; Schema: public; Owner: postgres
+-- Name: update_dm_chat_message_delivery_status(integer, integer, integer, character varying, timestamp without time zone); Type: FUNCTION; Schema: public; Owner: i9
 --
 
 CREATE FUNCTION public.update_dm_chat_message_delivery_status(in_dm_chat_id integer, in_msg_id integer, in_receiver_id integer, in_status character varying, in_updated_at timestamp without time zone) RETURNS boolean
@@ -1153,10 +1153,10 @@ END;
 $$;
 
 
-ALTER FUNCTION public.update_dm_chat_message_delivery_status(in_dm_chat_id integer, in_msg_id integer, in_receiver_id integer, in_status character varying, in_updated_at timestamp without time zone) OWNER TO postgres;
+ALTER FUNCTION public.update_dm_chat_message_delivery_status(in_dm_chat_id integer, in_msg_id integer, in_receiver_id integer, in_status character varying, in_updated_at timestamp without time zone) OWNER TO i9;
 
 --
--- Name: update_group_chat_message_delivery_status(integer, integer, integer, character varying, timestamp without time zone); Type: FUNCTION; Schema: public; Owner: postgres
+-- Name: update_group_chat_message_delivery_status(integer, integer, integer, character varying, timestamp without time zone); Type: FUNCTION; Schema: public; Owner: i9
 --
 
 CREATE FUNCTION public.update_group_chat_message_delivery_status(in_group_chat_id integer, in_msg_id integer, in_receiver_id integer, in_status character varying, in_updated_at timestamp without time zone, OUT overall_delivery_status character varying, OUT should_broadcast boolean) RETURNS record
@@ -1229,10 +1229,10 @@ END;
 $$;
 
 
-ALTER FUNCTION public.update_group_chat_message_delivery_status(in_group_chat_id integer, in_msg_id integer, in_receiver_id integer, in_status character varying, in_updated_at timestamp without time zone, OUT overall_delivery_status character varying, OUT should_broadcast boolean) OWNER TO postgres;
+ALTER FUNCTION public.update_group_chat_message_delivery_status(in_group_chat_id integer, in_msg_id integer, in_receiver_id integer, in_status character varying, in_updated_at timestamp without time zone, OUT overall_delivery_status character varying, OUT should_broadcast boolean) OWNER TO i9;
 
 --
--- Name: update_user_location(integer, circle); Type: FUNCTION; Schema: public; Owner: postgres
+-- Name: update_user_location(integer, circle); Type: FUNCTION; Schema: public; Owner: i9
 --
 
 CREATE FUNCTION public.update_user_location(in_user_id integer, in_new_location circle) RETURNS boolean
@@ -1248,10 +1248,10 @@ END;
 $$;
 
 
-ALTER FUNCTION public.update_user_location(in_user_id integer, in_new_location circle) OWNER TO postgres;
+ALTER FUNCTION public.update_user_location(in_user_id integer, in_new_location circle) OWNER TO i9;
 
 --
--- Name: verify_email(uuid, integer); Type: FUNCTION; Schema: public; Owner: postgres
+-- Name: verify_email(uuid, integer); Type: FUNCTION; Schema: public; Owner: i9
 --
 
 CREATE FUNCTION public.verify_email(in_session_id uuid, in_verf_code integer, OUT is_success boolean) RETURNS boolean
@@ -1271,14 +1271,14 @@ END;
 $$;
 
 
-ALTER FUNCTION public.verify_email(in_session_id uuid, in_verf_code integer, OUT is_success boolean) OWNER TO postgres;
+ALTER FUNCTION public.verify_email(in_session_id uuid, in_verf_code integer, OUT is_success boolean) OWNER TO i9;
 
 SET default_tablespace = '';
 
 SET default_table_access_method = heap;
 
 --
--- Name: dm_chat; Type: TABLE; Schema: public; Owner: postgres
+-- Name: dm_chat; Type: TABLE; Schema: public; Owner: i9
 --
 
 CREATE TABLE public.dm_chat (
@@ -1290,10 +1290,10 @@ CREATE TABLE public.dm_chat (
 );
 
 
-ALTER TABLE public.dm_chat OWNER TO postgres;
+ALTER TABLE public.dm_chat OWNER TO i9;
 
 --
--- Name: dm_chat_event_pending_receipt; Type: TABLE; Schema: public; Owner: postgres
+-- Name: dm_chat_event_pending_receipt; Type: TABLE; Schema: public; Owner: i9
 --
 
 CREATE TABLE public.dm_chat_event_pending_receipt (
@@ -1305,10 +1305,10 @@ CREATE TABLE public.dm_chat_event_pending_receipt (
 );
 
 
-ALTER TABLE public.dm_chat_event_pending_receipt OWNER TO postgres;
+ALTER TABLE public.dm_chat_event_pending_receipt OWNER TO i9;
 
 --
--- Name: dm_chat_event_pending_receipt_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+-- Name: dm_chat_event_pending_receipt_id_seq; Type: SEQUENCE; Schema: public; Owner: i9
 --
 
 CREATE SEQUENCE public.dm_chat_event_pending_receipt_id_seq
@@ -1320,17 +1320,17 @@ CREATE SEQUENCE public.dm_chat_event_pending_receipt_id_seq
     CACHE 1;
 
 
-ALTER SEQUENCE public.dm_chat_event_pending_receipt_id_seq OWNER TO postgres;
+ALTER SEQUENCE public.dm_chat_event_pending_receipt_id_seq OWNER TO i9;
 
 --
--- Name: dm_chat_event_pending_receipt_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+-- Name: dm_chat_event_pending_receipt_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: i9
 --
 
 ALTER SEQUENCE public.dm_chat_event_pending_receipt_id_seq OWNED BY public.dm_chat_event_pending_receipt.id;
 
 
 --
--- Name: dm_chat_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+-- Name: dm_chat_id_seq; Type: SEQUENCE; Schema: public; Owner: i9
 --
 
 CREATE SEQUENCE public.dm_chat_id_seq
@@ -1342,17 +1342,17 @@ CREATE SEQUENCE public.dm_chat_id_seq
     CACHE 1;
 
 
-ALTER SEQUENCE public.dm_chat_id_seq OWNER TO postgres;
+ALTER SEQUENCE public.dm_chat_id_seq OWNER TO i9;
 
 --
--- Name: dm_chat_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+-- Name: dm_chat_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: i9
 --
 
 ALTER SEQUENCE public.dm_chat_id_seq OWNED BY public.dm_chat.id;
 
 
 --
--- Name: dm_chat_message; Type: TABLE; Schema: public; Owner: postgres
+-- Name: dm_chat_message; Type: TABLE; Schema: public; Owner: i9
 --
 
 CREATE TABLE public.dm_chat_message (
@@ -1369,10 +1369,10 @@ CREATE TABLE public.dm_chat_message (
 );
 
 
-ALTER TABLE public.dm_chat_message OWNER TO postgres;
+ALTER TABLE public.dm_chat_message OWNER TO i9;
 
 --
--- Name: dm_chat_message_event_pending_receipt; Type: TABLE; Schema: public; Owner: postgres
+-- Name: dm_chat_message_event_pending_receipt; Type: TABLE; Schema: public; Owner: i9
 --
 
 CREATE TABLE public.dm_chat_message_event_pending_receipt (
@@ -1385,10 +1385,10 @@ CREATE TABLE public.dm_chat_message_event_pending_receipt (
 );
 
 
-ALTER TABLE public.dm_chat_message_event_pending_receipt OWNER TO postgres;
+ALTER TABLE public.dm_chat_message_event_pending_receipt OWNER TO i9;
 
 --
--- Name: dm_chat_message_event_pending_receipt_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+-- Name: dm_chat_message_event_pending_receipt_id_seq; Type: SEQUENCE; Schema: public; Owner: i9
 --
 
 CREATE SEQUENCE public.dm_chat_message_event_pending_receipt_id_seq
@@ -1400,17 +1400,17 @@ CREATE SEQUENCE public.dm_chat_message_event_pending_receipt_id_seq
     CACHE 1;
 
 
-ALTER SEQUENCE public.dm_chat_message_event_pending_receipt_id_seq OWNER TO postgres;
+ALTER SEQUENCE public.dm_chat_message_event_pending_receipt_id_seq OWNER TO i9;
 
 --
--- Name: dm_chat_message_event_pending_receipt_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+-- Name: dm_chat_message_event_pending_receipt_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: i9
 --
 
 ALTER SEQUENCE public.dm_chat_message_event_pending_receipt_id_seq OWNED BY public.dm_chat_message_event_pending_receipt.id;
 
 
 --
--- Name: dm_chat_message_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+-- Name: dm_chat_message_id_seq; Type: SEQUENCE; Schema: public; Owner: i9
 --
 
 CREATE SEQUENCE public.dm_chat_message_id_seq
@@ -1422,17 +1422,17 @@ CREATE SEQUENCE public.dm_chat_message_id_seq
     CACHE 1;
 
 
-ALTER SEQUENCE public.dm_chat_message_id_seq OWNER TO postgres;
+ALTER SEQUENCE public.dm_chat_message_id_seq OWNER TO i9;
 
 --
--- Name: dm_chat_message_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+-- Name: dm_chat_message_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: i9
 --
 
 ALTER SEQUENCE public.dm_chat_message_id_seq OWNED BY public.dm_chat_message.id;
 
 
 --
--- Name: dm_chat_message_reaction; Type: TABLE; Schema: public; Owner: postgres
+-- Name: dm_chat_message_reaction; Type: TABLE; Schema: public; Owner: i9
 --
 
 CREATE TABLE public.dm_chat_message_reaction (
@@ -1446,10 +1446,10 @@ CREATE TABLE public.dm_chat_message_reaction (
 );
 
 
-ALTER TABLE public.dm_chat_message_reaction OWNER TO postgres;
+ALTER TABLE public.dm_chat_message_reaction OWNER TO i9;
 
 --
--- Name: dm_chat_message_reaction_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+-- Name: dm_chat_message_reaction_id_seq; Type: SEQUENCE; Schema: public; Owner: i9
 --
 
 CREATE SEQUENCE public.dm_chat_message_reaction_id_seq
@@ -1461,17 +1461,17 @@ CREATE SEQUENCE public.dm_chat_message_reaction_id_seq
     CACHE 1;
 
 
-ALTER SEQUENCE public.dm_chat_message_reaction_id_seq OWNER TO postgres;
+ALTER SEQUENCE public.dm_chat_message_reaction_id_seq OWNER TO i9;
 
 --
--- Name: dm_chat_message_reaction_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+-- Name: dm_chat_message_reaction_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: i9
 --
 
 ALTER SEQUENCE public.dm_chat_message_reaction_id_seq OWNED BY public.dm_chat_message_reaction.id;
 
 
 --
--- Name: group_chat; Type: TABLE; Schema: public; Owner: postgres
+-- Name: group_chat; Type: TABLE; Schema: public; Owner: i9
 --
 
 CREATE TABLE public.group_chat (
@@ -1486,10 +1486,10 @@ CREATE TABLE public.group_chat (
 );
 
 
-ALTER TABLE public.group_chat OWNER TO postgres;
+ALTER TABLE public.group_chat OWNER TO i9;
 
 --
--- Name: group_chat_activity_log; Type: TABLE; Schema: public; Owner: postgres
+-- Name: group_chat_activity_log; Type: TABLE; Schema: public; Owner: i9
 --
 
 CREATE TABLE public.group_chat_activity_log (
@@ -1501,10 +1501,10 @@ CREATE TABLE public.group_chat_activity_log (
 );
 
 
-ALTER TABLE public.group_chat_activity_log OWNER TO postgres;
+ALTER TABLE public.group_chat_activity_log OWNER TO i9;
 
 --
--- Name: group_chat_activity_log_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+-- Name: group_chat_activity_log_id_seq; Type: SEQUENCE; Schema: public; Owner: i9
 --
 
 CREATE SEQUENCE public.group_chat_activity_log_id_seq
@@ -1516,17 +1516,17 @@ CREATE SEQUENCE public.group_chat_activity_log_id_seq
     CACHE 1;
 
 
-ALTER SEQUENCE public.group_chat_activity_log_id_seq OWNER TO postgres;
+ALTER SEQUENCE public.group_chat_activity_log_id_seq OWNER TO i9;
 
 --
--- Name: group_chat_activity_log_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+-- Name: group_chat_activity_log_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: i9
 --
 
 ALTER SEQUENCE public.group_chat_activity_log_id_seq OWNED BY public.group_chat_activity_log.id;
 
 
 --
--- Name: group_chat_event_pending_receipt; Type: TABLE; Schema: public; Owner: postgres
+-- Name: group_chat_event_pending_receipt; Type: TABLE; Schema: public; Owner: i9
 --
 
 CREATE TABLE public.group_chat_event_pending_receipt (
@@ -1538,10 +1538,10 @@ CREATE TABLE public.group_chat_event_pending_receipt (
 );
 
 
-ALTER TABLE public.group_chat_event_pending_receipt OWNER TO postgres;
+ALTER TABLE public.group_chat_event_pending_receipt OWNER TO i9;
 
 --
--- Name: group_chat_event_pending_receipt_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+-- Name: group_chat_event_pending_receipt_id_seq; Type: SEQUENCE; Schema: public; Owner: i9
 --
 
 CREATE SEQUENCE public.group_chat_event_pending_receipt_id_seq
@@ -1553,17 +1553,17 @@ CREATE SEQUENCE public.group_chat_event_pending_receipt_id_seq
     CACHE 1;
 
 
-ALTER SEQUENCE public.group_chat_event_pending_receipt_id_seq OWNER TO postgres;
+ALTER SEQUENCE public.group_chat_event_pending_receipt_id_seq OWNER TO i9;
 
 --
--- Name: group_chat_event_pending_receipt_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+-- Name: group_chat_event_pending_receipt_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: i9
 --
 
 ALTER SEQUENCE public.group_chat_event_pending_receipt_id_seq OWNED BY public.group_chat_event_pending_receipt.id;
 
 
 --
--- Name: group_chat_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+-- Name: group_chat_id_seq; Type: SEQUENCE; Schema: public; Owner: i9
 --
 
 CREATE SEQUENCE public.group_chat_id_seq
@@ -1575,17 +1575,17 @@ CREATE SEQUENCE public.group_chat_id_seq
     CACHE 1;
 
 
-ALTER SEQUENCE public.group_chat_id_seq OWNER TO postgres;
+ALTER SEQUENCE public.group_chat_id_seq OWNER TO i9;
 
 --
--- Name: group_chat_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+-- Name: group_chat_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: i9
 --
 
 ALTER SEQUENCE public.group_chat_id_seq OWNED BY public.group_chat.id;
 
 
 --
--- Name: group_chat_membership; Type: TABLE; Schema: public; Owner: postgres
+-- Name: group_chat_membership; Type: TABLE; Schema: public; Owner: i9
 --
 
 CREATE TABLE public.group_chat_membership (
@@ -1598,10 +1598,10 @@ CREATE TABLE public.group_chat_membership (
 );
 
 
-ALTER TABLE public.group_chat_membership OWNER TO postgres;
+ALTER TABLE public.group_chat_membership OWNER TO i9;
 
 --
--- Name: group_chat_membership_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+-- Name: group_chat_membership_id_seq; Type: SEQUENCE; Schema: public; Owner: i9
 --
 
 CREATE SEQUENCE public.group_chat_membership_id_seq
@@ -1613,17 +1613,17 @@ CREATE SEQUENCE public.group_chat_membership_id_seq
     CACHE 1;
 
 
-ALTER SEQUENCE public.group_chat_membership_id_seq OWNER TO postgres;
+ALTER SEQUENCE public.group_chat_membership_id_seq OWNER TO i9;
 
 --
--- Name: group_chat_membership_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+-- Name: group_chat_membership_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: i9
 --
 
 ALTER SEQUENCE public.group_chat_membership_id_seq OWNED BY public.group_chat_membership.id;
 
 
 --
--- Name: group_chat_message; Type: TABLE; Schema: public; Owner: postgres
+-- Name: group_chat_message; Type: TABLE; Schema: public; Owner: i9
 --
 
 CREATE TABLE public.group_chat_message (
@@ -1640,10 +1640,10 @@ CREATE TABLE public.group_chat_message (
 );
 
 
-ALTER TABLE public.group_chat_message OWNER TO postgres;
+ALTER TABLE public.group_chat_message OWNER TO i9;
 
 --
--- Name: group_chat_message_delivery; Type: TABLE; Schema: public; Owner: postgres
+-- Name: group_chat_message_delivery; Type: TABLE; Schema: public; Owner: i9
 --
 
 CREATE TABLE public.group_chat_message_delivery (
@@ -1656,10 +1656,10 @@ CREATE TABLE public.group_chat_message_delivery (
 );
 
 
-ALTER TABLE public.group_chat_message_delivery OWNER TO postgres;
+ALTER TABLE public.group_chat_message_delivery OWNER TO i9;
 
 --
--- Name: group_chat_message_delivery_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+-- Name: group_chat_message_delivery_id_seq; Type: SEQUENCE; Schema: public; Owner: i9
 --
 
 CREATE SEQUENCE public.group_chat_message_delivery_id_seq
@@ -1671,17 +1671,17 @@ CREATE SEQUENCE public.group_chat_message_delivery_id_seq
     CACHE 1;
 
 
-ALTER SEQUENCE public.group_chat_message_delivery_id_seq OWNER TO postgres;
+ALTER SEQUENCE public.group_chat_message_delivery_id_seq OWNER TO i9;
 
 --
--- Name: group_chat_message_delivery_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+-- Name: group_chat_message_delivery_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: i9
 --
 
 ALTER SEQUENCE public.group_chat_message_delivery_id_seq OWNED BY public.group_chat_message_delivery.id;
 
 
 --
--- Name: group_chat_message_event_pending_receipt; Type: TABLE; Schema: public; Owner: postgres
+-- Name: group_chat_message_event_pending_receipt; Type: TABLE; Schema: public; Owner: i9
 --
 
 CREATE TABLE public.group_chat_message_event_pending_receipt (
@@ -1694,10 +1694,10 @@ CREATE TABLE public.group_chat_message_event_pending_receipt (
 );
 
 
-ALTER TABLE public.group_chat_message_event_pending_receipt OWNER TO postgres;
+ALTER TABLE public.group_chat_message_event_pending_receipt OWNER TO i9;
 
 --
--- Name: group_chat_message_event_pending_receipt_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+-- Name: group_chat_message_event_pending_receipt_id_seq; Type: SEQUENCE; Schema: public; Owner: i9
 --
 
 CREATE SEQUENCE public.group_chat_message_event_pending_receipt_id_seq
@@ -1709,17 +1709,17 @@ CREATE SEQUENCE public.group_chat_message_event_pending_receipt_id_seq
     CACHE 1;
 
 
-ALTER SEQUENCE public.group_chat_message_event_pending_receipt_id_seq OWNER TO postgres;
+ALTER SEQUENCE public.group_chat_message_event_pending_receipt_id_seq OWNER TO i9;
 
 --
--- Name: group_chat_message_event_pending_receipt_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+-- Name: group_chat_message_event_pending_receipt_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: i9
 --
 
 ALTER SEQUENCE public.group_chat_message_event_pending_receipt_id_seq OWNED BY public.group_chat_message_event_pending_receipt.id;
 
 
 --
--- Name: group_chat_message_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+-- Name: group_chat_message_id_seq; Type: SEQUENCE; Schema: public; Owner: i9
 --
 
 CREATE SEQUENCE public.group_chat_message_id_seq
@@ -1731,17 +1731,17 @@ CREATE SEQUENCE public.group_chat_message_id_seq
     CACHE 1;
 
 
-ALTER SEQUENCE public.group_chat_message_id_seq OWNER TO postgres;
+ALTER SEQUENCE public.group_chat_message_id_seq OWNER TO i9;
 
 --
--- Name: group_chat_message_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+-- Name: group_chat_message_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: i9
 --
 
 ALTER SEQUENCE public.group_chat_message_id_seq OWNED BY public.group_chat_message.id;
 
 
 --
--- Name: group_chat_message_reaction; Type: TABLE; Schema: public; Owner: postgres
+-- Name: group_chat_message_reaction; Type: TABLE; Schema: public; Owner: i9
 --
 
 CREATE TABLE public.group_chat_message_reaction (
@@ -1755,10 +1755,10 @@ CREATE TABLE public.group_chat_message_reaction (
 );
 
 
-ALTER TABLE public.group_chat_message_reaction OWNER TO postgres;
+ALTER TABLE public.group_chat_message_reaction OWNER TO i9;
 
 --
--- Name: group_chat_message_reaction_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+-- Name: group_chat_message_reaction_id_seq; Type: SEQUENCE; Schema: public; Owner: i9
 --
 
 CREATE SEQUENCE public.group_chat_message_reaction_id_seq
@@ -1770,17 +1770,17 @@ CREATE SEQUENCE public.group_chat_message_reaction_id_seq
     CACHE 1;
 
 
-ALTER SEQUENCE public.group_chat_message_reaction_id_seq OWNER TO postgres;
+ALTER SEQUENCE public.group_chat_message_reaction_id_seq OWNER TO i9;
 
 --
--- Name: group_chat_message_reaction_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+-- Name: group_chat_message_reaction_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: i9
 --
 
 ALTER SEQUENCE public.group_chat_message_reaction_id_seq OWNED BY public.group_chat_message_reaction.id;
 
 
 --
--- Name: i9c_user; Type: TABLE; Schema: public; Owner: postgres
+-- Name: i9c_user; Type: TABLE; Schema: public; Owner: i9
 --
 
 CREATE TABLE public.i9c_user (
@@ -1798,10 +1798,10 @@ CREATE TABLE public.i9c_user (
 );
 
 
-ALTER TABLE public.i9c_user OWNER TO postgres;
+ALTER TABLE public.i9c_user OWNER TO i9;
 
 --
--- Name: i9c_user_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+-- Name: i9c_user_id_seq; Type: SEQUENCE; Schema: public; Owner: i9
 --
 
 CREATE SEQUENCE public.i9c_user_id_seq
@@ -1813,17 +1813,17 @@ CREATE SEQUENCE public.i9c_user_id_seq
     CACHE 1;
 
 
-ALTER SEQUENCE public.i9c_user_id_seq OWNER TO postgres;
+ALTER SEQUENCE public.i9c_user_id_seq OWNER TO i9;
 
 --
--- Name: i9c_user_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+-- Name: i9c_user_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: i9
 --
 
 ALTER SEQUENCE public.i9c_user_id_seq OWNED BY public.i9c_user.id;
 
 
 --
--- Name: ongoing_signup; Type: TABLE; Schema: public; Owner: postgres
+-- Name: ongoing_signup; Type: TABLE; Schema: public; Owner: i9
 --
 
 CREATE TABLE public.ongoing_signup (
@@ -1834,10 +1834,10 @@ CREATE TABLE public.ongoing_signup (
 );
 
 
-ALTER TABLE public.ongoing_signup OWNER TO postgres;
+ALTER TABLE public.ongoing_signup OWNER TO i9;
 
 --
--- Name: user_dm_chat; Type: TABLE; Schema: public; Owner: postgres
+-- Name: user_dm_chat; Type: TABLE; Schema: public; Owner: i9
 --
 
 CREATE TABLE public.user_dm_chat (
@@ -1851,10 +1851,10 @@ CREATE TABLE public.user_dm_chat (
 );
 
 
-ALTER TABLE public.user_dm_chat OWNER TO postgres;
+ALTER TABLE public.user_dm_chat OWNER TO i9;
 
 --
--- Name: user_dm_chat_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+-- Name: user_dm_chat_id_seq; Type: SEQUENCE; Schema: public; Owner: i9
 --
 
 CREATE SEQUENCE public.user_dm_chat_id_seq
@@ -1866,17 +1866,17 @@ CREATE SEQUENCE public.user_dm_chat_id_seq
     CACHE 1;
 
 
-ALTER SEQUENCE public.user_dm_chat_id_seq OWNER TO postgres;
+ALTER SEQUENCE public.user_dm_chat_id_seq OWNER TO i9;
 
 --
--- Name: user_dm_chat_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+-- Name: user_dm_chat_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: i9
 --
 
 ALTER SEQUENCE public.user_dm_chat_id_seq OWNED BY public.user_dm_chat.id;
 
 
 --
--- Name: user_group_chat; Type: TABLE; Schema: public; Owner: postgres
+-- Name: user_group_chat; Type: TABLE; Schema: public; Owner: i9
 --
 
 CREATE TABLE public.user_group_chat (
@@ -1889,10 +1889,10 @@ CREATE TABLE public.user_group_chat (
 );
 
 
-ALTER TABLE public.user_group_chat OWNER TO postgres;
+ALTER TABLE public.user_group_chat OWNER TO i9;
 
 --
--- Name: user_group_chat_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+-- Name: user_group_chat_id_seq; Type: SEQUENCE; Schema: public; Owner: i9
 --
 
 CREATE SEQUENCE public.user_group_chat_id_seq
@@ -1904,129 +1904,129 @@ CREATE SEQUENCE public.user_group_chat_id_seq
     CACHE 1;
 
 
-ALTER SEQUENCE public.user_group_chat_id_seq OWNER TO postgres;
+ALTER SEQUENCE public.user_group_chat_id_seq OWNER TO i9;
 
 --
--- Name: user_group_chat_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+-- Name: user_group_chat_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: i9
 --
 
 ALTER SEQUENCE public.user_group_chat_id_seq OWNED BY public.user_group_chat.id;
 
 
 --
--- Name: dm_chat id; Type: DEFAULT; Schema: public; Owner: postgres
+-- Name: dm_chat id; Type: DEFAULT; Schema: public; Owner: i9
 --
 
 ALTER TABLE ONLY public.dm_chat ALTER COLUMN id SET DEFAULT nextval('public.dm_chat_id_seq'::regclass);
 
 
 --
--- Name: dm_chat_event_pending_receipt id; Type: DEFAULT; Schema: public; Owner: postgres
+-- Name: dm_chat_event_pending_receipt id; Type: DEFAULT; Schema: public; Owner: i9
 --
 
 ALTER TABLE ONLY public.dm_chat_event_pending_receipt ALTER COLUMN id SET DEFAULT nextval('public.dm_chat_event_pending_receipt_id_seq'::regclass);
 
 
 --
--- Name: dm_chat_message id; Type: DEFAULT; Schema: public; Owner: postgres
+-- Name: dm_chat_message id; Type: DEFAULT; Schema: public; Owner: i9
 --
 
 ALTER TABLE ONLY public.dm_chat_message ALTER COLUMN id SET DEFAULT nextval('public.dm_chat_message_id_seq'::regclass);
 
 
 --
--- Name: dm_chat_message_event_pending_receipt id; Type: DEFAULT; Schema: public; Owner: postgres
+-- Name: dm_chat_message_event_pending_receipt id; Type: DEFAULT; Schema: public; Owner: i9
 --
 
 ALTER TABLE ONLY public.dm_chat_message_event_pending_receipt ALTER COLUMN id SET DEFAULT nextval('public.dm_chat_message_event_pending_receipt_id_seq'::regclass);
 
 
 --
--- Name: dm_chat_message_reaction id; Type: DEFAULT; Schema: public; Owner: postgres
+-- Name: dm_chat_message_reaction id; Type: DEFAULT; Schema: public; Owner: i9
 --
 
 ALTER TABLE ONLY public.dm_chat_message_reaction ALTER COLUMN id SET DEFAULT nextval('public.dm_chat_message_reaction_id_seq'::regclass);
 
 
 --
--- Name: group_chat id; Type: DEFAULT; Schema: public; Owner: postgres
+-- Name: group_chat id; Type: DEFAULT; Schema: public; Owner: i9
 --
 
 ALTER TABLE ONLY public.group_chat ALTER COLUMN id SET DEFAULT nextval('public.group_chat_id_seq'::regclass);
 
 
 --
--- Name: group_chat_activity_log id; Type: DEFAULT; Schema: public; Owner: postgres
+-- Name: group_chat_activity_log id; Type: DEFAULT; Schema: public; Owner: i9
 --
 
 ALTER TABLE ONLY public.group_chat_activity_log ALTER COLUMN id SET DEFAULT nextval('public.group_chat_activity_log_id_seq'::regclass);
 
 
 --
--- Name: group_chat_event_pending_receipt id; Type: DEFAULT; Schema: public; Owner: postgres
+-- Name: group_chat_event_pending_receipt id; Type: DEFAULT; Schema: public; Owner: i9
 --
 
 ALTER TABLE ONLY public.group_chat_event_pending_receipt ALTER COLUMN id SET DEFAULT nextval('public.group_chat_event_pending_receipt_id_seq'::regclass);
 
 
 --
--- Name: group_chat_membership id; Type: DEFAULT; Schema: public; Owner: postgres
+-- Name: group_chat_membership id; Type: DEFAULT; Schema: public; Owner: i9
 --
 
 ALTER TABLE ONLY public.group_chat_membership ALTER COLUMN id SET DEFAULT nextval('public.group_chat_membership_id_seq'::regclass);
 
 
 --
--- Name: group_chat_message id; Type: DEFAULT; Schema: public; Owner: postgres
+-- Name: group_chat_message id; Type: DEFAULT; Schema: public; Owner: i9
 --
 
 ALTER TABLE ONLY public.group_chat_message ALTER COLUMN id SET DEFAULT nextval('public.group_chat_message_id_seq'::regclass);
 
 
 --
--- Name: group_chat_message_delivery id; Type: DEFAULT; Schema: public; Owner: postgres
+-- Name: group_chat_message_delivery id; Type: DEFAULT; Schema: public; Owner: i9
 --
 
 ALTER TABLE ONLY public.group_chat_message_delivery ALTER COLUMN id SET DEFAULT nextval('public.group_chat_message_delivery_id_seq'::regclass);
 
 
 --
--- Name: group_chat_message_event_pending_receipt id; Type: DEFAULT; Schema: public; Owner: postgres
+-- Name: group_chat_message_event_pending_receipt id; Type: DEFAULT; Schema: public; Owner: i9
 --
 
 ALTER TABLE ONLY public.group_chat_message_event_pending_receipt ALTER COLUMN id SET DEFAULT nextval('public.group_chat_message_event_pending_receipt_id_seq'::regclass);
 
 
 --
--- Name: group_chat_message_reaction id; Type: DEFAULT; Schema: public; Owner: postgres
+-- Name: group_chat_message_reaction id; Type: DEFAULT; Schema: public; Owner: i9
 --
 
 ALTER TABLE ONLY public.group_chat_message_reaction ALTER COLUMN id SET DEFAULT nextval('public.group_chat_message_reaction_id_seq'::regclass);
 
 
 --
--- Name: i9c_user id; Type: DEFAULT; Schema: public; Owner: postgres
+-- Name: i9c_user id; Type: DEFAULT; Schema: public; Owner: i9
 --
 
 ALTER TABLE ONLY public.i9c_user ALTER COLUMN id SET DEFAULT nextval('public.i9c_user_id_seq'::regclass);
 
 
 --
--- Name: user_dm_chat id; Type: DEFAULT; Schema: public; Owner: postgres
+-- Name: user_dm_chat id; Type: DEFAULT; Schema: public; Owner: i9
 --
 
 ALTER TABLE ONLY public.user_dm_chat ALTER COLUMN id SET DEFAULT nextval('public.user_dm_chat_id_seq'::regclass);
 
 
 --
--- Name: user_group_chat id; Type: DEFAULT; Schema: public; Owner: postgres
+-- Name: user_group_chat id; Type: DEFAULT; Schema: public; Owner: i9
 --
 
 ALTER TABLE ONLY public.user_group_chat ALTER COLUMN id SET DEFAULT nextval('public.user_group_chat_id_seq'::regclass);
 
 
 --
--- Name: dm_chat dm_chat_initiator_id_partner_id_key; Type: CONSTRAINT; Schema: public; Owner: postgres
+-- Name: dm_chat dm_chat_initiator_id_partner_id_key; Type: CONSTRAINT; Schema: public; Owner: i9
 --
 
 ALTER TABLE ONLY public.dm_chat
@@ -2034,7 +2034,7 @@ ALTER TABLE ONLY public.dm_chat
 
 
 --
--- Name: dm_chat_message dm_chat_message_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+-- Name: dm_chat_message dm_chat_message_pkey; Type: CONSTRAINT; Schema: public; Owner: i9
 --
 
 ALTER TABLE ONLY public.dm_chat_message
@@ -2042,7 +2042,7 @@ ALTER TABLE ONLY public.dm_chat_message
 
 
 --
--- Name: dm_chat_message_reaction dm_chat_message_reaction_message_id_reactor_id_key; Type: CONSTRAINT; Schema: public; Owner: postgres
+-- Name: dm_chat_message_reaction dm_chat_message_reaction_message_id_reactor_id_key; Type: CONSTRAINT; Schema: public; Owner: i9
 --
 
 ALTER TABLE ONLY public.dm_chat_message_reaction
@@ -2050,7 +2050,7 @@ ALTER TABLE ONLY public.dm_chat_message_reaction
 
 
 --
--- Name: dm_chat dm_chat_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+-- Name: dm_chat dm_chat_pkey; Type: CONSTRAINT; Schema: public; Owner: i9
 --
 
 ALTER TABLE ONLY public.dm_chat
@@ -2058,7 +2058,7 @@ ALTER TABLE ONLY public.dm_chat
 
 
 --
--- Name: group_chat_membership group_chat_membership_group_chat_id_member_id_key; Type: CONSTRAINT; Schema: public; Owner: postgres
+-- Name: group_chat_membership group_chat_membership_group_chat_id_member_id_key; Type: CONSTRAINT; Schema: public; Owner: i9
 --
 
 ALTER TABLE ONLY public.group_chat_membership
@@ -2066,7 +2066,7 @@ ALTER TABLE ONLY public.group_chat_membership
 
 
 --
--- Name: group_chat_message_delivery group_chat_message_delivery_message_id_user_id_group_chat_i_key; Type: CONSTRAINT; Schema: public; Owner: postgres
+-- Name: group_chat_message_delivery group_chat_message_delivery_message_id_user_id_group_chat_i_key; Type: CONSTRAINT; Schema: public; Owner: i9
 --
 
 ALTER TABLE ONLY public.group_chat_message_delivery
@@ -2074,7 +2074,7 @@ ALTER TABLE ONLY public.group_chat_message_delivery
 
 
 --
--- Name: group_chat_message group_chat_message_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+-- Name: group_chat_message group_chat_message_pkey; Type: CONSTRAINT; Schema: public; Owner: i9
 --
 
 ALTER TABLE ONLY public.group_chat_message
@@ -2082,7 +2082,7 @@ ALTER TABLE ONLY public.group_chat_message
 
 
 --
--- Name: group_chat_message_reaction group_chat_message_reaction_message_id_reactor_id_key; Type: CONSTRAINT; Schema: public; Owner: postgres
+-- Name: group_chat_message_reaction group_chat_message_reaction_message_id_reactor_id_key; Type: CONSTRAINT; Schema: public; Owner: i9
 --
 
 ALTER TABLE ONLY public.group_chat_message_reaction
@@ -2090,7 +2090,7 @@ ALTER TABLE ONLY public.group_chat_message_reaction
 
 
 --
--- Name: group_chat group_chat_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+-- Name: group_chat group_chat_pkey; Type: CONSTRAINT; Schema: public; Owner: i9
 --
 
 ALTER TABLE ONLY public.group_chat
@@ -2098,7 +2098,7 @@ ALTER TABLE ONLY public.group_chat
 
 
 --
--- Name: i9c_user i9c_user_email_key; Type: CONSTRAINT; Schema: public; Owner: postgres
+-- Name: i9c_user i9c_user_email_key; Type: CONSTRAINT; Schema: public; Owner: i9
 --
 
 ALTER TABLE ONLY public.i9c_user
@@ -2106,7 +2106,7 @@ ALTER TABLE ONLY public.i9c_user
 
 
 --
--- Name: i9c_user i9c_user_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+-- Name: i9c_user i9c_user_pkey; Type: CONSTRAINT; Schema: public; Owner: i9
 --
 
 ALTER TABLE ONLY public.i9c_user
@@ -2114,7 +2114,7 @@ ALTER TABLE ONLY public.i9c_user
 
 
 --
--- Name: i9c_user i9c_user_username_key; Type: CONSTRAINT; Schema: public; Owner: postgres
+-- Name: i9c_user i9c_user_username_key; Type: CONSTRAINT; Schema: public; Owner: i9
 --
 
 ALTER TABLE ONLY public.i9c_user
@@ -2122,7 +2122,7 @@ ALTER TABLE ONLY public.i9c_user
 
 
 --
--- Name: ongoing_signup ongoing_signup_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+-- Name: ongoing_signup ongoing_signup_pkey; Type: CONSTRAINT; Schema: public; Owner: i9
 --
 
 ALTER TABLE ONLY public.ongoing_signup
@@ -2130,7 +2130,7 @@ ALTER TABLE ONLY public.ongoing_signup
 
 
 --
--- Name: user_dm_chat user_dm_chat_user_id_dm_chat_id_key; Type: CONSTRAINT; Schema: public; Owner: postgres
+-- Name: user_dm_chat user_dm_chat_user_id_dm_chat_id_key; Type: CONSTRAINT; Schema: public; Owner: i9
 --
 
 ALTER TABLE ONLY public.user_dm_chat
@@ -2138,7 +2138,7 @@ ALTER TABLE ONLY public.user_dm_chat
 
 
 --
--- Name: user_dm_chat user_dm_chat_user_id_partner_id_key; Type: CONSTRAINT; Schema: public; Owner: postgres
+-- Name: user_dm_chat user_dm_chat_user_id_partner_id_key; Type: CONSTRAINT; Schema: public; Owner: i9
 --
 
 ALTER TABLE ONLY public.user_dm_chat
@@ -2146,7 +2146,7 @@ ALTER TABLE ONLY public.user_dm_chat
 
 
 --
--- Name: user_group_chat user_group_chat_user_id_group_chat_id_key; Type: CONSTRAINT; Schema: public; Owner: postgres
+-- Name: user_group_chat user_group_chat_user_id_group_chat_id_key; Type: CONSTRAINT; Schema: public; Owner: i9
 --
 
 ALTER TABLE ONLY public.user_group_chat
@@ -2154,7 +2154,7 @@ ALTER TABLE ONLY public.user_group_chat
 
 
 --
--- Name: dm_chat_event_pending_receipt dm_chat_event_pending_receipt_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+-- Name: dm_chat_event_pending_receipt dm_chat_event_pending_receipt_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: i9
 --
 
 ALTER TABLE ONLY public.dm_chat_event_pending_receipt
@@ -2162,7 +2162,7 @@ ALTER TABLE ONLY public.dm_chat_event_pending_receipt
 
 
 --
--- Name: dm_chat dm_chat_initiator_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+-- Name: dm_chat dm_chat_initiator_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: i9
 --
 
 ALTER TABLE ONLY public.dm_chat
@@ -2170,7 +2170,7 @@ ALTER TABLE ONLY public.dm_chat
 
 
 --
--- Name: dm_chat_message dm_chat_message_dm_chat_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+-- Name: dm_chat_message dm_chat_message_dm_chat_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: i9
 --
 
 ALTER TABLE ONLY public.dm_chat_message
@@ -2178,7 +2178,7 @@ ALTER TABLE ONLY public.dm_chat_message
 
 
 --
--- Name: dm_chat_message_event_pending_receipt dm_chat_message_event_pending_receipt_dm_chat_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+-- Name: dm_chat_message_event_pending_receipt dm_chat_message_event_pending_receipt_dm_chat_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: i9
 --
 
 ALTER TABLE ONLY public.dm_chat_message_event_pending_receipt
@@ -2186,7 +2186,7 @@ ALTER TABLE ONLY public.dm_chat_message_event_pending_receipt
 
 
 --
--- Name: dm_chat_message_event_pending_receipt dm_chat_message_event_pending_receipt_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+-- Name: dm_chat_message_event_pending_receipt dm_chat_message_event_pending_receipt_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: i9
 --
 
 ALTER TABLE ONLY public.dm_chat_message_event_pending_receipt
@@ -2194,7 +2194,7 @@ ALTER TABLE ONLY public.dm_chat_message_event_pending_receipt
 
 
 --
--- Name: dm_chat_message_reaction dm_chat_message_reaction_dm_chat_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+-- Name: dm_chat_message_reaction dm_chat_message_reaction_dm_chat_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: i9
 --
 
 ALTER TABLE ONLY public.dm_chat_message_reaction
@@ -2202,7 +2202,7 @@ ALTER TABLE ONLY public.dm_chat_message_reaction
 
 
 --
--- Name: dm_chat_message_reaction dm_chat_message_reaction_message_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+-- Name: dm_chat_message_reaction dm_chat_message_reaction_message_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: i9
 --
 
 ALTER TABLE ONLY public.dm_chat_message_reaction
@@ -2210,7 +2210,7 @@ ALTER TABLE ONLY public.dm_chat_message_reaction
 
 
 --
--- Name: dm_chat_message_reaction dm_chat_message_reaction_reactor_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+-- Name: dm_chat_message_reaction dm_chat_message_reaction_reactor_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: i9
 --
 
 ALTER TABLE ONLY public.dm_chat_message_reaction
@@ -2218,7 +2218,7 @@ ALTER TABLE ONLY public.dm_chat_message_reaction
 
 
 --
--- Name: dm_chat_message dm_chat_message_sender_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+-- Name: dm_chat_message dm_chat_message_sender_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: i9
 --
 
 ALTER TABLE ONLY public.dm_chat_message
@@ -2226,7 +2226,7 @@ ALTER TABLE ONLY public.dm_chat_message
 
 
 --
--- Name: dm_chat dm_chat_partner_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+-- Name: dm_chat dm_chat_partner_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: i9
 --
 
 ALTER TABLE ONLY public.dm_chat
@@ -2234,7 +2234,7 @@ ALTER TABLE ONLY public.dm_chat
 
 
 --
--- Name: group_chat_activity_log group_chat_activity_log_group_chat_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+-- Name: group_chat_activity_log group_chat_activity_log_group_chat_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: i9
 --
 
 ALTER TABLE ONLY public.group_chat_activity_log
@@ -2242,7 +2242,7 @@ ALTER TABLE ONLY public.group_chat_activity_log
 
 
 --
--- Name: group_chat group_chat_creator_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+-- Name: group_chat group_chat_creator_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: i9
 --
 
 ALTER TABLE ONLY public.group_chat
@@ -2250,7 +2250,7 @@ ALTER TABLE ONLY public.group_chat
 
 
 --
--- Name: group_chat_event_pending_receipt group_chat_event_pending_receipt_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+-- Name: group_chat_event_pending_receipt group_chat_event_pending_receipt_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: i9
 --
 
 ALTER TABLE ONLY public.group_chat_event_pending_receipt
@@ -2258,7 +2258,7 @@ ALTER TABLE ONLY public.group_chat_event_pending_receipt
 
 
 --
--- Name: group_chat_membership group_chat_membership_group_chat_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+-- Name: group_chat_membership group_chat_membership_group_chat_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: i9
 --
 
 ALTER TABLE ONLY public.group_chat_membership
@@ -2266,7 +2266,7 @@ ALTER TABLE ONLY public.group_chat_membership
 
 
 --
--- Name: group_chat_membership group_chat_membership_member_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+-- Name: group_chat_membership group_chat_membership_member_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: i9
 --
 
 ALTER TABLE ONLY public.group_chat_membership
@@ -2274,7 +2274,7 @@ ALTER TABLE ONLY public.group_chat_membership
 
 
 --
--- Name: group_chat_message_delivery group_chat_message_delivery_group_chat_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+-- Name: group_chat_message_delivery group_chat_message_delivery_group_chat_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: i9
 --
 
 ALTER TABLE ONLY public.group_chat_message_delivery
@@ -2282,7 +2282,7 @@ ALTER TABLE ONLY public.group_chat_message_delivery
 
 
 --
--- Name: group_chat_message_delivery group_chat_message_delivery_message_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+-- Name: group_chat_message_delivery group_chat_message_delivery_message_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: i9
 --
 
 ALTER TABLE ONLY public.group_chat_message_delivery
@@ -2290,7 +2290,7 @@ ALTER TABLE ONLY public.group_chat_message_delivery
 
 
 --
--- Name: group_chat_message_delivery group_chat_message_delivery_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+-- Name: group_chat_message_delivery group_chat_message_delivery_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: i9
 --
 
 ALTER TABLE ONLY public.group_chat_message_delivery
@@ -2298,7 +2298,7 @@ ALTER TABLE ONLY public.group_chat_message_delivery
 
 
 --
--- Name: group_chat_message_event_pending_receipt group_chat_message_event_pending_receipt_group_chat_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+-- Name: group_chat_message_event_pending_receipt group_chat_message_event_pending_receipt_group_chat_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: i9
 --
 
 ALTER TABLE ONLY public.group_chat_message_event_pending_receipt
@@ -2306,7 +2306,7 @@ ALTER TABLE ONLY public.group_chat_message_event_pending_receipt
 
 
 --
--- Name: group_chat_message_event_pending_receipt group_chat_message_event_pending_receipt_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+-- Name: group_chat_message_event_pending_receipt group_chat_message_event_pending_receipt_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: i9
 --
 
 ALTER TABLE ONLY public.group_chat_message_event_pending_receipt
@@ -2314,7 +2314,7 @@ ALTER TABLE ONLY public.group_chat_message_event_pending_receipt
 
 
 --
--- Name: group_chat_message group_chat_message_group_chat_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+-- Name: group_chat_message group_chat_message_group_chat_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: i9
 --
 
 ALTER TABLE ONLY public.group_chat_message
@@ -2322,7 +2322,7 @@ ALTER TABLE ONLY public.group_chat_message
 
 
 --
--- Name: group_chat_message_reaction group_chat_message_reaction_group_chat_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+-- Name: group_chat_message_reaction group_chat_message_reaction_group_chat_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: i9
 --
 
 ALTER TABLE ONLY public.group_chat_message_reaction
@@ -2330,7 +2330,7 @@ ALTER TABLE ONLY public.group_chat_message_reaction
 
 
 --
--- Name: group_chat_message_reaction group_chat_message_reaction_message_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+-- Name: group_chat_message_reaction group_chat_message_reaction_message_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: i9
 --
 
 ALTER TABLE ONLY public.group_chat_message_reaction
@@ -2338,7 +2338,7 @@ ALTER TABLE ONLY public.group_chat_message_reaction
 
 
 --
--- Name: group_chat_message_reaction group_chat_message_reaction_reactor_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+-- Name: group_chat_message_reaction group_chat_message_reaction_reactor_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: i9
 --
 
 ALTER TABLE ONLY public.group_chat_message_reaction
@@ -2346,7 +2346,7 @@ ALTER TABLE ONLY public.group_chat_message_reaction
 
 
 --
--- Name: group_chat_message group_chat_message_sender_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+-- Name: group_chat_message group_chat_message_sender_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: i9
 --
 
 ALTER TABLE ONLY public.group_chat_message
@@ -2354,7 +2354,7 @@ ALTER TABLE ONLY public.group_chat_message
 
 
 --
--- Name: user_dm_chat user_dm_chat_dm_chat_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+-- Name: user_dm_chat user_dm_chat_dm_chat_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: i9
 --
 
 ALTER TABLE ONLY public.user_dm_chat
@@ -2362,7 +2362,7 @@ ALTER TABLE ONLY public.user_dm_chat
 
 
 --
--- Name: user_dm_chat user_dm_chat_partner_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+-- Name: user_dm_chat user_dm_chat_partner_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: i9
 --
 
 ALTER TABLE ONLY public.user_dm_chat
@@ -2370,7 +2370,7 @@ ALTER TABLE ONLY public.user_dm_chat
 
 
 --
--- Name: user_dm_chat user_dm_chat_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+-- Name: user_dm_chat user_dm_chat_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: i9
 --
 
 ALTER TABLE ONLY public.user_dm_chat
@@ -2378,7 +2378,7 @@ ALTER TABLE ONLY public.user_dm_chat
 
 
 --
--- Name: user_group_chat user_group_chat_group_chat_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+-- Name: user_group_chat user_group_chat_group_chat_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: i9
 --
 
 ALTER TABLE ONLY public.user_group_chat
@@ -2386,7 +2386,7 @@ ALTER TABLE ONLY public.user_group_chat
 
 
 --
--- Name: user_group_chat user_group_chat_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+-- Name: user_group_chat user_group_chat_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: i9
 --
 
 ALTER TABLE ONLY public.user_group_chat
