@@ -65,7 +65,7 @@ var VerifyEmail = websocket.New(func(c *websocket.Conn) {
 	}
 
 	if sessionData.State != "verify email" {
-		if w_err := c.WriteJSON(helpers.ErrResp(fiber.StatusUnauthorized, fiber.ErrUnauthorized)); w_err != nil {
+		if w_err := c.WriteJSON(helpers.ErrResp(fiber.StatusUnauthorized, fmt.Errorf("expected state: verify email"))); w_err != nil {
 			log.Println(w_err)
 		}
 		return
@@ -121,7 +121,7 @@ var RegisterUser = websocket.New(func(c *websocket.Conn) {
 	}
 
 	if sessionData.State != "register user" {
-		if w_err := c.WriteJSON(helpers.ErrResp(fiber.StatusUnauthorized, fiber.ErrUnauthorized)); w_err != nil {
+		if w_err := c.WriteJSON(helpers.ErrResp(fiber.StatusUnauthorized, fmt.Errorf("expected state: register user"))); w_err != nil {
 			log.Println(w_err)
 		}
 		return
