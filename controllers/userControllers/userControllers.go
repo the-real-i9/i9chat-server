@@ -40,7 +40,7 @@ var ChangeProfilePicture = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 			continue
 		}
 
-		if app_err := userService.ChangeMyProfilePicture(clientUser.Id, body.PictureData); app_err != nil {
+		if app_err := userService.ChangeMyProfilePicture(clientUser.Id, clientUser.Username, body.PictureData); app_err != nil {
 			w_err = c.WriteJSON(helpers.ErrResp(fiber.StatusUnprocessableEntity, fmt.Errorf("operation failed: %s", app_err)))
 			continue
 		}

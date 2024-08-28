@@ -30,7 +30,7 @@ func ErrResp(code int, err error) appTypes.WSResp {
 }
 
 func UploadFile(filePath string, data []byte) (string, error) {
-	fileUrl := fmt.Sprintf("https://storage.cloud.google.com/i9chat-bucket/%s", filePath)
+	fileUrl := fmt.Sprintf("https://storage.googleapis.com/i9chat-bucket/%s", filePath)
 
 	stWriter := appGlobals.GCSClient.Bucket("i9chat-bucket").Object(filePath).NewWriter(context.Background())
 

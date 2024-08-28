@@ -39,10 +39,10 @@ func SwitchMyPresence(clientUserId int, presence string, lastSeen pgtype.Timesta
 	return nil
 }
 
-func ChangeMyProfilePicture(clientUserId int, pictureData []byte) error {
+func ChangeMyProfilePicture(clientUserId int, clientUsername string, pictureData []byte) error {
 	// if any picture size validation error, do it here
 
-	picPath := fmt.Sprintf("profile_pictures/profile_pic_%d.jpg", time.Now().UnixNano())
+	picPath := fmt.Sprintf("profile_pictures/%s/profile_pic_%d.jpg", clientUsername, time.Now().UnixNano())
 
 	newPicUrl, err := helpers.UploadFile(picPath, pictureData)
 	if err != nil {
