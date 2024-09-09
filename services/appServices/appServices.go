@@ -1,7 +1,6 @@
 package appServices
 
 import (
-	"crypto/tls"
 	"fmt"
 	"i9chat/helpers"
 	"log"
@@ -23,7 +22,7 @@ func SendMail(email string, subject string, body string) {
 	m.SetBody("text/html", body)
 
 	d := gomail.NewDialer("smtp.gmail.com", 465, user, pass)
-	d.TLSConfig = &tls.Config{InsecureSkipVerify: true}
+	// d.TLSConfig = &tls.Config{InsecureSkipVerify: true}
 
 	if err := d.DialAndSend(m); err != nil {
 		log.Println(err)
