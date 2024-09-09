@@ -7,6 +7,7 @@ import (
 	"i9chat/src/routes/chatRoutes/groupChatRoutes"
 	"i9chat/src/routes/userRoutes"
 	"log"
+	"os"
 
 	"github.com/gofiber/contrib/websocket"
 	"github.com/gofiber/fiber/v2"
@@ -20,7 +21,7 @@ func init() {
 
 func main() {
 
-	app := fiber.New(fiber.Config{DisableStartupMessage: true})
+	app := fiber.New()
 
 	app.Use(func(c *fiber.Ctx) error {
 		if websocket.IsWebSocketUpgrade(c) {
@@ -37,8 +38,6 @@ func main() {
 	app.Route("/api/app/dm_chat", dmChatRoutes.Init)
 	app.Route("/api/app/group_chat", groupChatRoutes.Init)
 
-	log.Println("Server listening on ws://localhost:8000")
-
-	log.Fatalln(app.Listen("localhost:8000"))
+	log.Fatalln(app.Listen("0.0.0.0:" + os.Getenv("PORT")))
 
 }

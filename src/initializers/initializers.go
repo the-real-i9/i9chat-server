@@ -33,8 +33,10 @@ func initDBPool() error {
 
 func InitApp() error {
 
-	if err := godotenv.Load(".env"); err != nil {
-		return err
+	if os.Getenv("GO_ENV") != "production" {
+		if err := godotenv.Load(".env"); err != nil {
+			return err
+		}
 	}
 
 	if err := initDBPool(); err != nil {
