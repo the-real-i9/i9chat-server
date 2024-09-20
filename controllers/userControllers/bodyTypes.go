@@ -18,9 +18,6 @@ func (b changeProfilePictureBody) Validate() error {
 	return validation.ValidateStruct(&b,
 		validation.Field(&b.PictureData,
 			validation.Required,
-		),
-		validation.Field(&b.PictureData,
-			validation.Required,
 			validation.Length(1, 2*1024*1024).Error("maximum picture size of 2mb exceeded"),
 		),
 	)
@@ -47,22 +44,14 @@ type newDMChatDataT struct {
 	CreatedAt time.Time      `json:"createdAt"`
 }
 
-func (ob newDMChatDataT) Validate() error {
-	var vb struct {
-		PartnerId int                 `json:"partnerId"`
-		InitMsg   appTypes.MsgContent `json:"initMsg"`
-		CreatedAt time.Time           `json:"createdAt"`
-	}
-
-	helpers.ToStruct(ob, &vb)
-
-	return validation.ValidateStruct(&vb,
-		validation.Field(&vb.PartnerId,
+func (b newDMChatDataT) Validate() error {
+	return validation.ValidateStruct(&b,
+		validation.Field(&b.PartnerId,
 			validation.Required,
 			validation.Min(1).Error("invalid value"),
 		),
-		validation.Field(&vb.InitMsg, validation.Required),
-		validation.Field(&vb.CreatedAt,
+		validation.Field(&b.InitMsg, validation.Required),
+		validation.Field(&b.CreatedAt,
 			validation.Required,
 			validation.Max(time.Now()).Error("invalid future time"),
 		),
