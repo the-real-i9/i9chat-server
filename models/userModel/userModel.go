@@ -30,9 +30,9 @@ func New(email string, username string, password string, geolocation string) (*U
 	return user, nil
 }
 
-func FindOne(uniqueId string) (*User, error) {
+func FindOne(uniqueIdent string) (*User, error) {
 
-	user, err := helpers.QueryRowType[User]("SELECT * FROM get_user($1)", uniqueId)
+	user, err := helpers.QueryRowType[User]("SELECT * FROM get_user($1)", uniqueIdent)
 
 	if err != nil {
 		log.Println(fmt.Errorf("userModel.go: FindOne: %s", err))
@@ -99,6 +99,16 @@ func EditProfile(userId int, fieldValuePair [][]string) (*User, error) {
 	}
 
 	return updatedUser, nil
+}
+
+func GetPassword(uniqueIdent string) (string, error) {
+	hashedPassword, err := helpers.QueryRowField[string]("SELECT password FROM get_user_password($1)", uniqueIdent)
+	if err != nil {
+		log.Println(fmt.Errorf("userModel.go: GetPassword: %s", err))
+		return "", appGlobals.ErrInternalServerError
+	}
+
+	return *hashedPassword, nil
 }
 
 func SwitchPresence(userId int, presence string, lastSeen pgtype.Timestamp) error {

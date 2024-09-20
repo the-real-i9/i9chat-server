@@ -64,7 +64,7 @@ var VerifyEmail = websocket.New(func(c *websocket.Conn) {
 		return
 	}
 
-	if sessionData.State != "verify email" {
+	if sessionData.Step != "verify email" {
 		if w_err := c.WriteJSON(helpers.ErrResp(fiber.StatusUnauthorized, fmt.Errorf("expected state: verify email"))); w_err != nil {
 			log.Println(w_err)
 		}
@@ -120,7 +120,7 @@ var RegisterUser = websocket.New(func(c *websocket.Conn) {
 		return
 	}
 
-	if sessionData.State != "register user" {
+	if sessionData.Step != "register user" {
 		if w_err := c.WriteJSON(helpers.ErrResp(fiber.StatusUnauthorized, fmt.Errorf("expected state: register user"))); w_err != nil {
 			log.Println(w_err)
 		}
@@ -148,7 +148,7 @@ var RegisterUser = websocket.New(func(c *websocket.Conn) {
 			continue
 		}
 
-		userData, authJwt, app_err := authServices.RegisterUser(sessionData.SessionId, sessionData.Email, body.Username, body.Password, body.Geolocation)
+		newUser, authJwt, app_err := authServices.RegisterUser(sessionData.SessionId, sessionData.Email, body.Username, body.Password, body.Geolocation)
 
 		if app_err != nil {
 			w_err = c.WriteJSON(helpers.ErrResp(fiber.StatusUnprocessableEntity, app_err))
@@ -159,7 +159,7 @@ var RegisterUser = websocket.New(func(c *websocket.Conn) {
 			StatusCode: fiber.StatusOK,
 			Body: map[string]any{
 				"msg":     "Signup success!",
-				"user":    userData,
+				"user":    newUser,
 				"authJwt": authJwt,
 			},
 		})
@@ -189,7 +189,7 @@ var Signin = websocket.New(func(c *websocket.Conn) {
 			continue
 		}
 
-		userData, authJwt, app_err := authServices.Signin(body.EmailOrUsername, body.Password)
+		theUser, authJwt, app_err := authServices.Signin(body.EmailOrUsername, body.Password)
 
 		if app_err != nil {
 			w_err = c.WriteJSON(helpers.ErrResp(fiber.StatusUnprocessableEntity, app_err))
@@ -200,7 +200,7 @@ var Signin = websocket.New(func(c *websocket.Conn) {
 			StatusCode: fiber.StatusOK,
 			Body: map[string]any{
 				"msg":     "Signin success!",
-				"user":    userData,
+				"user":    theUser,
 				"authJwt": authJwt,
 			},
 		})

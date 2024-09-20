@@ -39,7 +39,7 @@ func RequestNewAccount(email string) (string, error) {
 	signupSessionJwt := helpers.JwtSign(appTypes.SignupSessionData{
 		SessionId: sessionId,
 		Email:     email,
-		State:     "verify email",
+		Step:      "verify email",
 	}, os.Getenv("SIGNUP_SESSION_JWT_SECRET"), expires)
 
 	return signupSessionJwt, nil
@@ -60,19 +60,13 @@ func VerifyEmail(sessionId string, inputVerfCode int, email string) (string, err
 	signupSessionJwt := helpers.JwtSign(appTypes.SignupSessionData{
 		SessionId: sessionId,
 		Email:     email,
-		State:     "register user",
+		Step:      "register user",
 	}, os.Getenv("SIGNUP_SESSION_JWT_SECRET"), time.Now().UTC().Add(1*time.Hour))
 
 	return signupSessionJwt, nil
 }
 
-func RegisterUser(sessionId string, email string, username string, password string, geolocation string) (*user.User, string, error) {
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
-	if err != nil {
-		log.Println(fmt.Errorf("authServices.go: RegisterUser: %s", err))
-		return nil, "", appGlobals.ErrInternalServerError
-	}
-
+func RegisterUser(sessionId, email, username, password, geolocation string) (*user.User, string, error) {
 	accExists, err := appModel.AccountExists(username)
 	if err != nil {
 		return nil, "", err
@@ -82,38 +76,43 @@ func RegisterUser(sessionId string, email string, username string, password stri
 		return nil, "", fmt.Errorf("username error: username '%s' is unavailable", username)
 	}
 
-	user, err := user.New(email, username, string(hashedPassword), geolocation)
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		log.Println(fmt.Errorf("authServices.go: RegisterUser: %s", err))
+		return nil, "", appGlobals.ErrInternalServerError
+	}
+
+	newUser, err := user.New(email, username, string(hashedPassword), geolocation)
 	if err != nil {
 		return nil, "", err
 	}
 
 	authJwt := helpers.JwtSign(appTypes.ClientUser{
-		Id:       user.Id,
-		Username: user.Username,
+		Id:       newUser.Id,
+		Username: newUser.Username,
 	}, os.Getenv("AUTH_JWT_SECRET"), time.Now().UTC().Add(365*24*time.Hour)) // 1 year
 
-	appModel.EndSignupSession(sessionId)
+	go appModel.EndSignupSession(sessionId)
 
-	return user, authJwt, nil
+	return newUser, authJwt, nil
 }
 
 func Signin(emailOrUsername string, password string) (*user.User, string, error) {
-	user, err := user.FindOne(emailOrUsername)
+	theUser, err := user.FindOne(emailOrUsername)
 	if err != nil {
 		return nil, "", err
 	}
 
-	if user == nil {
+	if theUser == nil {
 		return nil, "", fmt.Errorf("signin error: incorrect email/username or password")
 	}
 
-	hashedPassword, err := helpers.QueryRowField[string]("SELECT password FROM get_user_password($1)", emailOrUsername)
+	hashedPassword, err := user.GetPassword(emailOrUsername)
 	if err != nil {
-		log.Println(fmt.Errorf("authServices.go: Signin: DB query error: get_user_password(): %s", err))
-		return nil, "", appGlobals.ErrInternalServerError
+		return nil, "", err
 	}
 
-	cmp_err := bcrypt.CompareHashAndPassword([]byte(*hashedPassword), []byte(password))
+	cmp_err := bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(password))
 	if cmp_err != nil {
 		if errors.Is(cmp_err, bcrypt.ErrMismatchedHashAndPassword) {
 			return nil, "", fmt.Errorf("signin error: incorrect email/username or password")
@@ -124,9 +123,9 @@ func Signin(emailOrUsername string, password string) (*user.User, string, error)
 	}
 
 	authJwt := helpers.JwtSign(appTypes.ClientUser{
-		Id:       user.Id,
-		Username: user.Username,
+		Id:       theUser.Id,
+		Username: theUser.Username,
 	}, os.Getenv("AUTH_JWT_SECRET"), time.Now().UTC().Add(365*24*time.Hour))
 
-	return user, authJwt, nil
+	return theUser, authJwt, nil
 }

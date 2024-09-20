@@ -41,5 +41,5 @@ func VerifyEmail(sessionId string, verfCode int) (bool, error) {
 }
 
 func EndSignupSession(sessionId string) {
-	go helpers.QueryRowField[bool]("SELECT end_signup_session ($1)", sessionId)
+	helpers.QueryRowField[bool]("SELECT end_signup_session ($1)", sessionId)
 }
