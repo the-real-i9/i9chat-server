@@ -18,7 +18,7 @@ func SwitchMyPresence(clientUserId int, presence string, lastSeen pgtype.Timesta
 	}
 
 	go func() {
-		// "recepients" are: all users to whom I am a DMChat partner
+		// "recepients" are: all users to whom you are a DMChat partner
 		recepientIds, err := helpers.QueryRowsField[int]("SELECT user_id FROM user_dm_chat WHERE partner_id = $1", clientUserId)
 		if err != nil {
 			return
