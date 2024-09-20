@@ -342,7 +342,6 @@ func createNewGroupChatAndAckMessages(c *websocket.Conn, clientUser *appTypes.Cl
 // This handler merely get chats as is from the database, no updates accounted for yet.
 // After closing this,  we must immediately access "Open[DM|Group]ChatStream"
 var GetMyChats = helpers.WSHandlerProtected(func(c *websocket.Conn) {
-
 	clientUser := c.Locals("user").(*appTypes.ClientUser)
 
 	myChats, app_err := user.GetChats(clientUser.Id)
@@ -357,13 +356,13 @@ var GetMyChats = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 
 		if app_err != nil {
 			w_err = c.WriteJSON(helpers.ErrResp(fiber.StatusInternalServerError, app_err))
-			continue
-		}
+		} else {
 
-		w_err = c.WriteJSON(appTypes.WSResp{
-			StatusCode: fiber.StatusOK,
-			Body:       myChats,
-		})
+			w_err = c.WriteJSON(appTypes.WSResp{
+				StatusCode: fiber.StatusOK,
+				Body:       myChats,
+			})
+		}
 
 		var body struct{}
 		if r_err := c.ReadJSON(&body); r_err != nil {
@@ -388,13 +387,12 @@ var GetAllUsers = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 
 		if app_err != nil {
 			w_err = c.WriteJSON(helpers.ErrResp(fiber.StatusUnprocessableEntity, app_err))
-			continue
+		} else {
+			w_err = c.WriteJSON(appTypes.WSResp{
+				StatusCode: fiber.StatusOK,
+				Body:       allUsers,
+			})
 		}
-
-		w_err = c.WriteJSON(appTypes.WSResp{
-			StatusCode: fiber.StatusOK,
-			Body:       allUsers,
-		})
 
 		var body struct{}
 		if r_err := c.ReadJSON(&body); r_err != nil {
