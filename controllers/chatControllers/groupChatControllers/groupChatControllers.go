@@ -8,6 +8,7 @@ import (
 	user "i9chat/models/userModel"
 	"i9chat/services/appObservers"
 	"i9chat/services/appServices"
+	"i9chat/services/authServices"
 	"i9chat/services/chatService/groupChatService"
 	"log"
 
@@ -15,7 +16,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
-var GetChatHistory = helpers.WSHandlerProtected(func(c *websocket.Conn) {
+var GetChatHistory = authServices.WSHandlerProtected(func(c *websocket.Conn) {
 
 	var w_err error
 
@@ -54,7 +55,7 @@ var GetChatHistory = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 
 // this goroutine receives message acknowlegement for sent messages,
 // and in turn changes the delivery status of messages sent by the child goroutine
-var OpenMessagingStream = helpers.WSHandlerProtected(func(c *websocket.Conn) {
+var OpenMessagingStream = authServices.WSHandlerProtected(func(c *websocket.Conn) {
 	clientUser := c.Locals("user").(*appTypes.ClientUser)
 
 	var groupChatId int
@@ -143,7 +144,7 @@ func sendMessages(c *websocket.Conn, clientUser *appTypes.ClientUser, groupChatI
 	}
 }
 
-var ExecuteAction = helpers.WSHandlerProtected(func(c *websocket.Conn) {
+var ExecuteAction = authServices.WSHandlerProtected(func(c *websocket.Conn) {
 	clientUser := c.Locals("user").(*appTypes.ClientUser)
 
 	type handler func(clientUser []string, data map[string]any) error

@@ -7,6 +7,7 @@ import (
 	user "i9chat/models/userModel"
 	"i9chat/services/appObservers"
 	"i9chat/services/appServices"
+	"i9chat/services/authServices"
 	"i9chat/services/chatService/dmChatService"
 	"i9chat/services/chatService/groupChatService"
 	"i9chat/services/userService"
@@ -16,7 +17,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
-var ChangeProfilePicture = helpers.WSHandlerProtected(func(c *websocket.Conn) {
+var ChangeProfilePicture = authServices.WSHandlerProtected(func(c *websocket.Conn) {
 	clientUser := c.Locals("user").(*appTypes.ClientUser)
 
 	var w_err error
@@ -60,7 +61,7 @@ var ChangeProfilePicture = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 // 1. As soon as connection is restored (client online), streams all new dm chats pending receipt (while client offline) to the client, and keeps the connection open to send new ones.
 //
 // 2. Lets the client: "initiate a new dm chat" and "acknowledge received dm messages"
-var OpenDMChatStream = helpers.WSHandlerProtected(func(c *websocket.Conn) {
+var OpenDMChatStream = authServices.WSHandlerProtected(func(c *websocket.Conn) {
 	clientUser := c.Locals("user").(*appTypes.ClientUser)
 
 	// a channel for streaming data to client
@@ -212,7 +213,7 @@ func createNewDMChatAndAckMessages(c *websocket.Conn, clientUser *appTypes.Clien
 // 1. As soon as connection is restored (client online), streams all new group chats pending receipt (while client offline) to the client, and keeps the connection open to send new ones.
 //
 // 2. Lets the client: "initiate a new group chat" and "acknowledge received group messages"
-var OpenGroupChatStream = helpers.WSHandlerProtected(func(c *websocket.Conn) {
+var OpenGroupChatStream = authServices.WSHandlerProtected(func(c *websocket.Conn) {
 	clientUser := c.Locals("user").(*appTypes.ClientUser)
 
 	// a channel for streaming data to client
@@ -341,7 +342,7 @@ func createNewGroupChatAndAckMessages(c *websocket.Conn, clientUser *appTypes.Cl
 
 // This handler merely get chats as is from the database, no updates accounted for yet.
 // After closing this,  we must immediately access "Open[DM|Group]ChatStream"
-var GetMyChats = helpers.WSHandlerProtected(func(c *websocket.Conn) {
+var GetMyChats = authServices.WSHandlerProtected(func(c *websocket.Conn) {
 	clientUser := c.Locals("user").(*appTypes.ClientUser)
 
 	myChats, app_err := user.GetChats(clientUser.Id)
@@ -372,7 +373,7 @@ var GetMyChats = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 	}
 })
 
-var GetAllUsers = helpers.WSHandlerProtected(func(c *websocket.Conn) {
+var GetAllUsers = authServices.WSHandlerProtected(func(c *websocket.Conn) {
 	clientUser := c.Locals("user").(*appTypes.ClientUser)
 
 	allUsers, app_err := user.GetAll(clientUser.Id)
@@ -402,7 +403,7 @@ var GetAllUsers = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 	}
 })
 
-var SearchUser = helpers.WSHandlerProtected(func(c *websocket.Conn) {
+var SearchUser = authServices.WSHandlerProtected(func(c *websocket.Conn) {
 	clientUser := c.Locals("user").(*appTypes.ClientUser)
 
 	var w_err error
@@ -437,7 +438,7 @@ var SearchUser = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 	}
 })
 
-var FindNearbyUsers = helpers.WSHandlerProtected(func(c *websocket.Conn) {
+var FindNearbyUsers = authServices.WSHandlerProtected(func(c *websocket.Conn) {
 	clientUser := c.Locals("user").(*appTypes.ClientUser)
 
 	var w_err error
@@ -475,7 +476,7 @@ var FindNearbyUsers = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 	}
 })
 
-var SwitchMyPresence = helpers.WSHandlerProtected(func(c *websocket.Conn) {
+var SwitchMyPresence = authServices.WSHandlerProtected(func(c *websocket.Conn) {
 	clientUser := c.Locals("user").(*appTypes.ClientUser)
 
 	var w_err error
@@ -516,7 +517,7 @@ var SwitchMyPresence = helpers.WSHandlerProtected(func(c *websocket.Conn) {
 	}
 })
 
-var UpdateMyGeolocation = helpers.WSHandlerProtected(func(c *websocket.Conn) {
+var UpdateMyGeolocation = authServices.WSHandlerProtected(func(c *websocket.Conn) {
 	clientUser := c.Locals("user").(*appTypes.ClientUser)
 
 	var body updateMyGeolocationBody

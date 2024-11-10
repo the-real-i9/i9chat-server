@@ -36,7 +36,7 @@ var RequestNewAccount = websocket.New(func(c *websocket.Conn) {
 			continue
 		}
 
-		signupSessionJwt, app_err := authServices.RequestNewAccount(body.Email)
+		signupSessionJwt, app_err := requestNewAccount(body.Email)
 
 		if app_err != nil {
 			w_err = c.WriteJSON(helpers.ErrResp(fiber.StatusUnprocessableEntity, app_err))
@@ -56,7 +56,7 @@ var RequestNewAccount = websocket.New(func(c *websocket.Conn) {
 var VerifyEmail = websocket.New(func(c *websocket.Conn) {
 	sessionToken := c.Headers("Authorization")
 
-	sessionData, err := helpers.JwtVerify[appTypes.SignupSessionData](sessionToken, os.Getenv("SIGNUP_SESSION_JWT_SECRET"))
+	sessionData, err := authServices.JwtVerify[appTypes.SignupSessionData](sessionToken, os.Getenv("SIGNUP_SESSION_JWT_SECRET"))
 	if err != nil {
 		if w_err := c.WriteJSON(helpers.ErrResp(fiber.StatusUnauthorized, err)); w_err != nil {
 			log.Println(w_err)
@@ -92,7 +92,7 @@ var VerifyEmail = websocket.New(func(c *websocket.Conn) {
 			continue
 		}
 
-		signupSessionJwt, app_err := authServices.VerifyEmail(sessionData.SessionId, body.Code, sessionData.Email)
+		signupSessionJwt, app_err := verifyEmail(sessionData.SessionId, body.Code, sessionData.Email)
 
 		if app_err != nil {
 			w_err = c.WriteJSON(helpers.ErrResp(fiber.StatusUnprocessableEntity, app_err))
@@ -112,7 +112,7 @@ var VerifyEmail = websocket.New(func(c *websocket.Conn) {
 var RegisterUser = websocket.New(func(c *websocket.Conn) {
 	sessionToken := c.Headers("Authorization")
 
-	sessionData, err := helpers.JwtVerify[appTypes.SignupSessionData](sessionToken, os.Getenv("SIGNUP_SESSION_JWT_SECRET"))
+	sessionData, err := authServices.JwtVerify[appTypes.SignupSessionData](sessionToken, os.Getenv("SIGNUP_SESSION_JWT_SECRET"))
 	if err != nil {
 		if w_err := c.WriteJSON(helpers.ErrResp(fiber.StatusUnauthorized, err)); w_err != nil {
 			log.Println(w_err)
@@ -148,7 +148,7 @@ var RegisterUser = websocket.New(func(c *websocket.Conn) {
 			continue
 		}
 
-		newUser, authJwt, app_err := authServices.RegisterUser(sessionData.SessionId, sessionData.Email, body.Username, body.Password, body.Geolocation)
+		newUser, authJwt, app_err := registerUser(sessionData.SessionId, sessionData.Email, body.Username, body.Password, body.Geolocation)
 
 		if app_err != nil {
 			w_err = c.WriteJSON(helpers.ErrResp(fiber.StatusUnprocessableEntity, app_err))
@@ -189,7 +189,7 @@ var Signin = websocket.New(func(c *websocket.Conn) {
 			continue
 		}
 
-		theUser, authJwt, app_err := authServices.Signin(body.EmailOrUsername, body.Password)
+		theUser, authJwt, app_err := signin(body.EmailOrUsername, body.Password)
 
 		if app_err != nil {
 			w_err = c.WriteJSON(helpers.ErrResp(fiber.StatusUnprocessableEntity, app_err))
