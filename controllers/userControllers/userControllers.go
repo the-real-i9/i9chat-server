@@ -10,6 +10,7 @@ import (
 	"i9chat/services/authServices"
 	"i9chat/services/chatService/dmChatService"
 	"i9chat/services/chatService/groupChatService"
+	"i9chat/services/messageBrokerService"
 	"i9chat/services/userService"
 	"log"
 
@@ -481,6 +482,11 @@ var FindNearbyUsers = authServices.WSHandlerProtected(func(c *websocket.Conn) {
 var SwitchMyPresence = authServices.WSHandlerProtected(func(c *websocket.Conn) {
 	clientUser := c.Locals("user").(*appTypes.ClientUser)
 
+	// a channel for streaming data to client
+	var myMailbox = make(chan any)
+
+	userPOId := fmt.Sprintf("user-%d", clientUser.Id)
+
 	var w_err error
 
 	for {
@@ -502,7 +508,13 @@ var SwitchMyPresence = authServices.WSHandlerProtected(func(c *websocket.Conn) {
 			continue
 		}
 
-		app_err := userService.SwitchMyPresence(clientUser.Id, body.Presence, body.LastSeen)
+		if body.Presence == "online" {
+			messageBrokerService.AddMailbox(userPOId, myMailbox)
+		} else {
+			messageBrokerService.RemoveMailbox(userPOId)
+		}
+
+		app_err := switchMyPresence(clientUser.Id, body.Presence, body.LastSeen)
 
 		if app_err != nil {
 			w_err = c.WriteJSON(helpers.ErrResp(fiber.StatusUnprocessableEntity, app_err))
@@ -517,6 +529,8 @@ var SwitchMyPresence = authServices.WSHandlerProtected(func(c *websocket.Conn) {
 		})
 
 	}
+
+	messageBrokerService.RemoveMailbox(userPOId)
 })
 
 var UpdateMyGeolocation = authServices.WSHandlerProtected(func(c *websocket.Conn) {

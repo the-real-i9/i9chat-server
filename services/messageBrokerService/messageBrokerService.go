@@ -13,19 +13,19 @@ import (
 // AddMailbox():
 // The user calls whis method when he wants to start receiveing messages/events from the server, practically by "coming online".
 // On call: It accepts a user's mailbox in which it wants to receive messages, and adds it to a map of user mailboxes in the post office.
-// The method will use the user's key to check for "must-deliver" messages pending delivery
+// The method will use the user's PostOffice(PO) id to check for "must-deliver" messages pending delivery
 // as queued in the database, and stream it to the user's mailbox
 
 // RemoveMailbox():
 // This user calls this method when he wants to stop receiving messages/events from the server, practically by "going offline".
-// On call: It accepts a user's key and uses it to remove their mailbox from the map of user mailboxes.
+// On call: It accepts a user's PostOffice(PO) id and uses it to remove their mailbox from the map of user mailboxes.
 
 // PostMessage():
 // This method is called when a user wants to post a message/event to another user
-// On call: It accepts a user's key whose mailbox the sender wants to post a message
+// On call: It accepts a user's PostOffice(PO) id whose mailbox the sender wants to post a message
 // If the user's mailbox is missing in the map of user mailboxes,
 // a "must-deliver" flag, set to true, causes this message to be persisted in the database
-// alongside the receiver's user key.
+// alongside the receiver's user PostOffice(PO) id.
 
 var (
 	mu         = sync.Mutex{}
@@ -37,18 +37,23 @@ type Message struct {
 	Data  any    `json:"data" db:"data"`
 }
 
-func AddMailbox(userKey string, mailbox chan<- any) {
+func AddMailbox(userPOId string, mailbox chan<- any) {
 	mu.Lock()
 	defer mu.Unlock()
 
-	postOffice[userKey] = mailbox
+	if _, found := postOffice[userPOId]; found {
+		return
+	}
 
-	streamMessagesPendingDelivery(userKey, mailbox)
+	postOffice[userPOId] = mailbox
+
+	streamMessagesPendingDelivery(userPOId, mailbox)
+
 }
 
-func streamMessagesPendingDelivery(userKey string, mailbox chan<- any) {
+func streamMessagesPendingDelivery(userPOId string, mailbox chan<- any) {
 	var userId int
-	fmt.Sscanf(userKey, "user-%d", &userId)
+	fmt.Sscanf(userPOId, "user-%d", &userId)
 
 	messages, _ := helpers.QueryRowsField[Message](`
 		SELECT message FROM user_message_pending_delivery 
@@ -62,23 +67,27 @@ func streamMessagesPendingDelivery(userKey string, mailbox chan<- any) {
 	}
 }
 
-func RemoveMailbox(userKey string) {
+func RemoveMailbox(userPOId string) {
 	mu.Lock()
 	defer mu.Unlock()
 
-	close(postOffice[userKey])
-	delete(postOffice, userKey)
+	if _, found := postOffice[userPOId]; !found {
+		return
+	}
+
+	close(postOffice[userPOId])
+	delete(postOffice, userPOId)
 }
 
-func PostMessage(userKey string, msg Message, mustDeliver bool) {
+func PostMessage(userPOId string, msg Message, mustDeliver bool) {
 	mu.Lock()
 	defer mu.Unlock()
 
-	if mailbox, found := postOffice[userKey]; found {
+	if mailbox, found := postOffice[userPOId]; found {
 		mailbox <- msg
 	} else if mustDeliver {
 		var userId int
-		fmt.Sscanf(userKey, "user-%d", &userId)
+		fmt.Sscanf(userPOId, "user-%d", &userId)
 
 		go helpers.QueryRowField[bool](`
 			INSERT INTO user_message_pending_delivery (user_id, message) 
