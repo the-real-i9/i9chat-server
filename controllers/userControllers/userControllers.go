@@ -476,6 +476,8 @@ var FindNearbyUsers = authServices.WSHandlerProtected(func(c *websocket.Conn) {
 	}
 })
 
+// This controller determines if the user receive events or not. It's powerful.
+// It essentially subscribe or unsubscribe a user from the message broker service.
 var SwitchMyPresence = authServices.WSHandlerProtected(func(c *websocket.Conn) {
 	clientUser := c.Locals("user").(*appTypes.ClientUser)
 

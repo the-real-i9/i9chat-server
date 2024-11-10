@@ -111,16 +111,16 @@ func GetPassword(uniqueIdent string) (string, error) {
 	return *hashedPassword, nil
 }
 
-func SwitchPresence(userId int, presence string, lastSeen pgtype.Timestamp) error {
+func SwitchPresence(userId int, presence string, lastSeen pgtype.Timestamp) ([]*int, error) {
 
-	_, err := helpers.QueryRowField[bool](`SELECT switch_user_presence($1, $2, $3)`, userId, presence, lastSeen)
+	userDMChatPartnersIdList, err := helpers.QueryRowsField[int](`SELECT * FROM switch_user_presence($1, $2, $3)`, userId, presence, lastSeen)
 
 	if err != nil {
 		log.Println(fmt.Errorf("userModel.go: SwitchPresence: %s", err))
-		return appGlobals.ErrInternalServerError
+		return nil, appGlobals.ErrInternalServerError
 	}
 
-	return nil
+	return userDMChatPartnersIdList, nil
 }
 
 func UpdateLocation(userId int, newGeolocation string) error {

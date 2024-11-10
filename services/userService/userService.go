@@ -13,17 +13,13 @@ import (
 )
 
 func SwitchMyPresence(clientUserId int, presence string, lastSeen pgtype.Timestamp) error {
-	if err := user.SwitchPresence(clientUserId, presence, lastSeen); err != nil {
+	userDMChatPartnersIdList, err := user.SwitchPresence(clientUserId, presence, lastSeen)
+	if err != nil {
 		return err
 	}
 
-	go func() {
+	go func(recepientIds []*int) {
 		// "recepients" are: all users to whom you are a DMChat partner
-		recepientIds, err := helpers.QueryRowsField[int]("SELECT user_id FROM user_dm_chat WHERE partner_id = $1", clientUserId)
-		if err != nil {
-			return
-		}
-
 		for _, rId := range recepientIds {
 			rId := *rId
 			go appObservers.DMChatObserver{}.SendPresenceUpdate(
@@ -34,7 +30,7 @@ func SwitchMyPresence(clientUserId int, presence string, lastSeen pgtype.Timesta
 				}, "user presence update",
 			)
 		}
-	}()
+	}(userDMChatPartnersIdList)
 
 	return nil
 }
