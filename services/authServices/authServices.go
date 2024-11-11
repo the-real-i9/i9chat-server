@@ -21,7 +21,7 @@ import (
 func HashPassword(password string) string {
 	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
-		log.Panicln(err)
+		panic(err)
 	}
 
 	return string(hash)
@@ -33,7 +33,7 @@ func PasswordMatchesHash(hash string, password string) bool {
 		if errors.Is(err, bcrypt.ErrMismatchedHashAndPassword) {
 			return false
 		} else {
-			log.Panicln(err)
+			panic(err)
 		}
 	}
 

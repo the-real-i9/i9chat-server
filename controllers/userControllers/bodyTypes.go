@@ -23,12 +23,12 @@ func (b changeProfilePictureBody) Validate() error {
 	)
 }
 
-type openDMChatStreamBody struct {
+type createNewDMChatAndAckMessagesBody struct {
 	Action string         `json:"action"`
 	Data   map[string]any `json:"data"`
 }
 
-func (b openDMChatStreamBody) Validate() error {
+func (b createNewDMChatAndAckMessagesBody) Validate() error {
 	return validation.ValidateStruct(&b,
 		validation.Field(&b.Action,
 			validation.Required,
@@ -88,12 +88,12 @@ func (b batchAckMsgDataT) Validate() error {
 	)
 }
 
-type openGroupChatStreamBody struct {
+type createNewGroupChatAndAckMessagesBody struct {
 	Action string         `json:"action"`
 	Data   map[string]any `json:"data"`
 }
 
-func (b openGroupChatStreamBody) Validate() error {
+func (b createNewGroupChatAndAckMessagesBody) Validate() error {
 	return validation.ValidateStruct(&b,
 		validation.Field(&b.Action,
 			validation.Required,

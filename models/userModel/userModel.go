@@ -115,7 +115,7 @@ func DMChatPartners(userId int) []*int {
 
 	userDMChatPartnersIdList, err := helpers.QueryRowsField[int](`SELECT user_id FROM user_dm_chat WHERE partner_id = $1`, userId)
 	if err != nil {
-		log.Panicln(err)
+		panic(err)
 	}
 
 	return userDMChatPartnersIdList

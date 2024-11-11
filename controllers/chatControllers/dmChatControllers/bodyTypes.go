@@ -20,12 +20,12 @@ func (b getChatHistoryBody) Validate() error {
 	)
 }
 
-type openMessagingStreamBody struct {
+type sendMessageBody struct {
 	Msg map[string]any `json:"msg"`
 	At  time.Time      `json:"at"`
 }
 
-func (ob openMessagingStreamBody) Validate() error {
+func (ob sendMessageBody) Validate() error {
 	var vb struct {
 		Msg appTypes.MsgContent `json:"msg"`
 		At  time.Time           `json:"at"`

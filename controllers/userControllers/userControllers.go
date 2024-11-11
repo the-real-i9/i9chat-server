@@ -279,7 +279,7 @@ var CreateNewDMChatAndAckMessages = authServices.WSHandlerProtected(func(c *webs
 	var w_err error
 
 	for {
-		var body openDMChatStreamBody
+		var body createNewDMChatAndAckMessagesBody
 
 		var newChatData newDMChatDataT
 
@@ -379,7 +379,7 @@ var CreateNewGroupChatAndAckMessages = authServices.WSHandlerProtected(func(c *w
 	var w_err error
 
 	for {
-		var body openGroupChatStreamBody
+		var body createNewGroupChatAndAckMessagesBody
 
 		var newChatData newGroupChatDataT
 
