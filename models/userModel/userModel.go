@@ -5,6 +5,7 @@ import (
 	"i9chat/appGlobals"
 	"i9chat/helpers"
 	"log"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgtype"
 )
@@ -111,9 +112,9 @@ func GetPassword(uniqueIdent string) (string, error) {
 	return *hashedPassword, nil
 }
 
-func DMChatPartners(userId int) []*int {
+func ChangePresence(userId int, presence string, lastSeen time.Time) []*int {
 
-	userDMChatPartnersIdList, err := helpers.QueryRowsField[int](`SELECT user_id FROM user_dm_chat WHERE partner_id = $1`, userId)
+	userDMChatPartnersIdList, err := helpers.QueryRowsField[int](`SELECT * FROM change_user_presence($1, $2, $3)`, userId, presence, lastSeen)
 	if err != nil {
 		panic(err)
 	}

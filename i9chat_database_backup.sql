@@ -214,6 +214,31 @@ $$;
 ALTER FUNCTION public.change_group_picture(in_group_chat_id integer, in_admin character varying[], in_new_picture_url character varying, OUT members_ids integer[], OUT activity_data json) OWNER TO i9;
 
 --
+-- Name: change_user_presence(integer, character varying, timestamp without time zone); Type: FUNCTION; Schema: public; Owner: i9
+--
+
+CREATE FUNCTION public.change_user_presence(in_user_id integer, in_presence character varying, in_last_seen timestamp without time zone) RETURNS SETOF integer
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+  IF in_presence = 'offline' THEN
+    UPDATE i9c_user SET presence = 'offline', last_seen = in_last_seen
+	WHERE id = in_user_id;
+  ELSE
+    UPDATE i9c_user SET presence = 'online', last_seen = null
+	WHERE id = in_user_id;
+  END IF;
+
+  RETURN QUERY SELECT user_id FROM user_dm_chat WHERE partner_id = in_user_id;
+
+  RETURN;
+END;
+$$;
+
+
+ALTER FUNCTION public.change_user_presence(in_user_id integer, in_presence character varying, in_last_seen timestamp without time zone) OWNER TO i9;
+
+--
 -- Name: edit_user(integer, character varying[]); Type: FUNCTION; Schema: public; Owner: i9
 --
 
@@ -1853,202 +1878,6 @@ ALTER TABLE ONLY public.user_dm_chat ALTER COLUMN id SET DEFAULT nextval('public
 --
 
 ALTER TABLE ONLY public.user_group_chat ALTER COLUMN id SET DEFAULT nextval('public.user_group_chat_id_seq'::regclass);
-
-
---
--- Data for Name: dm_chat; Type: TABLE DATA; Schema: public; Owner: i9
---
-
-COPY public.dm_chat (id, initiator_id, partner_id, created_at, deleted) FROM stdin;
-\.
-
-
---
--- Data for Name: dm_chat_message; Type: TABLE DATA; Schema: public; Owner: i9
---
-
-COPY public.dm_chat_message (id, sender_id, dm_chat_id, msg_content, edited, delivery_status, created_at, edited_at, deleted) FROM stdin;
-\.
-
-
---
--- Data for Name: dm_chat_message_reaction; Type: TABLE DATA; Schema: public; Owner: i9
---
-
-COPY public.dm_chat_message_reaction (id, message_id, reactor_id, reaction, created_at, dm_chat_id, deleted) FROM stdin;
-\.
-
-
---
--- Data for Name: group_chat; Type: TABLE DATA; Schema: public; Owner: i9
---
-
-COPY public.group_chat (id, creator_id, name, description, created_at, deleted, members_count, picture_url) FROM stdin;
-\.
-
-
---
--- Data for Name: group_chat_activity_log; Type: TABLE DATA; Schema: public; Owner: i9
---
-
-COPY public.group_chat_activity_log (id, group_chat_id, activity_type, activity_info, created_at) FROM stdin;
-\.
-
-
---
--- Data for Name: group_chat_membership; Type: TABLE DATA; Schema: public; Owner: i9
---
-
-COPY public.group_chat_membership (id, group_chat_id, member_id, role, deleted) FROM stdin;
-\.
-
-
---
--- Data for Name: group_chat_message; Type: TABLE DATA; Schema: public; Owner: i9
---
-
-COPY public.group_chat_message (id, sender_id, group_chat_id, msg_content, edited, delivery_status, created_at, edited_at, deleted) FROM stdin;
-\.
-
-
---
--- Data for Name: group_chat_message_delivery; Type: TABLE DATA; Schema: public; Owner: i9
---
-
-COPY public.group_chat_message_delivery (id, group_chat_id, message_id, user_id, status) FROM stdin;
-\.
-
-
---
--- Data for Name: group_chat_message_reaction; Type: TABLE DATA; Schema: public; Owner: i9
---
-
-COPY public.group_chat_message_reaction (id, message_id, reactor_id, reaction, created_at, group_chat_id, deleted) FROM stdin;
-\.
-
-
---
--- Data for Name: i9c_user; Type: TABLE DATA; Schema: public; Owner: i9
---
-
-COPY public.i9c_user (id, username, password, email, profile_picture_url, presence, last_seen, created_at, deleted, location) FROM stdin;
-\.
-
-
---
--- Data for Name: ongoing_signup; Type: TABLE DATA; Schema: public; Owner: i9
---
-
-COPY public.ongoing_signup (session_id, email, verification_code, verified) FROM stdin;
-\.
-
-
---
--- Data for Name: user_broker_message_pending_delivery; Type: TABLE DATA; Schema: public; Owner: i9
---
-
-COPY public.user_broker_message_pending_delivery (user_id, message, date_created) FROM stdin;
-\.
-
-
---
--- Data for Name: user_dm_chat; Type: TABLE DATA; Schema: public; Owner: i9
---
-
-COPY public.user_dm_chat (id, user_id, partner_id, dm_chat_id, unread_messages_count, updated_at, deleted) FROM stdin;
-\.
-
-
---
--- Data for Name: user_group_chat; Type: TABLE DATA; Schema: public; Owner: i9
---
-
-COPY public.user_group_chat (id, user_id, group_chat_id, unread_messages_count, updated_at, deleted) FROM stdin;
-\.
-
-
---
--- Name: dm_chat_id_seq; Type: SEQUENCE SET; Schema: public; Owner: i9
---
-
-SELECT pg_catalog.setval('public.dm_chat_id_seq', 1, false);
-
-
---
--- Name: dm_chat_message_id_seq; Type: SEQUENCE SET; Schema: public; Owner: i9
---
-
-SELECT pg_catalog.setval('public.dm_chat_message_id_seq', 1, false);
-
-
---
--- Name: dm_chat_message_reaction_id_seq; Type: SEQUENCE SET; Schema: public; Owner: i9
---
-
-SELECT pg_catalog.setval('public.dm_chat_message_reaction_id_seq', 1, false);
-
-
---
--- Name: group_chat_activity_log_id_seq; Type: SEQUENCE SET; Schema: public; Owner: i9
---
-
-SELECT pg_catalog.setval('public.group_chat_activity_log_id_seq', 1, false);
-
-
---
--- Name: group_chat_id_seq; Type: SEQUENCE SET; Schema: public; Owner: i9
---
-
-SELECT pg_catalog.setval('public.group_chat_id_seq', 1, false);
-
-
---
--- Name: group_chat_membership_id_seq; Type: SEQUENCE SET; Schema: public; Owner: i9
---
-
-SELECT pg_catalog.setval('public.group_chat_membership_id_seq', 1, false);
-
-
---
--- Name: group_chat_message_delivery_id_seq; Type: SEQUENCE SET; Schema: public; Owner: i9
---
-
-SELECT pg_catalog.setval('public.group_chat_message_delivery_id_seq', 1, false);
-
-
---
--- Name: group_chat_message_id_seq; Type: SEQUENCE SET; Schema: public; Owner: i9
---
-
-SELECT pg_catalog.setval('public.group_chat_message_id_seq', 1, false);
-
-
---
--- Name: group_chat_message_reaction_id_seq; Type: SEQUENCE SET; Schema: public; Owner: i9
---
-
-SELECT pg_catalog.setval('public.group_chat_message_reaction_id_seq', 1, false);
-
-
---
--- Name: i9c_user_id_seq; Type: SEQUENCE SET; Schema: public; Owner: i9
---
-
-SELECT pg_catalog.setval('public.i9c_user_id_seq', 1, false);
-
-
---
--- Name: user_dm_chat_id_seq; Type: SEQUENCE SET; Schema: public; Owner: i9
---
-
-SELECT pg_catalog.setval('public.user_dm_chat_id_seq', 1, false);
-
-
---
--- Name: user_group_chat_id_seq; Type: SEQUENCE SET; Schema: public; Owner: i9
---
-
-SELECT pg_catalog.setval('public.user_group_chat_id_seq', 1, false);
 
 
 --

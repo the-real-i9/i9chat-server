@@ -14,7 +14,7 @@ import (
 )
 
 func goOnline(clientUserId int, userPOId string, mailbox chan<- any) error {
-	userDMChatPartnersIdList := user.DMChatPartners(clientUserId)
+	userDMChatPartnersIdList := user.ChangePresence(clientUserId, "online", time.Now())
 
 	go messageBrokerService.AddMailbox(userPOId, mailbox)
 
@@ -38,7 +38,7 @@ func goOnline(clientUserId int, userPOId string, mailbox chan<- any) error {
 }
 
 func goOffline(clientUserId int, lastSeen time.Time, userPOId string) error {
-	userDMChatPartnersIdList := user.DMChatPartners(clientUserId)
+	userDMChatPartnersIdList := user.ChangePresence(clientUserId, "offline", lastSeen)
 
 	go messageBrokerService.RemoveMailbox(userPOId)
 

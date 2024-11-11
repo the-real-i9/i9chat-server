@@ -32,7 +32,6 @@ var GoOnline = authServices.WSHandlerProtected(func(c *websocket.Conn) {
 	go goOnlineSocketControl(c, goOff)
 
 	for data := range myMailbox {
-		fmt.Println(data)
 		w_err := c.WriteJSON(data)
 		if w_err != nil {
 			log.Println(w_err)
