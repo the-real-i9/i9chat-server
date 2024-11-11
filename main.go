@@ -41,7 +41,7 @@ func main() {
 	var PORT string
 
 	if os.Getenv("GO_ENV") != "production" {
-		PORT = "5000"
+		PORT = "8000"
 	} else {
 		PORT = os.Getenv("PORT")
 	}
