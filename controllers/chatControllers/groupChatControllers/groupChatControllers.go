@@ -84,7 +84,7 @@ var SendMessage = authServices.WSHandlerProtected(func(c *websocket.Conn) {
 		senderData, app_err := sendMessage(
 			groupChatId,
 			clientUser.Id,
-			appServices.MessageBinaryToUrl(clientUser.Id, body.Msg),
+			appServices.UploadMessageMedia(clientUser.Id, body.Msg),
 			body.At,
 		)
 

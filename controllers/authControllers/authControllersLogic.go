@@ -5,8 +5,8 @@ import (
 	"i9chat/appTypes"
 	"i9chat/models/appModel"
 	user "i9chat/models/userModel"
-	"i9chat/services/appServices"
 	"i9chat/services/authServices"
+	"i9chat/services/mailService"
 	"os"
 	"time"
 )
@@ -23,7 +23,7 @@ func requestNewAccount(email string) (string, error) {
 
 	verfCode, expires := authServices.GenerateVerifCodeExp()
 
-	go appServices.SendMail(email, "Email Verification", fmt.Sprintf("Your email verification code is: <b>%d</b>", verfCode))
+	go mailService.SendMail(email, "Email Verification", fmt.Sprintf("Your email verification code is: <b>%d</b>", verfCode))
 
 	sessionId, err := appModel.NewSignupSession(email, verfCode)
 	if err != nil {
@@ -49,7 +49,7 @@ func verifyEmail(sessionId string, inputVerfCode int, email string) (string, err
 		return "", fmt.Errorf("email verification error: incorrect verification code")
 	}
 
-	go appServices.SendMail(email, "Email Verification Success", fmt.Sprintf("Your email %s has been verified!", email))
+	go mailService.SendMail(email, "Email Verification Success", fmt.Sprintf("Your email %s has been verified!", email))
 
 	signupSessionJwt := authServices.JwtSign(appTypes.SignupSessionData{
 		SessionId: sessionId,

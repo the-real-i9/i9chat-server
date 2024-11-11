@@ -1,44 +1,20 @@
 package appServices
 
 import (
-	"crypto/tls"
 	"fmt"
 	"i9chat/helpers"
-	"log"
-	"os"
+	"i9chat/services/cloudStorageService"
 	"time"
-
-	"gopkg.in/gomail.v2"
 )
 
-func SendMail(email string, subject string, body string) {
-
-	user := os.Getenv("MAILING_EMAIL")
-	pass := os.Getenv("MAILING_PASSWORD")
-
-	m := gomail.NewMessage()
-	m.SetHeader("From", user)
-	m.SetHeader("To", email)
-	m.SetHeader("Subject", fmt.Sprintf("i9chat - %s", subject))
-	m.SetBody("text/html", body)
-
-	d := gomail.NewDialer("smtp.gmail.com", 465, user, pass)
-	d.TLSConfig = &tls.Config{InsecureSkipVerify: os.Getenv("GO_ENV") != "production"}
-
-	if err := d.DialAndSend(m); err != nil {
-		log.Println(err)
-		return
-	}
-}
-
-func handleVoiceMsg(userId int, props map[string]any) map[string]any {
+func uploadVoice(userId int, props map[string]any) map[string]any {
 	var vd struct {
 		Data []byte
 	}
 
 	helpers.MapToStruct(props, &vd)
 
-	voiceUrl, _ := helpers.UploadFile(fmt.Sprintf("voice messages/user-%d/voice-%d.ogg", userId, time.Now().UnixNano()), vd.Data)
+	voiceUrl, _ := cloudStorageService.UploadFile(fmt.Sprintf("voice_messages/user-%d/voice-%d.ogg", userId, time.Now().UnixNano()), vd.Data)
 
 	delete(props, "data")
 
@@ -47,14 +23,14 @@ func handleVoiceMsg(userId int, props map[string]any) map[string]any {
 	return map[string]any{"type": "voice", "props": props}
 }
 
-func handleAudioMsg(userId int, props map[string]any) map[string]any {
+func uploadAudio(userId int, props map[string]any) map[string]any {
 	var ad struct {
 		Data []byte
 	}
 
 	helpers.MapToStruct(props, &ad)
 
-	audioUrl, _ := helpers.UploadFile(fmt.Sprintf("audio messages/user-%d/aud-%d.mp3", userId, time.Now().UnixNano()), ad.Data)
+	audioUrl, _ := cloudStorageService.UploadFile(fmt.Sprintf("audio_messages/user-%d/aud-%d.mp3", userId, time.Now().UnixNano()), ad.Data)
 
 	delete(props, "data")
 
@@ -63,14 +39,14 @@ func handleAudioMsg(userId int, props map[string]any) map[string]any {
 	return map[string]any{"type": "audio", "props": props}
 }
 
-func handleVideoMsg(userId int, props map[string]any) map[string]any {
+func uploadVideo(userId int, props map[string]any) map[string]any {
 	var vd struct {
 		Data []byte
 	}
 
 	helpers.MapToStruct(props, &vd)
 
-	videoUrl, _ := helpers.UploadFile(fmt.Sprintf("video messages/user-%d/vid-%d.mp4", userId, time.Now().UnixNano()), vd.Data)
+	videoUrl, _ := cloudStorageService.UploadFile(fmt.Sprintf("video_messages/user-%d/vid-%d.mp4", userId, time.Now().UnixNano()), vd.Data)
 
 	delete(props, "data")
 
@@ -79,14 +55,14 @@ func handleVideoMsg(userId int, props map[string]any) map[string]any {
 	return map[string]any{"type": "video", "props": props}
 }
 
-func handleImageMsg(userId int, props map[string]any) map[string]any {
+func uploadImage(userId int, props map[string]any) map[string]any {
 	var id struct {
 		Data []byte
 	}
 
 	helpers.MapToStruct(props, &id)
 
-	imageUrl, _ := helpers.UploadFile(fmt.Sprintf("image messages/user-%d/img-%d.jpg", userId, time.Now().UnixNano()), id.Data)
+	imageUrl, _ := cloudStorageService.UploadFile(fmt.Sprintf("image_messages/user-%d/img-%d.jpg", userId, time.Now().UnixNano()), id.Data)
 
 	delete(props, "data")
 
@@ -95,14 +71,14 @@ func handleImageMsg(userId int, props map[string]any) map[string]any {
 	return map[string]any{"type": "image", "props": props}
 }
 
-func handleFileMsg(userId int, props map[string]any) map[string]any {
+func uploadFile(userId int, props map[string]any) map[string]any {
 	var fd struct {
 		Data []byte
 	}
 
 	helpers.MapToStruct(props, &fd)
 
-	fileUrl, _ := helpers.UploadFile(fmt.Sprintf("file messages/user-%d/img-%d.jpg", userId, time.Now().UnixNano()), fd.Data)
+	fileUrl, _ := cloudStorageService.UploadFile(fmt.Sprintf("file_messages/user-%d/img-%d.jpg", userId, time.Now().UnixNano()), fd.Data)
 
 	delete(props, "data")
 
@@ -111,7 +87,7 @@ func handleFileMsg(userId int, props map[string]any) map[string]any {
 	return map[string]any{"type": "image", "props": props}
 }
 
-func MessageBinaryToUrl(userId int, msgBody map[string]any) map[string]any {
+func UploadMessageMedia(userId int, msgBody map[string]any) map[string]any {
 	var msg struct {
 		Type  string
 		Props map[string]any
@@ -121,15 +97,15 @@ func MessageBinaryToUrl(userId int, msgBody map[string]any) map[string]any {
 
 	switch msg.Type {
 	case "voice":
-		return handleVoiceMsg(userId, msg.Props)
+		return uploadVoice(userId, msg.Props)
 	case "audio":
-		return handleAudioMsg(userId, msg.Props)
+		return uploadAudio(userId, msg.Props)
 	case "video":
-		return handleVideoMsg(userId, msg.Props)
+		return uploadVideo(userId, msg.Props)
 	case "image":
-		return handleImageMsg(userId, msg.Props)
+		return uploadImage(userId, msg.Props)
 	case "file":
-		return handleFileMsg(userId, msg.Props)
+		return uploadFile(userId, msg.Props)
 	default:
 		return msgBody
 	}

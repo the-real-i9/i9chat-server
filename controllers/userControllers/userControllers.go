@@ -315,7 +315,7 @@ var CreateNewDMChatAndAckMessages = authServices.WSHandlerProtected(func(c *webs
 			initiatorData, app_err := newDMChat(
 				clientUser.Id,
 				newChatData.PartnerId,
-				appServices.MessageBinaryToUrl(clientUser.Id, newChatData.InitMsg),
+				appServices.UploadMessageMedia(clientUser.Id, newChatData.InitMsg),
 				newChatData.CreatedAt,
 			)
 
