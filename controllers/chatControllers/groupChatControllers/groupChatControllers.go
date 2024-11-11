@@ -5,11 +5,8 @@ import (
 	"i9chat/appTypes"
 	"i9chat/helpers"
 	groupChat "i9chat/models/chatModel/groupChatModel"
-	user "i9chat/models/userModel"
-	"i9chat/services/appObservers"
 	"i9chat/services/appServices"
 	"i9chat/services/authServices"
-	"i9chat/services/chatService/groupChatService"
 	"log"
 
 	"github.com/gofiber/contrib/websocket"
@@ -53,66 +50,23 @@ var GetChatHistory = authServices.WSHandlerProtected(func(c *websocket.Conn) {
 	}
 })
 
-// this goroutine receives message acknowlegement for sent messages,
-// and in turn changes the delivery status of messages sent by the child goroutine
-var OpenMessagingStream = authServices.WSHandlerProtected(func(c *websocket.Conn) {
+var SendMessage = authServices.WSHandlerProtected(func(c *websocket.Conn) {
 	clientUser := c.Locals("user").(*appTypes.ClientUser)
 
 	var groupChatId int
 
-	_, param_err := fmt.Sscanf(c.Params("group_chat_id"), "%d", &groupChatId)
-	if param_err != nil {
-		if w_err := c.WriteJSON(helpers.ErrResp(fiber.StatusBadRequest, fmt.Errorf("parameter group_chat_id is not a number"))); w_err != nil {
-			log.Println(w_err)
-		}
-		return
+	_, err := fmt.Sscanf(c.Params("group_chat_id"), "%d", &groupChatId)
+	if err != nil {
+		panic(err)
 	}
-
-	var myMailbox = make(chan map[string]any, 2)
-
-	mailboxKey := fmt.Sprintf("user-%d--groupchat-%d", clientUser.Id, groupChatId)
-
-	gcso := appObservers.GroupChatSessionObserver{}
-
-	gcso.Subscribe(mailboxKey, myMailbox)
-
-	endSession := func() {
-		gcso.Unsubscribe(mailboxKey)
-	}
-
-	go sendMessages(c, clientUser, groupChatId, endSession)
-
-	/* ---- stream group chat message events pending dispatch to the channel ---- */
-	// observe that this happens once every new connection
-	// A "What did I miss?" sort of query
-	if eventDataList, err := user.GetGroupChatMessageEventsPendingReceipt(clientUser.Id, groupChatId); err == nil {
-		for _, eventData := range eventDataList {
-			eventData := *eventData
-			myMailbox <- eventData
-		}
-	}
-
-	for data := range myMailbox {
-		w_err := c.WriteJSON(data)
-		if w_err != nil {
-			log.Println(w_err)
-			endSession()
-			return
-		}
-	}
-})
-
-func sendMessages(c *websocket.Conn, clientUser *appTypes.ClientUser, groupChatId int, endSession func()) {
-	// this goroutine sends messages
 
 	var w_err error
 
 	for {
-		var body openMessagingStreamBody
+		var body sendMessageBody
 
 		if w_err != nil {
 			log.Println(w_err)
-			endSession()
 			break
 		}
 
@@ -127,7 +81,7 @@ func sendMessages(c *websocket.Conn, clientUser *appTypes.ClientUser, groupChatI
 			continue
 		}
 
-		senderData, app_err := groupChatService.SendMessage(
+		senderData, app_err := sendMessage(
 			groupChatId,
 			clientUser.Id,
 			appServices.MessageBinaryToUrl(clientUser.Id, body.Msg),
@@ -142,7 +96,7 @@ func sendMessages(c *websocket.Conn, clientUser *appTypes.ClientUser, groupChatI
 		w_err = c.WriteJSON(senderData)
 
 	}
-}
+})
 
 var ExecuteAction = authServices.WSHandlerProtected(func(c *websocket.Conn) {
 	clientUser := c.Locals("user").(*appTypes.ClientUser)
@@ -191,112 +145,3 @@ var ExecuteAction = authServices.WSHandlerProtected(func(c *websocket.Conn) {
 		})
 	}
 })
-
-func changeGroupName(clientUser []string, data map[string]any) error {
-	var d changeGroupNameT
-
-	helpers.MapToStruct(data, &d)
-
-	if val_err := d.Validate(); val_err != nil {
-		return val_err
-	}
-
-	return groupChatService.ChangeGroupName(d.GroupChatId, clientUser, d.NewName)
-
-}
-
-func changeGroupDescription(clientUser []string, data map[string]any) error {
-	var d changeGroupDescriptionT
-
-	helpers.MapToStruct(data, &d)
-
-	if val_err := d.Validate(); val_err != nil {
-		return val_err
-	}
-
-	return groupChatService.ChangeGroupDescription(d.GroupChatId, clientUser, d.NewDescription)
-}
-
-func changeGroupPicture(clientUser []string, data map[string]any) error {
-	var d changeGroupPictureT
-
-	helpers.MapToStruct(data, &d)
-
-	if val_err := d.Validate(); val_err != nil {
-		return val_err
-	}
-
-	return groupChatService.ChangeGroupPicture(d.GroupChatId, clientUser, d.NewPictureData)
-}
-
-func addUsersToGroup(clientUser []string, data map[string]any) error {
-	var d addUsersToGroupT
-
-	helpers.MapToStruct(data, &d)
-
-	if val_err := d.Validate(); val_err != nil {
-		return val_err
-	}
-
-	return groupChatService.AddUsersToGroup(d.GroupChatId, clientUser, d.NewUsers)
-}
-
-func removeUserFromGroup(clientUser []string, data map[string]any) error {
-	var d actOnSingleUserT
-
-	helpers.MapToStruct(data, &d)
-
-	if val_err := d.Validate(); val_err != nil {
-		return val_err
-	}
-
-	return groupChatService.RemoveUserFromGroup(d.GroupChatId, clientUser, d.User)
-}
-
-func joinGroup(clientUser []string, data map[string]any) error {
-	var d joinLeaveGroupT
-
-	helpers.MapToStruct(data, &d)
-
-	if val_err := d.Validate(); val_err != nil {
-		return val_err
-	}
-
-	return groupChatService.JoinGroup(d.GroupChatId, clientUser)
-}
-
-func leaveGroup(clientUser []string, data map[string]any) error {
-	var d joinLeaveGroupT
-
-	helpers.MapToStruct(data, &d)
-
-	if val_err := d.Validate(); val_err != nil {
-		return val_err
-	}
-
-	return groupChatService.LeaveGroup(d.GroupChatId, clientUser)
-}
-
-func makeUserGroupAdmin(clientUser []string, data map[string]any) error {
-	var d actOnSingleUserT
-
-	helpers.MapToStruct(data, &d)
-
-	if val_err := d.Validate(); val_err != nil {
-		return val_err
-	}
-
-	return groupChatService.MakeUserGroupAdmin(d.GroupChatId, clientUser, d.User)
-}
-
-func removeUserFromGroupAdmins(clientUser []string, data map[string]any) error {
-	var d actOnSingleUserT
-
-	helpers.MapToStruct(data, &d)
-
-	if val_err := d.Validate(); val_err != nil {
-		return val_err
-	}
-
-	return groupChatService.RemoveUserFromGroupAdmins(d.GroupChatId, clientUser, d.User)
-}
