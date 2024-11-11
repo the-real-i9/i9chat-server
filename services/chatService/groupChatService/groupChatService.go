@@ -31,19 +31,6 @@ func uploadGroupPicture(pictureData []byte) (string, error) {
 	return picUrl, nil
 }
 
-func NewGroupChat(name string, description string, pictureData []byte, creator []string, initUsers [][]appTypes.String) (*groupChat.CreatorData, error) {
-	picUrl, _ := uploadGroupPicture(pictureData)
-
-	newGroupChat, err := groupChat.New(name, description, picUrl, creator, initUsers)
-	if err != nil {
-		return nil, err
-	}
-
-	go broadcastNewGroup(initUsers, newGroupChat.InitMemberData)
-
-	return newGroupChat.CreatorData, nil
-}
-
 func broadcastActivity(newActivity *groupChat.NewActivity) {
 
 	for _, mId := range newActivity.MembersIds {
@@ -172,40 +159,4 @@ func SendMessage(groupChatId, clientUserId int, msgContent map[string]any, creat
 	go broadcastNewMessage(newMessage.MembersIds, newMessage.MemberData)
 
 	return newMessage.SenderData, nil
-}
-
-func broadcastMessageDeliveryStatusUpdate(groupChatId, clientUserId int, ackDatas []*appTypes.GroupChatMsgAckData, status string) {
-	membersIds, err := helpers.QueryRowsField[int]("SELECT member_id FROM group_chat_membership WHERE group_chat_id = $1 AND member_id != $2 AND deleted = false", groupChatId, clientUserId)
-	if err == nil {
-		for _, memberId := range membersIds {
-			memberId := *memberId
-			for _, data := range ackDatas {
-				msgId := data.MsgId
-				go appObservers.DMChatSessionObserver{}.Send(
-					fmt.Sprintf("user-%d--groupchat-%d", memberId, groupChatId),
-					map[string]any{"msgId": msgId, "status": status},
-					"delivery status update",
-				)
-			}
-		}
-	}
-}
-
-func BatchUpdateMessageDeliveryStatus(groupChatId, receiverId int, status string, ackDatas []*appTypes.GroupChatMsgAckData) {
-	batchStatusUpdateResult, err := groupChat.BatchUpdateMessageDeliveryStatus(groupChatId, receiverId, status, ackDatas)
-	if err != nil {
-		return
-	}
-
-	// The idea is that: the delivery status of a group message updates only
-	// when all members have acknowledged the message as either "delivered" or "seen",
-	// the new delivery status is set in the OverallDeliveryStatus, after all members have acknowledged a certain delivery status ("delivered" or "seen").
-
-	// ShouldBroadcast sets the boolean that determines if we should broadcast the OverallDeliveryStatus
-	// (if it has changed since the last one) or not (if it hasn't changed since the last one)
-	// this prevents unnecessary data transfer
-
-	if batchStatusUpdateResult.ShouldBroadcast {
-		go broadcastMessageDeliveryStatusUpdate(groupChatId, receiverId, ackDatas, batchStatusUpdateResult.OverallDeliveryStatus)
-	}
 }

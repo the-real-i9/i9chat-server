@@ -55,11 +55,7 @@ func streamMessagesPendingDelivery(userPOId string, mailbox chan<- any) {
 	var userId int
 	fmt.Sscanf(userPOId, "user-%d", &userId)
 
-	messages, _ := helpers.QueryRowsField[Message](`
-		SELECT message FROM user_message_pending_delivery 
-		WHERE user_id = $1
-		ORDER BY date_created ASC
-	`, userId)
+	messages, _ := helpers.QueryRowsField[Message](`SELECT * FROM fetch_user_broker_messages_pending_delivery($1)`, userId)
 
 	for _, msg := range messages {
 		msg := *msg
@@ -79,18 +75,18 @@ func RemoveMailbox(userPOId string) {
 	delete(postOffice, userPOId)
 }
 
-func PostMessage(userPOId string, msg Message, mustDeliver bool) {
+func PostMessage(userPOId string, msg Message) {
 	mu.Lock()
 	defer mu.Unlock()
 
 	if mailbox, found := postOffice[userPOId]; found {
 		mailbox <- msg
-	} else if mustDeliver {
+	} else {
 		var userId int
 		fmt.Sscanf(userPOId, "user-%d", &userId)
 
 		go helpers.QueryRowField[bool](`
-			INSERT INTO user_message_pending_delivery (user_id, message) 
+			INSERT INTO user_broker_message_pending_delivery (user_id, message) 
 			VALUES ($1, $2) 
 			RETURNING true
 		`, userId, msg)

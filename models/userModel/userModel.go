@@ -95,7 +95,7 @@ func EditProfile(userId int, fieldValuePair [][]string) (*User, error) {
 
 	if err != nil {
 		log.Println(fmt.Errorf("userModel.go: EditProfile: %s", err))
-		return nil, err
+		return nil, appGlobals.ErrInternalServerError
 	}
 
 	return updatedUser, nil
@@ -111,16 +111,14 @@ func GetPassword(uniqueIdent string) (string, error) {
 	return *hashedPassword, nil
 }
 
-func SwitchPresence(userId int, presence string, lastSeen pgtype.Timestamp) ([]*int, error) {
+func DMChatPartners(userId int) []*int {
 
-	userDMChatPartnersIdList, err := helpers.QueryRowsField[int](`SELECT * FROM switch_user_presence($1, $2, $3)`, userId, presence, lastSeen)
-
+	userDMChatPartnersIdList, err := helpers.QueryRowsField[int](`SELECT user_id FROM user_dm_chat WHERE partner_id = $1`, userId)
 	if err != nil {
-		log.Println(fmt.Errorf("userModel.go: SwitchPresence: %s", err))
-		return nil, appGlobals.ErrInternalServerError
+		log.Panicln(err)
 	}
 
-	return userDMChatPartnersIdList, nil
+	return userDMChatPartnersIdList
 }
 
 func UpdateLocation(userId int, newGeolocation string) error {
