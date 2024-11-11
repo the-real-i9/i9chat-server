@@ -2,12 +2,13 @@
 -- PostgreSQL database dump
 --
 
--- Dumped from database version 16.3 (Ubuntu 16.3-1.pgdg22.04+1)
--- Dumped by pg_dump version 16.3 (Ubuntu 16.3-1.pgdg22.04+1)
+-- Dumped from database version 17.0 (Ubuntu 17.0-1.pgdg24.04+1)
+-- Dumped by pg_dump version 17.0 (Ubuntu 17.0-1.pgdg24.04+1)
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
 SET idle_in_transaction_session_timeout = 0;
+SET transaction_timeout = 0;
 SET client_encoding = 'UTF8';
 SET standard_conforming_strings = on;
 SELECT pg_catalog.set_config('search_path', '', false);
@@ -260,6 +261,27 @@ $$;
 
 
 ALTER FUNCTION public.end_signup_session(in_session_id uuid) OWNER TO i9;
+
+--
+-- Name: fetch_user_broker_messages_pending_delivery(integer); Type: FUNCTION; Schema: public; Owner: i9
+--
+
+CREATE FUNCTION public.fetch_user_broker_messages_pending_delivery(in_user_id integer) RETURNS SETOF json
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+ RETURN QUERY SELECT message FROM user_broker_message_pending_delivery 
+              WHERE user_id = in_user_id
+		      ORDER BY date_created ASC;
+
+DELETE FROM user_broker_message_pending_delivery WHERE user_id = in_user_id;
+
+RETURN;
+END;
+$$;
+
+
+ALTER FUNCTION public.fetch_user_broker_messages_pending_delivery(in_user_id integer) OWNER TO i9;
 
 --
 -- Name: find_nearby_users(integer, circle); Type: FUNCTION; Schema: public; Owner: i9
@@ -1098,33 +1120,6 @@ $$;
 ALTER FUNCTION public.signup_session_email_verified(in_session_id uuid, OUT is_verified boolean) OWNER TO i9;
 
 --
--- Name: switch_user_presence(integer, character varying, timestamp without time zone); Type: FUNCTION; Schema: public; Owner: i9
---
-
-CREATE FUNCTION public.switch_user_presence(in_user_id integer, in_presence character varying, in_last_seen timestamp without time zone) RETURNS boolean
-    LANGUAGE plpgsql
-    AS $$
-declare 
-ls timestamp := null;
-begin
-if in_presence not in ('offline', 'online') then
-raise exception 'Invalid presence value "%"', in_presence;
-end if;
-
-if in_presence = 'offline' then
-ls := in_last_seen;
-end if;
-
-update i9c_user set presence = in_presence, last_seen = ls where id = in_user_id;
-
-return true;
-end;
-$$;
-
-
-ALTER FUNCTION public.switch_user_presence(in_user_id integer, in_presence character varying, in_last_seen timestamp without time zone) OWNER TO i9;
-
---
 -- Name: update_dm_chat_message_delivery_status(integer, integer, integer, character varying, timestamp without time zone); Type: FUNCTION; Schema: public; Owner: i9
 --
 
@@ -1293,43 +1288,6 @@ CREATE TABLE public.dm_chat (
 ALTER TABLE public.dm_chat OWNER TO i9;
 
 --
--- Name: dm_chat_event_pending_receipt; Type: TABLE; Schema: public; Owner: i9
---
-
-CREATE TABLE public.dm_chat_event_pending_receipt (
-    id integer NOT NULL,
-    user_id integer NOT NULL,
-    event character varying NOT NULL,
-    data json NOT NULL,
-    created_at timestamp without time zone DEFAULT now() NOT NULL
-);
-
-
-ALTER TABLE public.dm_chat_event_pending_receipt OWNER TO i9;
-
---
--- Name: dm_chat_event_pending_receipt_id_seq; Type: SEQUENCE; Schema: public; Owner: i9
---
-
-CREATE SEQUENCE public.dm_chat_event_pending_receipt_id_seq
-    AS integer
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
-ALTER SEQUENCE public.dm_chat_event_pending_receipt_id_seq OWNER TO i9;
-
---
--- Name: dm_chat_event_pending_receipt_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: i9
---
-
-ALTER SEQUENCE public.dm_chat_event_pending_receipt_id_seq OWNED BY public.dm_chat_event_pending_receipt.id;
-
-
---
 -- Name: dm_chat_id_seq; Type: SEQUENCE; Schema: public; Owner: i9
 --
 
@@ -1370,44 +1328,6 @@ CREATE TABLE public.dm_chat_message (
 
 
 ALTER TABLE public.dm_chat_message OWNER TO i9;
-
---
--- Name: dm_chat_message_event_pending_receipt; Type: TABLE; Schema: public; Owner: i9
---
-
-CREATE TABLE public.dm_chat_message_event_pending_receipt (
-    id integer NOT NULL,
-    user_id integer NOT NULL,
-    dm_chat_id integer NOT NULL,
-    event character varying NOT NULL,
-    data json NOT NULL,
-    created_at timestamp without time zone DEFAULT now() NOT NULL
-);
-
-
-ALTER TABLE public.dm_chat_message_event_pending_receipt OWNER TO i9;
-
---
--- Name: dm_chat_message_event_pending_receipt_id_seq; Type: SEQUENCE; Schema: public; Owner: i9
---
-
-CREATE SEQUENCE public.dm_chat_message_event_pending_receipt_id_seq
-    AS integer
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
-ALTER SEQUENCE public.dm_chat_message_event_pending_receipt_id_seq OWNER TO i9;
-
---
--- Name: dm_chat_message_event_pending_receipt_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: i9
---
-
-ALTER SEQUENCE public.dm_chat_message_event_pending_receipt_id_seq OWNED BY public.dm_chat_message_event_pending_receipt.id;
-
 
 --
 -- Name: dm_chat_message_id_seq; Type: SEQUENCE; Schema: public; Owner: i9
@@ -1523,43 +1443,6 @@ ALTER SEQUENCE public.group_chat_activity_log_id_seq OWNER TO i9;
 --
 
 ALTER SEQUENCE public.group_chat_activity_log_id_seq OWNED BY public.group_chat_activity_log.id;
-
-
---
--- Name: group_chat_event_pending_receipt; Type: TABLE; Schema: public; Owner: i9
---
-
-CREATE TABLE public.group_chat_event_pending_receipt (
-    id integer NOT NULL,
-    user_id integer NOT NULL,
-    event character varying NOT NULL,
-    data json NOT NULL,
-    created_at timestamp without time zone DEFAULT now() NOT NULL
-);
-
-
-ALTER TABLE public.group_chat_event_pending_receipt OWNER TO i9;
-
---
--- Name: group_chat_event_pending_receipt_id_seq; Type: SEQUENCE; Schema: public; Owner: i9
---
-
-CREATE SEQUENCE public.group_chat_event_pending_receipt_id_seq
-    AS integer
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
-ALTER SEQUENCE public.group_chat_event_pending_receipt_id_seq OWNER TO i9;
-
---
--- Name: group_chat_event_pending_receipt_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: i9
---
-
-ALTER SEQUENCE public.group_chat_event_pending_receipt_id_seq OWNED BY public.group_chat_event_pending_receipt.id;
 
 
 --
@@ -1681,44 +1564,6 @@ ALTER SEQUENCE public.group_chat_message_delivery_id_seq OWNED BY public.group_c
 
 
 --
--- Name: group_chat_message_event_pending_receipt; Type: TABLE; Schema: public; Owner: i9
---
-
-CREATE TABLE public.group_chat_message_event_pending_receipt (
-    id integer NOT NULL,
-    user_id integer NOT NULL,
-    group_chat_id integer NOT NULL,
-    event character varying NOT NULL,
-    data json NOT NULL,
-    created_at timestamp without time zone DEFAULT now() NOT NULL
-);
-
-
-ALTER TABLE public.group_chat_message_event_pending_receipt OWNER TO i9;
-
---
--- Name: group_chat_message_event_pending_receipt_id_seq; Type: SEQUENCE; Schema: public; Owner: i9
---
-
-CREATE SEQUENCE public.group_chat_message_event_pending_receipt_id_seq
-    AS integer
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
-ALTER SEQUENCE public.group_chat_message_event_pending_receipt_id_seq OWNER TO i9;
-
---
--- Name: group_chat_message_event_pending_receipt_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: i9
---
-
-ALTER SEQUENCE public.group_chat_message_event_pending_receipt_id_seq OWNED BY public.group_chat_message_event_pending_receipt.id;
-
-
---
 -- Name: group_chat_message_id_seq; Type: SEQUENCE; Schema: public; Owner: i9
 --
 
@@ -1789,7 +1634,7 @@ CREATE TABLE public.i9c_user (
     password character varying NOT NULL,
     email character varying NOT NULL,
     profile_picture_url character varying DEFAULT ''::character varying NOT NULL,
-    presence character varying DEFAULT 'online'::character varying NOT NULL,
+    presence character varying DEFAULT 'offline'::character varying NOT NULL,
     last_seen timestamp without time zone,
     created_at timestamp without time zone DEFAULT now() NOT NULL,
     deleted boolean DEFAULT false NOT NULL,
@@ -1835,6 +1680,19 @@ CREATE TABLE public.ongoing_signup (
 
 
 ALTER TABLE public.ongoing_signup OWNER TO i9;
+
+--
+-- Name: user_broker_message_pending_delivery; Type: TABLE; Schema: public; Owner: i9
+--
+
+CREATE TABLE public.user_broker_message_pending_delivery (
+    user_id integer NOT NULL,
+    message json NOT NULL,
+    date_created timestamp without time zone DEFAULT now()
+);
+
+
+ALTER TABLE public.user_broker_message_pending_delivery OWNER TO i9;
 
 --
 -- Name: user_dm_chat; Type: TABLE; Schema: public; Owner: i9
@@ -1921,24 +1779,10 @@ ALTER TABLE ONLY public.dm_chat ALTER COLUMN id SET DEFAULT nextval('public.dm_c
 
 
 --
--- Name: dm_chat_event_pending_receipt id; Type: DEFAULT; Schema: public; Owner: i9
---
-
-ALTER TABLE ONLY public.dm_chat_event_pending_receipt ALTER COLUMN id SET DEFAULT nextval('public.dm_chat_event_pending_receipt_id_seq'::regclass);
-
-
---
 -- Name: dm_chat_message id; Type: DEFAULT; Schema: public; Owner: i9
 --
 
 ALTER TABLE ONLY public.dm_chat_message ALTER COLUMN id SET DEFAULT nextval('public.dm_chat_message_id_seq'::regclass);
-
-
---
--- Name: dm_chat_message_event_pending_receipt id; Type: DEFAULT; Schema: public; Owner: i9
---
-
-ALTER TABLE ONLY public.dm_chat_message_event_pending_receipt ALTER COLUMN id SET DEFAULT nextval('public.dm_chat_message_event_pending_receipt_id_seq'::regclass);
 
 
 --
@@ -1963,13 +1807,6 @@ ALTER TABLE ONLY public.group_chat_activity_log ALTER COLUMN id SET DEFAULT next
 
 
 --
--- Name: group_chat_event_pending_receipt id; Type: DEFAULT; Schema: public; Owner: i9
---
-
-ALTER TABLE ONLY public.group_chat_event_pending_receipt ALTER COLUMN id SET DEFAULT nextval('public.group_chat_event_pending_receipt_id_seq'::regclass);
-
-
---
 -- Name: group_chat_membership id; Type: DEFAULT; Schema: public; Owner: i9
 --
 
@@ -1988,13 +1825,6 @@ ALTER TABLE ONLY public.group_chat_message ALTER COLUMN id SET DEFAULT nextval('
 --
 
 ALTER TABLE ONLY public.group_chat_message_delivery ALTER COLUMN id SET DEFAULT nextval('public.group_chat_message_delivery_id_seq'::regclass);
-
-
---
--- Name: group_chat_message_event_pending_receipt id; Type: DEFAULT; Schema: public; Owner: i9
---
-
-ALTER TABLE ONLY public.group_chat_message_event_pending_receipt ALTER COLUMN id SET DEFAULT nextval('public.group_chat_message_event_pending_receipt_id_seq'::regclass);
 
 
 --
@@ -2023,6 +1853,202 @@ ALTER TABLE ONLY public.user_dm_chat ALTER COLUMN id SET DEFAULT nextval('public
 --
 
 ALTER TABLE ONLY public.user_group_chat ALTER COLUMN id SET DEFAULT nextval('public.user_group_chat_id_seq'::regclass);
+
+
+--
+-- Data for Name: dm_chat; Type: TABLE DATA; Schema: public; Owner: i9
+--
+
+COPY public.dm_chat (id, initiator_id, partner_id, created_at, deleted) FROM stdin;
+\.
+
+
+--
+-- Data for Name: dm_chat_message; Type: TABLE DATA; Schema: public; Owner: i9
+--
+
+COPY public.dm_chat_message (id, sender_id, dm_chat_id, msg_content, edited, delivery_status, created_at, edited_at, deleted) FROM stdin;
+\.
+
+
+--
+-- Data for Name: dm_chat_message_reaction; Type: TABLE DATA; Schema: public; Owner: i9
+--
+
+COPY public.dm_chat_message_reaction (id, message_id, reactor_id, reaction, created_at, dm_chat_id, deleted) FROM stdin;
+\.
+
+
+--
+-- Data for Name: group_chat; Type: TABLE DATA; Schema: public; Owner: i9
+--
+
+COPY public.group_chat (id, creator_id, name, description, created_at, deleted, members_count, picture_url) FROM stdin;
+\.
+
+
+--
+-- Data for Name: group_chat_activity_log; Type: TABLE DATA; Schema: public; Owner: i9
+--
+
+COPY public.group_chat_activity_log (id, group_chat_id, activity_type, activity_info, created_at) FROM stdin;
+\.
+
+
+--
+-- Data for Name: group_chat_membership; Type: TABLE DATA; Schema: public; Owner: i9
+--
+
+COPY public.group_chat_membership (id, group_chat_id, member_id, role, deleted) FROM stdin;
+\.
+
+
+--
+-- Data for Name: group_chat_message; Type: TABLE DATA; Schema: public; Owner: i9
+--
+
+COPY public.group_chat_message (id, sender_id, group_chat_id, msg_content, edited, delivery_status, created_at, edited_at, deleted) FROM stdin;
+\.
+
+
+--
+-- Data for Name: group_chat_message_delivery; Type: TABLE DATA; Schema: public; Owner: i9
+--
+
+COPY public.group_chat_message_delivery (id, group_chat_id, message_id, user_id, status) FROM stdin;
+\.
+
+
+--
+-- Data for Name: group_chat_message_reaction; Type: TABLE DATA; Schema: public; Owner: i9
+--
+
+COPY public.group_chat_message_reaction (id, message_id, reactor_id, reaction, created_at, group_chat_id, deleted) FROM stdin;
+\.
+
+
+--
+-- Data for Name: i9c_user; Type: TABLE DATA; Schema: public; Owner: i9
+--
+
+COPY public.i9c_user (id, username, password, email, profile_picture_url, presence, last_seen, created_at, deleted, location) FROM stdin;
+\.
+
+
+--
+-- Data for Name: ongoing_signup; Type: TABLE DATA; Schema: public; Owner: i9
+--
+
+COPY public.ongoing_signup (session_id, email, verification_code, verified) FROM stdin;
+\.
+
+
+--
+-- Data for Name: user_broker_message_pending_delivery; Type: TABLE DATA; Schema: public; Owner: i9
+--
+
+COPY public.user_broker_message_pending_delivery (user_id, message, date_created) FROM stdin;
+\.
+
+
+--
+-- Data for Name: user_dm_chat; Type: TABLE DATA; Schema: public; Owner: i9
+--
+
+COPY public.user_dm_chat (id, user_id, partner_id, dm_chat_id, unread_messages_count, updated_at, deleted) FROM stdin;
+\.
+
+
+--
+-- Data for Name: user_group_chat; Type: TABLE DATA; Schema: public; Owner: i9
+--
+
+COPY public.user_group_chat (id, user_id, group_chat_id, unread_messages_count, updated_at, deleted) FROM stdin;
+\.
+
+
+--
+-- Name: dm_chat_id_seq; Type: SEQUENCE SET; Schema: public; Owner: i9
+--
+
+SELECT pg_catalog.setval('public.dm_chat_id_seq', 1, false);
+
+
+--
+-- Name: dm_chat_message_id_seq; Type: SEQUENCE SET; Schema: public; Owner: i9
+--
+
+SELECT pg_catalog.setval('public.dm_chat_message_id_seq', 1, false);
+
+
+--
+-- Name: dm_chat_message_reaction_id_seq; Type: SEQUENCE SET; Schema: public; Owner: i9
+--
+
+SELECT pg_catalog.setval('public.dm_chat_message_reaction_id_seq', 1, false);
+
+
+--
+-- Name: group_chat_activity_log_id_seq; Type: SEQUENCE SET; Schema: public; Owner: i9
+--
+
+SELECT pg_catalog.setval('public.group_chat_activity_log_id_seq', 1, false);
+
+
+--
+-- Name: group_chat_id_seq; Type: SEQUENCE SET; Schema: public; Owner: i9
+--
+
+SELECT pg_catalog.setval('public.group_chat_id_seq', 1, false);
+
+
+--
+-- Name: group_chat_membership_id_seq; Type: SEQUENCE SET; Schema: public; Owner: i9
+--
+
+SELECT pg_catalog.setval('public.group_chat_membership_id_seq', 1, false);
+
+
+--
+-- Name: group_chat_message_delivery_id_seq; Type: SEQUENCE SET; Schema: public; Owner: i9
+--
+
+SELECT pg_catalog.setval('public.group_chat_message_delivery_id_seq', 1, false);
+
+
+--
+-- Name: group_chat_message_id_seq; Type: SEQUENCE SET; Schema: public; Owner: i9
+--
+
+SELECT pg_catalog.setval('public.group_chat_message_id_seq', 1, false);
+
+
+--
+-- Name: group_chat_message_reaction_id_seq; Type: SEQUENCE SET; Schema: public; Owner: i9
+--
+
+SELECT pg_catalog.setval('public.group_chat_message_reaction_id_seq', 1, false);
+
+
+--
+-- Name: i9c_user_id_seq; Type: SEQUENCE SET; Schema: public; Owner: i9
+--
+
+SELECT pg_catalog.setval('public.i9c_user_id_seq', 1, false);
+
+
+--
+-- Name: user_dm_chat_id_seq; Type: SEQUENCE SET; Schema: public; Owner: i9
+--
+
+SELECT pg_catalog.setval('public.user_dm_chat_id_seq', 1, false);
+
+
+--
+-- Name: user_group_chat_id_seq; Type: SEQUENCE SET; Schema: public; Owner: i9
+--
+
+SELECT pg_catalog.setval('public.user_group_chat_id_seq', 1, false);
 
 
 --
@@ -2154,14 +2180,6 @@ ALTER TABLE ONLY public.user_group_chat
 
 
 --
--- Name: dm_chat_event_pending_receipt dm_chat_event_pending_receipt_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: i9
---
-
-ALTER TABLE ONLY public.dm_chat_event_pending_receipt
-    ADD CONSTRAINT dm_chat_event_pending_receipt_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.i9c_user(id) ON DELETE CASCADE;
-
-
---
 -- Name: dm_chat dm_chat_initiator_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: i9
 --
 
@@ -2175,22 +2193,6 @@ ALTER TABLE ONLY public.dm_chat
 
 ALTER TABLE ONLY public.dm_chat_message
     ADD CONSTRAINT dm_chat_message_dm_chat_id_fkey FOREIGN KEY (dm_chat_id) REFERENCES public.dm_chat(id) ON DELETE CASCADE;
-
-
---
--- Name: dm_chat_message_event_pending_receipt dm_chat_message_event_pending_receipt_dm_chat_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: i9
---
-
-ALTER TABLE ONLY public.dm_chat_message_event_pending_receipt
-    ADD CONSTRAINT dm_chat_message_event_pending_receipt_dm_chat_id_fkey FOREIGN KEY (dm_chat_id) REFERENCES public.dm_chat(id) ON DELETE CASCADE;
-
-
---
--- Name: dm_chat_message_event_pending_receipt dm_chat_message_event_pending_receipt_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: i9
---
-
-ALTER TABLE ONLY public.dm_chat_message_event_pending_receipt
-    ADD CONSTRAINT dm_chat_message_event_pending_receipt_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.i9c_user(id) ON DELETE CASCADE;
 
 
 --
@@ -2250,14 +2252,6 @@ ALTER TABLE ONLY public.group_chat
 
 
 --
--- Name: group_chat_event_pending_receipt group_chat_event_pending_receipt_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: i9
---
-
-ALTER TABLE ONLY public.group_chat_event_pending_receipt
-    ADD CONSTRAINT group_chat_event_pending_receipt_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.i9c_user(id) ON DELETE CASCADE;
-
-
---
 -- Name: group_chat_membership group_chat_membership_group_chat_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: i9
 --
 
@@ -2295,22 +2289,6 @@ ALTER TABLE ONLY public.group_chat_message_delivery
 
 ALTER TABLE ONLY public.group_chat_message_delivery
     ADD CONSTRAINT group_chat_message_delivery_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.i9c_user(id) ON DELETE CASCADE;
-
-
---
--- Name: group_chat_message_event_pending_receipt group_chat_message_event_pending_receipt_group_chat_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: i9
---
-
-ALTER TABLE ONLY public.group_chat_message_event_pending_receipt
-    ADD CONSTRAINT group_chat_message_event_pending_receipt_group_chat_id_fkey FOREIGN KEY (group_chat_id) REFERENCES public.group_chat(id) ON DELETE CASCADE;
-
-
---
--- Name: group_chat_message_event_pending_receipt group_chat_message_event_pending_receipt_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: i9
---
-
-ALTER TABLE ONLY public.group_chat_message_event_pending_receipt
-    ADD CONSTRAINT group_chat_message_event_pending_receipt_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.i9c_user(id) ON DELETE CASCADE;
 
 
 --
@@ -2391,6 +2369,14 @@ ALTER TABLE ONLY public.user_group_chat
 
 ALTER TABLE ONLY public.user_group_chat
     ADD CONSTRAINT user_group_chat_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.i9c_user(id) ON DELETE CASCADE;
+
+
+--
+-- Name: user_broker_message_pending_delivery user_message_pending_delivery_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: i9
+--
+
+ALTER TABLE ONLY public.user_broker_message_pending_delivery
+    ADD CONSTRAINT user_message_pending_delivery_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.i9c_user(id) ON DELETE CASCADE;
 
 
 --
