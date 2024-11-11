@@ -55,7 +55,10 @@ func streamMessagesPendingDelivery(userPOId string, mailbox chan<- any) {
 	var userId int
 	fmt.Sscanf(userPOId, "user-%d", &userId)
 
-	messages, _ := helpers.QueryRowsField[Message](`SELECT * FROM fetch_user_broker_messages_pending_delivery($1)`, userId)
+	messages, err := helpers.QueryRowsField[Message](`SELECT * FROM fetch_user_broker_messages_pending_delivery($1)`, userId)
+	if err != nil {
+		panic(err)
+	}
 
 	for _, msg := range messages {
 		msg := *msg

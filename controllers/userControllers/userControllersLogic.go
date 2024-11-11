@@ -13,13 +13,16 @@ import (
 	"time"
 )
 
-func goOnline(clientUserId int) error {
+func goOnline(clientUserId int, userPOId string, mailbox chan<- any) error {
 	userDMChatPartnersIdList := user.DMChatPartners(clientUserId)
 
+	go messageBrokerService.AddMailbox(userPOId, mailbox)
+
+	// "recepients" are: all users to whom you are a DMChat partner
 	go func(recepientIds []*int) {
-		// "recepients" are: all users to whom you are a DMChat partner
 		for _, rId := range recepientIds {
 			rId := *rId
+
 			go messageBrokerService.PostMessage(fmt.Sprintf("user-%d", rId), messageBrokerService.Message{
 				Event: "user presence changed",
 				Data: map[string]any{
@@ -34,13 +37,16 @@ func goOnline(clientUserId int) error {
 	return nil
 }
 
-func goOffline(clientUserId int, lastSeen time.Time) error {
+func goOffline(clientUserId int, lastSeen time.Time, userPOId string) error {
 	userDMChatPartnersIdList := user.DMChatPartners(clientUserId)
 
+	go messageBrokerService.RemoveMailbox(userPOId)
+
+	// "recepients" are: all users to whom you are a DMChat partner
 	go func(recepientIds []*int) {
-		// "recepients" are: all users to whom you are a DMChat partner
 		for _, rId := range recepientIds {
 			rId := *rId
+
 			go messageBrokerService.PostMessage(fmt.Sprintf("user-%d", rId), messageBrokerService.Message{
 				Event: "user presence changed",
 				Data: map[string]any{
@@ -91,7 +97,7 @@ func newDMChat(initiatorId, partnerId int, initMsgContent map[string]any, create
 func updateDMChatMessageDeliveryStatus(dmChatId, msgId, senderId, receiverId int, status string, updatedAt time.Time) {
 	if err := dmChat.UpdateMessageDeliveryStatus(dmChatId, msgId, receiverId, status, updatedAt); err == nil {
 
-		messageBrokerService.PostMessage(fmt.Sprintf("user-%d", senderId), messageBrokerService.Message{
+		go messageBrokerService.PostMessage(fmt.Sprintf("user-%d", senderId), messageBrokerService.Message{
 			Event: "dm chat message delivery status changed",
 			Data: map[string]any{
 				"dmChatId": dmChatId,
@@ -107,7 +113,7 @@ func batchUpdateDMChatMessageDeliveryStatus(receiverId int, status string, ackDa
 		for _, data := range ackDatas {
 			data := data
 
-			messageBrokerService.PostMessage(fmt.Sprintf("user-%d", data.SenderId), messageBrokerService.Message{
+			go messageBrokerService.PostMessage(fmt.Sprintf("user-%d", data.SenderId), messageBrokerService.Message{
 				Event: "dm chat message delivery status changed",
 				Data: map[string]any{
 					"dmChatId": data.DMChatId,

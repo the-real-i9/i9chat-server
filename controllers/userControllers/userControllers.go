@@ -7,7 +7,6 @@ import (
 	user "i9chat/models/userModel"
 	"i9chat/services/appServices"
 	"i9chat/services/authServices"
-	"i9chat/services/messageBrokerService"
 	"log"
 	"time"
 
@@ -24,17 +23,16 @@ var GoOnline = authServices.WSHandlerProtected(func(c *websocket.Conn) {
 
 	userPOId := fmt.Sprintf("user-%d", clientUser.Id)
 
-	goOnline(clientUser.Id)
-	messageBrokerService.AddMailbox(userPOId, myMailbox)
+	go goOnline(clientUser.Id, userPOId, myMailbox)
 
 	goOff := func() {
-		goOffline(clientUser.Id, time.Now())
-		messageBrokerService.RemoveMailbox(userPOId)
+		goOffline(clientUser.Id, time.Now(), userPOId)
 	}
 
 	go goOnlineSocketControl(c, goOff)
 
 	for data := range myMailbox {
+		fmt.Println(data)
 		w_err := c.WriteJSON(data)
 		if w_err != nil {
 			log.Println(w_err)

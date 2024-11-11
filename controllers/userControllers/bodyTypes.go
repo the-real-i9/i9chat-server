@@ -7,7 +7,6 @@ import (
 	"time"
 
 	validation "github.com/go-ozzo/ozzo-validation/v4"
-	"github.com/jackc/pgx/v5/pgtype"
 )
 
 type changeProfilePictureBody struct {
@@ -167,23 +166,6 @@ func (b updateMyGeolocationBody) Validate() error {
 		validation.Field(&b.NewGeolocation,
 			validation.Required,
 			validation.Match(regexp.MustCompile("^[0-9]+, ?[0-9]+, ?[0-9]+$")).Error("invalid circle format; format: pointX, pointY, radiusR"),
-		),
-	)
-}
-
-type switchMyPresenceBody struct {
-	Presence string           `json:"presence"`
-	LastSeen pgtype.Timestamp `json:"lastSeen"`
-}
-
-func (b switchMyPresenceBody) Validate() error {
-	return validation.ValidateStruct(&b,
-		validation.Field(&b.Presence,
-			validation.Required,
-			validation.In("online", "offline").Error("invalid value for prescence; expects 'online' or 'offline'"),
-		),
-		validation.Field(&b.LastSeen,
-			validation.When(b.Presence == "online", validation.Nil.Error("only required when presence is 'offline'")).Else(validation.Required, validation.Max(time.Now()).Error("invalid future time")),
 		),
 	)
 }
