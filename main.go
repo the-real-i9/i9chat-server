@@ -38,6 +38,14 @@ func main() {
 	app.Route("/api/app/dm_chat", dmChatRoutes.Init)
 	app.Route("/api/app/group_chat", groupChatRoutes.Init)
 
-	log.Fatalln(app.Listen("0.0.0.0:" + os.Getenv("PORT")))
+	var PORT string
+
+	if os.Getenv("GO_ENV") != "production" {
+		PORT = "5000"
+	} else {
+		PORT = os.Getenv("PORT")
+	}
+
+	log.Fatalln(app.Listen("0.0.0.0:" + PORT))
 
 }
