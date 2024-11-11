@@ -24,8 +24,8 @@ var GoOnline = authServices.WSHandlerProtected(func(c *websocket.Conn) {
 
 	userPOId := fmt.Sprintf("user-%d", clientUser.Id)
 
-	messageBrokerService.AddMailbox(userPOId, myMailbox)
 	goOnline(clientUser.Id)
+	messageBrokerService.AddMailbox(userPOId, myMailbox)
 
 	goOff := func() {
 		goOffline(clientUser.Id, time.Now())
