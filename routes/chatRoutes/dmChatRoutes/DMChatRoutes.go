@@ -1,12 +1,12 @@
 package dmChatRoutes
 
 import (
-	dcc "i9chat/controllers/chatControllers/dmChatControllers"
+	dmcc "i9chat/controllers/chatControllers/dmChatControllers"
 
 	"github.com/gofiber/fiber/v2"
 )
 
 func Init(router fiber.Router) {
-	router.Get("/chat_history", dcc.GetChatHistory)
-	router.Get("/:dm_chat_id/open_messaging_stream", dcc.OpenMessagingStream)
+	router.Get("/chat_history", dmcc.GetChatHistory)
+	router.Get("/:dm_chat_id/send_message", dmcc.SendMessage)
 }
