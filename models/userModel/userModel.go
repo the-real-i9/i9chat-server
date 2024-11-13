@@ -112,14 +112,15 @@ func GetPassword(uniqueIdent string) (string, error) {
 	return *hashedPassword, nil
 }
 
-func ChangePresence(userId int, presence string, lastSeen time.Time) []*int {
+func ChangePresence(userId int, presence string, lastSeen time.Time) ([]*int, error) {
 
 	userDMChatPartnersIdList, err := helpers.QueryRowsField[int](`SELECT * FROM change_user_presence($1, $2, $3)`, userId, presence, lastSeen)
 	if err != nil {
-		panic(err)
+		log.Println(fmt.Errorf("userModel.go: ChangePresence: %s", err))
+		return nil, appGlobals.ErrInternalServerError
 	}
 
-	return userDMChatPartnersIdList
+	return userDMChatPartnersIdList, nil
 }
 
 func UpdateLocation(userId int, newGeolocation string) error {

@@ -1,4 +1,4 @@
-package appServices
+package appUtilServices
 
 import (
 	"fmt"

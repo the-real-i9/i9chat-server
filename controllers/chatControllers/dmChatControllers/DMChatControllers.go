@@ -4,16 +4,15 @@ import (
 	"fmt"
 	"i9chat/appTypes"
 	"i9chat/helpers"
-	dmChat "i9chat/models/chatModel/dmChatModel"
-	"i9chat/services/appServices"
-	"i9chat/services/authServices"
+	"i9chat/services/chatServices/dmChatService"
+	"i9chat/services/utils/authUtilServices"
 	"log"
 
 	"github.com/gofiber/contrib/websocket"
 	"github.com/gofiber/fiber/v2"
 )
 
-var GetChatHistory = authServices.WSHandlerProtected(func(c *websocket.Conn) {
+var GetChatHistory = authUtilServices.WSHandlerProtected(func(c *websocket.Conn) {
 
 	var w_err error
 
@@ -36,7 +35,7 @@ var GetChatHistory = authServices.WSHandlerProtected(func(c *websocket.Conn) {
 			continue
 		}
 
-		dmChatMessages, app_err := dmChat.GetChatHistory(body.DMChatId, body.Offset)
+		respData, app_err := dmChatService.GetChatHistory(body.DMChatId, body.Offset)
 
 		if app_err != nil {
 			w_err = c.WriteJSON(helpers.ErrResp(fiber.StatusUnprocessableEntity, app_err))
@@ -45,12 +44,12 @@ var GetChatHistory = authServices.WSHandlerProtected(func(c *websocket.Conn) {
 
 		w_err = c.WriteJSON(appTypes.WSResp{
 			StatusCode: 200,
-			Body:       dmChatMessages,
+			Body:       respData,
 		})
 	}
 })
 
-var SendMessage = authServices.WSHandlerProtected(func(c *websocket.Conn) {
+var SendMessage = authUtilServices.WSHandlerProtected(func(c *websocket.Conn) {
 	clientUser := c.Locals("user").(*appTypes.ClientUser)
 
 	var dmChatId int
@@ -81,10 +80,10 @@ var SendMessage = authServices.WSHandlerProtected(func(c *websocket.Conn) {
 			continue
 		}
 
-		senderData, app_err := sendMessage(
+		respData, app_err := dmChatService.SendMessage(
 			dmChatId,
 			clientUser.Id,
-			appServices.UploadMessageMedia(clientUser.Id, body.Msg),
+			body.Msg,
 			body.At,
 		)
 
@@ -93,7 +92,7 @@ var SendMessage = authServices.WSHandlerProtected(func(c *websocket.Conn) {
 			continue
 		}
 
-		w_err = c.WriteJSON(senderData)
+		w_err = c.WriteJSON(respData)
 
 	}
 })

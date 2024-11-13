@@ -4,9 +4,8 @@ import (
 	"fmt"
 	"i9chat/appTypes"
 	"i9chat/helpers"
-	user "i9chat/models/userModel"
-	"i9chat/services/appServices"
-	"i9chat/services/authServices"
+	"i9chat/services/userService"
+	"i9chat/services/utils/authUtilServices"
 	"log"
 	"time"
 
@@ -15,7 +14,7 @@ import (
 )
 
 // This Controller essentially opens the stream for receiving messages
-var GoOnline = authServices.WSHandlerProtected(func(c *websocket.Conn) {
+var GoOnline = authUtilServices.WSHandlerProtected(func(c *websocket.Conn) {
 	clientUser := c.Locals("user").(*appTypes.ClientUser)
 
 	// a channel for streaming data to client
@@ -23,10 +22,17 @@ var GoOnline = authServices.WSHandlerProtected(func(c *websocket.Conn) {
 
 	userPOId := fmt.Sprintf("user-%d", clientUser.Id)
 
-	go goOnline(clientUser.Id, userPOId, myMailbox)
+	app_err := userService.GoOnline(clientUser.Id, userPOId, myMailbox)
+	if app_err != nil {
+		w_err := c.WriteJSON(helpers.ErrResp(fiber.StatusUnprocessableEntity, fmt.Errorf("operation failed: %s", app_err)))
+		if w_err != nil {
+			log.Println(w_err)
+			return
+		}
+	}
 
 	goOff := func() {
-		goOffline(clientUser.Id, time.Now(), userPOId)
+		userService.GoOffline(clientUser.Id, time.Now(), userPOId)
 	}
 
 	go goOnlineSocketControl(c, goOff)
@@ -55,7 +61,7 @@ func goOnlineSocketControl(c *websocket.Conn, goOff func()) {
 	goOff()
 }
 
-var ChangeProfilePicture = authServices.WSHandlerProtected(func(c *websocket.Conn) {
+var ChangeProfilePicture = authUtilServices.WSHandlerProtected(func(c *websocket.Conn) {
 	clientUser := c.Locals("user").(*appTypes.ClientUser)
 
 	var w_err error
@@ -79,22 +85,21 @@ var ChangeProfilePicture = authServices.WSHandlerProtected(func(c *websocket.Con
 			continue
 		}
 
-		if app_err := changeMyProfilePicture(clientUser.Id, clientUser.Username, body.PictureData); app_err != nil {
+		respData, app_err := userService.ChangeProfilePicture(clientUser.Id, clientUser.Username, body.PictureData)
+		if app_err != nil {
 			w_err = c.WriteJSON(helpers.ErrResp(fiber.StatusUnprocessableEntity, fmt.Errorf("operation failed: %s", app_err)))
 			continue
 		}
 
 		w_err = c.WriteJSON(appTypes.WSResp{
 			StatusCode: fiber.StatusOK,
-			Body: map[string]any{
-				"msg": "Operation Successful",
-			},
+			Body:       respData,
 		})
 
 	}
 })
 
-var UpdateMyGeolocation = authServices.WSHandlerProtected(func(c *websocket.Conn) {
+var UpdateMyLocation = authUtilServices.WSHandlerProtected(func(c *websocket.Conn) {
 	clientUser := c.Locals("user").(*appTypes.ClientUser)
 
 	var body updateMyGeolocationBody
@@ -118,7 +123,7 @@ var UpdateMyGeolocation = authServices.WSHandlerProtected(func(c *websocket.Conn
 			continue
 		}
 
-		app_err := user.UpdateLocation(clientUser.Id, body.NewGeolocation)
+		respData, app_err := userService.UpdateMyLocation(clientUser.Id, body.NewGeolocation)
 
 		if app_err != nil {
 			w_err = c.WriteJSON(helpers.ErrResp(fiber.StatusUnprocessableEntity, app_err))
@@ -127,17 +132,15 @@ var UpdateMyGeolocation = authServices.WSHandlerProtected(func(c *websocket.Conn
 
 		w_err = c.WriteJSON(appTypes.WSResp{
 			StatusCode: 200,
-			Body: map[string]any{
-				"msg": "Operation Successful",
-			},
+			Body:       respData,
 		})
 	}
 })
 
-var GetAllUsers = authServices.WSHandlerProtected(func(c *websocket.Conn) {
+var GetAllUsers = authUtilServices.WSHandlerProtected(func(c *websocket.Conn) {
 	clientUser := c.Locals("user").(*appTypes.ClientUser)
 
-	allUsers, app_err := user.GetAll(clientUser.Id)
+	respData, app_err := userService.GetAllUsers(clientUser.Id)
 
 	var w_err error
 
@@ -152,7 +155,7 @@ var GetAllUsers = authServices.WSHandlerProtected(func(c *websocket.Conn) {
 		} else {
 			w_err = c.WriteJSON(appTypes.WSResp{
 				StatusCode: fiber.StatusOK,
-				Body:       allUsers,
+				Body:       respData,
 			})
 		}
 
@@ -164,7 +167,7 @@ var GetAllUsers = authServices.WSHandlerProtected(func(c *websocket.Conn) {
 	}
 })
 
-var SearchUser = authServices.WSHandlerProtected(func(c *websocket.Conn) {
+var SearchUser = authUtilServices.WSHandlerProtected(func(c *websocket.Conn) {
 	clientUser := c.Locals("user").(*appTypes.ClientUser)
 
 	var w_err error
@@ -185,7 +188,7 @@ var SearchUser = authServices.WSHandlerProtected(func(c *websocket.Conn) {
 			break
 		}
 
-		searchResult, app_err := user.Search(clientUser.Id, body.Query)
+		respData, app_err := userService.SearchUser(clientUser.Id, body.Query)
 
 		if app_err != nil {
 			w_err = c.WriteJSON(helpers.ErrResp(fiber.StatusUnprocessableEntity, app_err))
@@ -194,12 +197,12 @@ var SearchUser = authServices.WSHandlerProtected(func(c *websocket.Conn) {
 
 		w_err = c.WriteJSON(appTypes.WSResp{
 			StatusCode: 200,
-			Body:       searchResult,
+			Body:       respData,
 		})
 	}
 })
 
-var FindNearbyUsers = authServices.WSHandlerProtected(func(c *websocket.Conn) {
+var FindNearbyUsers = authUtilServices.WSHandlerProtected(func(c *websocket.Conn) {
 	clientUser := c.Locals("user").(*appTypes.ClientUser)
 
 	var w_err error
@@ -223,7 +226,7 @@ var FindNearbyUsers = authServices.WSHandlerProtected(func(c *websocket.Conn) {
 			continue
 		}
 
-		nearbyUsers, app_err := user.FindNearby(clientUser.Id, body.LiveLocation)
+		respData, app_err := userService.FindNearbyUsers(clientUser.Id, body.LiveLocation)
 
 		if app_err != nil {
 			w_err = c.WriteJSON(helpers.ErrResp(fiber.StatusUnprocessableEntity, app_err))
@@ -232,17 +235,17 @@ var FindNearbyUsers = authServices.WSHandlerProtected(func(c *websocket.Conn) {
 
 		w_err = c.WriteJSON(appTypes.WSResp{
 			StatusCode: 200,
-			Body:       nearbyUsers,
+			Body:       respData,
 		})
 	}
 })
 
 // This handler merely get chats as is from the database, no updates accounted for yet.
 // After closing this,  we must "GoOnline" to retrieve updates
-var GetMyChats = authServices.WSHandlerProtected(func(c *websocket.Conn) {
+var GetMyChats = authUtilServices.WSHandlerProtected(func(c *websocket.Conn) {
 	clientUser := c.Locals("user").(*appTypes.ClientUser)
 
-	myChats, app_err := user.GetChats(clientUser.Id)
+	respData, app_err := userService.GetMyChats(clientUser.Id)
 
 	var w_err error
 
@@ -258,7 +261,7 @@ var GetMyChats = authServices.WSHandlerProtected(func(c *websocket.Conn) {
 
 			w_err = c.WriteJSON(appTypes.WSResp{
 				StatusCode: fiber.StatusOK,
-				Body:       myChats,
+				Body:       respData,
 			})
 		}
 
@@ -270,7 +273,7 @@ var GetMyChats = authServices.WSHandlerProtected(func(c *websocket.Conn) {
 	}
 })
 
-var CreateNewDMChatAndAckMessages = authServices.WSHandlerProtected(func(c *websocket.Conn) {
+var CreateNewDMChatAndAckMessages = authUtilServices.WSHandlerProtected(func(c *websocket.Conn) {
 	clientUser := c.Locals("user").(*appTypes.ClientUser)
 
 	var w_err error
@@ -309,10 +312,10 @@ var CreateNewDMChatAndAckMessages = authServices.WSHandlerProtected(func(c *webs
 				return c.WriteJSON(helpers.ErrResp(fiber.StatusUnprocessableEntity, val_err))
 			}
 
-			initiatorData, app_err := newDMChat(
+			respData, app_err := userService.NewDMChat(
 				clientUser.Id,
 				newChatData.PartnerId,
-				appServices.UploadMessageMedia(clientUser.Id, newChatData.InitMsg),
+				newChatData.InitMsg,
 				newChatData.CreatedAt,
 			)
 
@@ -320,7 +323,7 @@ var CreateNewDMChatAndAckMessages = authServices.WSHandlerProtected(func(c *webs
 				return c.WriteJSON(helpers.ErrResp(fiber.StatusUnprocessableEntity, app_err))
 			}
 
-			return c.WriteJSON(initiatorData)
+			return c.WriteJSON(respData)
 
 		}
 
@@ -333,7 +336,7 @@ var CreateNewDMChatAndAckMessages = authServices.WSHandlerProtected(func(c *webs
 				return c.WriteJSON(helpers.ErrResp(fiber.StatusUnprocessableEntity, val_err))
 			}
 
-			go updateDMChatMessageDeliveryStatus(ackMsgData.DMChatId, ackMsgData.MsgId, ackMsgData.SenderId, clientUser.Id, ackMsgData.Status, ackMsgData.At)
+			go userService.UpdateDMChatMessageDeliveryStatus(ackMsgData.DMChatId, ackMsgData.MsgId, ackMsgData.SenderId, clientUser.Id, ackMsgData.Status, ackMsgData.At)
 
 			return nil
 		}
@@ -347,7 +350,7 @@ var CreateNewDMChatAndAckMessages = authServices.WSHandlerProtected(func(c *webs
 				return c.WriteJSON(helpers.ErrResp(fiber.StatusUnprocessableEntity, val_err))
 			}
 
-			go batchUpdateDMChatMessageDeliveryStatus(clientUser.Id, batchAckMsgData.Status, batchAckMsgData.MsgAckDatas)
+			go userService.BatchUpdateDMChatMessageDeliveryStatus(clientUser.Id, batchAckMsgData.Status, batchAckMsgData.MsgAckDatas)
 
 			return nil
 		}
@@ -370,7 +373,7 @@ var CreateNewDMChatAndAckMessages = authServices.WSHandlerProtected(func(c *webs
 	}
 })
 
-var CreateNewGroupChatAndAckMessages = authServices.WSHandlerProtected(func(c *websocket.Conn) {
+var CreateNewGroupChatAndAckMessages = authUtilServices.WSHandlerProtected(func(c *websocket.Conn) {
 	clientUser := c.Locals("user").(*appTypes.ClientUser)
 
 	var w_err error
@@ -408,7 +411,7 @@ var CreateNewGroupChatAndAckMessages = authServices.WSHandlerProtected(func(c *w
 				return c.WriteJSON(helpers.ErrResp(fiber.StatusUnprocessableEntity, val_err))
 			}
 
-			data, app_err := newGroupChat(
+			respData, app_err := userService.NewGroupChat(
 				newChatData.Name,
 				newChatData.Description,
 				newChatData.PictureData,
@@ -419,7 +422,7 @@ var CreateNewGroupChatAndAckMessages = authServices.WSHandlerProtected(func(c *w
 				return c.WriteJSON(helpers.ErrResp(fiber.StatusUnprocessableEntity, app_err))
 			}
 
-			return c.WriteJSON(data)
+			return c.WriteJSON(respData)
 		}
 
 		// For Group chat, messages can only be acknowledged in batches,
@@ -431,7 +434,7 @@ var CreateNewGroupChatAndAckMessages = authServices.WSHandlerProtected(func(c *w
 				return c.WriteJSON(helpers.ErrResp(fiber.StatusUnprocessableEntity, val_err))
 			}
 
-			go batchUpdateGroupChatMessageDeliveryStatus(ackMsgsData.GroupChatId, clientUser.Id, ackMsgsData.Status, ackMsgsData.MsgAckDatas)
+			go userService.BatchUpdateGroupChatMessageDeliveryStatus(ackMsgsData.GroupChatId, clientUser.Id, ackMsgsData.Status, ackMsgsData.MsgAckDatas)
 
 			return nil
 		}
