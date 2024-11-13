@@ -42,6 +42,63 @@ func (ob sendMessageBody) Validate() error {
 	)
 }
 
+type createNewGroupChatAndAckMessagesBody struct {
+	Action string         `json:"action"`
+	Data   map[string]any `json:"data"`
+}
+
+func (b createNewGroupChatAndAckMessagesBody) Validate() error {
+	return validation.ValidateStruct(&b,
+		validation.Field(&b.Action,
+			validation.Required,
+			validation.In("create new chat", "acknowledge messages").Error("invalid action"),
+		),
+		validation.Field(&b.Data, validation.Required),
+	)
+}
+
+type newGroupChatDataT struct {
+	Name        string              `json:"name"`
+	Description string              `json:"description"`
+	PictureData []byte              `json:"pictureData"`
+	InitUsers   [][]appTypes.String `json:"initUsers"`
+}
+
+func (b newGroupChatDataT) Validate() error {
+	return validation.ValidateStruct(&b,
+		validation.Field(&b.Name, validation.Required),
+		validation.Field(&b.Description, validation.Required),
+		validation.Field(&b.PictureData,
+			validation.Required,
+			validation.Length(1, 2*1024*1024).Error("maximum picture size of 2mb exceeded"),
+		),
+		validation.Field(&b.InitUsers,
+			validation.Required,
+			validation.Each(
+				validation.Length(2, 2).Error(`invalid format; should be: [{userId}, {username}] e.g. [2, "kenny"]`),
+				validation.By(helpers.UserSliceRule),
+			),
+		),
+	)
+}
+
+type ackMsgsDataT struct {
+	Status      string                          `json:"status"`
+	GroupChatId int                             `json:"groupChatId"`
+	MsgAckDatas []*appTypes.GroupChatMsgAckData `json:"msgAckDatas"`
+}
+
+func (b ackMsgsDataT) Validate() error {
+	return validation.ValidateStruct(&b,
+		validation.Field(&b.Status,
+			validation.Required,
+			validation.In("delivered", "seen").Error("invalid status value; should be 'delivered' or 'seen'"),
+		),
+		validation.Field(&b.GroupChatId, validation.Required, validation.Min(1).Error("invalid value")),
+		validation.Field(&b.MsgAckDatas, validation.Required),
+	)
+}
+
 type action string
 
 type executeActionBody struct {

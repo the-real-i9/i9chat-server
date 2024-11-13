@@ -17,7 +17,4 @@ func Init(router fiber.Router) {
 	router.Get("/find_nearby_users", UC.FindNearbyUsers)
 
 	router.Get("/my_chats", UC.GetMyChats)
-
-	router.Get("/create_dm_chat_ack_msgs", UC.CreateNewDMChatAndAckMessages)
-	router.Get("/create_group_chat_ack_msgs", UC.CreateNewGroupChatAndAckMessages)
 }

@@ -12,6 +12,86 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
+var CreateNewGroupChatAndAckMessages = authUtilServices.WSHandlerProtected(func(c *websocket.Conn) {
+	clientUser := c.Locals("user").(*appTypes.ClientUser)
+
+	var w_err error
+
+	for {
+		var body createNewGroupChatAndAckMessagesBody
+
+		var newChatData newGroupChatDataT
+
+		// For Group chat, messages should be acknowledged in batches,
+		// and it's only for a single group chat at a time
+		var ackMsgsData ackMsgsDataT
+
+		if w_err != nil {
+			log.Println(w_err)
+			break
+		}
+
+		r_err := c.ReadJSON(&body)
+		if r_err != nil {
+			log.Println(r_err)
+			break
+		}
+
+		if val_err := body.Validate(); val_err != nil {
+			w_err = c.WriteJSON(helpers.ErrResp(fiber.StatusUnprocessableEntity, val_err))
+			continue
+		}
+
+		createNewChat := func() error {
+
+			helpers.MapToStruct(body.Data, &newChatData)
+
+			if val_err := newChatData.Validate(); val_err != nil {
+				return c.WriteJSON(helpers.ErrResp(fiber.StatusUnprocessableEntity, val_err))
+			}
+
+			respData, app_err := groupChatService.NewGroupChat(
+				newChatData.Name,
+				newChatData.Description,
+				newChatData.PictureData,
+				[]string{fmt.Sprint(clientUser.Id), clientUser.Username},
+				newChatData.InitUsers,
+			)
+			if app_err != nil {
+				return c.WriteJSON(helpers.ErrResp(fiber.StatusUnprocessableEntity, app_err))
+			}
+
+			return c.WriteJSON(respData)
+		}
+
+		// For Group chat, messages can only be acknowledged in batches,
+		acknowledgeMessages := func() error {
+
+			helpers.MapToStruct(body.Data, &ackMsgsData)
+
+			if val_err := ackMsgsData.Validate(); val_err != nil {
+				return c.WriteJSON(helpers.ErrResp(fiber.StatusUnprocessableEntity, val_err))
+			}
+
+			go groupChatService.BatchUpdateMessageDeliveryStatus(ackMsgsData.GroupChatId, clientUser.Id, ackMsgsData.Status, ackMsgsData.MsgAckDatas)
+
+			return nil
+		}
+
+		if body.Action == "create new chat" {
+
+			w_err = createNewChat()
+
+		} else if body.Action == "acknowledge messages" {
+
+			w_err = acknowledgeMessages()
+
+		} else {
+			w_err = c.WriteJSON(helpers.ErrResp(fiber.StatusUnprocessableEntity, fmt.Errorf("invalid 'action' value")))
+		}
+	}
+})
+
 var GetChatHistory = authUtilServices.WSHandlerProtected(func(c *websocket.Conn) {
 
 	var w_err error

@@ -2,12 +2,7 @@ package userService
 
 import (
 	"fmt"
-	"i9chat/appTypes"
-	dmChat "i9chat/models/chatModel/dmChatModel"
-	groupChat "i9chat/models/chatModel/groupChatModel"
 	user "i9chat/models/userModel"
-	"i9chat/services/chatServices/dmChatService"
-	"i9chat/services/chatServices/groupChatService"
 	"i9chat/services/cloudStorageService"
 	"i9chat/services/messageBrokerService"
 	"log"
@@ -116,24 +111,4 @@ func FindNearbyUsers(clientUserId int, liveLocation string) ([]*user.User, error
 
 func GetMyChats(clientUserId int) ([]*map[string]any, error) {
 	return user.GetChats(clientUserId)
-}
-
-func NewDMChat(initiatorId, partnerId int, initMsgContent map[string]any, createdAt time.Time) (*dmChat.InitiatorData, error) {
-	return dmChatService.NewDMChat(initiatorId, partnerId, initMsgContent, createdAt)
-}
-
-func UpdateDMChatMessageDeliveryStatus(dmChatId, msgId, senderId, receiverId int, status string, updatedAt time.Time) {
-	dmChatService.UpdateMessageDeliveryStatus(dmChatId, msgId, senderId, receiverId, status, updatedAt)
-}
-
-func BatchUpdateDMChatMessageDeliveryStatus(receiverId int, status string, ackDatas []*appTypes.DMChatMsgAckData) {
-	dmChatService.BatchUpdateMessageDeliveryStatus(receiverId, status, ackDatas)
-}
-
-func NewGroupChat(name string, description string, pictureData []byte, creator []string, initUsers [][]appTypes.String) (*groupChat.CreatorData, error) {
-	return groupChatService.NewGroupChat(name, description, pictureData, creator, initUsers)
-}
-
-func BatchUpdateGroupChatMessageDeliveryStatus(groupChatId, receiverId int, status string, ackDatas []*appTypes.GroupChatMsgAckData) {
-	groupChatService.BatchUpdateMessageDeliveryStatus(groupChatId, receiverId, status, ackDatas)
 }
