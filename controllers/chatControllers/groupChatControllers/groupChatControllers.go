@@ -5,14 +5,14 @@ import (
 	"i9chat/appTypes"
 	"i9chat/helpers"
 	"i9chat/services/chatServices/groupChatService"
-	"i9chat/services/utils/authUtilServices"
+	"i9chat/services/securityServices"
 	"log"
 
 	"github.com/gofiber/contrib/websocket"
 	"github.com/gofiber/fiber/v2"
 )
 
-var CreateNewGroupChatAndAckMessages = authUtilServices.WSHandlerProtected(func(c *websocket.Conn) {
+var CreateNewGroupChatAndAckMessages = securityServices.WSHandlerProtected(func(c *websocket.Conn) {
 	clientUser := c.Locals("user").(*appTypes.ClientUser)
 
 	var w_err error
@@ -92,7 +92,7 @@ var CreateNewGroupChatAndAckMessages = authUtilServices.WSHandlerProtected(func(
 	}
 })
 
-var GetChatHistory = authUtilServices.WSHandlerProtected(func(c *websocket.Conn) {
+var GetChatHistory = securityServices.WSHandlerProtected(func(c *websocket.Conn) {
 
 	var w_err error
 
@@ -129,7 +129,7 @@ var GetChatHistory = authUtilServices.WSHandlerProtected(func(c *websocket.Conn)
 	}
 })
 
-var SendMessage = authUtilServices.WSHandlerProtected(func(c *websocket.Conn) {
+var SendMessage = securityServices.WSHandlerProtected(func(c *websocket.Conn) {
 	clientUser := c.Locals("user").(*appTypes.ClientUser)
 
 	var groupChatId int
@@ -177,7 +177,7 @@ var SendMessage = authUtilServices.WSHandlerProtected(func(c *websocket.Conn) {
 	}
 })
 
-var ExecuteAction = authUtilServices.WSHandlerProtected(func(c *websocket.Conn) {
+var ExecuteAction = securityServices.WSHandlerProtected(func(c *websocket.Conn) {
 	clientUser := c.Locals("user").(*appTypes.ClientUser)
 
 	type handler func(clientUser []string, data map[string]any) error

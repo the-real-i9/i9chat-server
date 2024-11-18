@@ -5,14 +5,14 @@ import (
 	"i9chat/appTypes"
 	"i9chat/helpers"
 	"i9chat/services/chatServices/dmChatService"
-	"i9chat/services/utils/authUtilServices"
+	"i9chat/services/securityServices"
 	"log"
 
 	"github.com/gofiber/contrib/websocket"
 	"github.com/gofiber/fiber/v2"
 )
 
-var CreateNewDMChatAndAckMessages = authUtilServices.WSHandlerProtected(func(c *websocket.Conn) {
+var CreateNewDMChatAndAckMessages = securityServices.WSHandlerProtected(func(c *websocket.Conn) {
 	clientUser := c.Locals("user").(*appTypes.ClientUser)
 
 	var w_err error
@@ -112,7 +112,7 @@ var CreateNewDMChatAndAckMessages = authUtilServices.WSHandlerProtected(func(c *
 	}
 })
 
-var GetChatHistory = authUtilServices.WSHandlerProtected(func(c *websocket.Conn) {
+var GetChatHistory = securityServices.WSHandlerProtected(func(c *websocket.Conn) {
 
 	var w_err error
 
@@ -149,7 +149,7 @@ var GetChatHistory = authUtilServices.WSHandlerProtected(func(c *websocket.Conn)
 	}
 })
 
-var SendMessage = authUtilServices.WSHandlerProtected(func(c *websocket.Conn) {
+var SendMessage = securityServices.WSHandlerProtected(func(c *websocket.Conn) {
 	clientUser := c.Locals("user").(*appTypes.ClientUser)
 
 	var dmChatId int

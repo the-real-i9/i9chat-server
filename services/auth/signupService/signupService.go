@@ -6,7 +6,7 @@ import (
 	"i9chat/models/appModel"
 	user "i9chat/models/userModel"
 	"i9chat/services/mailService"
-	"i9chat/services/utils/authUtilServices"
+	"i9chat/services/securityServices"
 	"os"
 	"time"
 )
@@ -21,7 +21,7 @@ func RequestNewAccount(email string) (any, error) {
 		return "", fmt.Errorf("signup error: an account with '%s' already exists", email)
 	}
 
-	verfCode, expires := authUtilServices.GenerateVerifCodeExp()
+	verfCode, expires := securityServices.GenerateVerifCodeExp()
 
 	go mailService.SendMail(email, "Email Verification", fmt.Sprintf("Your email verification code is: <b>%d</b>", verfCode))
 
@@ -30,7 +30,7 @@ func RequestNewAccount(email string) (any, error) {
 		return "", err
 	}
 
-	signupSessionJwt := authUtilServices.JwtSign(appTypes.SignupSessionData{
+	signupSessionJwt := securityServices.JwtSign(appTypes.SignupSessionData{
 		SessionId: sessionId,
 		Email:     email,
 		Step:      "verify email",
@@ -56,7 +56,7 @@ func VerifyEmail(sessionId string, inputVerfCode int, email string) (any, error)
 
 	go mailService.SendMail(email, "Email Verification Success", fmt.Sprintf("Your email %s has been verified!", email))
 
-	signupSessionJwt := authUtilServices.JwtSign(appTypes.SignupSessionData{
+	signupSessionJwt := securityServices.JwtSign(appTypes.SignupSessionData{
 		SessionId: sessionId,
 		Email:     email,
 		Step:      "register user",
@@ -80,14 +80,14 @@ func RegisterUser(sessionId, email, username, password, geolocation string) (any
 		return nil, fmt.Errorf("username error: username '%s' is unavailable", username)
 	}
 
-	hashedPassword := authUtilServices.HashPassword(password)
+	hashedPassword := securityServices.HashPassword(password)
 
 	newUser, err := user.New(email, username, hashedPassword, geolocation)
 	if err != nil {
 		return nil, err
 	}
 
-	authJwt := authUtilServices.JwtSign(appTypes.ClientUser{
+	authJwt := securityServices.JwtSign(appTypes.ClientUser{
 		Id:       newUser.Id,
 		Username: newUser.Username,
 	}, os.Getenv("AUTH_JWT_SECRET"), time.Now().UTC().Add(365*24*time.Hour)) // 1 year

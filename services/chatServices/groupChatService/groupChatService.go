@@ -5,9 +5,9 @@ import (
 	"i9chat/appTypes"
 	"i9chat/helpers"
 	groupChat "i9chat/models/chatModel/groupChatModel"
+	"i9chat/services/appServices"
 	"i9chat/services/cloudStorageService"
 	"i9chat/services/messageBrokerService"
-	"i9chat/services/utils/appUtilServices"
 	"time"
 )
 
@@ -81,7 +81,7 @@ func GetChatHistory(dmChatId, offset int) ([]*groupChat.HistoryItem, error) {
 
 func SendMessage(groupChatId, clientUserId int, msgContent map[string]any, createdAt time.Time) (*groupChat.SenderData, error) {
 
-	modMsgContent := appUtilServices.UploadMessageMedia(clientUserId, msgContent)
+	modMsgContent := appServices.UploadMessageMedia(clientUserId, msgContent)
 
 	newMessage, err := groupChat.SendMessage(groupChatId, clientUserId, modMsgContent, createdAt)
 	if err != nil {

@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"i9chat/appTypes"
 	dmChat "i9chat/models/chatModel/dmChatModel"
+	"i9chat/services/appServices"
 	"i9chat/services/messageBrokerService"
-	"i9chat/services/utils/appUtilServices"
 	"time"
 )
 
@@ -15,7 +15,7 @@ func GetChatHistory(dmChatId, offset int) ([]*dmChat.Message, error) {
 
 func SendMessage(dmChatId, senderId int, msgContent map[string]any, createdAt time.Time) (*dmChat.SenderData, error) {
 
-	modMsgContent := appUtilServices.UploadMessageMedia(senderId, msgContent)
+	modMsgContent := appServices.UploadMessageMedia(senderId, msgContent)
 
 	newMessage, err := dmChat.SendMessage(dmChatId, senderId, modMsgContent, createdAt)
 	if err != nil {
@@ -34,7 +34,7 @@ func SendMessage(dmChatId, senderId int, msgContent map[string]any, createdAt ti
 
 func NewDMChat(initiatorId, partnerId int, initMsgContent map[string]any, createdAt time.Time) (*dmChat.InitiatorData, error) {
 
-	modInitMsgContent := appUtilServices.UploadMessageMedia(initiatorId, initMsgContent)
+	modInitMsgContent := appServices.UploadMessageMedia(initiatorId, initMsgContent)
 
 	dmChat, err := dmChat.New(initiatorId, partnerId, modInitMsgContent, createdAt)
 	if err != nil {

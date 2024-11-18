@@ -5,7 +5,7 @@ import (
 	"i9chat/appTypes"
 	"i9chat/helpers"
 	"i9chat/services/auth/signupService"
-	"i9chat/services/utils/authUtilServices"
+	"i9chat/services/securityServices"
 	"log"
 	"os"
 
@@ -54,7 +54,7 @@ var RequestNewAccount = websocket.New(func(c *websocket.Conn) {
 var VerifyEmail = websocket.New(func(c *websocket.Conn) {
 	sessionToken := c.Headers("Authorization")
 
-	sessionData, err := authUtilServices.JwtVerify[appTypes.SignupSessionData](sessionToken, os.Getenv("SIGNUP_SESSION_JWT_SECRET"))
+	sessionData, err := securityServices.JwtVerify[appTypes.SignupSessionData](sessionToken, os.Getenv("SIGNUP_SESSION_JWT_SECRET"))
 	if err != nil {
 		if w_err := c.WriteJSON(helpers.ErrResp(fiber.StatusUnauthorized, err)); w_err != nil {
 			log.Println(w_err)
@@ -107,7 +107,7 @@ var VerifyEmail = websocket.New(func(c *websocket.Conn) {
 var RegisterUser = websocket.New(func(c *websocket.Conn) {
 	sessionToken := c.Headers("Authorization")
 
-	sessionData, err := authUtilServices.JwtVerify[appTypes.SignupSessionData](sessionToken, os.Getenv("SIGNUP_SESSION_JWT_SECRET"))
+	sessionData, err := securityServices.JwtVerify[appTypes.SignupSessionData](sessionToken, os.Getenv("SIGNUP_SESSION_JWT_SECRET"))
 	if err != nil {
 		if w_err := c.WriteJSON(helpers.ErrResp(fiber.StatusUnauthorized, err)); w_err != nil {
 			log.Println(w_err)

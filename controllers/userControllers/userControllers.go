@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"i9chat/appTypes"
 	"i9chat/helpers"
+	"i9chat/services/securityServices"
 	"i9chat/services/userService"
-	"i9chat/services/utils/authUtilServices"
 	"log"
 	"time"
 
@@ -14,7 +14,7 @@ import (
 )
 
 // This Controller essentially opens the stream for receiving messages
-var GoOnline = authUtilServices.WSHandlerProtected(func(c *websocket.Conn) {
+var GoOnline = securityServices.WSHandlerProtected(func(c *websocket.Conn) {
 	clientUser := c.Locals("user").(*appTypes.ClientUser)
 
 	// a channel for streaming data to client
@@ -61,7 +61,7 @@ func goOnlineSocketControl(c *websocket.Conn, goOff func()) {
 	goOff()
 }
 
-var ChangeProfilePicture = authUtilServices.WSHandlerProtected(func(c *websocket.Conn) {
+var ChangeProfilePicture = securityServices.WSHandlerProtected(func(c *websocket.Conn) {
 	clientUser := c.Locals("user").(*appTypes.ClientUser)
 
 	var w_err error
@@ -99,7 +99,7 @@ var ChangeProfilePicture = authUtilServices.WSHandlerProtected(func(c *websocket
 	}
 })
 
-var UpdateMyLocation = authUtilServices.WSHandlerProtected(func(c *websocket.Conn) {
+var UpdateMyLocation = securityServices.WSHandlerProtected(func(c *websocket.Conn) {
 	clientUser := c.Locals("user").(*appTypes.ClientUser)
 
 	var body updateMyGeolocationBody
@@ -137,7 +137,7 @@ var UpdateMyLocation = authUtilServices.WSHandlerProtected(func(c *websocket.Con
 	}
 })
 
-var GetAllUsers = authUtilServices.WSHandlerProtected(func(c *websocket.Conn) {
+var GetAllUsers = securityServices.WSHandlerProtected(func(c *websocket.Conn) {
 	clientUser := c.Locals("user").(*appTypes.ClientUser)
 
 	respData, app_err := userService.GetAllUsers(clientUser.Id)
@@ -167,7 +167,7 @@ var GetAllUsers = authUtilServices.WSHandlerProtected(func(c *websocket.Conn) {
 	}
 })
 
-var SearchUser = authUtilServices.WSHandlerProtected(func(c *websocket.Conn) {
+var SearchUser = securityServices.WSHandlerProtected(func(c *websocket.Conn) {
 	clientUser := c.Locals("user").(*appTypes.ClientUser)
 
 	var w_err error
@@ -202,7 +202,7 @@ var SearchUser = authUtilServices.WSHandlerProtected(func(c *websocket.Conn) {
 	}
 })
 
-var FindNearbyUsers = authUtilServices.WSHandlerProtected(func(c *websocket.Conn) {
+var FindNearbyUsers = securityServices.WSHandlerProtected(func(c *websocket.Conn) {
 	clientUser := c.Locals("user").(*appTypes.ClientUser)
 
 	var w_err error
@@ -242,7 +242,7 @@ var FindNearbyUsers = authUtilServices.WSHandlerProtected(func(c *websocket.Conn
 
 // This handler merely get chats as is from the database, no updates accounted for yet.
 // After closing this,  we must "GoOnline" to retrieve updates
-var GetMyChats = authUtilServices.WSHandlerProtected(func(c *websocket.Conn) {
+var GetMyChats = securityServices.WSHandlerProtected(func(c *websocket.Conn) {
 	clientUser := c.Locals("user").(*appTypes.ClientUser)
 
 	respData, app_err := userService.GetMyChats(clientUser.Id)

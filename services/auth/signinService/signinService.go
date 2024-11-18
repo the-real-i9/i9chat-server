@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"i9chat/appTypes"
 	user "i9chat/models/userModel"
-	"i9chat/services/utils/authUtilServices"
+	"i9chat/services/securityServices"
 	"os"
 	"time"
 )
@@ -24,11 +24,11 @@ func Signin(emailOrUsername string, password string) (any, error) {
 		return nil, err
 	}
 
-	if !authUtilServices.PasswordMatchesHash(hashedPassword, password) {
+	if !securityServices.PasswordMatchesHash(hashedPassword, password) {
 		return nil, fmt.Errorf("signin error: incorrect email/username or password")
 	}
 
-	authJwt := authUtilServices.JwtSign(appTypes.ClientUser{
+	authJwt := securityServices.JwtSign(appTypes.ClientUser{
 		Id:       theUser.Id,
 		Username: theUser.Username,
 	}, os.Getenv("AUTH_JWT_SECRET"), time.Now().UTC().Add(365*24*time.Hour))
