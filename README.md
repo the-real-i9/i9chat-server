@@ -102,7 +102,7 @@ The following are code examples with explanations of notable functionalities and
 
 The API server handles this action on this WebSocket endpoint: ``
 
-#### Sample request body
+#### Sample WebSocket message
 
 ```js
 {
@@ -111,6 +111,11 @@ The API server handles this action on this WebSocket endpoint: ``
 ```
 
 #### Business Logic
+
+The business logic is written in a `creatDMChat` service, called by the `createDMChat` controller/handler.
+
+```go
+```
 
 ...
 
@@ -124,7 +129,7 @@ The API server handles this action on this WebSocket endpoint: ``
 
 Use the provided [API documention](./attachments/API%20doc.md).
 
-> ⚠️ Note: The API documentation is not written according to the OpenAPI specification, as it's entirely built with WebSockets and uses WebSocket communication on all endpoints, but its easy to follow like any API documentation.
+> ⚠️ Note: The API documentation is not written according to the OpenAPI specification, as it's entirely built with WebSockets and uses WebSocket communication on all endpoints. However, it's well-written enough to follow easily, like most documentations.
 
 This API server is currently running remotely on Railway's cloud platform, but I plan to stop it very soon as I'll soon exhuast my trial plan.
 
