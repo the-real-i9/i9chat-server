@@ -4,12 +4,14 @@ import (
 	"context"
 	"fmt"
 	"i9chat/appGlobals"
+	"os"
 )
 
 func UploadFile(filePath string, data []byte) (string, error) {
-	fileUrl := fmt.Sprintf("https://storage.googleapis.com/i9chat-bucket/%s", filePath)
+	bucketName := os.Getenv("GCS_BUCKET")
+	fileUrl := fmt.Sprintf("https://storage.googleapis.com/%s/%s", bucketName, filePath)
 
-	stWriter := appGlobals.GCSClient.Bucket("i9chat-bucket").Object(filePath).NewWriter(context.Background())
+	stWriter := appGlobals.GCSClient.Bucket(bucketName).Object(filePath).NewWriter(context.Background())
 
 	stWriter.Write(data)
 

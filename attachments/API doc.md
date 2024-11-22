@@ -12,7 +12,7 @@ Before we dive in, separated by horizontal lines are informations we need to kee
 "Sent" and "Received" data implies, "the data to send to the server" and "the expected response", respectively.
 
 ---
-The are two **formats of received data** :
+Received data are in two formats:
 
 - The first format indicates a **success response**:
 
