@@ -127,9 +127,9 @@ The business logic is written in a `creatDMChat` service, called by the `createD
 
 ## Usage
 
-Use the provided [API documention](./attachments/API%20doc.md).
+Use the provided [API documention](./API%20doc.md).
 
-> ⚠️ Note: The API documentation is not written according to the OpenAPI specification, as it's entirely built with WebSockets and uses WebSocket communication on all endpoints. However, it's well-written enough to follow easily, like most documentations.
+> ⚠️ Note: The API documentation does not follow the OpenAPI specification, as it relies entirely on WebSocket communication for all endpoints. However, it is clearly written and easy to follow, similar to most standard documentation.
 
 This API server is currently running remotely on Railway's cloud platform, but I plan to stop it very soon as I'll soon exhuast my trial plan.
 
