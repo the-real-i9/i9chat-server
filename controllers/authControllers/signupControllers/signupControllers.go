@@ -1,6 +1,7 @@
 package signupControllers
 
 import (
+	"context"
 	"fmt"
 	"i9chat/appTypes"
 	"i9chat/helpers"
@@ -14,6 +15,9 @@ import (
 )
 
 var RequestNewAccount = websocket.New(func(c *websocket.Conn) {
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
 	var w_err error
 
@@ -33,14 +37,14 @@ var RequestNewAccount = websocket.New(func(c *websocket.Conn) {
 
 		if val_err := body.Validate(); val_err != nil {
 
-			w_err = c.WriteJSON(helpers.ErrResp(fiber.StatusUnprocessableEntity, val_err))
+			w_err = c.WriteJSON(helpers.ErrResp(fiber.NewError(fiber.StatusBadRequest, "validation error:", val_err.Error())))
 			continue
 		}
 
-		respData, app_err := signupService.RequestNewAccount(body.Email)
+		respData, app_err := signupService.RequestNewAccount(ctx, body.Email)
 
 		if app_err != nil {
-			w_err = c.WriteJSON(helpers.ErrResp(fiber.StatusUnprocessableEntity, app_err))
+			w_err = c.WriteJSON(helpers.ErrResp(app_err))
 			continue
 		}
 
@@ -52,18 +56,21 @@ var RequestNewAccount = websocket.New(func(c *websocket.Conn) {
 })
 
 var VerifyEmail = websocket.New(func(c *websocket.Conn) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
 	sessionToken := c.Headers("Authorization")
 
 	sessionData, err := securityServices.JwtVerify[appTypes.SignupSessionData](sessionToken, os.Getenv("SIGNUP_SESSION_JWT_SECRET"))
 	if err != nil {
-		if w_err := c.WriteJSON(helpers.ErrResp(fiber.StatusUnauthorized, err)); w_err != nil {
+		if w_err := c.WriteJSON(helpers.ErrResp(err)); w_err != nil {
 			log.Println(w_err)
 		}
 		return
 	}
 
 	if sessionData.Step != "verify email" {
-		if w_err := c.WriteJSON(helpers.ErrResp(fiber.StatusUnauthorized, fmt.Errorf("invalid session token on endpoint"))); w_err != nil {
+		if w_err := c.WriteJSON(helpers.ErrResp(fiber.NewError(fiber.StatusUnauthorized, "invalid session token on endpoint"))); w_err != nil {
 			log.Println(w_err)
 		}
 		return

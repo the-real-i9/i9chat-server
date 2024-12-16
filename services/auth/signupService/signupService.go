@@ -1,6 +1,7 @@
 package signupService
 
 import (
+	"context"
 	"fmt"
 	"i9chat/appTypes"
 	"i9chat/models/appModel"
@@ -9,32 +10,38 @@ import (
 	"i9chat/services/securityServices"
 	"os"
 	"time"
+
+	"github.com/gofiber/fiber/v2"
 )
 
-func RequestNewAccount(email string) (any, error) {
-	accExists, err := appModel.AccountExists(email)
+func RequestNewAccount(ctx context.Context, email string) (any, error) {
+	accExists, err := appModel.AccountExists(ctx, email)
 	if err != nil {
 		return "", err
 	}
 
 	if accExists {
-		return "", fmt.Errorf("signup error: an account with '%s' already exists", email)
+		return "", fiber.NewError(fiber.StatusBadRequest, "signup error: an account with", email, "already exists")
 	}
 
 	verfCode, expires := securityServices.GenerateVerifCodeExp()
 
 	go mailService.SendMail(email, "Email Verification", fmt.Sprintf("Your email verification code is: <b>%d</b>", verfCode))
 
-	sessionId, err := appModel.NewSignupSession(email, verfCode)
+	sessionId, err := appModel.NewSignupSession(ctx, email, verfCode)
 	if err != nil {
 		return "", err
 	}
 
-	signupSessionJwt := securityServices.JwtSign(appTypes.SignupSessionData{
+	signupSessionJwt, err := securityServices.JwtSign(appTypes.SignupSessionData{
 		SessionId: sessionId,
 		Email:     email,
 		Step:      "verify email",
 	}, os.Getenv("SIGNUP_SESSION_JWT_SECRET"), expires)
+
+	if err != nil {
+		return "", err
+	}
 
 	respData := map[string]any{
 		"msg":           "A 6-digit verification code has been sent to " + email,
@@ -44,23 +51,27 @@ func RequestNewAccount(email string) (any, error) {
 	return respData, nil
 }
 
-func VerifyEmail(sessionId string, inputVerfCode int, email string) (any, error) {
-	isSuccess, err := appModel.VerifyEmail(sessionId, inputVerfCode)
+func VerifyEmail(ctx context.Context, sessionId string, inputVerfCode int, email string) (any, error) {
+	isSuccess, err := appModel.VerifyEmail(ctx, sessionId, inputVerfCode)
 	if err != nil {
 		return "", err
 	}
 
 	if !isSuccess {
-		return "", fmt.Errorf("email verification error: incorrect verification code")
+		return "", fiber.NewError(fiber.StatusBadRequest, "email verification error: incorrect verification code")
 	}
 
 	go mailService.SendMail(email, "Email Verification Success", fmt.Sprintf("Your email %s has been verified!", email))
 
-	signupSessionJwt := securityServices.JwtSign(appTypes.SignupSessionData{
+	signupSessionJwt, err := securityServices.JwtSign(appTypes.SignupSessionData{
 		SessionId: sessionId,
 		Email:     email,
 		Step:      "register user",
 	}, os.Getenv("SIGNUP_SESSION_JWT_SECRET"), time.Now().UTC().Add(1*time.Hour))
+
+	if err != nil {
+		return "", err
+	}
 
 	respData := map[string]any{
 		"msg":           fmt.Sprintf("Your email '%s' has been verified!", email),
@@ -70,29 +81,36 @@ func VerifyEmail(sessionId string, inputVerfCode int, email string) (any, error)
 	return respData, nil
 }
 
-func RegisterUser(sessionId, email, username, password, geolocation string) (any, error) {
-	accExists, err := appModel.AccountExists(username)
+func RegisterUser(ctx context.Context, sessionId, email, username, password, geolocation string) (any, error) {
+	accExists, err := appModel.AccountExists(ctx, username)
 	if err != nil {
 		return nil, err
 	}
 
 	if accExists {
-		return nil, fmt.Errorf("username error: username '%s' is unavailable", username)
+		return nil, fiber.NewError(fiber.StatusBadRequest, "username error: username", username, "is unavailable")
 	}
 
-	hashedPassword := securityServices.HashPassword(password)
-
-	newUser, err := user.New(email, username, hashedPassword, geolocation)
+	hashedPassword, err := securityServices.HashPassword(password)
 	if err != nil {
 		return nil, err
 	}
 
-	authJwt := securityServices.JwtSign(appTypes.ClientUser{
+	newUser, err := user.New(ctx, email, username, hashedPassword, geolocation)
+	if err != nil {
+		return nil, err
+	}
+
+	authJwt, err := securityServices.JwtSign(appTypes.ClientUser{
 		Id:       newUser.Id,
 		Username: newUser.Username,
 	}, os.Getenv("AUTH_JWT_SECRET"), time.Now().UTC().Add(365*24*time.Hour)) // 1 year
 
-	go appModel.EndSignupSession(sessionId)
+	if err != nil {
+		return "", err
+	}
+
+	go appModel.EndSignupSession(ctx, sessionId)
 
 	respData := map[string]any{
 		"msg":     "Signup success!",

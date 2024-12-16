@@ -4,28 +4,38 @@ import (
 	"context"
 	"errors"
 	"i9chat/appGlobals"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 )
 
-func QueryRowField[T any](sql string, params ...any) (*T, error) {
-	rows, _ := appGlobals.DBPool.Query(context.Background(), sql, params...)
+func QueryRowField[T any](ctx context.Context, sql string, params ...any) (*T, error) {
+	dpOpCtx, cancel := context.WithTimeout(ctx, 2*time.Second)
+	defer cancel()
+
+	rows, _ := appGlobals.DBPool.Query(dpOpCtx, sql, params...)
 
 	res, err := pgx.CollectOneRow(rows, pgx.RowToAddrOf[T])
 	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, nil
+		}
 		return nil, err
 	}
 
 	return res, err
 }
 
-func QueryRowsField[T any](sql string, params ...any) ([]*T, error) {
-	rows, _ := appGlobals.DBPool.Query(context.Background(), sql, params...)
+func QueryRowsField[T any](ctx context.Context, sql string, params ...any) ([]*T, error) {
+	dpOpCtx, cancel := context.WithTimeout(ctx, 2*time.Second)
+	defer cancel()
+
+	rows, _ := appGlobals.DBPool.Query(dpOpCtx, sql, params...)
 
 	res, err := pgx.CollectRows(rows, pgx.RowToAddrOf[T])
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return make([]*T, 0), nil
+			return nil, nil
 		}
 		return nil, err
 	}
@@ -33,8 +43,11 @@ func QueryRowsField[T any](sql string, params ...any) ([]*T, error) {
 	return res, nil
 }
 
-func QueryRowType[T any](sql string, params ...any) (*T, error) {
-	rows, _ := appGlobals.DBPool.Query(context.Background(), sql, params...)
+func QueryRowType[T any](ctx context.Context, sql string, params ...any) (*T, error) {
+	dpOpCtx, cancel := context.WithTimeout(ctx, 2*time.Second)
+	defer cancel()
+
+	rows, _ := appGlobals.DBPool.Query(dpOpCtx, sql, params...)
 
 	res, err := pgx.CollectOneRow(rows, pgx.RowToAddrOfStructByNameLax[T])
 	if err != nil {
@@ -47,8 +60,11 @@ func QueryRowType[T any](sql string, params ...any) (*T, error) {
 	return res, nil
 }
 
-func QueryRowsType[T any](sql string, params ...any) ([]*T, error) {
-	rows, _ := appGlobals.DBPool.Query(context.Background(), sql, params...)
+func QueryRowsType[T any](ctx context.Context, sql string, params ...any) ([]*T, error) {
+	dpOpCtx, cancel := context.WithTimeout(ctx, 2*time.Second)
+	defer cancel()
+
+	rows, _ := appGlobals.DBPool.Query(dpOpCtx, sql, params...)
 
 	res, err := pgx.CollectRows(rows, pgx.RowToAddrOfStructByNameLax[T])
 	if err != nil {
@@ -61,7 +77,10 @@ func QueryRowsType[T any](sql string, params ...any) ([]*T, error) {
 	return res, nil
 }
 
-func BatchQuery[T any](sqls []string, params [][]any) ([]*T, error) {
+func BatchQuery[T any](ctx context.Context, sqls []string, params [][]any) ([]*T, error) {
+	dpOpCtx, cancel := context.WithTimeout(ctx, 2*time.Second)
+	defer cancel()
+
 	var res = make([]*T, len(sqls))
 
 	batch := &pgx.Batch{}
@@ -80,7 +99,7 @@ func BatchQuery[T any](sqls []string, params [][]any) ([]*T, error) {
 		})
 	}
 
-	s_err := appGlobals.DBPool.SendBatch(context.Background(), batch).Close()
+	s_err := appGlobals.DBPool.SendBatch(dpOpCtx, batch).Close()
 
 	return res, s_err
 }

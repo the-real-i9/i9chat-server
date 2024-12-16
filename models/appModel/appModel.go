@@ -1,45 +1,45 @@
 package appModel
 
 import (
-	"fmt"
+	"context"
 	"i9chat/appGlobals"
 	"i9chat/helpers"
 	"log"
 )
 
-func AccountExists(emailOrUsername string) (bool, error) {
-	exist, err := helpers.QueryRowField[bool]("SELECT exist FROM account_exists($1)", emailOrUsername)
+func AccountExists(ctx context.Context, emailOrUsername string) (bool, error) {
+	exist, err := helpers.QueryRowField[bool](ctx, "SELECT exist FROM account_exists($1)", emailOrUsername)
 
 	if err != nil {
-		log.Println(fmt.Errorf("appModel.go: AccountExists: %s", err))
+		log.Println("appModel.go: AccountExists:", err)
 		return false, appGlobals.ErrInternalServerError
 	}
 
 	return *exist, nil
 }
 
-func NewSignupSession(email string, verfCode int) (string, error) {
-	sessionId, err := helpers.QueryRowField[string]("SELECT session_id FROM new_signup_session($1, $2)", email, verfCode)
+func NewSignupSession(ctx context.Context, email string, verfCode int) (string, error) {
+	sessionId, err := helpers.QueryRowField[string](ctx, "SELECT session_id FROM new_signup_session($1, $2)", email, verfCode)
 
 	if err != nil {
-		log.Println(fmt.Errorf("appModel.go: NewSignupSession: %s", err))
+		log.Println("appModel.go: NewSignupSession:", err)
 		return "", appGlobals.ErrInternalServerError
 	}
 
 	return *sessionId, nil
 }
 
-func VerifyEmail(sessionId string, verfCode int) (bool, error) {
-	isSuccess, err := helpers.QueryRowField[bool]("SELECT is_success FROM verify_email($1, $2)", sessionId, verfCode)
+func VerifyEmail(ctx context.Context, sessionId string, verfCode int) (bool, error) {
+	isSuccess, err := helpers.QueryRowField[bool](ctx, "SELECT is_success FROM verify_email($1, $2)", sessionId, verfCode)
 
 	if err != nil {
-		log.Println(fmt.Errorf("appModel.go: VerifyEmail: %s", err))
+		log.Println("appModel.go: VerifyEmail:", err)
 		return false, appGlobals.ErrInternalServerError
 	}
 
 	return *isSuccess, nil
 }
 
-func EndSignupSession(sessionId string) {
-	helpers.QueryRowField[bool]("SELECT end_signup_session ($1)", sessionId)
+func EndSignupSession(ctx context.Context, sessionId string) {
+	helpers.QueryRowField[bool](ctx, "SELECT end_signup_session ($1)", sessionId)
 }

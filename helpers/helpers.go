@@ -2,9 +2,9 @@ package helpers
 
 import (
 	"encoding/json"
-	"errors"
-	"i9chat/appGlobals"
 	"i9chat/appTypes"
+
+	"github.com/gofiber/fiber/v2"
 )
 
 func MapToStruct(val map[string]any, structData any) {
@@ -19,10 +19,13 @@ func ToStruct(val any, structData any) {
 	json.Unmarshal(bt, structData)
 }
 
-func ErrResp(code int, err error) appTypes.WSResp {
-	if errors.Is(err, appGlobals.ErrInternalServerError) {
-		return appTypes.WSResp{StatusCode: 500, Error: appGlobals.ErrInternalServerError.Error()}
+func ErrResp(err error) appTypes.WSResp {
+
+	errCode := fiber.StatusInternalServerError
+
+	if ferr, ok := err.(*fiber.Error); ok {
+		errCode = ferr.Code
 	}
 
-	return appTypes.WSResp{StatusCode: code, Error: err.Error()}
+	return appTypes.WSResp{StatusCode: errCode, Error: err.Error()}
 }

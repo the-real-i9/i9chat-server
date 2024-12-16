@@ -1,6 +1,7 @@
 package user
 
 import (
+	"context"
 	"fmt"
 	"i9chat/appGlobals"
 	"i9chat/helpers"
@@ -19,9 +20,9 @@ type User struct {
 	Location          *pgtype.Circle    `json:"location,omitempty"`
 }
 
-func New(email string, username string, password string, geolocation string) (*User, error) {
+func New(ctx context.Context, email string, username string, password string, geolocation string) (*User, error) {
 
-	user, err := helpers.QueryRowType[User]("SELECT * FROM new_user($1, $2, $3, $4)", email, username, password, geolocation)
+	user, err := helpers.QueryRowType[User](ctx, "SELECT * FROM new_user($1, $2, $3, $4)", email, username, password, geolocation)
 
 	if err != nil {
 		log.Println(fmt.Errorf("userModel.go: NewUser: %s", err))
@@ -31,9 +32,9 @@ func New(email string, username string, password string, geolocation string) (*U
 	return user, nil
 }
 
-func FindOne(uniqueIdent string) (*User, error) {
+func FindOne(ctx context.Context, uniqueIdent string) (*User, error) {
 
-	user, err := helpers.QueryRowType[User]("SELECT * FROM get_user($1)", uniqueIdent)
+	user, err := helpers.QueryRowType[User](ctx, "SELECT * FROM get_user($1)", uniqueIdent)
 
 	if err != nil {
 		log.Println(fmt.Errorf("userModel.go: FindOne: %s", err))
@@ -43,9 +44,9 @@ func FindOne(uniqueIdent string) (*User, error) {
 	return user, nil
 }
 
-func FindNearby(clientUserId int, liveLocation string) ([]*User, error) {
+func FindNearby(ctx context.Context, clientUserId int, liveLocation string) ([]*User, error) {
 
-	nearbyUsers, err := helpers.QueryRowsType[User]("SELECT * FROM find_nearby_users($1, $2)", clientUserId, liveLocation)
+	nearbyUsers, err := helpers.QueryRowsType[User](ctx, "SELECT * FROM find_nearby_users($1, $2)", clientUserId, liveLocation)
 
 	if err != nil {
 		log.Println(fmt.Errorf("userModel.go: FindNearbyUsers: %s", err))
@@ -55,9 +56,9 @@ func FindNearby(clientUserId int, liveLocation string) ([]*User, error) {
 	return nearbyUsers, nil
 }
 
-func Search(clientUserId int, searchQuery string) ([]*User, error) {
+func Search(ctx context.Context, clientUserId int, searchQuery string) ([]*User, error) {
 
-	matchUsers, err := helpers.QueryRowsType[User]("SELECT * FROM search_user($1, $2)", clientUserId, searchQuery)
+	matchUsers, err := helpers.QueryRowsType[User](ctx, "SELECT * FROM search_user($1, $2)", clientUserId, searchQuery)
 
 	if err != nil {
 		log.Println(fmt.Errorf("userModel.go: Search: %s", err))
@@ -67,9 +68,9 @@ func Search(clientUserId int, searchQuery string) ([]*User, error) {
 	return matchUsers, nil
 }
 
-func GetAll(clientUserId int) ([]*User, error) {
+func GetAll(ctx context.Context, clientUserId int) ([]*User, error) {
 
-	allUsers, err := helpers.QueryRowsType[User]("SELECT * FROM get_all_users($1)", clientUserId)
+	allUsers, err := helpers.QueryRowsType[User](ctx, "SELECT * FROM get_all_users($1)", clientUserId)
 
 	if err != nil {
 		log.Println(fmt.Errorf("userModel.go: GetAll: %s", err))
@@ -79,8 +80,8 @@ func GetAll(clientUserId int) ([]*User, error) {
 	return allUsers, nil
 }
 
-func GetChats(userId int) ([]*map[string]any, error) {
-	myChats, err := helpers.QueryRowsField[map[string]any]("SELECT chat FROM get_my_chats($1)", userId)
+func GetChats(ctx context.Context, userId int) ([]*map[string]any, error) {
+	myChats, err := helpers.QueryRowsField[map[string]any](ctx, "SELECT chat FROM get_my_chats($1)", userId)
 
 	if err != nil {
 		log.Println(fmt.Errorf("userModel.go: GetChats: %s", err))
@@ -90,9 +91,9 @@ func GetChats(userId int) ([]*map[string]any, error) {
 	return myChats, nil
 }
 
-func EditProfile(userId int, fieldValuePair [][]string) (*User, error) {
+func EditProfile(ctx context.Context, userId int, fieldValuePair [][]string) (*User, error) {
 
-	updatedUser, err := helpers.QueryRowType[User]("SELECT * FROM edit_user($1, $2)", userId, fieldValuePair)
+	updatedUser, err := helpers.QueryRowType[User](ctx, "SELECT * FROM edit_user($1, $2)", userId, fieldValuePair)
 
 	if err != nil {
 		log.Println(fmt.Errorf("userModel.go: EditProfile: %s", err))
@@ -102,8 +103,8 @@ func EditProfile(userId int, fieldValuePair [][]string) (*User, error) {
 	return updatedUser, nil
 }
 
-func GetPassword(uniqueIdent string) (string, error) {
-	hashedPassword, err := helpers.QueryRowField[string]("SELECT password FROM get_user_password($1)", uniqueIdent)
+func GetPassword(ctx context.Context, uniqueIdent string) (string, error) {
+	hashedPassword, err := helpers.QueryRowField[string](ctx, "SELECT password FROM get_user_password($1)", uniqueIdent)
 	if err != nil {
 		log.Println(fmt.Errorf("userModel.go: GetPassword: %s", err))
 		return "", appGlobals.ErrInternalServerError
@@ -112,9 +113,9 @@ func GetPassword(uniqueIdent string) (string, error) {
 	return *hashedPassword, nil
 }
 
-func ChangePresence(userId int, presence string, lastSeen time.Time) ([]*int, error) {
+func ChangePresence(ctx context.Context, userId int, presence string, lastSeen time.Time) ([]*int, error) {
 
-	userDMChatPartnersIdList, err := helpers.QueryRowsField[int](`SELECT * FROM change_user_presence($1, $2, $3)`, userId, presence, lastSeen)
+	userDMChatPartnersIdList, err := helpers.QueryRowsField[int](ctx, `SELECT * FROM change_user_presence($1, $2, $3)`, userId, presence, lastSeen)
 	if err != nil {
 		log.Println(fmt.Errorf("userModel.go: ChangePresence: %s", err))
 		return nil, appGlobals.ErrInternalServerError
@@ -123,9 +124,9 @@ func ChangePresence(userId int, presence string, lastSeen time.Time) ([]*int, er
 	return userDMChatPartnersIdList, nil
 }
 
-func UpdateLocation(userId int, newGeolocation string) error {
+func UpdateLocation(ctx context.Context, userId int, newGeolocation string) error {
 
-	_, err := helpers.QueryRowField[bool]("SELECT update_user_location($1, $2)", userId, newGeolocation)
+	_, err := helpers.QueryRowField[bool](ctx, "SELECT update_user_location($1, $2)", userId, newGeolocation)
 
 	if err != nil {
 		log.Println(fmt.Errorf("userModel.go: UpdateLocation: %s", err))
@@ -135,9 +136,9 @@ func UpdateLocation(userId int, newGeolocation string) error {
 	return nil
 }
 
-func GetDMChatEventsPendingReceipt(userId int) ([]*map[string]any, error) {
+func GetDMChatEventsPendingReceipt(ctx context.Context, userId int) ([]*map[string]any, error) {
 
-	data, err := helpers.QueryRowsField[map[string]any]("SELECT event_data_kvp FROM get_dm_chat_events_pending_receipt($1)", userId)
+	data, err := helpers.QueryRowsField[map[string]any](ctx, "SELECT event_data_kvp FROM get_dm_chat_events_pending_receipt($1)", userId)
 
 	if err != nil {
 		log.Println(fmt.Errorf("userModel.go: GetDMChatEventsPendingReceipt: %s", err))
@@ -147,9 +148,9 @@ func GetDMChatEventsPendingReceipt(userId int) ([]*map[string]any, error) {
 	return data, nil
 }
 
-func GetGroupChatEventsPendingReceipt(userId int) ([]*map[string]any, error) {
+func GetGroupChatEventsPendingReceipt(ctx context.Context, userId int) ([]*map[string]any, error) {
 
-	data, err := helpers.QueryRowsField[map[string]any]("SELECT event_data_kvp FROM get_group_chat_events_pending_receipt($1)", userId)
+	data, err := helpers.QueryRowsField[map[string]any](ctx, "SELECT event_data_kvp FROM get_group_chat_events_pending_receipt($1)", userId)
 
 	if err != nil {
 		log.Println(fmt.Errorf("userModel.go: GetGroupChatEventsPendingReceipt: %s", err))
@@ -159,9 +160,9 @@ func GetGroupChatEventsPendingReceipt(userId int) ([]*map[string]any, error) {
 	return data, nil
 }
 
-func GetDMChatMessageEventsPendingReceipt(userId int, dmChatId int) ([]*map[string]any, error) {
+func GetDMChatMessageEventsPendingReceipt(ctx context.Context, userId int, dmChatId int) ([]*map[string]any, error) {
 
-	data, err := helpers.QueryRowsField[map[string]any]("SELECT event_data_kvp FROM get_dm_chat_message_events_pending_receipt($1, $2)", userId, dmChatId)
+	data, err := helpers.QueryRowsField[map[string]any](ctx, "SELECT event_data_kvp FROM get_dm_chat_message_events_pending_receipt($1, $2)", userId, dmChatId)
 
 	if err != nil {
 		log.Println(fmt.Errorf("userModel.go: GetDMChatEventsPendingReceipt: %s", err))
@@ -171,9 +172,9 @@ func GetDMChatMessageEventsPendingReceipt(userId int, dmChatId int) ([]*map[stri
 	return data, nil
 }
 
-func GetGroupChatMessageEventsPendingReceipt(userId int, groupChatId int) ([]*map[string]any, error) {
+func GetGroupChatMessageEventsPendingReceipt(ctx context.Context, userId int, groupChatId int) ([]*map[string]any, error) {
 
-	data, err := helpers.QueryRowsField[map[string]any]("SELECT event_data_kvp FROM get_group_chat_message_events_pending_receipt($1, $2)", userId, groupChatId)
+	data, err := helpers.QueryRowsField[map[string]any](ctx, "SELECT event_data_kvp FROM get_group_chat_message_events_pending_receipt($1, $2)", userId, groupChatId)
 
 	if err != nil {
 		log.Println(fmt.Errorf("userModel.go: GetGroupChatEventsPendingReceipt: %s", err))
