@@ -11,20 +11,18 @@ import (
 	"github.com/gabriel-vasile/mimetype"
 )
 
-func GoOnline(ctx context.Context, clientUserId int, userPOId string, mailbox chan<- any) error {
+func GoOnline(ctx context.Context, clientUserId int) error {
 	userDMChatPartnersIdList, err := user.ChangePresence(ctx, clientUserId, "online", time.Now())
 	if err != nil {
 		return err
 	}
-
-	go messageBrokerService.AddMailbox(userPOId, mailbox)
 
 	// "recepients" are: all users to whom you are a DMChat partner
 	go func(recepientIds []*int) {
 		for _, rId := range recepientIds {
 			rId := *rId
 
-			go messageBrokerService.PostMessage(fmt.Sprintf("user-%d", rId), messageBrokerService.Message{
+			messageBrokerService.Send(fmt.Sprintf("user-%d-topic", rId), messageBrokerService.Message{
 				Event: "user presence changed",
 				Data: map[string]any{
 					"userId":   clientUserId,
@@ -38,20 +36,18 @@ func GoOnline(ctx context.Context, clientUserId int, userPOId string, mailbox ch
 	return nil
 }
 
-func GoOffline(ctx context.Context, clientUserId int, lastSeen time.Time, userPOId string) {
+func GoOffline(ctx context.Context, clientUserId int, lastSeen time.Time) {
 	userDMChatPartnersIdList, err := user.ChangePresence(ctx, clientUserId, "offline", lastSeen)
 	if err != nil {
 		return
 	}
-
-	go messageBrokerService.RemoveMailbox(userPOId)
 
 	// "recepients" are: all users to whom you are a DMChat partner
 	go func(recepientIds []*int) {
 		for _, rId := range recepientIds {
 			rId := *rId
 
-			go messageBrokerService.PostMessage(fmt.Sprintf("user-%d", rId), messageBrokerService.Message{
+			go messageBrokerService.Send(fmt.Sprintf("user-%d-topic", rId), messageBrokerService.Message{
 				Event: "user presence changed",
 				Data: map[string]any{
 					"userId":   clientUserId,

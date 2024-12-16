@@ -32,7 +32,7 @@ func broadcastNewGroup(initMembers [][]appTypes.String, initMemberData *groupCha
 	for _, initMember := range initMembers {
 		initMemberId := initMember[0]
 
-		go messageBrokerService.PostMessage(fmt.Sprintf("user-%s", initMemberId), messageBrokerService.Message{
+		messageBrokerService.Send(fmt.Sprintf("user-%s-topic", initMemberId), messageBrokerService.Message{
 			Event: "new group chat",
 			Data:  initMemberData,
 		})
@@ -66,7 +66,7 @@ func broadcastGroupChatMessageDeliveryStatusUpdate(groupChatId, clientUserId int
 			for _, data := range ackDatas {
 				msgId := data.MsgId
 
-				go messageBrokerService.PostMessage(fmt.Sprintf("user-%d", memberId), messageBrokerService.Message{
+				messageBrokerService.Send(fmt.Sprintf("user-%d-topic", memberId), messageBrokerService.Message{
 					Event: "group chat message delivery status changed",
 					Data: map[string]any{
 						"groupChatId": groupChatId,
@@ -105,7 +105,7 @@ func SendMessage(ctx context.Context, groupChatId, clientUserId int, msgContent 
 func broadcastNewMessage(membersIds []int, memberData *groupChat.MemberData) {
 	for _, mId := range membersIds {
 		memberId := mId
-		go messageBrokerService.PostMessage(fmt.Sprintf("user-%d", memberId), messageBrokerService.Message{
+		messageBrokerService.Send(fmt.Sprintf("user-%d-topic", memberId), messageBrokerService.Message{
 			Event: "new group chat message",
 			Data:  memberData,
 		})
@@ -234,7 +234,7 @@ func RemoveUserFromGroupAdmins(ctx context.Context, groupChatId int, admin []str
 func broadcastActivity(newActivity *groupChat.NewActivity) {
 
 	for _, mId := range newActivity.MembersIds {
-		go messageBrokerService.PostMessage(fmt.Sprintf("user-%d", mId), messageBrokerService.Message{
+		messageBrokerService.Send(fmt.Sprintf("user-%d-topic", mId), messageBrokerService.Message{
 			Event: "new group chat activity",
 			Data:  newActivity.ActivityInfo,
 		})

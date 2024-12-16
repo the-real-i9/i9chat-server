@@ -11,6 +11,7 @@ import (
 
 	"github.com/gofiber/contrib/websocket"
 	"github.com/gofiber/fiber/v2"
+	"github.com/segmentio/kafka-go"
 )
 
 // This Controller essentially opens the stream for receiving messages
@@ -20,12 +21,7 @@ var GoOnline = websocket.New(func(c *websocket.Conn) {
 
 	clientUser := c.Locals("user").(*appTypes.ClientUser)
 
-	// a channel for streaming data to client
-	var myMailbox = make(chan any)
-
-	userPOId := fmt.Sprintf("user-%d", clientUser.Id)
-
-	app_err := userService.GoOnline(ctx, clientUser.Id, userPOId, myMailbox)
+	app_err := userService.GoOnline(ctx, clientUser.Id)
 	if app_err != nil {
 		w_err := c.WriteJSON(helpers.ErrResp(app_err))
 		if w_err != nil {
@@ -34,19 +30,29 @@ var GoOnline = websocket.New(func(c *websocket.Conn) {
 		}
 	}
 
+	r := kafka.NewReader(kafka.ReaderConfig{
+		Brokers:   []string{"localhost:9092"},
+		Topic:     fmt.Sprintf("i9chat-user-%d-topic", clientUser.Id),
+		Partition: 0,
+	})
+
 	goOff := func() {
-		userService.GoOffline(context.TODO(), clientUser.Id, time.Now(), userPOId)
+		if err := r.Close(); err != nil {
+			log.Println("failed to close reader:", err)
+		}
+		userService.GoOffline(context.TODO(), clientUser.Id, time.Now())
 	}
 
 	go goOnlineSocketControl(c, goOff)
 
-	for data := range myMailbox {
-		w_err := c.WriteJSON(data)
-		if w_err != nil {
-			log.Println(w_err)
+	for {
+		m, err := r.ReadMessage(ctx)
+		if err != nil {
 			goOff()
 			break
 		}
+
+		c.WriteJSON(m.Value)
 	}
 })
 

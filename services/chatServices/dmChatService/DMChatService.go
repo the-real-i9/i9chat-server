@@ -22,7 +22,7 @@ func NewDMChat(ctx context.Context, initiatorId, partnerId int, initMsgContent m
 		return nil, err
 	}
 
-	go messageBrokerService.PostMessage(fmt.Sprintf("user-%d", partnerId), messageBrokerService.Message{
+	go messageBrokerService.Send(fmt.Sprintf("user-%d-topic", partnerId), messageBrokerService.Message{
 		Event: "new dm chat",
 		Data:  dmChat.PartnerData,
 	})
@@ -46,7 +46,7 @@ func SendMessage(ctx context.Context, dmChatId, senderId int, msgContent map[str
 		return nil, err
 	}
 
-	go messageBrokerService.PostMessage(fmt.Sprintf("user-%d", newMessage.ReceiverId), messageBrokerService.Message{
+	go messageBrokerService.Send(fmt.Sprintf("user-%d-topic", newMessage.ReceiverId), messageBrokerService.Message{
 		Event: "new dm chat message",
 		Data:  newMessage.ReceiverData,
 	})
@@ -59,7 +59,7 @@ func SendMessage(ctx context.Context, dmChatId, senderId int, msgContent map[str
 func UpdateMessageDeliveryStatus(ctx context.Context, dmChatId, msgId, senderId, receiverId int, status string, updatedAt time.Time) {
 	if err := dmChat.UpdateMessageDeliveryStatus(ctx, dmChatId, msgId, receiverId, status, updatedAt); err == nil {
 
-		go messageBrokerService.PostMessage(fmt.Sprintf("user-%d", senderId), messageBrokerService.Message{
+		go messageBrokerService.Send(fmt.Sprintf("user-%d-topic", senderId), messageBrokerService.Message{
 			Event: "dm chat message delivery status changed",
 			Data: map[string]any{
 				"dmChatId": dmChatId,
@@ -75,7 +75,7 @@ func BatchUpdateMessageDeliveryStatus(ctx context.Context, receiverId int, statu
 		for _, data := range ackDatas {
 			data := data
 
-			go messageBrokerService.PostMessage(fmt.Sprintf("user-%d", data.SenderId), messageBrokerService.Message{
+			messageBrokerService.Send(fmt.Sprintf("user-%d-topic", data.SenderId), messageBrokerService.Message{
 				Event: "dm chat message delivery status changed",
 				Data: map[string]any{
 					"dmChatId": data.DMChatId,
