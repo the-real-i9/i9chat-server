@@ -2,10 +2,14 @@ package signupControllers
 
 import (
 	"fmt"
+	"i9chat/appGlobals"
+	"i9chat/helpers"
+	"log"
 	"regexp"
 
 	validation "github.com/go-ozzo/ozzo-validation/v4"
 	"github.com/go-ozzo/ozzo-validation/v4/is"
+	"github.com/gofiber/fiber/v2"
 )
 
 type requestNewAccountBody struct {
@@ -13,12 +17,23 @@ type requestNewAccountBody struct {
 }
 
 func (b requestNewAccountBody) Validate() error {
-	return validation.ValidateStruct(&b,
+	err := validation.ValidateStruct(&b,
 		validation.Field(&b.Email,
 			validation.Required,
 			is.Email,
 		),
 	)
+
+	if err != nil {
+		if e, ok := err.(validation.InternalError); ok {
+			log.Println("signup_bodyValidators.go: requestNewAccountBody", e.InternalError())
+			return appGlobals.ErrInternalServerError
+		}
+
+		return fiber.NewError(fiber.StatusBadRequest, "validation error:", err.Error())
+	}
+
+	return nil
 }
 
 type verifyEmailBody struct {
@@ -30,12 +45,14 @@ func (b verifyEmailBody) Validate() error {
 		Code string `json:"code"`
 	}{Code: fmt.Sprint(b.Code)}
 
-	return validation.ValidateStruct(&mb,
+	err := validation.ValidateStruct(&mb,
 		validation.Field(&mb.Code,
 			validation.Required,
 			validation.Length(6, 6).Error("invalid code value"),
 		),
 	)
+
+	return helpers.ValidationError(err, "signup_bodyValidators.go", "verifyEmailBody")
 }
 
 type registerUserBody struct {
@@ -46,7 +63,7 @@ type registerUserBody struct {
 
 func (b registerUserBody) Validate() error {
 
-	return validation.ValidateStruct(&b,
+	err := validation.ValidateStruct(&b,
 		validation.Field(&b.Username,
 			validation.Required,
 			validation.Length(3, 0).Error("username too short"),
@@ -61,4 +78,6 @@ func (b registerUserBody) Validate() error {
 			validation.Match(regexp.MustCompile("^[0-9]+, ?[0-9]+, ?[0-9]+$")).Error("invalid circle format; format: pointX, pointY, radiusR"),
 		),
 	)
+
+	return helpers.ValidationError(err, "signup_bodyValidators.go", "registerUserBody")
 }

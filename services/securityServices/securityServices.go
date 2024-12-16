@@ -5,18 +5,14 @@ import (
 	"fmt"
 	"log"
 	"math/rand"
-	"os"
-	"strings"
 	"time"
 
 	"i9chat/appGlobals"
-	"i9chat/appTypes"
 	"i9chat/helpers"
 
 	"github.com/golang-jwt/jwt/v5"
 	"golang.org/x/crypto/bcrypt"
 
-	"github.com/gofiber/contrib/websocket"
 	"github.com/gofiber/fiber/v2"
 )
 
@@ -96,24 +92,4 @@ func JwtVerify[T any](tokenString, secret string) (*T, error) {
 	helpers.MapToStruct(token.Claims.(jwt.MapClaims)["data"].(map[string]any), &data)
 
 	return &data, nil
-}
-
-func WSHandlerProtected(handler func(*websocket.Conn), config ...websocket.Config) func(*fiber.Ctx) error {
-	return websocket.New(func(c *websocket.Conn) {
-		authHeaderValue := c.Headers("Authorization")
-
-		sessionToken := strings.Fields(authHeaderValue)[1]
-
-		clientUser, err := JwtVerify[appTypes.ClientUser](sessionToken, os.Getenv("AUTH_JWT_SECRET"))
-		if err != nil {
-			if w_err := c.WriteJSON(helpers.ErrResp(err)); w_err != nil {
-				log.Println(w_err)
-			}
-			return
-		}
-
-		c.Locals("user", clientUser)
-
-		handler(c)
-	}, config...)
 }

@@ -1,6 +1,7 @@
 package signinControllers
 
 import (
+	"i9chat/helpers"
 	"strings"
 
 	validation "github.com/go-ozzo/ozzo-validation/v4"
@@ -14,7 +15,7 @@ type signInBody struct {
 
 func (b signInBody) Validate() error {
 
-	return validation.ValidateStruct(&b,
+	err := validation.ValidateStruct(&b,
 		validation.Field(&b.EmailOrUsername,
 			validation.Required,
 			validation.When(strings.ContainsAny(b.EmailOrUsername, "@"),
@@ -27,4 +28,7 @@ func (b signInBody) Validate() error {
 			validation.Required,
 		),
 	)
+
+	return helpers.ValidationError(err, "signin_bodyValidators.go", "signInBody")
+
 }

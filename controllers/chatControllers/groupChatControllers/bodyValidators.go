@@ -14,10 +14,13 @@ type getChatHistoryBody struct {
 }
 
 func (b getChatHistoryBody) Validate() error {
-	return validation.ValidateStruct(&b,
+	err := validation.ValidateStruct(&b,
 		validation.Field(&b.GroupChatId, validation.Required, validation.Min(1).Error("invalid value")),
 		validation.Field(&b.Offset, validation.Required, validation.Min(0).Error("invalid negative offset")),
 	)
+
+	return helpers.ValidationError(err, "groupChat_bodyValidators.go", "getChatHistoryBody")
+
 }
 
 type sendMessageBody struct {
@@ -33,13 +36,16 @@ func (ob sendMessageBody) Validate() error {
 
 	helpers.ToStruct(ob, &vb)
 
-	return validation.ValidateStruct(&vb,
+	err := validation.ValidateStruct(&vb,
 		validation.Field(&vb.Msg, validation.Required),
 		validation.Field(&vb.At,
 			validation.Required,
 			validation.Max(time.Now()).Error("invalid future time"),
 		),
 	)
+
+	return helpers.ValidationError(err, "groupChat_bodyValidators.go", "sendMessageBody")
+
 }
 
 type createNewGroupChatAndAckMessagesBody struct {
@@ -48,13 +54,16 @@ type createNewGroupChatAndAckMessagesBody struct {
 }
 
 func (b createNewGroupChatAndAckMessagesBody) Validate() error {
-	return validation.ValidateStruct(&b,
+	err := validation.ValidateStruct(&b,
 		validation.Field(&b.Action,
 			validation.Required,
 			validation.In("create new chat", "acknowledge messages").Error("invalid action"),
 		),
 		validation.Field(&b.Data, validation.Required),
 	)
+
+	return helpers.ValidationError(err, "groupChat_bodyValidators.go", "createNewGroupChatAndAckMessagesBody")
+
 }
 
 type newGroupChatDataT struct {
@@ -65,7 +74,7 @@ type newGroupChatDataT struct {
 }
 
 func (b newGroupChatDataT) Validate() error {
-	return validation.ValidateStruct(&b,
+	err := validation.ValidateStruct(&b,
 		validation.Field(&b.Name, validation.Required),
 		validation.Field(&b.Description, validation.Required),
 		validation.Field(&b.PictureData,
@@ -80,6 +89,9 @@ func (b newGroupChatDataT) Validate() error {
 			),
 		),
 	)
+
+	return helpers.ValidationError(err, "groupChat_bodyValidators.go", "newGroupChatDataT")
+
 }
 
 type ackMsgsDataT struct {
@@ -89,7 +101,7 @@ type ackMsgsDataT struct {
 }
 
 func (b ackMsgsDataT) Validate() error {
-	return validation.ValidateStruct(&b,
+	err := validation.ValidateStruct(&b,
 		validation.Field(&b.Status,
 			validation.Required,
 			validation.In("delivered", "seen").Error("invalid status value; should be 'delivered' or 'seen'"),
@@ -97,6 +109,9 @@ func (b ackMsgsDataT) Validate() error {
 		validation.Field(&b.GroupChatId, validation.Required, validation.Min(1).Error("invalid value")),
 		validation.Field(&b.MsgAckDatas, validation.Required),
 	)
+
+	return helpers.ValidationError(err, "groupChat_bodyValidators.go", "ackMsgsDataT")
+
 }
 
 type action string
@@ -107,13 +122,16 @@ type executeActionBody struct {
 }
 
 func (b executeActionBody) Validate() error {
-	return validation.ValidateStruct(&b,
+	err := validation.ValidateStruct(&b,
 		validation.Field(&b.Action,
 			validation.Required,
 			validation.In("change name", "change description", "change picture", "add users", "remove user", "join", "leave", "make user admin", "remove user from admins").Error("invalid group action"),
 		),
 		validation.Field(&b.Data, validation.Required),
 	)
+
+	return helpers.ValidationError(err, "groupChat_bodyValidators.go", "executeActionBody")
+
 }
 
 type changeGroupNameT struct {
@@ -122,13 +140,16 @@ type changeGroupNameT struct {
 }
 
 func (d changeGroupNameT) Validate() error {
-	return validation.ValidateStruct(&d,
+	err := validation.ValidateStruct(&d,
 		validation.Field(&d.GroupChatId,
 			validation.Required,
 			validation.Min(1).Error("invalid value"),
 		),
 		validation.Field(&d.NewName, validation.Required),
 	)
+
+	return helpers.ValidationError(err, "groupChat_bodyValidators.go", "changeGroupNameT")
+
 }
 
 type changeGroupDescriptionT struct {
@@ -137,13 +158,16 @@ type changeGroupDescriptionT struct {
 }
 
 func (d changeGroupDescriptionT) Validate() error {
-	return validation.ValidateStruct(&d,
+	err := validation.ValidateStruct(&d,
 		validation.Field(&d.GroupChatId,
 			validation.Required,
 			validation.Min(1).Error("invalid value"),
 		),
 		validation.Field(&d.NewDescription, validation.Required),
 	)
+
+	return helpers.ValidationError(err, "groupChat_bodyValidators.go", "changeGroupDescriptionT")
+
 }
 
 type changeGroupPictureT struct {
@@ -152,7 +176,7 @@ type changeGroupPictureT struct {
 }
 
 func (d changeGroupPictureT) Validate() error {
-	return validation.ValidateStruct(&d,
+	err := validation.ValidateStruct(&d,
 		validation.Field(&d.GroupChatId,
 			validation.Required,
 			validation.Min(1).Error("invalid value"),
@@ -162,6 +186,9 @@ func (d changeGroupPictureT) Validate() error {
 			validation.Length(1, 2*1024*1024).Error("maximum picture size of 2mb exceeded"),
 		),
 	)
+
+	return helpers.ValidationError(err, "groupChat_bodyValidators.go", "changeGroupPictureT")
+
 }
 
 type addUsersToGroupT struct {
@@ -170,7 +197,7 @@ type addUsersToGroupT struct {
 }
 
 func (d addUsersToGroupT) Validate() error {
-	return validation.ValidateStruct(&d,
+	err := validation.ValidateStruct(&d,
 		validation.Field(&d.GroupChatId,
 			validation.Required,
 			validation.Min(1).Error("invalid value"),
@@ -183,6 +210,9 @@ func (d addUsersToGroupT) Validate() error {
 			),
 		),
 	)
+
+	return helpers.ValidationError(err, "groupChat_bodyValidators.go", "addUsersToGroupT")
+
 }
 
 type actOnSingleUserT struct {
@@ -191,7 +221,7 @@ type actOnSingleUserT struct {
 }
 
 func (d actOnSingleUserT) Validate() error {
-	return validation.ValidateStruct(&d,
+	err := validation.ValidateStruct(&d,
 		validation.Field(&d.GroupChatId,
 			validation.Required,
 			validation.Min(1).Error("invalid value"),
@@ -202,6 +232,9 @@ func (d actOnSingleUserT) Validate() error {
 			validation.By(helpers.UserSliceRule),
 		),
 	)
+
+	return helpers.ValidationError(err, "groupChat_bodyValidators.go", "actOnSingleUserT")
+
 }
 
 type joinLeaveGroupT struct {
@@ -209,10 +242,13 @@ type joinLeaveGroupT struct {
 }
 
 func (d joinLeaveGroupT) Validate() error {
-	return validation.ValidateStruct(&d,
+	err := validation.ValidateStruct(&d,
 		validation.Field(&d.GroupChatId,
 			validation.Required,
 			validation.Min(1).Error("invalid value"),
 		),
 	)
+
+	return helpers.ValidationError(err, "groupChat_bodyValidators.go", "joinLeaveGroupT")
+
 }

@@ -1,6 +1,7 @@
 package signinControllers
 
 import (
+	"context"
 	"i9chat/appTypes"
 	"i9chat/helpers"
 	"i9chat/services/auth/signinService"
@@ -11,6 +12,8 @@ import (
 )
 
 var Signin = websocket.New(func(c *websocket.Conn) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
 	var w_err error
 
@@ -29,14 +32,14 @@ var Signin = websocket.New(func(c *websocket.Conn) {
 		}
 
 		if val_err := body.Validate(); val_err != nil {
-			w_err = c.WriteJSON(helpers.ErrResp(fiber.StatusUnprocessableEntity, val_err))
+			w_err = c.WriteJSON(helpers.ErrResp(val_err))
 			continue
 		}
 
-		respData, app_err := signinService.Signin(body.EmailOrUsername, body.Password)
+		respData, app_err := signinService.Signin(ctx, body.EmailOrUsername, body.Password)
 
 		if app_err != nil {
-			w_err = c.WriteJSON(helpers.ErrResp(fiber.StatusUnprocessableEntity, app_err))
+			w_err = c.WriteJSON(helpers.ErrResp(app_err))
 			continue
 		}
 

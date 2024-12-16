@@ -14,10 +14,12 @@ type getChatHistoryBody struct {
 }
 
 func (b getChatHistoryBody) Validate() error {
-	return validation.ValidateStruct(&b,
+	err := validation.ValidateStruct(&b,
 		validation.Field(&b.DMChatId, validation.Required, validation.Min(1).Error("invalid value")),
 		validation.Field(&b.Offset, validation.Min(0).Error("invalid negative offset")),
 	)
+
+	return helpers.ValidationError(err, "dmChat_bodyValidators.go", "getChatHistoryBody")
 }
 
 type sendMessageBody struct {
@@ -33,13 +35,16 @@ func (ob sendMessageBody) Validate() error {
 
 	helpers.ToStruct(ob, &vb)
 
-	return validation.ValidateStruct(&vb,
+	err := validation.ValidateStruct(&vb,
 		validation.Field(&vb.Msg, validation.Required),
 		validation.Field(&vb.At,
 			validation.Required,
 			validation.Max(time.Now()).Error("invalid future time"),
 		),
 	)
+
+	return helpers.ValidationError(err, "dmChat_bodyValidators.go", "sendMessageBody")
+
 }
 
 type createNewDMChatAndAckMessagesBody struct {
@@ -48,13 +53,15 @@ type createNewDMChatAndAckMessagesBody struct {
 }
 
 func (b createNewDMChatAndAckMessagesBody) Validate() error {
-	return validation.ValidateStruct(&b,
+	err := validation.ValidateStruct(&b,
 		validation.Field(&b.Action,
 			validation.Required,
 			validation.In("create new chat", "acknowledge message", "batch acknowledge messages").Error("invalid action"),
 		),
 		validation.Field(&b.Data, validation.Required),
 	)
+
+	return helpers.ValidationError(err, "dmChat_bodyValidators.go", "createNewDMChatAndAckMessagesBody")
 }
 
 type newDMChatDataT struct {
@@ -64,7 +71,7 @@ type newDMChatDataT struct {
 }
 
 func (b newDMChatDataT) Validate() error {
-	return validation.ValidateStruct(&b,
+	err := validation.ValidateStruct(&b,
 		validation.Field(&b.PartnerId,
 			validation.Required,
 			validation.Min(1).Error("invalid value"),
@@ -75,6 +82,9 @@ func (b newDMChatDataT) Validate() error {
 			validation.Max(time.Now()).Error("invalid future time"),
 		),
 	)
+
+	return helpers.ValidationError(err, "dmChat_bodyValidators.go", "newDMChatDataT")
+
 }
 
 type ackMsgDataT struct {
@@ -83,13 +93,15 @@ type ackMsgDataT struct {
 }
 
 func (b ackMsgDataT) Validate() error {
-	return validation.ValidateStruct(&b,
+	err := validation.ValidateStruct(&b,
 		validation.Field(&b.Status,
 			validation.Required,
 			validation.In("delivered", "seen").Error("invalid status value; should be 'delivered' or 'seen'"),
 		),
 		validation.Field(&b.DMChatMsgAckData),
 	)
+
+	return helpers.ValidationError(err, "dmChat_bodyValidators.go", "ackMsgDataT")
 }
 
 type batchAckMsgDataT struct {
@@ -98,11 +110,14 @@ type batchAckMsgDataT struct {
 }
 
 func (b batchAckMsgDataT) Validate() error {
-	return validation.ValidateStruct(&b,
+	err := validation.ValidateStruct(&b,
 		validation.Field(&b.Status,
 			validation.Required,
 			validation.In("delivered", "seen").Error("invalid status value; should be 'delivered' or 'seen'"),
 		),
 		validation.Field(&b.MsgAckDatas, validation.Required),
 	)
+
+	return helpers.ValidationError(err, "dmChat_bodyValidators.go", "batchAckMsgDataT")
+
 }

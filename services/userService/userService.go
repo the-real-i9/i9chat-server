@@ -1,16 +1,18 @@
 package userService
 
 import (
+	"context"
 	"fmt"
 	user "i9chat/models/userModel"
 	"i9chat/services/cloudStorageService"
 	"i9chat/services/messageBrokerService"
-	"log"
 	"time"
+
+	"github.com/gabriel-vasile/mimetype"
 )
 
-func GoOnline(clientUserId int, userPOId string, mailbox chan<- any) error {
-	userDMChatPartnersIdList, err := user.ChangePresence(clientUserId, "online", time.Now())
+func GoOnline(ctx context.Context, clientUserId int, userPOId string, mailbox chan<- any) error {
+	userDMChatPartnersIdList, err := user.ChangePresence(ctx, clientUserId, "online", time.Now())
 	if err != nil {
 		return err
 	}
@@ -36,8 +38,8 @@ func GoOnline(clientUserId int, userPOId string, mailbox chan<- any) error {
 	return nil
 }
 
-func GoOffline(clientUserId int, lastSeen time.Time, userPOId string) {
-	userDMChatPartnersIdList, err := user.ChangePresence(clientUserId, "offline", lastSeen)
+func GoOffline(ctx context.Context, clientUserId int, lastSeen time.Time, userPOId string) {
+	userDMChatPartnersIdList, err := user.ChangePresence(ctx, clientUserId, "offline", lastSeen)
 	if err != nil {
 		return
 	}
@@ -61,18 +63,18 @@ func GoOffline(clientUserId int, lastSeen time.Time, userPOId string) {
 	}(userDMChatPartnersIdList)
 }
 
-func ChangeProfilePicture(clientUserId int, clientUsername string, pictureData []byte) (any, error) {
+func ChangeProfilePicture(ctx context.Context, clientUserId int, clientUsername string, pictureData []byte) (any, error) {
 	// if any picture size validation error, do it here
 
-	picPath := fmt.Sprintf("profile_pictures/%s/profile_pic_%d.jpg", clientUsername, time.Now().UnixNano())
+	ext := mimetype.Detect(pictureData).Extension()
+	picPath := fmt.Sprintf("profile_pictures/%s/profile_pic_%d.%s", clientUsername, time.Now().UnixNano(), ext)
 
-	newPicUrl, err := cloudStorageService.UploadFile(picPath, pictureData)
+	newPicUrl, err := cloudStorageService.Upload(ctx, picPath, pictureData)
 	if err != nil {
-		log.Println(err)
 		return nil, err
 	}
 
-	_, ed_err := user.EditProfile(clientUserId, [][]string{{"profile_picture_url", newPicUrl}})
+	_, ed_err := user.EditProfile(ctx, clientUserId, [][]string{{"profile_picture_url", newPicUrl}})
 	if ed_err != nil {
 		return nil, ed_err
 	}
@@ -84,8 +86,8 @@ func ChangeProfilePicture(clientUserId int, clientUsername string, pictureData [
 	return respData, nil
 }
 
-func UpdateMyLocation(clientUserId int, newGeolocation string) (any, error) {
-	err := user.UpdateLocation(clientUserId, newGeolocation)
+func UpdateMyLocation(ctx context.Context, clientUserId int, newGeolocation string) (any, error) {
+	err := user.UpdateLocation(ctx, clientUserId, newGeolocation)
 	if err != nil {
 		return nil, err
 	}
@@ -97,18 +99,18 @@ func UpdateMyLocation(clientUserId int, newGeolocation string) (any, error) {
 	return respData, err
 }
 
-func GetAllUsers(clientUserId int) ([]*user.User, error) {
-	return user.GetAll(clientUserId)
+func GetAllUsers(ctx context.Context, clientUserId int) ([]*user.User, error) {
+	return user.GetAll(ctx, clientUserId)
 }
 
-func SearchUser(clientUserId int, query string) ([]*user.User, error) {
-	return user.Search(clientUserId, query)
+func SearchUser(ctx context.Context, clientUserId int, query string) ([]*user.User, error) {
+	return user.Search(ctx, clientUserId, query)
 }
 
-func FindNearbyUsers(clientUserId int, liveLocation string) ([]*user.User, error) {
-	return user.FindNearby(clientUserId, liveLocation)
+func FindNearbyUsers(ctx context.Context, clientUserId int, liveLocation string) ([]*user.User, error) {
+	return user.FindNearby(ctx, clientUserId, liveLocation)
 }
 
-func GetMyChats(clientUserId int) ([]*map[string]any, error) {
-	return user.GetChats(clientUserId)
+func GetMyChats(ctx context.Context, clientUserId int) ([]*map[string]any, error) {
+	return user.GetChats(ctx, clientUserId)
 }

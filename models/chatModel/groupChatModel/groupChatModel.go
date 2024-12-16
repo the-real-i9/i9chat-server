@@ -1,6 +1,7 @@
 package groupChat
 
 import (
+	"context"
 	"fmt"
 	"i9chat/appGlobals"
 	"i9chat/appTypes"
@@ -30,8 +31,8 @@ type NewGroupChat struct {
 	*InitMemberData `db:"imrd"`
 }
 
-func New(name string, description string, pictureUrl string, creator []string, initUsers [][]appTypes.String) (*NewGroupChat, error) {
-	newGroupChat, err := helpers.QueryRowType[NewGroupChat]("SELECT creator_resp_data AS crd, init_member_resp_data AS imrd FROM new_group_chat($1, $2, $3, $4, $5)", name, description, pictureUrl, creator, initUsers)
+func New(ctx context.Context, name string, description string, pictureUrl string, creator []string, initUsers [][]appTypes.String) (*NewGroupChat, error) {
+	newGroupChat, err := helpers.QueryRowType[NewGroupChat](ctx, "SELECT creator_resp_data AS crd, init_member_resp_data AS imrd FROM new_group_chat($1, $2, $3, $4, $5)", name, description, pictureUrl, creator, initUsers)
 	if err != nil {
 		log.Println(fmt.Errorf("groupChatModel.go: New: %s", err))
 		return nil, appGlobals.ErrInternalServerError
@@ -45,8 +46,8 @@ type NewActivity struct {
 	ActivityInfo map[string]any `db:"activity_data"`
 }
 
-func ChangeName(groupChatId int, admin []string, newName string) (*NewActivity, error) {
-	newActivity, err := helpers.QueryRowType[NewActivity]("SELECT * change_group_name($1, $2, $3)", groupChatId, admin, newName)
+func ChangeName(ctx context.Context, groupChatId int, admin []string, newName string) (*NewActivity, error) {
+	newActivity, err := helpers.QueryRowType[NewActivity](ctx, "SELECT * change_group_name($1, $2, $3)", groupChatId, admin, newName)
 	if err != nil {
 		log.Println(fmt.Errorf("groupChatModel.go: ChangeName: %s", err))
 		return nil, appGlobals.ErrInternalServerError
@@ -55,8 +56,8 @@ func ChangeName(groupChatId int, admin []string, newName string) (*NewActivity, 
 	return newActivity, nil
 }
 
-func ChangeDescription(groupChatId int, admin []string, newDescription string) (*NewActivity, error) {
-	newActivity, err := helpers.QueryRowType[NewActivity]("SELECT * change_group_description($1, $2, $3)", groupChatId, admin, newDescription)
+func ChangeDescription(ctx context.Context, groupChatId int, admin []string, newDescription string) (*NewActivity, error) {
+	newActivity, err := helpers.QueryRowType[NewActivity](ctx, "SELECT * change_group_description($1, $2, $3)", groupChatId, admin, newDescription)
 	if err != nil {
 		log.Println(fmt.Errorf("groupChatModel.go: ChangeDescription: %s", err))
 		return nil, appGlobals.ErrInternalServerError
@@ -65,8 +66,8 @@ func ChangeDescription(groupChatId int, admin []string, newDescription string) (
 	return newActivity, nil
 }
 
-func ChangePicture(groupChatId int, admin []string, newPictureUrl string) (*NewActivity, error) {
-	newActivity, err := helpers.QueryRowType[NewActivity]("SELECT * change_group_picture($1, $2, $3)", groupChatId, admin, newPictureUrl)
+func ChangePicture(ctx context.Context, groupChatId int, admin []string, newPictureUrl string) (*NewActivity, error) {
+	newActivity, err := helpers.QueryRowType[NewActivity](ctx, "SELECT * change_group_picture($1, $2, $3)", groupChatId, admin, newPictureUrl)
 	if err != nil {
 		log.Println(fmt.Errorf("groupChatModel.go: ChangePicture: %s", err))
 		return nil, appGlobals.ErrInternalServerError
@@ -75,8 +76,8 @@ func ChangePicture(groupChatId int, admin []string, newPictureUrl string) (*NewA
 	return newActivity, nil
 }
 
-func AddUsers(groupChatId int, admin []string, newUsers [][]appTypes.String) (*NewActivity, error) {
-	newActivity, err := helpers.QueryRowType[NewActivity]("SELECT * add_users_to_group($1, $2, $3)", groupChatId, admin, newUsers)
+func AddUsers(ctx context.Context, groupChatId int, admin []string, newUsers [][]appTypes.String) (*NewActivity, error) {
+	newActivity, err := helpers.QueryRowType[NewActivity](ctx, "SELECT * add_users_to_group($1, $2, $3)", groupChatId, admin, newUsers)
 	if err != nil {
 		log.Println(fmt.Errorf("groupChatModel.go: AddUsers: %s", err))
 		return nil, appGlobals.ErrInternalServerError
@@ -85,8 +86,8 @@ func AddUsers(groupChatId int, admin []string, newUsers [][]appTypes.String) (*N
 	return newActivity, nil
 }
 
-func RemoveUser(groupChatId int, admin []string, user []appTypes.String) (*NewActivity, error) {
-	newActivity, err := helpers.QueryRowType[NewActivity]("SELECT * remove_user_to_group($1, $2, $3)", groupChatId, admin, user)
+func RemoveUser(ctx context.Context, groupChatId int, admin []string, user []appTypes.String) (*NewActivity, error) {
+	newActivity, err := helpers.QueryRowType[NewActivity](ctx, "SELECT * remove_user_to_group($1, $2, $3)", groupChatId, admin, user)
 	if err != nil {
 		log.Println(fmt.Errorf("groupChatModel.go: RemoveUser: %s", err))
 		return nil, appGlobals.ErrInternalServerError
@@ -95,8 +96,8 @@ func RemoveUser(groupChatId int, admin []string, user []appTypes.String) (*NewAc
 	return newActivity, nil
 }
 
-func Join(groupChatId int, newUser []string) (*NewActivity, error) {
-	newActivity, err := helpers.QueryRowType[NewActivity]("SELECT * join_group($1, $2)", groupChatId, newUser)
+func Join(ctx context.Context, groupChatId int, newUser []string) (*NewActivity, error) {
+	newActivity, err := helpers.QueryRowType[NewActivity](ctx, "SELECT * join_group($1, $2)", groupChatId, newUser)
 	if err != nil {
 		log.Println(fmt.Errorf("groupChatModel.go: Join: %s", err))
 		return nil, appGlobals.ErrInternalServerError
@@ -105,8 +106,8 @@ func Join(groupChatId int, newUser []string) (*NewActivity, error) {
 	return newActivity, nil
 }
 
-func Leave(groupChatId int, user []string) (*NewActivity, error) {
-	newActivity, err := helpers.QueryRowType[NewActivity]("SELECT * leave_group($1, $2)", groupChatId, user)
+func Leave(ctx context.Context, groupChatId int, user []string) (*NewActivity, error) {
+	newActivity, err := helpers.QueryRowType[NewActivity](ctx, "SELECT * leave_group($1, $2)", groupChatId, user)
 	if err != nil {
 		log.Println(fmt.Errorf("groupChatModel.go: Leave: %s", err))
 		return nil, appGlobals.ErrInternalServerError
@@ -115,8 +116,8 @@ func Leave(groupChatId int, user []string) (*NewActivity, error) {
 	return newActivity, nil
 }
 
-func MakeUserAdmin(groupChatId int, admin []string, user []appTypes.String) (*NewActivity, error) {
-	newActivity, err := helpers.QueryRowType[NewActivity]("SELECT * make_user_group_admin($1, $2, $3)", groupChatId, admin, user)
+func MakeUserAdmin(ctx context.Context, groupChatId int, admin []string, user []appTypes.String) (*NewActivity, error) {
+	newActivity, err := helpers.QueryRowType[NewActivity](ctx, "SELECT * make_user_group_admin($1, $2, $3)", groupChatId, admin, user)
 	if err != nil {
 		log.Println(fmt.Errorf("groupChatModel.go: MakeUserAdmin: %s", err))
 		return nil, appGlobals.ErrInternalServerError
@@ -125,8 +126,8 @@ func MakeUserAdmin(groupChatId int, admin []string, user []appTypes.String) (*Ne
 	return newActivity, nil
 }
 
-func RemoveUserFromAdmins(groupChatId int, admin []string, user []appTypes.String) (*NewActivity, error) {
-	newActivity, err := helpers.QueryRowType[NewActivity]("SELECT * remove_user_from_group_admins($1, $2, $3)", groupChatId, admin, user)
+func RemoveUserFromAdmins(ctx context.Context, groupChatId int, admin []string, user []appTypes.String) (*NewActivity, error) {
+	newActivity, err := helpers.QueryRowType[NewActivity](ctx, "SELECT * remove_user_from_group_admins($1, $2, $3)", groupChatId, admin, user)
 	if err != nil {
 		log.Println(fmt.Errorf("groupChatModel.go: RemoveUserFromAdmins: %s", err))
 		return nil, appGlobals.ErrInternalServerError
@@ -153,8 +154,8 @@ type NewMessage struct {
 	MembersIds  []int `db:"members_ids"`
 }
 
-func SendMessage(groupChatId int, senderId int, msgContent map[string]any, createdAt time.Time) (*NewMessage, error) {
-	newMessage, err := helpers.QueryRowType[NewMessage]("SELECT sender_resp_data AS srd, member_resp_data AS mrd, members_ids FROM send_group_chat_message($1, $2, $3, $4)", groupChatId, senderId, msgContent, createdAt)
+func SendMessage(ctx context.Context, groupChatId int, senderId int, msgContent map[string]any, createdAt time.Time) (*NewMessage, error) {
+	newMessage, err := helpers.QueryRowType[NewMessage](ctx, "SELECT sender_resp_data AS srd, member_resp_data AS mrd, members_ids FROM send_group_chat_message($1, $2, $3, $4)", groupChatId, senderId, msgContent, createdAt)
 	if err != nil {
 		log.Println(fmt.Errorf("groupChatModel.go: SendMessage: %s", err))
 		return nil, appGlobals.ErrInternalServerError
@@ -163,8 +164,8 @@ func SendMessage(groupChatId int, senderId int, msgContent map[string]any, creat
 	return newMessage, nil
 }
 
-func ReactToMessage(groupChatId int, msgId, reactorId int, reaction rune) error {
-	_, err := helpers.QueryRowField[bool]("SELECT react_to_group_chat_message($1, $2, $3, $4)", groupChatId, msgId, reactorId, strconv.QuoteRuneToASCII(reaction))
+func ReactToMessage(ctx context.Context, groupChatId int, msgId, reactorId int, reaction rune) error {
+	_, err := helpers.QueryRowField[bool](ctx, "SELECT react_to_group_chat_message($1, $2, $3, $4)", groupChatId, msgId, reactorId, strconv.QuoteRuneToASCII(reaction))
 	if err != nil {
 		log.Println(fmt.Errorf("groupChatModel.go: ReactToMessage: %s", err))
 		return appGlobals.ErrInternalServerError
@@ -178,7 +179,7 @@ type BatchStatusUpdateResult struct {
 	ShouldBroadcast       bool   `db:"should_broadcast"`
 }
 
-func BatchUpdateMessageDeliveryStatus(groupChatId int, receiverId int, status string, ackDatas []*appTypes.GroupChatMsgAckData) (*BatchStatusUpdateResult, error) {
+func BatchUpdateMessageDeliveryStatus(ctx context.Context, groupChatId int, receiverId int, status string, ackDatas []*appTypes.GroupChatMsgAckData) (*BatchStatusUpdateResult, error) {
 	var sqls = []string{}
 	var params = [][]any{}
 
@@ -187,7 +188,7 @@ func BatchUpdateMessageDeliveryStatus(groupChatId int, receiverId int, status st
 		params = append(params, []any{groupChatId, data.MsgId, receiverId, status, data.At})
 	}
 
-	resultList, err := helpers.BatchQuery[BatchStatusUpdateResult](sqls, params)
+	resultList, err := helpers.BatchQuery[BatchStatusUpdateResult](ctx, sqls, params)
 	if err != nil {
 		log.Println(fmt.Errorf("groupChatModel.go: BatchUpdateMessageDeliveryStatus: %s", err))
 		return nil, appGlobals.ErrInternalServerError
@@ -221,8 +222,8 @@ type HistoryItem struct {
 	ActivityInfo map[string]any `db:"activity_info" json:"activity_info,omitempty"`
 }
 
-func GetChatHistory(groupChatId, offset int) ([]*HistoryItem, error) {
-	history, err := helpers.QueryRowsType[HistoryItem](`
+func GetChatHistory(ctx context.Context, groupChatId, offset int) ([]*HistoryItem, error) {
+	history, err := helpers.QueryRowsType[HistoryItem](ctx, `
 	SELECT * FROM (
 		SELECT * FROM get_group_chat_history($1)
 		LIMIT 50 OFFSET $2

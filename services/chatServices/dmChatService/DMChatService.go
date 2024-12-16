@@ -1,6 +1,7 @@
 package dmChatService
 
 import (
+	"context"
 	"fmt"
 	"i9chat/appTypes"
 	dmChat "i9chat/models/chatModel/dmChatModel"
@@ -9,15 +10,38 @@ import (
 	"time"
 )
 
-func GetChatHistory(dmChatId, offset int) ([]*dmChat.Message, error) {
-	return dmChat.GetChatHistory(dmChatId, offset)
+func NewDMChat(ctx context.Context, initiatorId, partnerId int, initMsgContent map[string]any, createdAt time.Time) (*dmChat.InitiatorData, error) {
+
+	modInitMsgContent, err := appServices.UploadMessageMedia(ctx, initiatorId, initMsgContent)
+	if err != nil {
+		return nil, err
+	}
+
+	dmChat, err := dmChat.New(ctx, initiatorId, partnerId, modInitMsgContent, createdAt)
+	if err != nil {
+		return nil, err
+	}
+
+	go messageBrokerService.PostMessage(fmt.Sprintf("user-%d", partnerId), messageBrokerService.Message{
+		Event: "new dm chat",
+		Data:  dmChat.PartnerData,
+	})
+
+	return dmChat.InitiatorData, nil
 }
 
-func SendMessage(dmChatId, senderId int, msgContent map[string]any, createdAt time.Time) (*dmChat.SenderData, error) {
+func GetChatHistory(ctx context.Context, dmChatId, offset int) ([]*dmChat.Message, error) {
+	return dmChat.GetChatHistory(ctx, dmChatId, offset)
+}
 
-	modMsgContent := appServices.UploadMessageMedia(senderId, msgContent)
+func SendMessage(ctx context.Context, dmChatId, senderId int, msgContent map[string]any, createdAt time.Time) (*dmChat.SenderData, error) {
 
-	newMessage, err := dmChat.SendMessage(dmChatId, senderId, modMsgContent, createdAt)
+	modMsgContent, err := appServices.UploadMessageMedia(ctx, senderId, msgContent)
+	if err != nil {
+		return nil, err
+	}
+
+	newMessage, err := dmChat.SendMessage(ctx, dmChatId, senderId, modMsgContent, createdAt)
 	if err != nil {
 		return nil, err
 	}
@@ -32,25 +56,8 @@ func SendMessage(dmChatId, senderId int, msgContent map[string]any, createdAt ti
 	return respData, nil
 }
 
-func NewDMChat(initiatorId, partnerId int, initMsgContent map[string]any, createdAt time.Time) (*dmChat.InitiatorData, error) {
-
-	modInitMsgContent := appServices.UploadMessageMedia(initiatorId, initMsgContent)
-
-	dmChat, err := dmChat.New(initiatorId, partnerId, modInitMsgContent, createdAt)
-	if err != nil {
-		return nil, err
-	}
-
-	go messageBrokerService.PostMessage(fmt.Sprintf("user-%d", partnerId), messageBrokerService.Message{
-		Event: "new dm chat",
-		Data:  dmChat.PartnerData,
-	})
-
-	return dmChat.InitiatorData, nil
-}
-
-func UpdateMessageDeliveryStatus(dmChatId, msgId, senderId, receiverId int, status string, updatedAt time.Time) {
-	if err := dmChat.UpdateMessageDeliveryStatus(dmChatId, msgId, receiverId, status, updatedAt); err == nil {
+func UpdateMessageDeliveryStatus(ctx context.Context, dmChatId, msgId, senderId, receiverId int, status string, updatedAt time.Time) {
+	if err := dmChat.UpdateMessageDeliveryStatus(ctx, dmChatId, msgId, receiverId, status, updatedAt); err == nil {
 
 		go messageBrokerService.PostMessage(fmt.Sprintf("user-%d", senderId), messageBrokerService.Message{
 			Event: "dm chat message delivery status changed",
@@ -63,8 +70,8 @@ func UpdateMessageDeliveryStatus(dmChatId, msgId, senderId, receiverId int, stat
 	}
 }
 
-func BatchUpdateMessageDeliveryStatus(receiverId int, status string, ackDatas []*appTypes.DMChatMsgAckData) {
-	if err := dmChat.BatchUpdateMessageDeliveryStatus(receiverId, status, ackDatas); err == nil {
+func BatchUpdateMessageDeliveryStatus(ctx context.Context, receiverId int, status string, ackDatas []*appTypes.DMChatMsgAckData) {
+	if err := dmChat.BatchUpdateMessageDeliveryStatus(ctx, receiverId, status, ackDatas); err == nil {
 		for _, data := range ackDatas {
 			data := data
 

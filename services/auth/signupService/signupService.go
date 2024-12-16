@@ -110,7 +110,7 @@ func RegisterUser(ctx context.Context, sessionId, email, username, password, geo
 		return "", err
 	}
 
-	go appModel.EndSignupSession(ctx, sessionId)
+	go appModel.EndSignupSession(sessionId)
 
 	respData := map[string]any{
 		"msg":     "Signup success!",

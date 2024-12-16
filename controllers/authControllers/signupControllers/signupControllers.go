@@ -2,13 +2,10 @@ package signupControllers
 
 import (
 	"context"
-	"fmt"
 	"i9chat/appTypes"
 	"i9chat/helpers"
 	"i9chat/services/auth/signupService"
-	"i9chat/services/securityServices"
 	"log"
-	"os"
 
 	"github.com/gofiber/contrib/websocket"
 	"github.com/gofiber/fiber/v2"
@@ -37,7 +34,7 @@ var RequestNewAccount = websocket.New(func(c *websocket.Conn) {
 
 		if val_err := body.Validate(); val_err != nil {
 
-			w_err = c.WriteJSON(helpers.ErrResp(fiber.NewError(fiber.StatusBadRequest, "validation error:", val_err.Error())))
+			w_err = c.WriteJSON(helpers.ErrResp(val_err))
 			continue
 		}
 
@@ -59,15 +56,7 @@ var VerifyEmail = websocket.New(func(c *websocket.Conn) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	sessionToken := c.Headers("Authorization")
-
-	sessionData, err := securityServices.JwtVerify[appTypes.SignupSessionData](sessionToken, os.Getenv("SIGNUP_SESSION_JWT_SECRET"))
-	if err != nil {
-		if w_err := c.WriteJSON(helpers.ErrResp(err)); w_err != nil {
-			log.Println(w_err)
-		}
-		return
-	}
+	sessionData := c.Locals("session").(*appTypes.SignupSessionData)
 
 	if sessionData.Step != "verify email" {
 		if w_err := c.WriteJSON(helpers.ErrResp(fiber.NewError(fiber.StatusUnauthorized, "invalid session token on endpoint"))); w_err != nil {
@@ -93,14 +82,14 @@ var VerifyEmail = websocket.New(func(c *websocket.Conn) {
 		}
 
 		if val_err := body.Validate(); val_err != nil {
-			w_err = c.WriteJSON(helpers.ErrResp(fiber.StatusUnprocessableEntity, val_err))
+			w_err = c.WriteJSON(helpers.ErrResp(val_err))
 			continue
 		}
 
-		respData, app_err := signupService.VerifyEmail(sessionData.SessionId, body.Code, sessionData.Email)
+		respData, app_err := signupService.VerifyEmail(ctx, sessionData.SessionId, body.Code, sessionData.Email)
 
 		if app_err != nil {
-			w_err = c.WriteJSON(helpers.ErrResp(fiber.StatusUnprocessableEntity, app_err))
+			w_err = c.WriteJSON(helpers.ErrResp(app_err))
 			continue
 		}
 
@@ -112,18 +101,13 @@ var VerifyEmail = websocket.New(func(c *websocket.Conn) {
 })
 
 var RegisterUser = websocket.New(func(c *websocket.Conn) {
-	sessionToken := c.Headers("Authorization")
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
-	sessionData, err := securityServices.JwtVerify[appTypes.SignupSessionData](sessionToken, os.Getenv("SIGNUP_SESSION_JWT_SECRET"))
-	if err != nil {
-		if w_err := c.WriteJSON(helpers.ErrResp(fiber.StatusUnauthorized, err)); w_err != nil {
-			log.Println(w_err)
-		}
-		return
-	}
+	sessionData := c.Locals("session").(*appTypes.SignupSessionData)
 
 	if sessionData.Step != "register user" {
-		if w_err := c.WriteJSON(helpers.ErrResp(fiber.StatusUnauthorized, fmt.Errorf("expected state: register user"))); w_err != nil {
+		if w_err := c.WriteJSON(helpers.ErrResp(fiber.NewError(fiber.StatusUnauthorized, "invalid session token on endpoint"))); w_err != nil {
 			log.Println(w_err)
 		}
 		return
@@ -146,14 +130,14 @@ var RegisterUser = websocket.New(func(c *websocket.Conn) {
 		}
 
 		if val_err := body.Validate(); val_err != nil {
-			w_err = c.WriteJSON(helpers.ErrResp(fiber.StatusUnprocessableEntity, val_err))
+			w_err = c.WriteJSON(helpers.ErrResp(fiber.NewError(fiber.StatusBadRequest, "validation error:", val_err.Error())))
 			continue
 		}
 
-		respData, app_err := signupService.RegisterUser(sessionData.SessionId, sessionData.Email, body.Username, body.Password, body.Geolocation)
+		respData, app_err := signupService.RegisterUser(ctx, sessionData.SessionId, sessionData.Email, body.Username, body.Password, body.Geolocation)
 
 		if app_err != nil {
-			w_err = c.WriteJSON(helpers.ErrResp(fiber.StatusUnprocessableEntity, app_err))
+			w_err = c.WriteJSON(helpers.ErrResp(app_err))
 			continue
 		}
 

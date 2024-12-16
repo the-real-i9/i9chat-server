@@ -40,6 +40,6 @@ func VerifyEmail(ctx context.Context, sessionId string, verfCode int) (bool, err
 	return *isSuccess, nil
 }
 
-func EndSignupSession(ctx context.Context, sessionId string) {
-	helpers.QueryRowField[bool](ctx, "SELECT end_signup_session ($1)", sessionId)
+func EndSignupSession(sessionId string) {
+	helpers.QueryRowField[bool](context.TODO(), "SELECT end_signup_session ($1)", sessionId)
 }

@@ -1,6 +1,7 @@
 package groupChatService
 
 import (
+	"context"
 	"fmt"
 	"i9chat/appTypes"
 	"i9chat/helpers"
@@ -11,10 +12,13 @@ import (
 	"time"
 )
 
-func NewGroupChat(name string, description string, pictureData []byte, creator []string, initUsers [][]appTypes.String) (*groupChat.CreatorData, error) {
-	picUrl, _ := uploadGroupPicture(pictureData)
+func NewGroupChat(ctx context.Context, name string, description string, pictureData []byte, creator []string, initUsers [][]appTypes.String) (*groupChat.CreatorData, error) {
+	picUrl, err := uploadGroupPicture(ctx, pictureData)
+	if err != nil {
+		return nil, err
+	}
 
-	newGroupChat, err := groupChat.New(name, description, picUrl, creator, initUsers)
+	newGroupChat, err := groupChat.New(ctx, name, description, picUrl, creator, initUsers)
 	if err != nil {
 		return nil, err
 	}
@@ -35,8 +39,8 @@ func broadcastNewGroup(initMembers [][]appTypes.String, initMemberData *groupCha
 	}
 }
 
-func BatchUpdateMessageDeliveryStatus(groupChatId, receiverId int, status string, ackDatas []*appTypes.GroupChatMsgAckData) {
-	batchStatusUpdateResult, err := groupChat.BatchUpdateMessageDeliveryStatus(groupChatId, receiverId, status, ackDatas)
+func BatchUpdateMessageDeliveryStatus(ctx context.Context, groupChatId, receiverId int, status string, ackDatas []*appTypes.GroupChatMsgAckData) {
+	batchStatusUpdateResult, err := groupChat.BatchUpdateMessageDeliveryStatus(ctx, groupChatId, receiverId, status, ackDatas)
 	if err != nil {
 		return
 	}
@@ -55,7 +59,7 @@ func BatchUpdateMessageDeliveryStatus(groupChatId, receiverId int, status string
 }
 
 func broadcastGroupChatMessageDeliveryStatusUpdate(groupChatId, clientUserId int, ackDatas []*appTypes.GroupChatMsgAckData, status string) {
-	membersIds, err := helpers.QueryRowsField[int]("SELECT member_id FROM group_chat_membership WHERE group_chat_id = $1 AND member_id != $2 AND deleted = false", groupChatId, clientUserId)
+	membersIds, err := helpers.QueryRowsField[int](context.TODO(), "SELECT member_id FROM group_chat_membership WHERE group_chat_id = $1 AND member_id != $2 AND deleted = false", groupChatId, clientUserId)
 	if err == nil {
 		for _, memberId := range membersIds {
 			memberId := *memberId
@@ -75,15 +79,18 @@ func broadcastGroupChatMessageDeliveryStatusUpdate(groupChatId, clientUserId int
 	}
 }
 
-func GetChatHistory(dmChatId, offset int) ([]*groupChat.HistoryItem, error) {
-	return groupChat.GetChatHistory(dmChatId, offset)
+func GetChatHistory(ctx context.Context, dmChatId, offset int) ([]*groupChat.HistoryItem, error) {
+	return groupChat.GetChatHistory(ctx, dmChatId, offset)
 }
 
-func SendMessage(groupChatId, clientUserId int, msgContent map[string]any, createdAt time.Time) (*groupChat.SenderData, error) {
+func SendMessage(ctx context.Context, groupChatId, clientUserId int, msgContent map[string]any, createdAt time.Time) (*groupChat.SenderData, error) {
 
-	modMsgContent := appServices.UploadMessageMedia(clientUserId, msgContent)
+	modMsgContent, err := appServices.UploadMessageMedia(ctx, clientUserId, msgContent)
+	if err != nil {
+		return nil, err
+	}
 
-	newMessage, err := groupChat.SendMessage(groupChatId, clientUserId, modMsgContent, createdAt)
+	newMessage, err := groupChat.SendMessage(ctx, groupChatId, clientUserId, modMsgContent, createdAt)
 	if err != nil {
 		return nil, err
 	}
@@ -105,8 +112,8 @@ func broadcastNewMessage(membersIds []int, memberData *groupChat.MemberData) {
 	}
 }
 
-func ChangeGroupName(groupChatId int, clientUser []string, newName string) error {
-	newActivity, err := groupChat.ChangeName(groupChatId, clientUser, newName)
+func ChangeGroupName(ctx context.Context, groupChatId int, clientUser []string, newName string) error {
+	newActivity, err := groupChat.ChangeName(ctx, groupChatId, clientUser, newName)
 	if err != nil {
 		return err
 	}
@@ -116,8 +123,8 @@ func ChangeGroupName(groupChatId int, clientUser []string, newName string) error
 	return nil
 }
 
-func ChangeGroupDescription(groupChatId int, clientUser []string, newDescription string) error {
-	newActivity, err := groupChat.ChangeDescription(groupChatId, clientUser, newDescription)
+func ChangeGroupDescription(ctx context.Context, groupChatId int, clientUser []string, newDescription string) error {
+	newActivity, err := groupChat.ChangeDescription(ctx, groupChatId, clientUser, newDescription)
 	if err != nil {
 		return err
 	}
@@ -127,13 +134,13 @@ func ChangeGroupDescription(groupChatId int, clientUser []string, newDescription
 	return nil
 }
 
-func ChangeGroupPicture(groupChatId int, admin []string, newPictureData []byte) error {
-	newPicUrl, err := uploadGroupPicture(newPictureData)
+func ChangeGroupPicture(ctx context.Context, groupChatId int, admin []string, newPictureData []byte) error {
+	newPicUrl, err := uploadGroupPicture(ctx, newPictureData)
 	if err != nil {
 		return err
 	}
 
-	newActivity, err := groupChat.ChangePicture(groupChatId, admin, newPicUrl)
+	newActivity, err := groupChat.ChangePicture(ctx, groupChatId, admin, newPicUrl)
 	if err != nil {
 		return err
 	}
@@ -143,13 +150,13 @@ func ChangeGroupPicture(groupChatId int, admin []string, newPictureData []byte) 
 	return nil
 }
 
-func uploadGroupPicture(pictureData []byte) (string, error) {
+func uploadGroupPicture(ctx context.Context, pictureData []byte) (string, error) {
 	if len(pictureData) < 1 {
 		return "", fmt.Errorf("upload error: no picture data")
 	}
 	picPath := fmt.Sprintf("group_chat_pictures/group_chat_pic_%d.jpg", time.Now().UnixNano())
 
-	picUrl, err := cloudStorageService.UploadFile(picPath, pictureData)
+	picUrl, err := cloudStorageService.Upload(ctx, picPath, pictureData)
 
 	if err != nil {
 		return "", err
@@ -158,8 +165,8 @@ func uploadGroupPicture(pictureData []byte) (string, error) {
 	return picUrl, nil
 }
 
-func AddUsersToGroup(groupChatId int, admin []string, newUsers [][]appTypes.String) error {
-	newActivity, err := groupChat.AddUsers(groupChatId, admin, newUsers)
+func AddUsersToGroup(ctx context.Context, groupChatId int, admin []string, newUsers [][]appTypes.String) error {
+	newActivity, err := groupChat.AddUsers(ctx, groupChatId, admin, newUsers)
 	if err != nil {
 		return err
 	}
@@ -169,8 +176,8 @@ func AddUsersToGroup(groupChatId int, admin []string, newUsers [][]appTypes.Stri
 	return nil
 }
 
-func RemoveUserFromGroup(groupChatId int, admin []string, user []appTypes.String) error {
-	newActivity, err := groupChat.RemoveUser(groupChatId, admin, user)
+func RemoveUserFromGroup(ctx context.Context, groupChatId int, admin []string, user []appTypes.String) error {
+	newActivity, err := groupChat.RemoveUser(ctx, groupChatId, admin, user)
 	if err != nil {
 		return err
 	}
@@ -180,8 +187,8 @@ func RemoveUserFromGroup(groupChatId int, admin []string, user []appTypes.String
 	return nil
 }
 
-func JoinGroup(groupChatId int, newUser []string) error {
-	newActivity, err := groupChat.Join(groupChatId, newUser)
+func JoinGroup(ctx context.Context, groupChatId int, newUser []string) error {
+	newActivity, err := groupChat.Join(ctx, groupChatId, newUser)
 	if err != nil {
 		return err
 	}
@@ -191,8 +198,8 @@ func JoinGroup(groupChatId int, newUser []string) error {
 	return nil
 }
 
-func LeaveGroup(groupChatId int, user []string) error {
-	newActivity, err := groupChat.Leave(groupChatId, user)
+func LeaveGroup(ctx context.Context, groupChatId int, user []string) error {
+	newActivity, err := groupChat.Leave(ctx, groupChatId, user)
 	if err != nil {
 		return err
 	}
@@ -202,8 +209,8 @@ func LeaveGroup(groupChatId int, user []string) error {
 	return nil
 }
 
-func MakeUserGroupAdmin(groupChatId int, admin []string, user []appTypes.String) error {
-	newActivity, err := groupChat.MakeUserAdmin(groupChatId, admin, user)
+func MakeUserGroupAdmin(ctx context.Context, groupChatId int, admin []string, user []appTypes.String) error {
+	newActivity, err := groupChat.MakeUserAdmin(ctx, groupChatId, admin, user)
 	if err != nil {
 		return err
 	}
@@ -213,8 +220,8 @@ func MakeUserGroupAdmin(groupChatId int, admin []string, user []appTypes.String)
 	return nil
 }
 
-func RemoveUserFromGroupAdmins(groupChatId int, admin []string, user []appTypes.String) error {
-	newActivity, err := groupChat.RemoveUserFromAdmins(groupChatId, admin, user)
+func RemoveUserFromGroupAdmins(ctx context.Context, groupChatId int, admin []string, user []appTypes.String) error {
+	newActivity, err := groupChat.RemoveUserFromAdmins(ctx, groupChatId, admin, user)
 	if err != nil {
 		return err
 	}

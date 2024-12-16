@@ -1,18 +1,21 @@
 package dmChatControllers
 
 import (
+	"context"
 	"fmt"
 	"i9chat/appTypes"
 	"i9chat/helpers"
 	"i9chat/services/chatServices/dmChatService"
-	"i9chat/services/securityServices"
 	"log"
 
 	"github.com/gofiber/contrib/websocket"
 	"github.com/gofiber/fiber/v2"
 )
 
-var CreateNewDMChatAndAckMessages = securityServices.WSHandlerProtected(func(c *websocket.Conn) {
+var CreateNewDMChatAndAckMessages = websocket.New(func(c *websocket.Conn) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
 	clientUser := c.Locals("user").(*appTypes.ClientUser)
 
 	var w_err error
@@ -39,7 +42,7 @@ var CreateNewDMChatAndAckMessages = securityServices.WSHandlerProtected(func(c *
 		}
 
 		if val_err := body.Validate(); val_err != nil {
-			w_err = c.WriteJSON(helpers.ErrResp(fiber.StatusUnprocessableEntity, val_err))
+			w_err = c.WriteJSON(helpers.ErrResp(val_err))
 			continue
 		}
 
@@ -48,10 +51,10 @@ var CreateNewDMChatAndAckMessages = securityServices.WSHandlerProtected(func(c *
 			helpers.MapToStruct(body.Data, &newChatData)
 
 			if val_err := newChatData.Validate(); val_err != nil {
-				return c.WriteJSON(helpers.ErrResp(fiber.StatusUnprocessableEntity, val_err))
+				return c.WriteJSON(helpers.ErrResp(val_err))
 			}
 
-			respData, app_err := dmChatService.NewDMChat(
+			respData, app_err := dmChatService.NewDMChat(ctx,
 				clientUser.Id,
 				newChatData.PartnerId,
 				newChatData.InitMsg,
@@ -59,7 +62,7 @@ var CreateNewDMChatAndAckMessages = securityServices.WSHandlerProtected(func(c *
 			)
 
 			if app_err != nil {
-				return c.WriteJSON(helpers.ErrResp(fiber.StatusUnprocessableEntity, app_err))
+				return c.WriteJSON(helpers.ErrResp(app_err))
 			}
 
 			return c.WriteJSON(respData)
@@ -72,10 +75,10 @@ var CreateNewDMChatAndAckMessages = securityServices.WSHandlerProtected(func(c *
 			helpers.MapToStruct(body.Data, &ackMsgData)
 
 			if val_err := ackMsgData.Validate(); val_err != nil {
-				return c.WriteJSON(helpers.ErrResp(fiber.StatusUnprocessableEntity, val_err))
+				return c.WriteJSON(helpers.ErrResp(val_err))
 			}
 
-			go dmChatService.UpdateMessageDeliveryStatus(ackMsgData.DMChatId, ackMsgData.MsgId, ackMsgData.SenderId, clientUser.Id, ackMsgData.Status, ackMsgData.At)
+			go dmChatService.UpdateMessageDeliveryStatus(context.TODO(), ackMsgData.DMChatId, ackMsgData.MsgId, ackMsgData.SenderId, clientUser.Id, ackMsgData.Status, ackMsgData.At)
 
 			return nil
 		}
@@ -86,10 +89,10 @@ var CreateNewDMChatAndAckMessages = securityServices.WSHandlerProtected(func(c *
 			helpers.MapToStruct(body.Data, &batchAckMsgData)
 
 			if val_err := batchAckMsgData.Validate(); val_err != nil {
-				return c.WriteJSON(helpers.ErrResp(fiber.StatusUnprocessableEntity, val_err))
+				return c.WriteJSON(helpers.ErrResp(val_err))
 			}
 
-			go dmChatService.BatchUpdateMessageDeliveryStatus(clientUser.Id, batchAckMsgData.Status, batchAckMsgData.MsgAckDatas)
+			go dmChatService.BatchUpdateMessageDeliveryStatus(context.TODO(), clientUser.Id, batchAckMsgData.Status, batchAckMsgData.MsgAckDatas)
 
 			return nil
 		}
@@ -107,12 +110,14 @@ var CreateNewDMChatAndAckMessages = securityServices.WSHandlerProtected(func(c *
 			w_err = batchAcknowledgeMessages()
 
 		} else {
-			w_err = c.WriteJSON(helpers.ErrResp(fiber.StatusUnprocessableEntity, fmt.Errorf("invalid 'action' value")))
+			w_err = c.WriteJSON(helpers.ErrResp(fiber.NewError(fiber.StatusBadRequest, "invalid 'action' value")))
 		}
 	}
 })
 
-var GetChatHistory = securityServices.WSHandlerProtected(func(c *websocket.Conn) {
+var GetChatHistory = websocket.New(func(c *websocket.Conn) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
 	var w_err error
 
@@ -131,14 +136,14 @@ var GetChatHistory = securityServices.WSHandlerProtected(func(c *websocket.Conn)
 		}
 
 		if val_err := body.Validate(); val_err != nil {
-			w_err = c.WriteJSON(helpers.ErrResp(fiber.StatusUnprocessableEntity, val_err))
+			w_err = c.WriteJSON(helpers.ErrResp(val_err))
 			continue
 		}
 
-		respData, app_err := dmChatService.GetChatHistory(body.DMChatId, body.Offset)
+		respData, app_err := dmChatService.GetChatHistory(ctx, body.DMChatId, body.Offset)
 
 		if app_err != nil {
-			w_err = c.WriteJSON(helpers.ErrResp(fiber.StatusUnprocessableEntity, app_err))
+			w_err = c.WriteJSON(helpers.ErrResp(app_err))
 			continue
 		}
 
@@ -149,7 +154,10 @@ var GetChatHistory = securityServices.WSHandlerProtected(func(c *websocket.Conn)
 	}
 })
 
-var SendMessage = securityServices.WSHandlerProtected(func(c *websocket.Conn) {
+var SendMessage = websocket.New(func(c *websocket.Conn) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
 	clientUser := c.Locals("user").(*appTypes.ClientUser)
 
 	var dmChatId int
@@ -176,11 +184,11 @@ var SendMessage = securityServices.WSHandlerProtected(func(c *websocket.Conn) {
 		}
 
 		if val_err := body.Validate(); val_err != nil {
-			w_err = c.WriteJSON(helpers.ErrResp(fiber.StatusUnprocessableEntity, val_err))
+			w_err = c.WriteJSON(helpers.ErrResp(val_err))
 			continue
 		}
 
-		respData, app_err := dmChatService.SendMessage(
+		respData, app_err := dmChatService.SendMessage(ctx,
 			dmChatId,
 			clientUser.Id,
 			body.Msg,
@@ -188,7 +196,7 @@ var SendMessage = securityServices.WSHandlerProtected(func(c *websocket.Conn) {
 		)
 
 		if app_err != nil {
-			w_err = c.WriteJSON(helpers.ErrResp(fiber.StatusUnprocessableEntity, app_err))
+			w_err = c.WriteJSON(helpers.ErrResp(app_err))
 			continue
 		}
 
