@@ -2,6 +2,7 @@ package userControllers
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"i9chat/appTypes"
@@ -33,9 +34,9 @@ var GoOnline = websocket.New(func(c *websocket.Conn) {
 	}
 
 	r := kafka.NewReader(kafka.ReaderConfig{
-		Brokers:   []string{"localhost:9092"},
-		Topic:     fmt.Sprintf("i9chat-user-%d-topic", clientUser.Id),
-		Partition: 0,
+		Brokers: []string{"localhost:9092"},
+		Topic:   fmt.Sprintf("i9chat-user-%d-topic", clientUser.Id),
+		GroupID: fmt.Sprintf("i9chat-user-%d-cgroup", clientUser.Id),
 	})
 
 	goOff := func() {
@@ -48,7 +49,7 @@ var GoOnline = websocket.New(func(c *websocket.Conn) {
 	go goOnlineSocketControl(c, goOff)
 
 	for {
-		m, err := r.ReadMessage(ctx)
+		m, err := r.FetchMessage(ctx)
 		if err != nil {
 			if !errors.Is(err, io.EOF) {
 				log.Println(err)
@@ -57,7 +58,14 @@ var GoOnline = websocket.New(func(c *websocket.Conn) {
 			break
 		}
 
-		c.WriteJSON(m.Value)
+		var msg any
+		json.Unmarshal(m.Value, &msg)
+
+		c.WriteJSON(msg)
+
+		if err := r.CommitMessages(ctx, m); err != nil {
+			log.Println("failed to commit messages:", err)
+		}
 	}
 })
 
