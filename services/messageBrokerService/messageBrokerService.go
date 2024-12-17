@@ -21,7 +21,6 @@ func Send(topic string, message Message) {
 	w := appGlobals.KafkaWriter
 
 	err := w.WriteMessages(context.Background(), kafka.Message{
-		Key:   nil,
 		Value: msg,
 		Topic: fmt.Sprintf("i9chat-%s", topic),
 	})

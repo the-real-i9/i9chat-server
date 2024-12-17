@@ -47,7 +47,7 @@ func GoOffline(ctx context.Context, clientUserId int, lastSeen time.Time) {
 		for _, rId := range recepientIds {
 			rId := *rId
 
-			go messageBrokerService.Send(fmt.Sprintf("user-%d-topic", rId), messageBrokerService.Message{
+			messageBrokerService.Send(fmt.Sprintf("user-%d-topic", rId), messageBrokerService.Message{
 				Event: "user presence changed",
 				Data: map[string]any{
 					"userId":   clientUserId,

@@ -105,6 +105,7 @@ func SendMessage(ctx context.Context, groupChatId, clientUserId int, msgContent 
 func broadcastNewMessage(membersIds []int, memberData *groupChat.MemberData) {
 	for _, mId := range membersIds {
 		memberId := mId
+
 		messageBrokerService.Send(fmt.Sprintf("user-%d-topic", memberId), messageBrokerService.Message{
 			Event: "new group chat message",
 			Data:  memberData,

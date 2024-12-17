@@ -2,8 +2,8 @@
 -- PostgreSQL database dump
 --
 
--- Dumped from database version 17.0 (Ubuntu 17.0-1.pgdg24.04+1)
--- Dumped by pg_dump version 17.0 (Ubuntu 17.0-1.pgdg24.04+1)
+-- Dumped from database version 17.2 (Ubuntu 17.2-1.pgdg24.04+1)
+-- Dumped by pg_dump version 17.2 (Ubuntu 17.2-1.pgdg24.04+1)
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
@@ -288,27 +288,6 @@ $$;
 ALTER FUNCTION public.end_signup_session(in_session_id uuid) OWNER TO i9;
 
 --
--- Name: fetch_user_broker_messages_pending_delivery(integer); Type: FUNCTION; Schema: public; Owner: i9
---
-
-CREATE FUNCTION public.fetch_user_broker_messages_pending_delivery(in_user_id integer) RETURNS SETOF json
-    LANGUAGE plpgsql
-    AS $$
-BEGIN
- RETURN QUERY SELECT message FROM user_broker_message_pending_delivery 
-              WHERE user_id = in_user_id
-		      ORDER BY date_created ASC;
-
-DELETE FROM user_broker_message_pending_delivery WHERE user_id = in_user_id;
-
-RETURN;
-END;
-$$;
-
-
-ALTER FUNCTION public.fetch_user_broker_messages_pending_delivery(in_user_id integer) OWNER TO i9;
-
---
 -- Name: find_nearby_users(integer, circle); Type: FUNCTION; Schema: public; Owner: i9
 --
 
@@ -346,26 +325,6 @@ $$;
 
 
 ALTER FUNCTION public.get_all_users(in_client_id integer) OWNER TO i9;
-
---
--- Name: get_dm_chat_events_pending_receipt(integer); Type: FUNCTION; Schema: public; Owner: i9
---
-
-CREATE FUNCTION public.get_dm_chat_events_pending_receipt(in_user_id integer) RETURNS TABLE(event_data_kvp json)
-    LANGUAGE plpgsql
-    AS $$
-BEGIN
-  RETURN QUERY 
-  SELECT json_build_object('event', event, 'data', data) FROM dm_chat_event_pending_receipt
-  WHERE user_id = in_user_id ORDER BY created_at;
-  
-  DELETE FROM dm_chat_event_pending_receipt WHERE user_id = in_user_id;
-  RETURN;
-END;
-$$;
-
-
-ALTER FUNCTION public.get_dm_chat_events_pending_receipt(in_user_id integer) OWNER TO i9;
 
 --
 -- Name: get_dm_chat_history(integer); Type: FUNCTION; Schema: public; Owner: i9
@@ -412,46 +371,6 @@ $$;
 
 
 ALTER FUNCTION public.get_dm_chat_history(in_dm_chat_id integer) OWNER TO i9;
-
---
--- Name: get_dm_chat_message_events_pending_receipt(integer, integer); Type: FUNCTION; Schema: public; Owner: i9
---
-
-CREATE FUNCTION public.get_dm_chat_message_events_pending_receipt(in_user_id integer, in_dm_chat_id integer) RETURNS TABLE(event_data_kvp json)
-    LANGUAGE plpgsql
-    AS $$
-BEGIN
-  RETURN QUERY 
-  SELECT json_build_object('event', event, 'data', data) FROM dm_chat_message_event_pending_receipt
-  WHERE user_id = in_user_id AND dm_chat_id = in_dm_chat_id ORDER BY created_at;
-  
-  DELETE FROM dm_chat_message_event_pending_receipt WHERE user_id = in_user_id AND dm_chat_id = in_dm_chat_id;
-  RETURN;
-END;
-$$;
-
-
-ALTER FUNCTION public.get_dm_chat_message_events_pending_receipt(in_user_id integer, in_dm_chat_id integer) OWNER TO i9;
-
---
--- Name: get_group_chat_events_pending_receipt(integer); Type: FUNCTION; Schema: public; Owner: i9
---
-
-CREATE FUNCTION public.get_group_chat_events_pending_receipt(in_user_id integer) RETURNS TABLE(event_data_kvp json)
-    LANGUAGE plpgsql
-    AS $$
-BEGIN
-  RETURN QUERY 
-  SELECT json_build_object('event', event, 'data', data) FROM group_chat_event_pending_receipt
-  WHERE user_id = in_user_id ORDER BY created_at;
-  
-  DELETE FROM group_chat_event_pending_receipt WHERE user_id = in_user_id;
-  RETURN;
-END;
-$$;
-
-
-ALTER FUNCTION public.get_group_chat_events_pending_receipt(in_user_id integer) OWNER TO i9;
 
 --
 -- Name: get_group_chat_history(integer); Type: FUNCTION; Schema: public; Owner: i9
@@ -515,26 +434,6 @@ $$;
 
 
 ALTER FUNCTION public.get_group_chat_history(in_group_chat_id integer) OWNER TO i9;
-
---
--- Name: get_group_chat_message_events_pending_receipt(integer, integer); Type: FUNCTION; Schema: public; Owner: i9
---
-
-CREATE FUNCTION public.get_group_chat_message_events_pending_receipt(in_user_id integer, in_group_chat_id integer) RETURNS TABLE(event_data_kvp json)
-    LANGUAGE plpgsql
-    AS $$
-BEGIN
-  RETURN QUERY 
-  SELECT json_build_object('event', event, 'data', data) FROM group_chat_message_event_pending_receipt
-  WHERE user_id = in_user_id AND group_chat_id = in_group_chat_id ORDER BY created_at;
-  
-  DELETE FROM group_chat_message_event_pending_receipt WHERE user_id = in_user_id AND group_chat_id = in_group_chat_id;
-  RETURN;
-END;
-$$;
-
-
-ALTER FUNCTION public.get_group_chat_message_events_pending_receipt(in_user_id integer, in_group_chat_id integer) OWNER TO i9;
 
 --
 -- Name: get_my_chats(integer); Type: FUNCTION; Schema: public; Owner: i9
@@ -1707,19 +1606,6 @@ CREATE TABLE public.ongoing_signup (
 ALTER TABLE public.ongoing_signup OWNER TO i9;
 
 --
--- Name: user_broker_message_pending_delivery; Type: TABLE; Schema: public; Owner: i9
---
-
-CREATE TABLE public.user_broker_message_pending_delivery (
-    user_id integer NOT NULL,
-    message json NOT NULL,
-    date_created timestamp without time zone DEFAULT now()
-);
-
-
-ALTER TABLE public.user_broker_message_pending_delivery OWNER TO i9;
-
---
 -- Name: user_dm_chat; Type: TABLE; Schema: public; Owner: i9
 --
 
@@ -2198,14 +2084,6 @@ ALTER TABLE ONLY public.user_group_chat
 
 ALTER TABLE ONLY public.user_group_chat
     ADD CONSTRAINT user_group_chat_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.i9c_user(id) ON DELETE CASCADE;
-
-
---
--- Name: user_broker_message_pending_delivery user_message_pending_delivery_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: i9
---
-
-ALTER TABLE ONLY public.user_broker_message_pending_delivery
-    ADD CONSTRAINT user_message_pending_delivery_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.i9c_user(id) ON DELETE CASCADE;
 
 
 --

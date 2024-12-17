@@ -2,10 +2,12 @@ package userControllers
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"i9chat/appTypes"
 	"i9chat/helpers"
 	"i9chat/services/userService"
+	"io"
 	"log"
 	"time"
 
@@ -48,7 +50,10 @@ var GoOnline = websocket.New(func(c *websocket.Conn) {
 	for {
 		m, err := r.ReadMessage(ctx)
 		if err != nil {
-			goOff()
+			if !errors.Is(err, io.EOF) {
+				log.Println(err)
+				goOff()
+			}
 			break
 		}
 
