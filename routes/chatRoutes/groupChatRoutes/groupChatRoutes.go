@@ -12,6 +12,6 @@ func Init(router fiber.Router) {
 
 	router.Post("/create_group_chat", am, grcc.CreateNewGroupChat)
 	router.Get("/chat_history", am, grcc.GetChatHistory)
-	router.Get("/:group_chat_id/send_message", am, grcc.SendMessage)
-	router.Get("/execute_action", am, grcc.ExecuteAction)
+	router.Post("/:group_chat_id/send_message", am, grcc.SendMessage)
+	router.Post("/execute_action", am, grcc.ExecuteAction)
 }

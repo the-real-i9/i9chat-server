@@ -8,7 +8,6 @@ import (
 	"i9chat/services/chatServices/groupChatService"
 	"log"
 
-	"github.com/gofiber/contrib/websocket"
 	"github.com/gofiber/fiber/v2"
 )
 
@@ -43,46 +42,31 @@ func CreateNewGroupChat(c *fiber.Ctx) error {
 	return c.JSON(respData)
 }
 
-var GetChatHistory = websocket.New(func(c *websocket.Conn) {
+func GetChatHistory(c *fiber.Ctx) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	var w_err error
+	var body getChatHistoryBody
 
-	for {
-		var body getChatHistoryBody
-
-		if w_err != nil {
-			log.Println(w_err)
-			return
-		}
-
-		r_err := c.ReadJSON(&body)
-		if r_err != nil {
-			log.Println(r_err)
-			return
-		}
-
-		if val_err := body.Validate(); val_err != nil {
-			w_err = c.WriteJSON(helpers.ErrResp(val_err))
-			continue
-		}
-
-		respData, app_err := groupChatService.GetChatHistory(ctx, body.GroupChatId, body.Offset)
-
-		if app_err != nil {
-			w_err = c.WriteJSON(helpers.ErrResp(app_err))
-			continue
-		}
-
-		w_err = c.WriteJSON(appTypes.WSResp{
-			StatusCode: 200,
-			Body:       respData,
-		})
+	body_err := c.BodyParser(&body)
+	if body_err != nil {
+		return body_err
 	}
-})
 
-var SendMessage = websocket.New(func(c *websocket.Conn) {
+	if val_err := body.Validate(); val_err != nil {
+		return c.Status(fiber.StatusBadRequest).SendString(val_err.Error())
+	}
+
+	respData, app_err := groupChatService.GetChatHistory(ctx, body.GroupChatId, body.Offset)
+	if app_err != nil {
+		return app_err
+	}
+
+	return c.JSON(respData)
+
+}
+
+func SendMessage(c *fiber.Ctx) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -92,48 +76,35 @@ var SendMessage = websocket.New(func(c *websocket.Conn) {
 
 	_, err := fmt.Sscanf(c.Params("group_chat_id"), "%d", &groupChatId)
 	if err != nil {
-		panic(err)
+		log.Println("GroupChatControllers.go: SendMessage: fmt.Sscanf:", err)
+		return fiber.ErrInternalServerError
 	}
 
-	var w_err error
+	var body sendMessageBody
 
-	for {
-		var body sendMessageBody
-
-		if w_err != nil {
-			log.Println(w_err)
-			break
-		}
-
-		r_err := c.ReadJSON(&body)
-		if r_err != nil {
-			log.Println(r_err)
-			break
-		}
-
-		if val_err := body.Validate(); val_err != nil {
-			w_err = c.WriteJSON(helpers.ErrResp(val_err))
-			continue
-		}
-
-		respData, app_err := groupChatService.SendMessage(ctx,
-			groupChatId,
-			clientUser.Id,
-			body.Msg,
-			body.At,
-		)
-
-		if app_err != nil {
-			w_err = c.WriteJSON(helpers.ErrResp(app_err))
-			continue
-		}
-
-		w_err = c.WriteJSON(respData)
-
+	body_err := c.BodyParser(&body)
+	if body_err != nil {
+		return body_err
 	}
-})
 
-var ExecuteAction = websocket.New(func(c *websocket.Conn) {
+	if val_err := body.Validate(); val_err != nil {
+		return c.Status(fiber.StatusBadRequest).SendString(val_err.Error())
+	}
+
+	respData, app_err := groupChatService.SendMessage(ctx,
+		groupChatId,
+		clientUser.Id,
+		body.Msg,
+		body.At,
+	)
+	if app_err != nil {
+		return app_err
+	}
+
+	return c.JSON(respData)
+}
+
+func ExecuteAction(c *fiber.Ctx) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -153,36 +124,26 @@ var ExecuteAction = websocket.New(func(c *websocket.Conn) {
 		"remove user from admins": removeUserFromGroupAdmins,
 	}
 
-	var w_err error
+	var body executeActionBody
 
-	for {
-		var body executeActionBody
-
-		if w_err != nil {
-			log.Println(w_err)
-			break
-		}
-
-		if r_err := c.ReadJSON(&body); r_err != nil {
-			log.Println(r_err)
-			break
-		}
-
-		app_err := actionToHandlerMap[body.Action](ctx, []string{fmt.Sprint(clientUser.Id), clientUser.Username}, body.Data)
-
-		if app_err != nil {
-			w_err = c.WriteJSON(helpers.ErrResp(fmt.Errorf("action failed: %s", app_err)))
-			continue
-		}
-
-		w_err = c.WriteJSON(appTypes.WSResp{
-			StatusCode: 200,
-			Body: map[string]any{
-				"msg": "operation successful",
-			},
-		})
+	body_err := c.BodyParser(&body)
+	if body_err != nil {
+		return body_err
 	}
-})
+
+	if val_err := body.Validate(); val_err != nil {
+		return c.Status(fiber.StatusBadRequest).SendString(val_err.Error())
+	}
+
+	app_err := actionToHandlerMap[body.Action](ctx, []string{fmt.Sprint(clientUser.Id), clientUser.Username}, body.Data)
+	if app_err != nil {
+		return app_err
+	}
+
+	return c.JSON(fiber.Map{
+		"msg": "Operation Successful!",
+	})
+}
 
 func changeGroupName(ctx context.Context, clientUser []string, data map[string]any) error {
 	var d changeGroupNameT

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"i9chat/appTypes"
 	"i9chat/services/chatServices/dmChatService"
+	"log"
 
 	"github.com/gofiber/fiber/v2"
 )
@@ -73,7 +74,8 @@ func SendMessage(c *fiber.Ctx) error {
 
 	_, err := fmt.Sscanf(c.Params("dm_chat_id"), "%d", &dmChatId)
 	if err != nil {
-		panic(err)
+		log.Println("DMChatControllers.go: SendMessage: fmt.Sscanf:", err)
+		return fiber.ErrInternalServerError
 	}
 
 	var body sendMessageBody
