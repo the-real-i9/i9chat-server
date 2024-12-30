@@ -2,7 +2,6 @@ package signupControllers
 
 import (
 	"fmt"
-	"i9chat/appGlobals"
 	"i9chat/helpers"
 	"log"
 	"regexp"
@@ -27,7 +26,7 @@ func (b requestNewAccountBody) Validate() error {
 	if err != nil {
 		if e, ok := err.(validation.InternalError); ok {
 			log.Println("signup_bodyValidators.go: requestNewAccountBody", e.InternalError())
-			return appGlobals.ErrInternalServerError
+			return fiber.ErrInternalServerError
 		}
 
 		return fiber.NewError(fiber.StatusBadRequest, "validation error:", err.Error())

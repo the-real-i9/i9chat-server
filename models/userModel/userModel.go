@@ -3,7 +3,6 @@ package user
 import (
 	"context"
 	"fmt"
-	"i9chat/appGlobals"
 	"i9chat/helpers"
 	"log"
 	"time"
@@ -27,7 +26,7 @@ func New(ctx context.Context, email string, username string, password string, ge
 
 	if err != nil {
 		log.Println(fmt.Errorf("userModel.go: NewUser: %s", err))
-		return nil, appGlobals.ErrInternalServerError
+		return nil, fiber.ErrInternalServerError
 	}
 
 	return user, nil
@@ -51,7 +50,7 @@ func FindNearby(ctx context.Context, clientUserId int, liveLocation string) ([]*
 
 	if err != nil {
 		log.Println(fmt.Errorf("userModel.go: FindNearbyUsers: %s", err))
-		return nil, appGlobals.ErrInternalServerError
+		return nil, fiber.ErrInternalServerError
 	}
 
 	return nearbyUsers, nil
@@ -63,7 +62,7 @@ func Search(ctx context.Context, clientUserId int, searchQuery string) ([]*User,
 
 	if err != nil {
 		log.Println(fmt.Errorf("userModel.go: Search: %s", err))
-		return nil, appGlobals.ErrInternalServerError
+		return nil, fiber.ErrInternalServerError
 	}
 
 	return matchUsers, nil
@@ -75,7 +74,7 @@ func GetAll(ctx context.Context, clientUserId int) ([]*User, error) {
 
 	if err != nil {
 		log.Println(fmt.Errorf("userModel.go: GetAll: %s", err))
-		return nil, appGlobals.ErrInternalServerError
+		return nil, fiber.ErrInternalServerError
 	}
 
 	return allUsers, nil
@@ -86,7 +85,7 @@ func GetChats(ctx context.Context, userId int) ([]*map[string]any, error) {
 
 	if err != nil {
 		log.Println(fmt.Errorf("userModel.go: GetChats: %s", err))
-		return nil, appGlobals.ErrInternalServerError
+		return nil, fiber.ErrInternalServerError
 	}
 
 	return myChats, nil
@@ -98,7 +97,7 @@ func EditProfile(ctx context.Context, userId int, fieldValuePair [][]string) (*U
 
 	if err != nil {
 		log.Println(fmt.Errorf("userModel.go: EditProfile: %s", err))
-		return nil, appGlobals.ErrInternalServerError
+		return nil, fiber.ErrInternalServerError
 	}
 
 	return updatedUser, nil
@@ -108,7 +107,7 @@ func GetPassword(ctx context.Context, uniqueIdent string) (string, error) {
 	hashedPassword, err := helpers.QueryRowField[string](ctx, "SELECT password FROM get_user_password($1)", uniqueIdent)
 	if err != nil {
 		log.Println(fmt.Errorf("userModel.go: GetPassword: %s", err))
-		return "", appGlobals.ErrInternalServerError
+		return "", fiber.ErrInternalServerError
 	}
 
 	return *hashedPassword, nil
@@ -119,7 +118,7 @@ func ChangePresence(ctx context.Context, userId int, presence string, lastSeen t
 	userDMChatPartnersIdList, err := helpers.QueryRowsField[int](ctx, `SELECT * FROM change_user_presence($1, $2, $3)`, userId, presence, lastSeen)
 	if err != nil {
 		log.Println(fmt.Errorf("userModel.go: ChangePresence: %s", err))
-		return nil, appGlobals.ErrInternalServerError
+		return nil, fiber.ErrInternalServerError
 	}
 
 	return userDMChatPartnersIdList, nil
@@ -131,7 +130,7 @@ func UpdateLocation(ctx context.Context, userId int, newGeolocation string) erro
 
 	if err != nil {
 		log.Println(fmt.Errorf("userModel.go: UpdateLocation: %s", err))
-		return appGlobals.ErrInternalServerError
+		return fiber.ErrInternalServerError
 	}
 
 	return nil

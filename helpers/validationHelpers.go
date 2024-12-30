@@ -1,7 +1,6 @@
 package helpers
 
 import (
-	"i9chat/appGlobals"
 	"i9chat/appTypes"
 	"log"
 
@@ -28,7 +27,7 @@ func ValidationError(err error, filename, structname string) error {
 	if err != nil {
 		if e, ok := err.(validation.InternalError); ok {
 			log.Printf("%s: %s: %v", filename, structname, e.InternalError())
-			return appGlobals.ErrInternalServerError
+			return fiber.ErrInternalServerError
 		}
 
 		return fiber.NewError(fiber.StatusBadRequest, "validation error:", err.Error())

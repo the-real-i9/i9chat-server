@@ -3,7 +3,6 @@ package dmChat
 import (
 	"context"
 	"fmt"
-	"i9chat/appGlobals"
 	"i9chat/appTypes"
 	"i9chat/helpers"
 	user "i9chat/models/userModel"
@@ -11,6 +10,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/gofiber/fiber/v2"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
@@ -38,7 +38,7 @@ func New(ctx context.Context, initiatorId int, partnerId int, initMsgContent map
 	newDMChat, err := helpers.QueryRowType[NewDMChat](ctx, "SELECT initiator_resp_data AS ird, partner_resp_data AS prd FROM new_dm_chat($1, $2, $3, $4)", initiatorId, partnerId, initMsgContent, createdAt)
 	if err != nil {
 		log.Println(fmt.Errorf("DMChatModel.go: New: %s", err))
-		return nil, appGlobals.ErrInternalServerError
+		return nil, fiber.ErrInternalServerError
 	}
 
 	return newDMChat, nil
@@ -66,7 +66,7 @@ func SendMessage(ctx context.Context, dmChatId, senderId int, msgContent map[str
 	newMessage, err := helpers.QueryRowType[NewMessage](ctx, "SELECT sender_resp_data AS srd, receiver_resp_data AS rrd, receiver_id FROM send_dm_chat_message($1, $2, $3, $4)", dmChatId, senderId, msgContent, createdAt)
 	if err != nil {
 		log.Println(fmt.Errorf("DMChatModel.go: SendMessage: %s", err))
-		return nil, appGlobals.ErrInternalServerError
+		return nil, fiber.ErrInternalServerError
 	}
 
 	return newMessage, nil
@@ -76,7 +76,7 @@ func ReactToMessage(ctx context.Context, dmChatId, msgId, reactorId int, reactio
 	_, err := helpers.QueryRowField[bool](ctx, "SELECT react_to_dm_chat_message($1, $2, $3, $4)", dmChatId, msgId, reactorId, strconv.QuoteRuneToASCII(reaction))
 	if err != nil {
 		log.Println(fmt.Errorf("DMChatModel.go: ReactToMessage: %s", err))
-		return appGlobals.ErrInternalServerError
+		return fiber.ErrInternalServerError
 	}
 
 	return nil
@@ -106,7 +106,7 @@ func GetChatHistory(ctx context.Context, dmChatId, offset int) ([]*Message, erro
 	) ORDER BY created_at ASC`, dmChatId, offset)
 	if err != nil {
 		log.Println(fmt.Errorf("DMChatModel.go: GetChatHistory: %s", err))
-		return nil, appGlobals.ErrInternalServerError
+		return nil, fiber.ErrInternalServerError
 	}
 
 	return messages, nil
@@ -124,7 +124,7 @@ func BatchUpdateMessageDeliveryStatus(ctx context.Context, receiverId int, statu
 	_, err := helpers.BatchQuery[bool](ctx, sqls, params)
 	if err != nil {
 		log.Println(fmt.Errorf("DMChatModel.go: BatchUpdateMessageDeliveryStatus: %s", err))
-		return appGlobals.ErrInternalServerError
+		return fiber.ErrInternalServerError
 	}
 
 	return nil
@@ -134,7 +134,7 @@ func UpdateMessageDeliveryStatus(ctx context.Context, dmChatId, msgId, receiverI
 	_, err := helpers.QueryRowField[bool](ctx, "SELECT update_dm_chat_message_delivery_status($1, $2, $3, $4, $5)", dmChatId, msgId, receiverId, status, updatedAt)
 	if err != nil {
 		log.Println(fmt.Errorf("DMChatModel.go: UpdateMessageDeliveryStatus: %s", err))
-		return appGlobals.ErrInternalServerError
+		return fiber.ErrInternalServerError
 	}
 
 	return nil

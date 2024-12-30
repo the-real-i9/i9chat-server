@@ -3,7 +3,6 @@ package groupChat
 import (
 	"context"
 	"fmt"
-	"i9chat/appGlobals"
 	"i9chat/appTypes"
 	"i9chat/helpers"
 	user "i9chat/models/userModel"
@@ -11,6 +10,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/gofiber/fiber/v2"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
@@ -35,7 +35,7 @@ func New(ctx context.Context, name string, description string, pictureUrl string
 	newGroupChat, err := helpers.QueryRowType[NewGroupChat](ctx, "SELECT creator_resp_data AS crd, init_member_resp_data AS imrd FROM new_group_chat($1, $2, $3, $4, $5)", name, description, pictureUrl, creator, initUsers)
 	if err != nil {
 		log.Println(fmt.Errorf("groupChatModel.go: New: %s", err))
-		return nil, appGlobals.ErrInternalServerError
+		return nil, fiber.ErrInternalServerError
 	}
 
 	return newGroupChat, nil
@@ -50,7 +50,7 @@ func ChangeName(ctx context.Context, groupChatId int, admin []string, newName st
 	newActivity, err := helpers.QueryRowType[NewActivity](ctx, "SELECT * change_group_name($1, $2, $3)", groupChatId, admin, newName)
 	if err != nil {
 		log.Println(fmt.Errorf("groupChatModel.go: ChangeName: %s", err))
-		return nil, appGlobals.ErrInternalServerError
+		return nil, fiber.ErrInternalServerError
 	}
 
 	return newActivity, nil
@@ -60,7 +60,7 @@ func ChangeDescription(ctx context.Context, groupChatId int, admin []string, new
 	newActivity, err := helpers.QueryRowType[NewActivity](ctx, "SELECT * change_group_description($1, $2, $3)", groupChatId, admin, newDescription)
 	if err != nil {
 		log.Println(fmt.Errorf("groupChatModel.go: ChangeDescription: %s", err))
-		return nil, appGlobals.ErrInternalServerError
+		return nil, fiber.ErrInternalServerError
 	}
 
 	return newActivity, nil
@@ -70,7 +70,7 @@ func ChangePicture(ctx context.Context, groupChatId int, admin []string, newPict
 	newActivity, err := helpers.QueryRowType[NewActivity](ctx, "SELECT * change_group_picture($1, $2, $3)", groupChatId, admin, newPictureUrl)
 	if err != nil {
 		log.Println(fmt.Errorf("groupChatModel.go: ChangePicture: %s", err))
-		return nil, appGlobals.ErrInternalServerError
+		return nil, fiber.ErrInternalServerError
 	}
 
 	return newActivity, nil
@@ -80,7 +80,7 @@ func AddUsers(ctx context.Context, groupChatId int, admin []string, newUsers [][
 	newActivity, err := helpers.QueryRowType[NewActivity](ctx, "SELECT * add_users_to_group($1, $2, $3)", groupChatId, admin, newUsers)
 	if err != nil {
 		log.Println(fmt.Errorf("groupChatModel.go: AddUsers: %s", err))
-		return nil, appGlobals.ErrInternalServerError
+		return nil, fiber.ErrInternalServerError
 	}
 
 	return newActivity, nil
@@ -90,7 +90,7 @@ func RemoveUser(ctx context.Context, groupChatId int, admin []string, user []app
 	newActivity, err := helpers.QueryRowType[NewActivity](ctx, "SELECT * remove_user_to_group($1, $2, $3)", groupChatId, admin, user)
 	if err != nil {
 		log.Println(fmt.Errorf("groupChatModel.go: RemoveUser: %s", err))
-		return nil, appGlobals.ErrInternalServerError
+		return nil, fiber.ErrInternalServerError
 	}
 
 	return newActivity, nil
@@ -100,7 +100,7 @@ func Join(ctx context.Context, groupChatId int, newUser []string) (*NewActivity,
 	newActivity, err := helpers.QueryRowType[NewActivity](ctx, "SELECT * join_group($1, $2)", groupChatId, newUser)
 	if err != nil {
 		log.Println(fmt.Errorf("groupChatModel.go: Join: %s", err))
-		return nil, appGlobals.ErrInternalServerError
+		return nil, fiber.ErrInternalServerError
 	}
 
 	return newActivity, nil
@@ -110,7 +110,7 @@ func Leave(ctx context.Context, groupChatId int, user []string) (*NewActivity, e
 	newActivity, err := helpers.QueryRowType[NewActivity](ctx, "SELECT * leave_group($1, $2)", groupChatId, user)
 	if err != nil {
 		log.Println(fmt.Errorf("groupChatModel.go: Leave: %s", err))
-		return nil, appGlobals.ErrInternalServerError
+		return nil, fiber.ErrInternalServerError
 	}
 
 	return newActivity, nil
@@ -120,7 +120,7 @@ func MakeUserAdmin(ctx context.Context, groupChatId int, admin []string, user []
 	newActivity, err := helpers.QueryRowType[NewActivity](ctx, "SELECT * make_user_group_admin($1, $2, $3)", groupChatId, admin, user)
 	if err != nil {
 		log.Println(fmt.Errorf("groupChatModel.go: MakeUserAdmin: %s", err))
-		return nil, appGlobals.ErrInternalServerError
+		return nil, fiber.ErrInternalServerError
 	}
 
 	return newActivity, nil
@@ -130,7 +130,7 @@ func RemoveUserFromAdmins(ctx context.Context, groupChatId int, admin []string, 
 	newActivity, err := helpers.QueryRowType[NewActivity](ctx, "SELECT * remove_user_from_group_admins($1, $2, $3)", groupChatId, admin, user)
 	if err != nil {
 		log.Println(fmt.Errorf("groupChatModel.go: RemoveUserFromAdmins: %s", err))
-		return nil, appGlobals.ErrInternalServerError
+		return nil, fiber.ErrInternalServerError
 	}
 
 	return newActivity, nil
@@ -158,7 +158,7 @@ func SendMessage(ctx context.Context, groupChatId int, senderId int, msgContent 
 	newMessage, err := helpers.QueryRowType[NewMessage](ctx, "SELECT sender_resp_data AS srd, member_resp_data AS mrd, members_ids FROM send_group_chat_message($1, $2, $3, $4)", groupChatId, senderId, msgContent, createdAt)
 	if err != nil {
 		log.Println(fmt.Errorf("groupChatModel.go: SendMessage: %s", err))
-		return nil, appGlobals.ErrInternalServerError
+		return nil, fiber.ErrInternalServerError
 	}
 
 	return newMessage, nil
@@ -168,7 +168,7 @@ func ReactToMessage(ctx context.Context, groupChatId int, msgId, reactorId int, 
 	_, err := helpers.QueryRowField[bool](ctx, "SELECT react_to_group_chat_message($1, $2, $3, $4)", groupChatId, msgId, reactorId, strconv.QuoteRuneToASCII(reaction))
 	if err != nil {
 		log.Println(fmt.Errorf("groupChatModel.go: ReactToMessage: %s", err))
-		return appGlobals.ErrInternalServerError
+		return fiber.ErrInternalServerError
 	}
 
 	return nil
@@ -191,7 +191,7 @@ func BatchUpdateMessageDeliveryStatus(ctx context.Context, groupChatId int, rece
 	resultList, err := helpers.BatchQuery[BatchStatusUpdateResult](ctx, sqls, params)
 	if err != nil {
 		log.Println(fmt.Errorf("groupChatModel.go: BatchUpdateMessageDeliveryStatus: %s", err))
-		return nil, appGlobals.ErrInternalServerError
+		return nil, fiber.ErrInternalServerError
 	}
 
 	lastResult := resultList[len(resultList)]
@@ -230,7 +230,7 @@ func GetChatHistory(ctx context.Context, groupChatId, offset int) ([]*HistoryIte
 	) ORDER BY created_at ASC`, groupChatId, offset)
 	if err != nil {
 		log.Println(fmt.Errorf("groupChatModel.go: GetChatHistory: %s", err))
-		return nil, appGlobals.ErrInternalServerError
+		return nil, fiber.ErrInternalServerError
 	}
 
 	return history, nil

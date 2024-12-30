@@ -8,6 +8,8 @@ import (
 	"log"
 	"os"
 	"time"
+
+	"github.com/gofiber/fiber/v2"
 )
 
 func Upload(ctx context.Context, filePath string, data []byte) (string, error) {
@@ -29,7 +31,7 @@ func Upload(ctx context.Context, filePath string, data []byte) (string, error) {
 			log.Println("cloudStorageService.go: UploadFile:", err)
 		}
 
-		return "", appGlobals.ErrInternalServerError
+		return "", fiber.ErrInternalServerError
 	}
 
 	return fileUrl, nil

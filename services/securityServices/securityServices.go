@@ -7,7 +7,6 @@ import (
 	"math/rand"
 	"time"
 
-	"i9chat/appGlobals"
 	"i9chat/helpers"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -20,7 +19,7 @@ func HashPassword(password string) (string, error) {
 	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
 		log.Println("securityServices.go: HashPassword:", err)
-		return "", appGlobals.ErrInternalServerError
+		return "", fiber.ErrInternalServerError
 	}
 
 	return string(hash), nil
@@ -33,7 +32,7 @@ func PasswordMatchesHash(hash string, password string) (bool, error) {
 			return false, nil
 		} else {
 			log.Println("securityServices.go: HashPassword:", err)
-			return false, appGlobals.ErrInternalServerError
+			return false, fiber.ErrInternalServerError
 		}
 	}
 
@@ -84,7 +83,7 @@ func JwtVerify[T any](tokenString, secret string) (*T, error) {
 		}
 
 		log.Println("securityServices.go: JwtVerify:", err)
-		return nil, appGlobals.ErrInternalServerError
+		return nil, fiber.ErrInternalServerError
 	}
 
 	var data T
