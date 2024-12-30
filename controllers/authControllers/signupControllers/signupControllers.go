@@ -8,6 +8,7 @@ import (
 	"log"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/session"
 )
 
 func RequestNewAccount(c *fiber.Ctx) error {
@@ -36,7 +37,7 @@ func RequestNewAccount(c *fiber.Ctx) error {
 		return fiber.ErrInternalServerError
 	}
 
-	sess.Set("session", sessionData)
+	sess.Set("signup_session", sessionData)
 
 	if err := sess.Save(); err != nil {
 		log.Println("signupControllers.go: RequestNewAccount: sess.Save:", err)
@@ -50,17 +51,9 @@ func VerifyEmail(c *fiber.Ctx) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	sess, err := appGlobals.SignupSessionStore.Get(c)
-	if err != nil {
-		log.Println("signupControllers.go: VerifyEmail: SignupSessionStore.Get:", err)
-		return fiber.ErrInternalServerError
-	}
+	sess := c.Locals("session").(*session.Session)
 
-	signupSession := sess.Get("session").(*appTypes.SignupSession)
-
-	if signupSession.Step != "verify email" {
-		return c.Status(fiber.StatusUnauthorized).SendString("invalid session cookie at endpoint")
-	}
+	signupSession := sess.Get("signup_session").(*appTypes.SignupSession)
 
 	var body verifyEmailBody
 
@@ -78,7 +71,7 @@ func VerifyEmail(c *fiber.Ctx) error {
 		return app_err
 	}
 
-	sess.Set("session", updatedSessionData)
+	sess.Set("signup_session", updatedSessionData)
 
 	if err := sess.Save(); err != nil {
 		log.Println("signupControllers.go: VerifyEmail: sess.Save:", err)
@@ -92,17 +85,9 @@ func RegisterUser(c *fiber.Ctx) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	sess, err := appGlobals.SignupSessionStore.Get(c)
-	if err != nil {
-		log.Println("signupControllers.go: VerifyEmail: SignupSessionStore.Get:", err)
-		return fiber.ErrInternalServerError
-	}
+	sess := c.Locals("session").(*session.Session)
 
-	signupSession := sess.Get("session").(*appTypes.SignupSession)
-
-	if signupSession.Step != "verify email" {
-		return c.Status(fiber.StatusUnauthorized).SendString("invalid session cookie at endpoint")
-	}
+	signupSession := sess.Get("signup_session").(*appTypes.SignupSession)
 
 	var body registerUserBody
 
