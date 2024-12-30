@@ -7,6 +7,8 @@ import (
 	"os"
 
 	"cloud.google.com/go/storage"
+	"github.com/gofiber/fiber/v2/middleware/session"
+	"github.com/gofiber/storage/postgres/v3"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/joho/godotenv"
 	"github.com/segmentio/kafka-go"
@@ -46,6 +48,21 @@ func initKafkaWriter() error {
 	return nil
 }
 
+func configSessionStore() {
+	getStorage := func(tableName string) *postgres.Storage {
+		return postgres.New(postgres.Config{
+			DB:    appGlobals.DBPool,
+			Table: tableName,
+		})
+	}
+
+	appGlobals.SignupSessionStore = session.New(session.Config{
+		Storage:      getStorage("ongoing_signup"),
+		CookiePath:   "/api/auth/signup",
+		CookieDomain: os.Getenv("APP_DOMAIN"),
+	})
+}
+
 func InitApp() error {
 
 	if os.Getenv("GO_ENV") != "production" {
@@ -57,6 +74,8 @@ func InitApp() error {
 	if err := initDBPool(); err != nil {
 		return err
 	}
+
+	configSessionStore()
 
 	if err := initGCSClient(); err != nil {
 		return err

@@ -5,6 +5,8 @@ import (
 	"i9chat/appGlobals"
 	"i9chat/helpers"
 	"log"
+
+	"github.com/gofiber/fiber/v2"
 )
 
 func AccountExists(ctx context.Context, emailOrUsername string) (bool, error) {
@@ -12,7 +14,7 @@ func AccountExists(ctx context.Context, emailOrUsername string) (bool, error) {
 
 	if err != nil {
 		log.Println("appModel.go: AccountExists:", err)
-		return false, appGlobals.ErrInternalServerError
+		return false, fiber.ErrInternalServerError
 	}
 
 	return *exist, nil

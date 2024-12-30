@@ -2,148 +2,128 @@ package signupControllers
 
 import (
 	"context"
+	"i9chat/appGlobals"
 	"i9chat/appTypes"
-	"i9chat/helpers"
 	"i9chat/services/auth/signupService"
 	"log"
 
-	"github.com/gofiber/contrib/websocket"
 	"github.com/gofiber/fiber/v2"
 )
 
-var RequestNewAccount = websocket.New(func(c *websocket.Conn) {
-
+func RequestNewAccount(c *fiber.Ctx) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	var w_err error
+	var body requestNewAccountBody
 
-	for {
-		var body requestNewAccountBody
-
-		if w_err != nil {
-			log.Println(w_err)
-			break
-		}
-
-		r_err := c.ReadJSON(&body)
-		if r_err != nil {
-			log.Println(r_err)
-			break
-		}
-
-		if val_err := body.Validate(); val_err != nil {
-
-			w_err = c.WriteJSON(helpers.ErrResp(val_err))
-			continue
-		}
-
-		respData, app_err := signupService.RequestNewAccount(ctx, body.Email)
-
-		if app_err != nil {
-			w_err = c.WriteJSON(helpers.ErrResp(app_err))
-			continue
-		}
-
-		w_err = c.WriteJSON(appTypes.WSResp{
-			StatusCode: fiber.StatusOK,
-			Body:       respData,
-		})
+	body_err := c.BodyParser(&body)
+	if body_err != nil {
+		return body_err
 	}
-})
 
-var VerifyEmail = websocket.New(func(c *websocket.Conn) {
+	if val_err := body.Validate(); val_err != nil {
+		return c.Status(fiber.StatusBadRequest).SendString(val_err.Error())
+	}
+
+	respData, sessionData, app_err := signupService.RequestNewAccount(ctx, body.Email)
+	if app_err != nil {
+		return app_err
+	}
+
+	sess, err := appGlobals.SignupSessionStore.Get(c)
+	if err != nil {
+		log.Println("signupControllers.go: RequestNewAccount: SignupSessionStore.Get:", err)
+		return fiber.ErrInternalServerError
+	}
+
+	sess.Set("session", sessionData)
+
+	if err := sess.Save(); err != nil {
+		log.Println("signupControllers.go: RequestNewAccount: sess.Save:", err)
+		return fiber.ErrInternalServerError
+	}
+
+	return c.JSON(respData)
+}
+
+func VerifyEmail(c *fiber.Ctx) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	sessionData := c.Locals("session").(*appTypes.SignupSessionData)
-
-	if sessionData.Step != "verify email" {
-		if w_err := c.WriteJSON(helpers.ErrResp(fiber.NewError(fiber.StatusUnauthorized, "invalid session token on endpoint"))); w_err != nil {
-			log.Println(w_err)
-		}
-		return
+	sess, err := appGlobals.SignupSessionStore.Get(c)
+	if err != nil {
+		log.Println("signupControllers.go: VerifyEmail: SignupSessionStore.Get:", err)
+		return fiber.ErrInternalServerError
 	}
 
-	var w_err error
+	signupSession := sess.Get("session").(*appTypes.SignupSession)
 
-	for {
-		var body verifyEmailBody
-
-		if w_err != nil {
-			log.Println(w_err)
-			break
-		}
-
-		r_err := c.ReadJSON(&body)
-		if r_err != nil {
-			log.Println(r_err)
-			break
-		}
-
-		if val_err := body.Validate(); val_err != nil {
-			w_err = c.WriteJSON(helpers.ErrResp(val_err))
-			continue
-		}
-
-		respData, app_err := signupService.VerifyEmail(ctx, sessionData.SessionId, body.Code, sessionData.Email)
-
-		if app_err != nil {
-			w_err = c.WriteJSON(helpers.ErrResp(app_err))
-			continue
-		}
-
-		w_err = c.WriteJSON(appTypes.WSResp{
-			StatusCode: fiber.StatusOK,
-			Body:       respData,
-		})
+	if signupSession.Step != "verify email" {
+		return c.Status(fiber.StatusUnauthorized).SendString("invalid session cookie at endpoint")
 	}
-})
 
-var RegisterUser = websocket.New(func(c *websocket.Conn) {
+	var body verifyEmailBody
+
+	body_err := c.BodyParser(&body)
+	if body_err != nil {
+		return body_err
+	}
+
+	if val_err := body.Validate(); val_err != nil {
+		return c.Status(fiber.StatusBadRequest).SendString(val_err.Error())
+	}
+
+	respData, updatedSessionData, app_err := signupService.VerifyEmail(ctx, signupSession.Data, body.Code)
+	if app_err != nil {
+		return app_err
+	}
+
+	sess.Set("session", updatedSessionData)
+
+	if err := sess.Save(); err != nil {
+		log.Println("signupControllers.go: VerifyEmail: sess.Save:", err)
+		return fiber.ErrInternalServerError
+	}
+
+	return c.JSON(respData)
+}
+
+func RegisterUser(c *fiber.Ctx) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	sessionData := c.Locals("session").(*appTypes.SignupSessionData)
-
-	if sessionData.Step != "register user" {
-		if w_err := c.WriteJSON(helpers.ErrResp(fiber.NewError(fiber.StatusUnauthorized, "invalid session token on endpoint"))); w_err != nil {
-			log.Println(w_err)
-		}
-		return
+	sess, err := appGlobals.SignupSessionStore.Get(c)
+	if err != nil {
+		log.Println("signupControllers.go: VerifyEmail: SignupSessionStore.Get:", err)
+		return fiber.ErrInternalServerError
 	}
 
-	var w_err error
+	signupSession := sess.Get("session").(*appTypes.SignupSession)
 
-	for {
-		var body registerUserBody
-
-		if w_err != nil {
-			log.Println(w_err)
-			break
-		}
-
-		r_err := c.ReadJSON(&body)
-		if r_err != nil {
-			log.Println(r_err)
-			break
-		}
-
-		if val_err := body.Validate(); val_err != nil {
-			w_err = c.WriteJSON(helpers.ErrResp(fiber.NewError(fiber.StatusBadRequest, "validation error:", val_err.Error())))
-			continue
-		}
-
-		respData, app_err := signupService.RegisterUser(ctx, sessionData.SessionId, sessionData.Email, body.Username, body.Password, body.Geolocation)
-
-		if app_err != nil {
-			w_err = c.WriteJSON(helpers.ErrResp(app_err))
-			continue
-		}
-
-		w_err = c.WriteJSON(appTypes.WSResp{
-			StatusCode: fiber.StatusOK,
-			Body:       respData,
-		})
+	if signupSession.Step != "verify email" {
+		return c.Status(fiber.StatusUnauthorized).SendString("invalid session cookie at endpoint")
 	}
-})
+
+	var body registerUserBody
+
+	body_err := c.BodyParser(&body)
+	if body_err != nil {
+		return body_err
+	}
+
+	if val_err := body.Validate(); val_err != nil {
+		return c.Status(fiber.StatusBadRequest).SendString(val_err.Error())
+	}
+
+	respData, app_err := signupService.RegisterUser(ctx, signupSession.Data, body.Username, body.Password, body.Geolocation)
+	if app_err != nil {
+		return app_err
+	}
+
+	if err := sess.Destroy(); err != nil {
+		log.Println("signupControllers.go: RegisterUser: sess.Destroy:", err)
+		return fiber.ErrInternalServerError
+	}
+
+	return c.JSON(respData)
+}

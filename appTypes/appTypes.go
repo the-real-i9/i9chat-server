@@ -9,10 +9,9 @@ import (
 	validation "github.com/go-ozzo/ozzo-validation/v4"
 )
 
-type SignupSessionData struct {
-	SessionId string
-	Email     string
-	Step      string
+type SignupSession struct {
+	Step string
+	Data any
 }
 
 type ClientUser struct {

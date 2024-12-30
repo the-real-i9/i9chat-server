@@ -11,11 +11,11 @@ import (
 func Init(router fiber.Router) {
 	ssm := middlewares.SignupSession
 
-	router.Get("/signup/request_new_account", signupControllers.RequestNewAccount)
+	router.Post("/signup/request_new_account", signupControllers.RequestNewAccount)
 
-	router.Get("/signup/verify_email", ssm, signupControllers.VerifyEmail)
+	router.Post("/signup/verify_email", ssm, signupControllers.VerifyEmail)
 
-	router.Get("/signup/register_user", ssm, signupControllers.RegisterUser)
+	router.Post("/signup/register_user", ssm, signupControllers.RegisterUser)
 
 	router.Get("/signin", signinControllers.Signin)
 }
