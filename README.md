@@ -1,11 +1,14 @@
 # i9chat (API Server)
 
+> 🛠️ **Ongoing Update:** Replacing unneccessary WebSocket communication with normal HTTP transactions.
+>
+> **Why?** The current implementation uses WebSocket communication for simple request/response user actions. It requires the client to establish a WebSocket connection, send the appropriate message (data), and close the connection after receiving a response. This is the natural behaviour of an HTTP transaction excluding the client's intervention, making it unneccesary to use a WebSocket communication.
+>
+> I figured that I only need a single WebSocket endpoint where events are streamed to the client and acknowledgements are sent to the server.
+
 ## Overview
 
 i9chat is a Websocket-based API server for a chat application, designed as a portfolio project to showcase my backend development skills. It is aimed at fellow backend engineers and hiring managers seeking highly skilled developers.
-
->⚠️ **Important Note:**\
->This API server is built entirely with WebSockets,meaning all endpoints use WebSocket communication and require an active WebSocket connection.
 
 ## Table of Contents
 
