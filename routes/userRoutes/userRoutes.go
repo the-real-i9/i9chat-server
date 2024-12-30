@@ -10,7 +10,7 @@ import (
 func Init(router fiber.Router) {
 	am := middlewares.Auth
 
-	router.Get("/go_online", am, UC.GoOnline)
+	router.Get("/go_online", am, UC.OpenWSStream)
 
 	router.Get("/change_profile_picture", am, UC.ChangeProfilePicture)
 	router.Get("/update_my_geolocation", am, UC.UpdateMyLocation)

@@ -12,88 +12,36 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
-var CreateNewGroupChatAndAckMessages = websocket.New(func(c *websocket.Conn) {
+func CreateNewGroupChat(c *fiber.Ctx) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
 	clientUser := c.Locals("user").(*appTypes.ClientUser)
 
-	var w_err error
+	var body newGroupChatBody
 
-	for {
-		var body createNewGroupChatAndAckMessagesBody
-
-		var newChatData newGroupChatDataT
-
-		// For Group chat, messages should be acknowledged in batches,
-		// and it's only for a single group chat at a time
-		var ackMsgsData ackMsgsDataT
-
-		if w_err != nil {
-			log.Println(w_err)
-			break
-		}
-
-		r_err := c.ReadJSON(&body)
-		if r_err != nil {
-			log.Println(r_err)
-			break
-		}
-
-		if val_err := body.Validate(); val_err != nil {
-			w_err = c.WriteJSON(helpers.ErrResp(val_err))
-			continue
-		}
-
-		createNewChat := func() error {
-
-			helpers.MapToStruct(body.Data, &newChatData)
-
-			if val_err := newChatData.Validate(); val_err != nil {
-				return c.WriteJSON(helpers.ErrResp(val_err))
-			}
-
-			respData, app_err := groupChatService.NewGroupChat(ctx,
-				newChatData.Name,
-				newChatData.Description,
-				newChatData.PictureData,
-				[]string{fmt.Sprint(clientUser.Id), clientUser.Username},
-				newChatData.InitUsers,
-			)
-			if app_err != nil {
-				return c.WriteJSON(helpers.ErrResp(app_err))
-			}
-
-			return c.WriteJSON(respData)
-		}
-
-		// For Group chat, messages can only be acknowledged in batches,
-		acknowledgeMessages := func() error {
-
-			helpers.MapToStruct(body.Data, &ackMsgsData)
-
-			if val_err := ackMsgsData.Validate(); val_err != nil {
-				return c.WriteJSON(helpers.ErrResp(val_err))
-			}
-
-			go groupChatService.BatchUpdateMessageDeliveryStatus(context.TODO(), ackMsgsData.GroupChatId, clientUser.Id, ackMsgsData.Status, ackMsgsData.MsgAckDatas)
-
-			return nil
-		}
-
-		if body.Action == "create new chat" {
-
-			w_err = createNewChat()
-
-		} else if body.Action == "acknowledge messages" {
-
-			w_err = acknowledgeMessages()
-
-		} else {
-			w_err = c.WriteJSON(helpers.ErrResp(fiber.NewError(fiber.StatusBadRequest, "invalid 'action' value")))
-		}
+	body_err := c.BodyParser(&body)
+	if body_err != nil {
+		return body_err
 	}
-})
+
+	if val_err := body.Validate(); val_err != nil {
+		return c.Status(fiber.StatusBadRequest).SendString(val_err.Error())
+	}
+
+	respData, app_err := groupChatService.NewGroupChat(ctx,
+		body.Name,
+		body.Description,
+		body.PictureData,
+		[]string{fmt.Sprint(clientUser.Id), clientUser.Username},
+		body.InitUsers,
+	)
+	if app_err != nil {
+		return app_err
+	}
+
+	return c.JSON(respData)
+}
 
 var GetChatHistory = websocket.New(func(c *websocket.Conn) {
 	ctx, cancel := context.WithCancel(context.Background())

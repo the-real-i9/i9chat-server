@@ -10,7 +10,7 @@ import (
 func Init(router fiber.Router) {
 	am := middlewares.Auth
 
-	router.Get("/create_group_chat_ack_msgs", am, grcc.CreateNewGroupChatAndAckMessages)
+	router.Post("/create_group_chat", am, grcc.CreateNewGroupChat)
 	router.Get("/chat_history", am, grcc.GetChatHistory)
 	router.Get("/:group_chat_id/send_message", am, grcc.SendMessage)
 	router.Get("/execute_action", am, grcc.ExecuteAction)

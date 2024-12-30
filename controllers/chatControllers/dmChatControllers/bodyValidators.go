@@ -44,33 +44,15 @@ func (ob sendMessageBody) Validate() error {
 	)
 
 	return helpers.ValidationError(err, "dmChat_bodyValidators.go", "sendMessageBody")
-
 }
 
-type createNewDMChatAndAckMessagesBody struct {
-	Action string         `json:"action"`
-	Data   map[string]any `json:"data"`
-}
-
-func (b createNewDMChatAndAckMessagesBody) Validate() error {
-	err := validation.ValidateStruct(&b,
-		validation.Field(&b.Action,
-			validation.Required,
-			validation.In("create new chat", "acknowledge message", "batch acknowledge messages").Error("invalid action"),
-		),
-		validation.Field(&b.Data, validation.Required),
-	)
-
-	return helpers.ValidationError(err, "dmChat_bodyValidators.go", "createNewDMChatAndAckMessagesBody")
-}
-
-type newDMChatDataT struct {
+type newDMChatBody struct {
 	PartnerId int            `json:"partnerId"`
 	InitMsg   map[string]any `json:"initMsg"`
 	CreatedAt time.Time      `json:"createdAt"`
 }
 
-func (b newDMChatDataT) Validate() error {
+func (b newDMChatBody) Validate() error {
 	err := validation.ValidateStruct(&b,
 		validation.Field(&b.PartnerId,
 			validation.Required,
@@ -83,41 +65,5 @@ func (b newDMChatDataT) Validate() error {
 		),
 	)
 
-	return helpers.ValidationError(err, "dmChat_bodyValidators.go", "newDMChatDataT")
-
-}
-
-type ackMsgDataT struct {
-	Status string `json:"status"`
-	*appTypes.DMChatMsgAckData
-}
-
-func (b ackMsgDataT) Validate() error {
-	err := validation.ValidateStruct(&b,
-		validation.Field(&b.Status,
-			validation.Required,
-			validation.In("delivered", "seen").Error("invalid status value; should be 'delivered' or 'seen'"),
-		),
-		validation.Field(&b.DMChatMsgAckData),
-	)
-
-	return helpers.ValidationError(err, "dmChat_bodyValidators.go", "ackMsgDataT")
-}
-
-type batchAckMsgDataT struct {
-	Status      string                       `json:"status"`
-	MsgAckDatas []*appTypes.DMChatMsgAckData `json:"msgAckDatas"`
-}
-
-func (b batchAckMsgDataT) Validate() error {
-	err := validation.ValidateStruct(&b,
-		validation.Field(&b.Status,
-			validation.Required,
-			validation.In("delivered", "seen").Error("invalid status value; should be 'delivered' or 'seen'"),
-		),
-		validation.Field(&b.MsgAckDatas, validation.Required),
-	)
-
-	return helpers.ValidationError(err, "dmChat_bodyValidators.go", "batchAckMsgDataT")
-
+	return helpers.ValidationError(err, "dmChat_bodyValidators.go", "newDMChatBody")
 }

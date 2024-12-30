@@ -10,7 +10,7 @@ import (
 func Init(router fiber.Router) {
 	am := middlewares.Auth
 
-	router.Get("/create_dm_chat_ack_msgs", am, dmcc.CreateNewDMChatAndAckMessages)
+	router.Post("/create_dm_chat", am, dmcc.CreateNewDMChat)
 	router.Get("/chat_history", am, dmcc.GetChatHistory)
-	router.Get("/:dm_chat_id/send_message", am, dmcc.SendMessage)
+	router.Post("/:dm_chat_id/send_message", am, dmcc.SendMessage)
 }

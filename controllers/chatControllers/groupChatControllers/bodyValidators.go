@@ -48,32 +48,14 @@ func (ob sendMessageBody) Validate() error {
 
 }
 
-type createNewGroupChatAndAckMessagesBody struct {
-	Action string         `json:"action"`
-	Data   map[string]any `json:"data"`
-}
-
-func (b createNewGroupChatAndAckMessagesBody) Validate() error {
-	err := validation.ValidateStruct(&b,
-		validation.Field(&b.Action,
-			validation.Required,
-			validation.In("create new chat", "acknowledge messages").Error("invalid action"),
-		),
-		validation.Field(&b.Data, validation.Required),
-	)
-
-	return helpers.ValidationError(err, "groupChat_bodyValidators.go", "createNewGroupChatAndAckMessagesBody")
-
-}
-
-type newGroupChatDataT struct {
+type newGroupChatBody struct {
 	Name        string              `json:"name"`
 	Description string              `json:"description"`
 	PictureData []byte              `json:"pictureData"`
 	InitUsers   [][]appTypes.String `json:"initUsers"`
 }
 
-func (b newGroupChatDataT) Validate() error {
+func (b newGroupChatBody) Validate() error {
 	err := validation.ValidateStruct(&b,
 		validation.Field(&b.Name, validation.Required),
 		validation.Field(&b.Description, validation.Required),
@@ -90,27 +72,7 @@ func (b newGroupChatDataT) Validate() error {
 		),
 	)
 
-	return helpers.ValidationError(err, "groupChat_bodyValidators.go", "newGroupChatDataT")
-
-}
-
-type ackMsgsDataT struct {
-	Status      string                          `json:"status"`
-	GroupChatId int                             `json:"groupChatId"`
-	MsgAckDatas []*appTypes.GroupChatMsgAckData `json:"msgAckDatas"`
-}
-
-func (b ackMsgsDataT) Validate() error {
-	err := validation.ValidateStruct(&b,
-		validation.Field(&b.Status,
-			validation.Required,
-			validation.In("delivered", "seen").Error("invalid status value; should be 'delivered' or 'seen'"),
-		),
-		validation.Field(&b.GroupChatId, validation.Required, validation.Min(1).Error("invalid value")),
-		validation.Field(&b.MsgAckDatas, validation.Required),
-	)
-
-	return helpers.ValidationError(err, "groupChat_bodyValidators.go", "ackMsgsDataT")
+	return helpers.ValidationError(err, "groupChat_bodyValidators.go", "newGroupChatBody")
 
 }
 

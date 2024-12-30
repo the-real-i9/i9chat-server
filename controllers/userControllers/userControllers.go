@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"i9chat/appTypes"
 	"i9chat/helpers"
+	"i9chat/services/chatServices/dmChatService"
+	"i9chat/services/chatServices/groupChatService"
 	"i9chat/services/userService"
 	"io"
 	"log"
@@ -17,8 +19,7 @@ import (
 	"github.com/segmentio/kafka-go"
 )
 
-// This Controller essentially opens the stream for receiving messages
-var GoOnline = websocket.New(func(c *websocket.Conn) {
+var OpenWSStream = websocket.New(func(c *websocket.Conn) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -46,7 +47,7 @@ var GoOnline = websocket.New(func(c *websocket.Conn) {
 		userService.GoOffline(context.TODO(), clientUser.Id, time.Now())
 	}
 
-	go goOnlineSocketControl(c, goOff)
+	go clientEventStream(c, clientUser, goOff)
 
 	for {
 		m, err := r.FetchMessage(ctx)
@@ -69,18 +70,99 @@ var GoOnline = websocket.New(func(c *websocket.Conn) {
 	}
 })
 
-func goOnlineSocketControl(c *websocket.Conn, goOff func()) {
+func clientEventStream(c *websocket.Conn, clientUser *appTypes.ClientUser, goOff func()) {
+
+	var w_err error
+
+client_event_stream:
 	for {
-		var body struct{}
+		var body clientEventBody
+
+		var dmChatMsgAckData dmChatMsgAckDataT
+
+		var batchDMChatMsgAckData batchDMChatMsgAckDataT
+
+		var groupChatMsgsAckData groupChatMsgsAckDataT
+
+		if w_err != nil {
+			log.Println(w_err)
+			break
+		}
 
 		r_err := c.ReadJSON(&body)
 		if r_err != nil {
 			log.Println(r_err)
 			break
 		}
-	}
 
-	goOff()
+		if val_err := body.Validate(); val_err != nil {
+			w_err = c.WriteJSON(helpers.ErrResp(val_err))
+			continue
+		}
+
+		// acknowledge messages singly
+		acknowledgeDMChatMessage := func() error {
+
+			helpers.MapToStruct(body.Data, &dmChatMsgAckData)
+
+			if val_err := dmChatMsgAckData.Validate(); val_err != nil {
+				return c.WriteJSON(helpers.ErrResp(val_err))
+			}
+
+			go dmChatService.UpdateMessageDeliveryStatus(context.TODO(), dmChatMsgAckData.DMChatId, dmChatMsgAckData.MsgId, dmChatMsgAckData.SenderId, clientUser.Id, dmChatMsgAckData.Status, dmChatMsgAckData.At)
+
+			return nil
+		}
+
+		// acknowledge messages in batch
+		batchAcknowledgeDMChatMessages := func() error {
+
+			helpers.MapToStruct(body.Data, &batchDMChatMsgAckData)
+
+			if val_err := batchDMChatMsgAckData.Validate(); val_err != nil {
+				return c.WriteJSON(helpers.ErrResp(val_err))
+			}
+
+			go dmChatService.BatchUpdateMessageDeliveryStatus(context.TODO(), clientUser.Id, batchDMChatMsgAckData.Status, batchDMChatMsgAckData.MsgAckDatas)
+
+			return nil
+		}
+
+		batchAcknowledgeGroupChatMessages := func() error {
+
+			helpers.MapToStruct(body.Data, &groupChatMsgsAckData)
+
+			if val_err := groupChatMsgsAckData.Validate(); val_err != nil {
+				return c.WriteJSON(helpers.ErrResp(val_err))
+			}
+
+			go groupChatService.BatchUpdateMessageDeliveryStatus(context.TODO(), groupChatMsgsAckData.GroupChatId, clientUser.Id, groupChatMsgsAckData.Status, groupChatMsgsAckData.MsgAckDatas)
+
+			return nil
+		}
+
+		if body.Action == "ACK dm chat message" {
+
+			w_err = acknowledgeDMChatMessage()
+
+		} else if body.Action == "batch ACK dm chat messages" {
+
+			w_err = batchAcknowledgeDMChatMessages()
+
+		} else if body.Action == "batch ACK group chat messages" {
+
+			w_err = batchAcknowledgeGroupChatMessages()
+
+		} else if body.Action == "close" {
+
+			goOff()
+
+			break client_event_stream
+
+		} else {
+			w_err = c.WriteJSON(helpers.ErrResp(fiber.NewError(fiber.StatusBadRequest, "invalid 'action' value")))
+		}
+	}
 }
 
 var ChangeProfilePicture = websocket.New(func(c *websocket.Conn) {
