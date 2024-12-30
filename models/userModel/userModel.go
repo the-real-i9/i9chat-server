@@ -8,6 +8,7 @@ import (
 	"log"
 	"time"
 
+	"github.com/gofiber/fiber/v2"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
@@ -38,7 +39,7 @@ func FindOne(ctx context.Context, uniqueIdent string) (*User, error) {
 
 	if err != nil {
 		log.Println(fmt.Errorf("userModel.go: FindOne: %s", err))
-		return nil, appGlobals.ErrInternalServerError
+		return nil, fiber.ErrInternalServerError
 	}
 
 	return user, nil

@@ -16,5 +16,5 @@ func Init(router fiber.Router) {
 
 	router.Post("/signup/register_user", ssm.RegisterUser, signupControllers.RegisterUser)
 
-	router.Get("/signin", signinControllers.Signin)
+	router.Post("/signin", signinControllers.Signin)
 }

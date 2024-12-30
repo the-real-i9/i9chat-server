@@ -38,7 +38,7 @@ func Signin(ctx context.Context, emailOrUsername string, password string) (any, 
 	authJwt, err := securityServices.JwtSign(appTypes.ClientUser{
 		Id:       theUser.Id,
 		Username: theUser.Username,
-	}, os.Getenv("AUTH_JWT_SECRET"), time.Now().UTC().Add(365*24*time.Hour))
+	}, os.Getenv("AUTH_JWT_SECRET"), time.Now().UTC().Add(10*24*time.Hour))
 
 	if err != nil {
 		return nil, err

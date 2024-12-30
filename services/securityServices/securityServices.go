@@ -56,7 +56,7 @@ func JwtSign(data any, secret string, expires time.Time) (string, error) {
 
 	if err != nil {
 		log.Println("securityServices.go: JwtSign:", err)
-		return "", appGlobals.ErrInternalServerError
+		return "", fiber.ErrInternalServerError
 	}
 
 	return jwt, err
