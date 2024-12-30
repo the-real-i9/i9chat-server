@@ -165,47 +165,32 @@ client_event_stream:
 	}
 }
 
-var ChangeProfilePicture = websocket.New(func(c *websocket.Conn) {
+func ChangeProfilePicture(c *fiber.Ctx) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
 	clientUser := c.Locals("user").(*appTypes.ClientUser)
 
-	var w_err error
+	var body changeProfilePictureBody
 
-	for {
-		var body changeProfilePictureBody
-
-		if w_err != nil {
-			log.Println(w_err)
-			break
-		}
-
-		r_err := c.ReadJSON(&body)
-		if r_err != nil {
-			log.Println(r_err)
-			break
-		}
-
-		if val_err := body.Validate(); val_err != nil {
-			w_err = c.WriteJSON(helpers.ErrResp(val_err))
-			continue
-		}
-
-		respData, app_err := userService.ChangeProfilePicture(ctx, clientUser.Id, clientUser.Username, body.PictureData)
-		if app_err != nil {
-			w_err = c.WriteJSON(helpers.ErrResp(app_err))
-			continue
-		}
-
-		w_err = c.WriteJSON(appTypes.WSResp{
-			StatusCode: fiber.StatusOK,
-			Body:       respData,
-		})
+	body_err := c.BodyParser(&body)
+	if body_err != nil {
+		return body_err
 	}
-})
 
-var UpdateMyLocation = websocket.New(func(c *websocket.Conn) {
+	if val_err := body.Validate(); val_err != nil {
+		return c.Status(fiber.StatusBadRequest).SendString(val_err.Error())
+	}
+
+	respData, app_err := userService.ChangeProfilePicture(ctx, clientUser.Id, clientUser.Username, body.PictureData)
+	if app_err != nil {
+		return app_err
+	}
+
+	return c.JSON(respData)
+}
+
+func UpdateMyLocation(c *fiber.Ctx) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -213,183 +198,90 @@ var UpdateMyLocation = websocket.New(func(c *websocket.Conn) {
 
 	var body updateMyGeolocationBody
 
-	var w_err error
-
-	for {
-		if w_err != nil {
-			log.Println(w_err)
-			break
-		}
-
-		r_err := c.ReadJSON(&body)
-		if r_err != nil {
-			log.Println(r_err)
-			break
-		}
-
-		if val_err := body.Validate(); val_err != nil {
-			w_err = c.WriteJSON(helpers.ErrResp(val_err))
-			continue
-		}
-
-		respData, app_err := userService.UpdateMyLocation(ctx, clientUser.Id, body.NewGeolocation)
-
-		if app_err != nil {
-			w_err = c.WriteJSON(helpers.ErrResp(app_err))
-			continue
-		}
-
-		w_err = c.WriteJSON(appTypes.WSResp{
-			StatusCode: 200,
-			Body:       respData,
-		})
+	body_err := c.BodyParser(&body)
+	if body_err != nil {
+		return body_err
 	}
-})
 
-var GetAllUsers = websocket.New(func(c *websocket.Conn) {
+	if val_err := body.Validate(); val_err != nil {
+		return c.Status(fiber.StatusBadRequest).SendString(val_err.Error())
+	}
+
+	respData, app_err := userService.UpdateMyLocation(ctx, clientUser.Id, body.NewGeolocation)
+
+	if app_err != nil {
+		return app_err
+	}
+
+	return c.JSON(respData)
+}
+
+func GetAllUsers(c *fiber.Ctx) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
 	clientUser := c.Locals("user").(*appTypes.ClientUser)
 
 	respData, app_err := userService.GetAllUsers(ctx, clientUser.Id)
-
-	var w_err error
-
-	for {
-		if w_err != nil {
-			log.Println(w_err)
-			break
-		}
-
-		if app_err != nil {
-			w_err = c.WriteJSON(helpers.ErrResp(app_err))
-		} else {
-			w_err = c.WriteJSON(appTypes.WSResp{
-				StatusCode: fiber.StatusOK,
-				Body:       respData,
-			})
-		}
-
-		var body struct{}
-		if r_err := c.ReadJSON(&body); r_err != nil {
-			log.Println(r_err)
-			break
-		}
+	if app_err != nil {
+		return app_err
 	}
-})
 
-var SearchUser = websocket.New(func(c *websocket.Conn) {
+	return c.JSON(respData)
+}
+
+func SearchUser(c *fiber.Ctx) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
 	clientUser := c.Locals("user").(*appTypes.ClientUser)
 
-	var w_err error
+	query := c.Query("q")
 
-	for {
-		var body struct {
-			Query string
-		}
+	respData, app_err := userService.SearchUser(ctx, clientUser.Id, query)
 
-		if w_err != nil {
-			log.Println(w_err)
-			break
-		}
-
-		r_err := c.ReadJSON(&body)
-		if r_err != nil {
-			log.Println(r_err)
-			break
-		}
-
-		respData, app_err := userService.SearchUser(ctx, clientUser.Id, body.Query)
-
-		if app_err != nil {
-			w_err = c.WriteJSON(helpers.ErrResp(app_err))
-			continue
-		}
-
-		w_err = c.WriteJSON(appTypes.WSResp{
-			StatusCode: 200,
-			Body:       respData,
-		})
+	if app_err != nil {
+		return app_err
 	}
-})
 
-var FindNearbyUsers = websocket.New(func(c *websocket.Conn) {
+	return c.JSON(respData)
+}
+
+func FindNearbyUsers(c *fiber.Ctx) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
 	clientUser := c.Locals("user").(*appTypes.ClientUser)
 
-	var w_err error
+	var body findNearbyUsersBody
 
-	for {
-		var body findNearbyUsersBody
-
-		if w_err != nil {
-			log.Println(w_err)
-			break
-		}
-
-		r_err := c.ReadJSON(&body)
-		if r_err != nil {
-			log.Println(r_err)
-			break
-		}
-
-		if val_err := body.Validate(); val_err != nil {
-			w_err = c.WriteJSON(helpers.ErrResp(val_err))
-			continue
-		}
-
-		respData, app_err := userService.FindNearbyUsers(ctx, clientUser.Id, body.LiveLocation)
-
-		if app_err != nil {
-			w_err = c.WriteJSON(helpers.ErrResp(app_err))
-			continue
-		}
-
-		w_err = c.WriteJSON(appTypes.WSResp{
-			StatusCode: 200,
-			Body:       respData,
-		})
+	body_err := c.BodyParser(&body)
+	if body_err != nil {
+		return body_err
 	}
-})
 
-// This handler merely get chats as is from the database, no updates accounted for yet.
-// After closing this,  we must "GoOnline" to retrieve updates
-var GetMyChats = websocket.New(func(c *websocket.Conn) {
+	if val_err := body.Validate(); val_err != nil {
+		return c.Status(fiber.StatusBadRequest).SendString(val_err.Error())
+	}
+
+	respData, app_err := userService.FindNearbyUsers(ctx, clientUser.Id, body.LiveLocation)
+	if app_err != nil {
+		return app_err
+	}
+
+	return c.JSON(respData)
+}
+
+func GetMyChats(c *fiber.Ctx) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
 	clientUser := c.Locals("user").(*appTypes.ClientUser)
 
 	respData, app_err := userService.GetMyChats(ctx, clientUser.Id)
-
-	var w_err error
-
-	for {
-		if w_err != nil {
-			log.Println(w_err)
-			break
-		}
-
-		if app_err != nil {
-			w_err = c.WriteJSON(helpers.ErrResp(app_err))
-		} else {
-
-			w_err = c.WriteJSON(appTypes.WSResp{
-				StatusCode: fiber.StatusOK,
-				Body:       respData,
-			})
-		}
-
-		var body struct{}
-		if r_err := c.ReadJSON(&body); r_err != nil {
-			log.Println(r_err)
-			break
-		}
+	if app_err != nil {
+		return app_err
 	}
-})
+
+	return c.JSON(respData)
+}

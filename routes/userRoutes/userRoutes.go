@@ -12,8 +12,8 @@ func Init(router fiber.Router) {
 
 	router.Get("/go_online", am, UC.OpenWSStream)
 
-	router.Get("/change_profile_picture", am, UC.ChangeProfilePicture)
-	router.Get("/update_my_geolocation", am, UC.UpdateMyLocation)
+	router.Post("/change_profile_picture", am, UC.ChangeProfilePicture)
+	router.Post("/update_my_geolocation", am, UC.UpdateMyLocation)
 
 	router.Get("/all_users", am, UC.GetAllUsers)
 	router.Get("/search_user", am, UC.SearchUser)
