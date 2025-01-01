@@ -9,9 +9,15 @@ import (
 	validation "github.com/go-ozzo/ozzo-validation/v4"
 )
 
+type SignupSessionData struct {
+	Email                   string    `json:"email"`
+	VerificationCode        int       `json:"verificationCode"`
+	VerificationCodeExpires time.Time `json:"verificationCodeExpires"`
+}
+
 type SignupSession struct {
-	Step string
-	Data any
+	Step string `json:"step"`
+	Data *SignupSessionData
 }
 
 type ClientUser struct {

@@ -2,6 +2,7 @@ package signupControllers
 
 import (
 	"context"
+	"encoding/json"
 	"i9chat/appGlobals"
 	"i9chat/appTypes"
 	"i9chat/services/auth/signupService"
@@ -37,7 +38,13 @@ func RequestNewAccount(c *fiber.Ctx) error {
 		return fiber.ErrInternalServerError
 	}
 
-	sess.Set("signup_session", sessionData)
+	sd, err := json.Marshal(sessionData)
+	if err != nil {
+		log.Println("signupControllers.go: RequestNewAccount: json.Marshal:", err)
+		return fiber.ErrInternalServerError
+	}
+
+	sess.Set("signup_session", sd)
 
 	if err := sess.Save(); err != nil {
 		log.Println("signupControllers.go: RequestNewAccount: sess.Save:", err)
@@ -53,7 +60,14 @@ func VerifyEmail(c *fiber.Ctx) error {
 
 	sess := c.Locals("session").(*session.Session)
 
-	signupSession := sess.Get("signup_session").(*appTypes.SignupSession)
+	ssbt := sess.Get("signup_session").([]byte)
+
+	var signupSession appTypes.SignupSession
+
+	if err := json.Unmarshal(ssbt, &signupSession); err != nil {
+		log.Println("signupControllers.go: VerifyEmail: json.Unmarshal:", err)
+		return fiber.ErrInternalServerError
+	}
 
 	var body verifyEmailBody
 
@@ -71,7 +85,13 @@ func VerifyEmail(c *fiber.Ctx) error {
 		return app_err
 	}
 
-	sess.Set("signup_session", updatedSessionData)
+	usd, err := json.Marshal(updatedSessionData)
+	if err != nil {
+		log.Println("signupControllers.go: RequestNewAccount: json.Marshal:", err)
+		return fiber.ErrInternalServerError
+	}
+
+	sess.Set("signup_session", usd)
 
 	if err := sess.Save(); err != nil {
 		log.Println("signupControllers.go: VerifyEmail: sess.Save:", err)
@@ -87,7 +107,14 @@ func RegisterUser(c *fiber.Ctx) error {
 
 	sess := c.Locals("session").(*session.Session)
 
-	signupSession := sess.Get("signup_session").(*appTypes.SignupSession)
+	ssbt := sess.Get("signup_session").([]byte)
+
+	var signupSession appTypes.SignupSession
+
+	if err := json.Unmarshal(ssbt, &signupSession); err != nil {
+		log.Println("signupControllers.go: VerifyEmail: json.Unmarshal:", err)
+		return fiber.ErrInternalServerError
+	}
 
 	var body registerUserBody
 

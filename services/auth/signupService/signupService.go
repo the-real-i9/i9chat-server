@@ -30,11 +30,7 @@ func RequestNewAccount(ctx context.Context, email string) (any, *appTypes.Signup
 
 	sessionData := &appTypes.SignupSession{
 		Step: "verify email",
-		Data: struct {
-			Email                   string
-			VerificationCode        int
-			VerificationCodeExpires time.Time
-		}{email, verfCode, expires},
+		Data: &appTypes.SignupSessionData{Email: email, VerificationCode: verfCode, VerificationCodeExpires: expires},
 	}
 
 	respData := map[string]any{
@@ -44,15 +40,7 @@ func RequestNewAccount(ctx context.Context, email string) (any, *appTypes.Signup
 	return respData, sessionData, nil
 }
 
-func VerifyEmail(ctx context.Context, signupSessionData any, inputVerfCode int) (any, *appTypes.SignupSession, error) {
-	type sessionDataT struct {
-		Email                   string
-		VerificationCode        int
-		VerificationCodeExpires time.Time
-	}
-
-	sessionData := signupSessionData.(sessionDataT)
-
+func VerifyEmail(ctx context.Context, sessionData *appTypes.SignupSessionData, inputVerfCode int) (any, *appTypes.SignupSession, error) {
 	if sessionData.VerificationCode != inputVerfCode {
 		return "", nil, fiber.NewError(fiber.StatusBadRequest, "email verification error: incorrect verification code")
 	}
@@ -65,9 +53,7 @@ func VerifyEmail(ctx context.Context, signupSessionData any, inputVerfCode int) 
 
 	updatedSessionData := &appTypes.SignupSession{
 		Step: "register user",
-		Data: struct {
-			Email string
-		}{sessionData.Email},
+		Data: &appTypes.SignupSessionData{Email: sessionData.Email},
 	}
 
 	respData := map[string]any{
@@ -77,14 +63,7 @@ func VerifyEmail(ctx context.Context, signupSessionData any, inputVerfCode int) 
 	return respData, updatedSessionData, nil
 }
 
-func RegisterUser(ctx context.Context, signupSessionData any, username, password, geolocation string) (any, error) {
-
-	type sessionDataT struct {
-		Email string
-	}
-
-	sessionData := signupSessionData.(sessionDataT)
-
+func RegisterUser(ctx context.Context, sessionData *appTypes.SignupSessionData, username, password, geolocation string) (any, error) {
 	accExists, err := appModel.AccountExists(ctx, username)
 	if err != nil {
 		return nil, err

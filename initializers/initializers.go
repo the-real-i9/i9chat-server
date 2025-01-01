@@ -57,9 +57,10 @@ func configSessionStore() {
 	}
 
 	appGlobals.SignupSessionStore = session.New(session.Config{
-		Storage:      getStorage("ongoing_signup"),
-		CookiePath:   "/api/auth/signup",
-		CookieDomain: os.Getenv("APP_DOMAIN"),
+		Storage:        getStorage("ongoing_signup"),
+		CookiePath:     "/api/auth/signup",
+		CookieDomain:   os.Getenv("APP_DOMAIN"),
+		CookieHTTPOnly: true,
 	})
 }
 

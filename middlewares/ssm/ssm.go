@@ -2,6 +2,7 @@
 package ssm
 
 import (
+	"encoding/json"
 	"i9chat/appGlobals"
 	"i9chat/appTypes"
 	"log"
@@ -16,7 +17,14 @@ func VerifyEmail(c *fiber.Ctx) error {
 		return fiber.ErrInternalServerError
 	}
 
-	signupSession := sess.Get("signup_session").(*appTypes.SignupSession)
+	ssbt := sess.Get("signup_session").([]byte)
+
+	var signupSession appTypes.SignupSession
+
+	if err := json.Unmarshal(ssbt, &signupSession); err != nil {
+		log.Println("ssm.go: VerifyEmail: json.Unmarshal:", err)
+		return fiber.ErrInternalServerError
+	}
 
 	if signupSession.Step != "verify email" {
 		return c.Status(fiber.StatusUnauthorized).SendString("session error")
@@ -34,7 +42,14 @@ func RegisterUser(c *fiber.Ctx) error {
 		return fiber.ErrInternalServerError
 	}
 
-	signupSession := sess.Get("session").(*appTypes.SignupSession)
+	ssbt := sess.Get("signup_session").([]byte)
+
+	var signupSession appTypes.SignupSession
+
+	if err := json.Unmarshal(ssbt, &signupSession); err != nil {
+		log.Println("ssm.go: RegisterUser: json.Unmarshal:", err)
+		return fiber.ErrInternalServerError
+	}
 
 	if signupSession.Step != "register user" {
 		return c.Status(fiber.StatusUnauthorized).SendString("session error")

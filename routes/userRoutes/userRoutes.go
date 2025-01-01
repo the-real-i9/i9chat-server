@@ -4,11 +4,20 @@ import (
 	UC "i9chat/controllers/userControllers"
 	"i9chat/middlewares"
 
+	"github.com/gofiber/contrib/websocket"
 	"github.com/gofiber/fiber/v2"
 )
 
 func Init(router fiber.Router) {
 	am := middlewares.Auth
+
+	router.Use("/go_online", func(c *fiber.Ctx) error {
+		if websocket.IsWebSocketUpgrade(c) {
+			return c.Next()
+		}
+
+		return fiber.ErrUpgradeRequired
+	})
 
 	router.Get("/go_online", am, UC.OpenWSStream)
 

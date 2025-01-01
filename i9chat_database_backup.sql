@@ -270,24 +270,6 @@ $_$;
 ALTER FUNCTION public.edit_user(in_user_id integer, in_col_updates character varying[]) OWNER TO i9;
 
 --
--- Name: end_signup_session(uuid); Type: FUNCTION; Schema: public; Owner: i9
---
-
-CREATE FUNCTION public.end_signup_session(in_session_id uuid) RETURNS boolean
-    LANGUAGE plpgsql
-    AS $$
-BEGIN
-  DELETE FROM ongoing_signup 
-  WHERE session_id = in_session_id;
-  
-  RETURN true;
-END;
-$$;
-
-
-ALTER FUNCTION public.end_signup_session(in_session_id uuid) OWNER TO i9;
-
---
 -- Name: find_nearby_users(integer, circle); Type: FUNCTION; Schema: public; Owner: i9
 --
 
@@ -327,10 +309,10 @@ $$;
 ALTER FUNCTION public.get_all_users(in_client_id integer) OWNER TO i9;
 
 --
--- Name: get_dm_chat_history(integer); Type: FUNCTION; Schema: public; Owner: i9
+-- Name: get_dm_chat_history(character varying); Type: FUNCTION; Schema: public; Owner: i9
 --
 
-CREATE FUNCTION public.get_dm_chat_history(in_dm_chat_id integer) RETURNS TABLE(msg_id integer, sender json, msg_content json, edited boolean, delivery_status character varying, created_at timestamp without time zone, edited_at timestamp without time zone, reactions json)
+CREATE FUNCTION public.get_dm_chat_history(in_dm_chat_id character varying) RETURNS TABLE(msg_id integer, sender json, msg_content json, edited boolean, delivery_status character varying, created_at timestamp without time zone, edited_at timestamp without time zone, reactions json)
     LANGUAGE plpgsql
     AS $$
 BEGIN
@@ -357,11 +339,12 @@ BEGIN
 			  )
 		  )
 	) ELSE '[]'::json END AS reactions
-  FROM dm_chat_message dcm
+  FROM msgs_in_user_dm_chat miudc
+  INNER JOIN dm_chat_message dcm ON dcm.id = miudc.msg_id
   INNER JOIN i9c_user sender ON sender.id = dcm.sender_id
-  LEFT JOIN dm_chat_message_reaction dcmr ON dcmr.message_id = dcm.id AND dcmr.deleted = false
+  LEFT JOIN dm_chat_message_reaction dcmr ON dcmr.message_id = dcm.id
   LEFT JOIN i9c_user reactor ON reactor.id = dcmr.reactor_id
-  WHERE dcm.dm_chat_id = in_dm_chat_id AND dcm.deleted = false
+  WHERE miudc.user_dm_chat_id = in_dm_chat_id
   GROUP BY dcm.id, sender.id
   ORDER BY dcm.created_at DESC;
   
@@ -370,7 +353,7 @@ END;
 $$;
 
 
-ALTER FUNCTION public.get_dm_chat_history(in_dm_chat_id integer) OWNER TO i9;
+ALTER FUNCTION public.get_dm_chat_history(in_dm_chat_id character varying) OWNER TO i9;
 
 --
 -- Name: get_group_chat_history(integer); Type: FUNCTION; Schema: public; Owner: i9
@@ -457,8 +440,8 @@ BEGIN
 		  'last_seen', partner.last_seen
 	  )
   ) AS my_chat, updated_at FROM user_dm_chat
-  INNER JOIN i9c_user partner ON partner.id = user_dm_chat.partner_id
-  WHERE user_dm_chat.user_id = in_user_id
+  INNER JOIN i9c_user partner ON partner.id = user_dm_chat.partner_user_id
+  WHERE user_dm_chat.owner_user_id = in_user_id
   UNION
   SELECT jsonb_build_object(
 	  'type', 'group',
@@ -631,31 +614,38 @@ ALTER FUNCTION public.make_user_group_admin(in_group_chat_id integer, in_admin c
 -- Name: new_dm_chat(integer, integer, json, timestamp without time zone); Type: FUNCTION; Schema: public; Owner: i9
 --
 
-CREATE FUNCTION public.new_dm_chat(in_initiator_id integer, in_partner_id integer, in_init_msg_content json, in_created_at timestamp without time zone, OUT initiator_resp_data json, OUT partner_resp_data json) RETURNS record
+CREATE FUNCTION public.new_dm_chat(in_client_user_id integer, in_partner_user_id integer, in_init_msg_content json, in_created_at timestamp without time zone, OUT client_resp_data json, OUT partner_resp_data json) RETURNS record
     LANGUAGE plpgsql
     AS $$
 DECLARE
-  new_dm_chat_id int;
   init_msg_id int;
+
+  client_user_dm_chat_id varchar := concat(in_client_user_id, '_', in_partner_user_id)::varchar;
+  partner_user_dm_chat_id varchar := concat(in_partner_user_id, '_', in_client_user_id)::varchar;
   
-  initiator_user_data json;
+  client_user_data json;
 BEGIN
-  -- create dm_chat
-  INSERT INTO dm_chat (initiator_id, partner_id, created_at) 
-  VALUES (in_initiator_id, in_partner_id, in_created_at)
-  RETURNING id INTO new_dm_chat_id;
   
-  -- create user_dm_chat for both initiator and partner
-  INSERT INTO user_dm_chat (user_id, partner_id, dm_chat_id, updated_at) 
-  VALUES (in_initiator_id, in_partner_id, new_dm_chat_id, in_created_at);
+  -- create user_dm_chat: client user dm chat
+  INSERT INTO user_dm_chat (id, owner_user_id, partner_user_id, updated_at) 
+  VALUES (client_user_dm_chat_id, in_client_user_id, in_partner_user_id, in_created_at);
   
-  INSERT INTO user_dm_chat (user_id, partner_id, dm_chat_id) 
-  VALUES (in_partner_id, in_initiator_id, new_dm_chat_id);
+  -- create user_dm_chat: partner user dm chat
+  INSERT INTO user_dm_chat (id, owner_user_id, partner_user_id, updated_at) 
+  VALUES (concat(in_partner_user_id, '_', in_client_user_id)::varchar, in_partner_user_id, in_client_user_id, in_created_at);
   
   -- create dm_chat_message
-  INSERT INTO dm_chat_message (sender_id, dm_chat_id, msg_content, created_at) 
-  VALUES (in_initiator_id, new_dm_chat_id, in_init_msg_content, in_created_at)
+  INSERT INTO dm_chat_message (msg_content, created_at, sender_id) 
+  VALUES (in_init_msg_content, in_created_at, in_client_user_id)
   RETURNING id INTO init_msg_id;
+
+  -- put message in client user's chat as 'sender'
+  INSERT INTO msgs_in_user_dm_chat (msg_id, user_dm_chat_id, rel)
+  VALUES (init_msg_id, client_user_dm_chat_id, 'sent_in');
+  
+  -- put message in partner user's chat as 'receiver'
+  INSERT INTO msgs_in_user_dm_chat (msg_id, user_dm_chat_id, rel)
+  VALUES (init_msg_id, partner_user_dm_chat_id, 'received_in');
   
   SELECT json_build_object(
 		  'id', id,
@@ -663,16 +653,17 @@ BEGIN
 		  'profile_picture_url', profile_picture_url,
 		  'presence', presence,
 		  'last_seen', last_seen
-	  ) FROM i9c_user WHERE id = in_initiator_id INTO initiator_user_data;
+	  ) FROM i9c_user WHERE id = in_client_user_id INTO client_user_data;
   
-  initiator_resp_data := json_build_object('new_dm_chat_id', new_dm_chat_id, 'init_msg_id', init_msg_id);
+  client_resp_data := json_build_object('dm_chat_id', client_user_dm_chat_id, 'init_msg_id', init_msg_id);
   partner_resp_data := json_build_object(
 	  'type', 'dm',
-	  'dm_chat_id', new_dm_chat_id, 
-	  'partner', initiator_user_data,
+	  'dm_chat_id', partner_user_dm_chat_id, 
+	  'partner', client_user_data,
 	  'init_msg', json_build_object(
+	      'sender', client_user_data,
 		  'id', init_msg_id,
-		  'content', in_init_msg_content
+		  'msg_content', in_init_msg_content
 	  )
   );
   
@@ -681,7 +672,7 @@ END;
 $$;
 
 
-ALTER FUNCTION public.new_dm_chat(in_initiator_id integer, in_partner_id integer, in_init_msg_content json, in_created_at timestamp without time zone, OUT initiator_resp_data json, OUT partner_resp_data json) OWNER TO i9;
+ALTER FUNCTION public.new_dm_chat(in_client_user_id integer, in_partner_user_id integer, in_init_msg_content json, in_created_at timestamp without time zone, OUT client_resp_data json, OUT partner_resp_data json) OWNER TO i9;
 
 --
 -- Name: new_group_chat(character varying, character varying, character varying, character varying[], character varying[]); Type: FUNCTION; Schema: public; Owner: i9
@@ -746,27 +737,6 @@ $$;
 
 
 ALTER FUNCTION public.new_group_chat(in_name character varying, in_description character varying, in_picture_url character varying, in_creator character varying[], in_init_users character varying[], OUT creator_resp_data json, OUT init_member_resp_data json) OWNER TO i9;
-
---
--- Name: new_signup_session(character varying, integer); Type: FUNCTION; Schema: public; Owner: i9
---
-
-CREATE FUNCTION public.new_signup_session(in_email character varying, in_verification_code integer, OUT session_id uuid) RETURNS uuid
-    LANGUAGE plpgsql
-    AS $$
-BEGIN
-  DELETE FROM ongoing_signup WHERE email = in_email;  
-  
-  INSERT INTO ongoing_signup (email, verification_code)
-  VALUES (in_email, in_verification_code)
-  RETURNING ongoing_signup.session_id INTO session_id;
-  
-  RETURN;
-END;
-$$;
-
-
-ALTER FUNCTION public.new_signup_session(in_email character varying, in_verification_code integer, OUT session_id uuid) OWNER TO i9;
 
 --
 -- Name: new_user(character varying, character varying, character varying, circle); Type: FUNCTION; Schema: public; Owner: i9
@@ -928,41 +898,52 @@ $$;
 ALTER FUNCTION public.search_user(in_client_id integer, search_query text) OWNER TO i9;
 
 --
--- Name: send_dm_chat_message(integer, integer, json, timestamp without time zone); Type: FUNCTION; Schema: public; Owner: i9
+-- Name: send_dm_chat_message(character varying, integer, json, timestamp without time zone); Type: FUNCTION; Schema: public; Owner: i9
 --
 
-CREATE FUNCTION public.send_dm_chat_message(in_dm_chat_id integer, in_sender_id integer, in_msg_content json, in_created_at timestamp without time zone, OUT sender_resp_data json, OUT receiver_resp_data json, OUT receiver_id integer) RETURNS record
+CREATE FUNCTION public.send_dm_chat_message(in_client_dm_chat_id character varying, in_client_user_id integer, in_msg_content json, in_created_at timestamp without time zone, OUT client_resp_data json, OUT partner_resp_data json, OUT partner_user_id integer, OUT partner_dm_chat_id character varying) RETURNS record
     LANGUAGE plpgsql
     AS $$
 DECLARE
   new_msg_id int;
   
-  sender_info json;
+  sender_user json;
 BEGIN
   -- create dm_chat_message
-  INSERT INTO dm_chat_message (sender_id, dm_chat_id, msg_content, created_at) 
-  VALUES (in_sender_id, in_dm_chat_id, in_msg_content, in_created_at)
+  INSERT INTO dm_chat_message (sender_id, msg_content, created_at) 
+  VALUES (in_client_user_id, in_msg_content, in_created_at)
   RETURNING id INTO new_msg_id;
   
   -- update user_dm_chat
   UPDATE user_dm_chat 
   SET updated_at = in_created_at
-  WHERE user_id = in_sender_id AND dm_chat_id = in_dm_chat_id
-  RETURNING partner_id INTO receiver_id;
+  WHERE id = in_dm_chat_id
+  RETURNING partner_user_id INTO partner_user_id;
+
+  SELECT id INTO partner_dm_chat_id FROM user_dm_chat WHERE owner_user_id = partner_user_id AND partner_user_id = in_client_user_id;
+
+  INSERT INTO msgs_in_user_dm_chat (msg_id, user_dm_chat_id, rel)
+  VALUES (new_msg_id, in_client_dm_chat_id, 'sent_in');
   
+  INSERT INTO msgs_in_user_dm_chat (msg_id, user_dm_chat_id, rel)
+  VALUES (new_msg_id, partner_dm_chat_id, 'received_in');
+
   SELECT json_build_object (
 	  'id', id,
 	  'username', username,
-	  'profile_picture_url', profile_picture_url
-  ) FROM i9c_user WHERE id = in_sender_id INTO sender_info;
+	  'profile_picture_url', profile_picture_url,
+	  'connection_status', connection_status
+  ) FROM i9c_user WHERE id = in_client_user_id INTO sender_user;
   
-  sender_resp_data := json_build_object('new_msg_id', new_msg_id);
-  receiver_resp_data := json_build_object(
+  client_resp_data := json_build_object('new_msg_id', new_msg_id);
+  partner_resp_data := json_build_object(
 	  'in', 'dm chat',
-	  'msg_id', new_msg_id,
 	  'dm_chat_id', in_dm_chat_id,
-	  'sender', sender_info,
-	  'content', in_msg_content
+	  'new_message', json_build_object(
+	    'id', new_msg_id,
+	    'msg_content', in_msg_content
+	    'sender', sender_user
+	  )
   );
   
   RETURN;
@@ -970,7 +951,7 @@ END;
 $$;
 
 
-ALTER FUNCTION public.send_dm_chat_message(in_dm_chat_id integer, in_sender_id integer, in_msg_content json, in_created_at timestamp without time zone, OUT sender_resp_data json, OUT receiver_resp_data json, OUT receiver_id integer) OWNER TO i9;
+ALTER FUNCTION public.send_dm_chat_message(in_client_dm_chat_id character varying, in_client_user_id integer, in_msg_content json, in_created_at timestamp without time zone, OUT client_resp_data json, OUT partner_resp_data json, OUT partner_user_id integer, OUT partner_dm_chat_id character varying) OWNER TO i9;
 
 --
 -- Name: send_group_chat_message(integer, integer, json, timestamp without time zone); Type: FUNCTION; Schema: public; Owner: i9
@@ -1023,25 +1004,6 @@ $$;
 
 
 ALTER FUNCTION public.send_group_chat_message(in_group_chat_id integer, in_sender_id integer, in_msg_content json, in_created_at timestamp without time zone, OUT sender_resp_data json, OUT member_resp_data json, OUT members_ids integer[]) OWNER TO i9;
-
---
--- Name: signup_session_email_verified(uuid); Type: FUNCTION; Schema: public; Owner: i9
---
-
-CREATE FUNCTION public.signup_session_email_verified(in_session_id uuid, OUT is_verified boolean) RETURNS boolean
-    LANGUAGE plpgsql
-    AS $$
-BEGIN
-  SELECT verified FROM ongoing_signup 
-  WHERE session_id = in_session_id
-  INTO is_verified;
-  
-  RETURN;
-END;
-$$;
-
-
-ALTER FUNCTION public.signup_session_email_verified(in_session_id uuid, OUT is_verified boolean) OWNER TO i9;
 
 --
 -- Name: update_dm_chat_message_delivery_status(integer, integer, integer, character varying, timestamp without time zone); Type: FUNCTION; Schema: public; Owner: i9
@@ -1169,29 +1131,6 @@ $$;
 
 ALTER FUNCTION public.update_user_location(in_user_id integer, in_new_location circle) OWNER TO i9;
 
---
--- Name: verify_email(uuid, integer); Type: FUNCTION; Schema: public; Owner: i9
---
-
-CREATE FUNCTION public.verify_email(in_session_id uuid, in_verf_code integer, OUT is_success boolean) RETURNS boolean
-    LANGUAGE plpgsql
-    AS $$
-BEGIN    
-  IF (SELECT verification_code FROM ongoing_signup WHERE session_id = in_session_id) = in_verf_code THEN
-    UPDATE ongoing_signup SET verified = true 
-	WHERE session_id = in_session_id;
-    is_success := true;
-  ELSE 
-    is_success := false;
-  END IF;
-  
-  RETURN;
-END;
-$$;
-
-
-ALTER FUNCTION public.verify_email(in_session_id uuid, in_verf_code integer, OUT is_success boolean) OWNER TO i9;
-
 SET default_tablespace = '';
 
 SET default_table_access_method = heap;
@@ -1239,14 +1178,13 @@ ALTER SEQUENCE public.dm_chat_id_seq OWNED BY public.dm_chat.id;
 
 CREATE TABLE public.dm_chat_message (
     id integer NOT NULL,
-    sender_id integer NOT NULL,
-    dm_chat_id integer NOT NULL,
     msg_content json NOT NULL,
     edited boolean DEFAULT false NOT NULL,
     delivery_status character varying DEFAULT 'sent'::character varying NOT NULL,
     created_at timestamp without time zone DEFAULT now() NOT NULL,
     edited_at timestamp without time zone,
     deleted boolean DEFAULT false NOT NULL,
+    sender_id integer,
     CONSTRAINT dm_chat_message_delivery_status_check CHECK (((delivery_status)::text = ANY (ARRAY['sent'::text, 'delivered'::text, 'seen'::text])))
 );
 
@@ -1592,57 +1530,33 @@ ALTER SEQUENCE public.i9c_user_id_seq OWNED BY public.i9c_user.id;
 
 
 --
--- Name: ongoing_signup; Type: TABLE; Schema: public; Owner: i9
+-- Name: msgs_in_user_dm_chat; Type: TABLE; Schema: public; Owner: i9
 --
 
-CREATE TABLE public.ongoing_signup (
-    session_id uuid DEFAULT gen_random_uuid() NOT NULL,
-    email character varying NOT NULL,
-    verification_code integer NOT NULL,
-    verified boolean DEFAULT false NOT NULL
+CREATE TABLE public.msgs_in_user_dm_chat (
+    msg_id integer NOT NULL,
+    user_dm_chat_id character varying NOT NULL,
+    rel text NOT NULL,
+    CONSTRAINT msgs_in_user_dm_chat_rel_check CHECK ((rel = ANY (ARRAY['sent_in'::text, 'received_in'::text])))
 );
 
 
-ALTER TABLE public.ongoing_signup OWNER TO i9;
+ALTER TABLE public.msgs_in_user_dm_chat OWNER TO i9;
 
 --
 -- Name: user_dm_chat; Type: TABLE; Schema: public; Owner: i9
 --
 
 CREATE TABLE public.user_dm_chat (
-    id integer NOT NULL,
-    user_id integer NOT NULL,
-    partner_id integer NOT NULL,
-    dm_chat_id integer NOT NULL,
+    id character varying NOT NULL,
+    owner_user_id integer NOT NULL,
+    partner_user_id integer,
     unread_messages_count integer DEFAULT 0 NOT NULL,
-    updated_at timestamp without time zone DEFAULT now() NOT NULL,
-    deleted boolean DEFAULT false NOT NULL
+    updated_at timestamp without time zone DEFAULT now()
 );
 
 
 ALTER TABLE public.user_dm_chat OWNER TO i9;
-
---
--- Name: user_dm_chat_id_seq; Type: SEQUENCE; Schema: public; Owner: i9
---
-
-CREATE SEQUENCE public.user_dm_chat_id_seq
-    AS integer
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
-ALTER SEQUENCE public.user_dm_chat_id_seq OWNER TO i9;
-
---
--- Name: user_dm_chat_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: i9
---
-
-ALTER SEQUENCE public.user_dm_chat_id_seq OWNED BY public.user_dm_chat.id;
-
 
 --
 -- Name: user_group_chat; Type: TABLE; Schema: public; Owner: i9
@@ -1753,13 +1667,6 @@ ALTER TABLE ONLY public.i9c_user ALTER COLUMN id SET DEFAULT nextval('public.i9c
 
 
 --
--- Name: user_dm_chat id; Type: DEFAULT; Schema: public; Owner: i9
---
-
-ALTER TABLE ONLY public.user_dm_chat ALTER COLUMN id SET DEFAULT nextval('public.user_dm_chat_id_seq'::regclass);
-
-
---
 -- Name: user_group_chat id; Type: DEFAULT; Schema: public; Owner: i9
 --
 
@@ -1863,27 +1770,11 @@ ALTER TABLE ONLY public.i9c_user
 
 
 --
--- Name: ongoing_signup ongoing_signup_pkey; Type: CONSTRAINT; Schema: public; Owner: i9
---
-
-ALTER TABLE ONLY public.ongoing_signup
-    ADD CONSTRAINT ongoing_signup_pkey PRIMARY KEY (session_id);
-
-
---
--- Name: user_dm_chat user_dm_chat_user_id_dm_chat_id_key; Type: CONSTRAINT; Schema: public; Owner: i9
+-- Name: user_dm_chat user_dm_chat_pkey; Type: CONSTRAINT; Schema: public; Owner: i9
 --
 
 ALTER TABLE ONLY public.user_dm_chat
-    ADD CONSTRAINT user_dm_chat_user_id_dm_chat_id_key UNIQUE (user_id, dm_chat_id);
-
-
---
--- Name: user_dm_chat user_dm_chat_user_id_partner_id_key; Type: CONSTRAINT; Schema: public; Owner: i9
---
-
-ALTER TABLE ONLY public.user_dm_chat
-    ADD CONSTRAINT user_dm_chat_user_id_partner_id_key UNIQUE (user_id, partner_id);
+    ADD CONSTRAINT user_dm_chat_pkey PRIMARY KEY (id);
 
 
 --
@@ -1900,14 +1791,6 @@ ALTER TABLE ONLY public.user_group_chat
 
 ALTER TABLE ONLY public.dm_chat
     ADD CONSTRAINT dm_chat_initiator_id_fkey FOREIGN KEY (initiator_id) REFERENCES public.i9c_user(id) ON DELETE CASCADE;
-
-
---
--- Name: dm_chat_message dm_chat_message_dm_chat_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: i9
---
-
-ALTER TABLE ONLY public.dm_chat_message
-    ADD CONSTRAINT dm_chat_message_dm_chat_id_fkey FOREIGN KEY (dm_chat_id) REFERENCES public.dm_chat(id) ON DELETE CASCADE;
 
 
 --
@@ -1939,7 +1822,7 @@ ALTER TABLE ONLY public.dm_chat_message_reaction
 --
 
 ALTER TABLE ONLY public.dm_chat_message
-    ADD CONSTRAINT dm_chat_message_sender_id_fkey FOREIGN KEY (sender_id) REFERENCES public.i9c_user(id) ON DELETE CASCADE;
+    ADD CONSTRAINT dm_chat_message_sender_id_fkey FOREIGN KEY (sender_id) REFERENCES public.i9c_user(id) ON DELETE SET NULL;
 
 
 --
@@ -2047,27 +1930,35 @@ ALTER TABLE ONLY public.group_chat_message
 
 
 --
--- Name: user_dm_chat user_dm_chat_dm_chat_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: i9
+-- Name: msgs_in_user_dm_chat msgs_in_user_dm_chat_msg_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: i9
+--
+
+ALTER TABLE ONLY public.msgs_in_user_dm_chat
+    ADD CONSTRAINT msgs_in_user_dm_chat_msg_id_fkey FOREIGN KEY (msg_id) REFERENCES public.dm_chat_message(id);
+
+
+--
+-- Name: msgs_in_user_dm_chat msgs_in_user_dm_chat_user_dm_chat_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: i9
+--
+
+ALTER TABLE ONLY public.msgs_in_user_dm_chat
+    ADD CONSTRAINT msgs_in_user_dm_chat_user_dm_chat_id_fkey FOREIGN KEY (user_dm_chat_id) REFERENCES public.user_dm_chat(id);
+
+
+--
+-- Name: user_dm_chat user_dm_chat_client_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: i9
 --
 
 ALTER TABLE ONLY public.user_dm_chat
-    ADD CONSTRAINT user_dm_chat_dm_chat_id_fkey FOREIGN KEY (dm_chat_id) REFERENCES public.dm_chat(id) ON DELETE CASCADE;
+    ADD CONSTRAINT user_dm_chat_client_user_id_fkey FOREIGN KEY (owner_user_id) REFERENCES public.i9c_user(id) ON DELETE CASCADE;
 
 
 --
--- Name: user_dm_chat user_dm_chat_partner_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: i9
---
-
-ALTER TABLE ONLY public.user_dm_chat
-    ADD CONSTRAINT user_dm_chat_partner_id_fkey FOREIGN KEY (partner_id) REFERENCES public.i9c_user(id) ON DELETE CASCADE;
-
-
---
--- Name: user_dm_chat user_dm_chat_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: i9
+-- Name: user_dm_chat user_dm_chat_partner_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: i9
 --
 
 ALTER TABLE ONLY public.user_dm_chat
-    ADD CONSTRAINT user_dm_chat_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.i9c_user(id) ON DELETE CASCADE;
+    ADD CONSTRAINT user_dm_chat_partner_user_id_fkey FOREIGN KEY (partner_user_id) REFERENCES public.i9c_user(id) ON DELETE SET NULL;
 
 
 --
