@@ -9,7 +9,6 @@ import (
 	"log"
 
 	"github.com/gofiber/fiber/v2"
-	"github.com/gofiber/fiber/v2/middleware/session"
 )
 
 func RequestNewAccount(c *fiber.Ctx) error {
@@ -58,16 +57,7 @@ func VerifyEmail(c *fiber.Ctx) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	sess := c.Locals("session").(*session.Session)
-
-	ssbt := sess.Get("signup_session").([]byte)
-
-	var signupSession appTypes.SignupSession
-
-	if err := json.Unmarshal(ssbt, &signupSession); err != nil {
-		log.Println("signupControllers.go: VerifyEmail: json.Unmarshal:", err)
-		return fiber.ErrInternalServerError
-	}
+	sessionData := c.Locals("signup_session_data").(*appTypes.SignupSessionData)
 
 	var body verifyEmailBody
 
@@ -80,9 +70,15 @@ func VerifyEmail(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).SendString(val_err.Error())
 	}
 
-	respData, updatedSessionData, app_err := signupService.VerifyEmail(ctx, signupSession.Data, body.Code)
+	respData, updatedSessionData, app_err := signupService.VerifyEmail(ctx, sessionData, body.Code)
 	if app_err != nil {
 		return app_err
+	}
+
+	sess, err := appGlobals.SignupSessionStore.Get(c)
+	if err != nil {
+		log.Println("signupControllers.go: VerifyEmail: SignupSessionStore.Get:", err)
+		return fiber.ErrInternalServerError
 	}
 
 	usd, err := json.Marshal(updatedSessionData)
@@ -105,16 +101,7 @@ func RegisterUser(c *fiber.Ctx) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	sess := c.Locals("session").(*session.Session)
-
-	ssbt := sess.Get("signup_session").([]byte)
-
-	var signupSession appTypes.SignupSession
-
-	if err := json.Unmarshal(ssbt, &signupSession); err != nil {
-		log.Println("signupControllers.go: VerifyEmail: json.Unmarshal:", err)
-		return fiber.ErrInternalServerError
-	}
+	sessionData := c.Locals("signup_session_data").(*appTypes.SignupSessionData)
 
 	var body registerUserBody
 
@@ -127,9 +114,15 @@ func RegisterUser(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).SendString(val_err.Error())
 	}
 
-	respData, app_err := signupService.RegisterUser(ctx, signupSession.Data, body.Username, body.Password, body.Geolocation)
+	respData, app_err := signupService.RegisterUser(ctx, sessionData, body.Username, body.Password, body.Geolocation)
 	if app_err != nil {
 		return app_err
+	}
+
+	sess, err := appGlobals.SignupSessionStore.Get(c)
+	if err != nil {
+		log.Println("signupControllers.go: RegisterUser: SignupSessionStore.Get:", err)
+		return fiber.ErrInternalServerError
 	}
 
 	if err := sess.Destroy(); err != nil {

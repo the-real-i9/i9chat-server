@@ -30,7 +30,7 @@ func VerifyEmail(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusUnauthorized).SendString("session error")
 	}
 
-	c.Locals("session", sess)
+	c.Locals("signup_session_data", signupSession.Data)
 
 	return c.Next()
 }
@@ -55,7 +55,7 @@ func RegisterUser(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusUnauthorized).SendString("session error")
 	}
 
-	c.Locals("session", sess)
+	c.Locals("signup_session_data", signupSession.Data)
 
 	return c.Next()
 }
