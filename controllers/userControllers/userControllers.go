@@ -109,7 +109,7 @@ func clientEventStream(c *websocket.Conn, clientUser *appTypes.ClientUser, goOff
 				return c.WriteJSON(helpers.ErrResp(val_err))
 			}
 
-			go dmChatService.UpdateMessageDeliveryStatus(context.TODO(), dmChatMsgAckData.ClientDMChatId, dmChatMsgAckData.MsgId, clientUser.Id, dmChatMsgAckData.Status, dmChatMsgAckData.At)
+			go dmChatService.UpdateMessageDeliveryStatus(context.TODO(), clientUser.Id, dmChatMsgAckData.PartnerUserId, dmChatMsgAckData.MsgId, dmChatMsgAckData.Status, dmChatMsgAckData.At)
 
 			return nil
 		}
