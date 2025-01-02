@@ -74,7 +74,6 @@ func clientEventStream(c *websocket.Conn, clientUser *appTypes.ClientUser, goOff
 
 	var w_err error
 
-client_event_stream:
 	for {
 		var body clientEventBody
 
@@ -153,16 +152,12 @@ client_event_stream:
 
 			w_err = batchAcknowledgeGroupChatMessages()
 
-		} else if body.Action == "close" {
-
-			goOff()
-
-			break client_event_stream
-
 		} else {
 			w_err = c.WriteJSON(helpers.ErrResp(fiber.NewError(fiber.StatusBadRequest, "invalid 'action' value")))
 		}
 	}
+
+	goOff()
 }
 
 func ChangeProfilePicture(c *fiber.Ctx) error {
