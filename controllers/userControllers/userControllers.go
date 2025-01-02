@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"i9chat/appGlobals"
 	"i9chat/appTypes"
 	"i9chat/helpers"
 	"i9chat/services/chatServices/dmChatService"
@@ -279,4 +280,19 @@ func GetMyChats(c *fiber.Ctx) error {
 	}
 
 	return c.JSON(respData)
+}
+
+func Logout(c *fiber.Ctx) error {
+	sess, err := appGlobals.UserSessionStore.Get(c)
+	if err != nil {
+		log.Println("userControllers.go: Logout: UserSignupSession.Get:", err)
+		return fiber.ErrInternalServerError
+	}
+
+	if err := sess.Destroy(); err != nil {
+		log.Println("userControllers.go: Logout: sess.Destroy:", err)
+		return fiber.ErrInternalServerError
+	}
+
+	return c.Status(fiber.StatusOK).SendString("You've been logged out!")
 }

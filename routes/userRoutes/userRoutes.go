@@ -26,4 +26,6 @@ func Init(router fiber.Router) {
 	router.Get("/find_nearby_users", UC.FindNearbyUsers)
 
 	router.Get("/my_chats", UC.GetMyChats)
+
+	router.Get("/logout", UC.Logout)
 }
