@@ -24,7 +24,7 @@ type PartnerNewMsgData struct {
 	Msg    struct {
 		Id      int            `db:"msg_id" json:"msg_id"`
 		Content map[string]any `json:"content"`
-	}
+	} `json:"msg"`
 }
 
 type NewMessage struct {
