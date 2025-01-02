@@ -7,7 +7,7 @@ import (
 )
 
 func Init(router fiber.Router) {
-	router.Post("/create_dm_chat", dmcc.CreateNewDMChat)
+	router.Post("/new", dmcc.CreateNewDMChat)
 	router.Get("/chat_history", dmcc.GetChatHistory)
 	router.Post("/:dm_chat_id/send_message", dmcc.SendMessage)
 }

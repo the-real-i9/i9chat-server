@@ -25,20 +25,21 @@ type ClientUser struct {
 	Username string
 }
 
-type Props struct {
-	TextContent *string `json:"textContent"`
-	Data        []*byte `json:"data"`
-	Duration    *string `json:"duration"`
-	Caption     *string `json:"caption"`
-	MimeType    *string `json:"mimeType"`
-	Size        *int    `json:"size"`
-	Name        *string `json:"name"`
-	Extension   *string `json:"extension"`
+type MsgProps struct {
+	TextContent *string `json:"textContent" db:"textContent"`
+	Data        []byte  `json:"data"`
+	Url         *string `json:"url" db:"url"`
+	Duration    *string `json:"duration" db:"duration"`
+	Caption     *string `json:"caption" db:"caption"`
+	MimeType    *string `json:"mimeType" db:"mimeType"`
+	Size        *int    `json:"size" db:"size"`
+	Name        *string `json:"name" db:"name"`
+	Extension   *string `json:"extension" db:"extension"`
 }
 
 type MsgContent struct {
-	Type  string `json:"type"`
-	Props `json:"props"`
+	Type      string `json:"type" db:"type"`
+	*MsgProps `json:"props" db:"props"`
 }
 
 func (m MsgContent) Validate() error {
@@ -49,7 +50,7 @@ func (m MsgContent) Validate() error {
 			validation.Required,
 			validation.In("text", "voice", "audio", "video", "image", "file").Error("invalid message type"),
 		),
-		validation.Field(&m.Props, validation.Required),
+		validation.Field(&m.MsgProps, validation.Required),
 		validation.Field(&m.TextContent, validation.When(msgType != "text", validation.Nil.Error("invalid property for the specified type")).Else(validation.Required)),
 		validation.Field(&m.Data, validation.When(msgType == "text", validation.Nil.Error("invalid property for the specified type")).Else(
 			validation.Required,

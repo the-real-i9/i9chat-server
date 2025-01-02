@@ -34,7 +34,7 @@ type NewDMChat struct {
 	*PartnerNewDMChatData `db:"prd"`
 }
 
-func New(ctx context.Context, clientUserId int, partnerUserId int, initMsgContent map[string]any, createdAt time.Time) (*NewDMChat, error) {
+func New(ctx context.Context, clientUserId int, partnerUserId int, initMsgContent appTypes.MsgContent, createdAt time.Time) (*NewDMChat, error) {
 	newDMChat, err := helpers.QueryRowType[NewDMChat](ctx, "SELECT client_resp_data AS crd, partner_resp_data AS prd FROM new_dm_chat($1, $2, $3, $4)", clientUserId, partnerUserId, initMsgContent, createdAt)
 	if err != nil {
 		log.Println(fmt.Errorf("DMChatModel.go: New: %s", err))
@@ -62,7 +62,7 @@ type NewMessage struct {
 	PartnerUserId      int `db:"partner_user_id"`
 }
 
-func SendMessage(ctx context.Context, clientDMChatId string, clientUserId int, msgContent map[string]any, createdAt time.Time) (*NewMessage, error) {
+func SendMessage(ctx context.Context, clientDMChatId string, clientUserId int, msgContent appTypes.MsgContent, createdAt time.Time) (*NewMessage, error) {
 	newMessage, err := helpers.QueryRowType[NewMessage](ctx, "SELECT client_resp_data AS crd, partner_resp_data AS prd, partner_user_id FROM send_dm_chat_message($1, $2, $3, $4)", clientDMChatId, clientUserId, msgContent, createdAt)
 	if err != nil {
 		log.Println(fmt.Errorf("DMChatModel.go: SendMessage: %s", err))

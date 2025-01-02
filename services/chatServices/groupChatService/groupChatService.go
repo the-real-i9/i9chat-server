@@ -83,14 +83,14 @@ func GetChatHistory(ctx context.Context, dmChatId, offset int) ([]*groupChat.His
 	return groupChat.GetChatHistory(ctx, dmChatId, offset)
 }
 
-func SendMessage(ctx context.Context, groupChatId, clientUserId int, msgContent map[string]any, createdAt time.Time) (*groupChat.SenderData, error) {
+func SendMessage(ctx context.Context, groupChatId, clientUserId int, msgContent *appTypes.MsgContent, createdAt time.Time) (*groupChat.SenderData, error) {
 
-	modMsgContent, err := appServices.UploadMessageMedia(ctx, clientUserId, msgContent)
+	err := appServices.UploadMessageMedia(ctx, clientUserId, msgContent)
 	if err != nil {
 		return nil, err
 	}
 
-	newMessage, err := groupChat.SendMessage(ctx, groupChatId, clientUserId, modMsgContent, createdAt)
+	newMessage, err := groupChat.SendMessage(ctx, groupChatId, clientUserId, *msgContent, createdAt)
 	if err != nil {
 		return nil, err
 	}

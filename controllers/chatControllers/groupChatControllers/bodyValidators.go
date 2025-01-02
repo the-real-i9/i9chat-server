@@ -24,8 +24,8 @@ func (b getChatHistoryBody) Validate() error {
 }
 
 type sendMessageBody struct {
-	Msg map[string]any `json:"msg"`
-	At  time.Time      `json:"at"`
+	Msg *appTypes.MsgContent `json:"msg"`
+	At  time.Time            `json:"at"`
 }
 
 func (ob sendMessageBody) Validate() error {

@@ -23,17 +23,11 @@ func (b getChatHistoryBody) Validate() error {
 }
 
 type sendMessageBody struct {
-	Msg map[string]any `json:"msg"`
-	At  time.Time      `json:"at"`
+	Msg *appTypes.MsgContent `json:"msg"`
+	At  time.Time            `json:"at"`
 }
 
-func (ob sendMessageBody) Validate() error {
-	var vb struct {
-		Msg appTypes.MsgContent `json:"msg"`
-		At  time.Time           `json:"at"`
-	}
-
-	helpers.ToStruct(ob, &vb)
+func (vb sendMessageBody) Validate() error {
 
 	err := validation.ValidateStruct(&vb,
 		validation.Field(&vb.Msg, validation.Required),
@@ -47,9 +41,9 @@ func (ob sendMessageBody) Validate() error {
 }
 
 type newDMChatBody struct {
-	PartnerUserId int            `json:"partnerUserId"`
-	InitMsg       map[string]any `json:"initMsg"`
-	CreatedAt     time.Time      `json:"createdAt"`
+	PartnerUserId int                  `json:"partnerUserId"`
+	InitMsg       *appTypes.MsgContent `json:"initMsg"`
+	CreatedAt     time.Time            `json:"createdAt"`
 }
 
 func (b newDMChatBody) Validate() error {

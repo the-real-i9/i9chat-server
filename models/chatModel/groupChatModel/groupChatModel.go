@@ -154,7 +154,7 @@ type NewMessage struct {
 	MembersIds  []int `db:"members_ids"`
 }
 
-func SendMessage(ctx context.Context, groupChatId int, senderId int, msgContent map[string]any, createdAt time.Time) (*NewMessage, error) {
+func SendMessage(ctx context.Context, groupChatId int, senderId int, msgContent appTypes.MsgContent, createdAt time.Time) (*NewMessage, error) {
 	newMessage, err := helpers.QueryRowType[NewMessage](ctx, "SELECT sender_resp_data AS srd, member_resp_data AS mrd, members_ids FROM send_group_chat_message($1, $2, $3, $4)", groupChatId, senderId, msgContent, createdAt)
 	if err != nil {
 		log.Println(fmt.Errorf("groupChatModel.go: SendMessage: %s", err))

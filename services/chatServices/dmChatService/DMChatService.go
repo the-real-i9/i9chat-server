@@ -10,14 +10,14 @@ import (
 	"time"
 )
 
-func NewDMChat(ctx context.Context, clientUserId, partnerUserId int, initMsgContent map[string]any, createdAt time.Time) (*dmChat.ClientNewDMChatData, error) {
+func NewDMChat(ctx context.Context, clientUserId, partnerUserId int, initMsgContent *appTypes.MsgContent, createdAt time.Time) (*dmChat.ClientNewDMChatData, error) {
 
-	modInitMsgContent, err := appServices.UploadMessageMedia(ctx, clientUserId, initMsgContent)
+	err := appServices.UploadMessageMedia(ctx, clientUserId, initMsgContent)
 	if err != nil {
 		return nil, err
 	}
 
-	dmChat, err := dmChat.New(ctx, clientUserId, partnerUserId, modInitMsgContent, createdAt)
+	dmChat, err := dmChat.New(ctx, clientUserId, partnerUserId, *initMsgContent, createdAt)
 	if err != nil {
 		return nil, err
 	}
@@ -34,14 +34,14 @@ func GetChatHistory(ctx context.Context, dmChatId string, offset int) ([]*dmChat
 	return dmChat.GetChatHistory(ctx, dmChatId, offset)
 }
 
-func SendMessage(ctx context.Context, clientDMChatId string, clientUserId int, msgContent map[string]any, createdAt time.Time) (*dmChat.ClientNewMsgData, error) {
+func SendMessage(ctx context.Context, clientDMChatId string, clientUserId int, msgContent *appTypes.MsgContent, createdAt time.Time) (*dmChat.ClientNewMsgData, error) {
 
-	modMsgContent, err := appServices.UploadMessageMedia(ctx, clientUserId, msgContent)
+	err := appServices.UploadMessageMedia(ctx, clientUserId, msgContent)
 	if err != nil {
 		return nil, err
 	}
 
-	newMessage, err := dmChat.SendMessage(ctx, clientDMChatId, clientUserId, modMsgContent, createdAt)
+	newMessage, err := dmChat.SendMessage(ctx, clientDMChatId, clientUserId, *msgContent, createdAt)
 	if err != nil {
 		return nil, err
 	}
