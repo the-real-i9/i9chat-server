@@ -2,6 +2,7 @@ package main
 
 import (
 	"i9chat/initializers"
+	"i9chat/middlewares"
 	"i9chat/routes/authRoutes"
 	"i9chat/routes/chatRoutes/dmChatRoutes"
 	"i9chat/routes/chatRoutes/groupChatRoutes"
@@ -26,6 +27,8 @@ func main() {
 	app := fiber.New()
 
 	app.Route("/api/auth", authRoutes.Init)
+
+	app.Use("/api/app", middlewares.Auth)
 
 	app.Route("/api/app/user", userRoutes.Init)
 

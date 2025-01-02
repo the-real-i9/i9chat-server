@@ -14,28 +14,28 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-type InitiatorData struct {
-	NewDMChatId int `db:"new_dm_chat_id" json:"new_dm_chat_id"`
-	InitMsgId   int `db:"init_msg_id" json:"init_msg_id"`
+type ClientNewDMChatData struct {
+	NewDMChatId string `db:"new_dm_chat_id" json:"new_dm_chat_id"` // client's dm chat id
+	InitMsgId   int    `db:"init_msg_id" json:"init_msg_id"`
 }
 
-type PartnerData struct {
-	Type     string    `json:"type"`
-	DMChatId int       `db:"dm_chat_id" json:"dm_chat_id"`
-	Partner  user.User `json:"partner"`
-	InitMsg  struct {
+type PartnerNewDMChatData struct {
+	Type        string    `json:"type"`
+	DMChatId    string    `db:"dm_chat_id" json:"dm_chat_id"` // partner's dm chat id
+	PartnerUser user.User `json:"partner_user"`
+	InitMsg     struct {
 		Id      int            `json:"id"`
 		Content map[string]any `json:"content"`
 	} `db:"init_msg" json:"init_msg"`
 }
 
 type NewDMChat struct {
-	*InitiatorData `db:"ird"`
-	*PartnerData   `db:"prd"`
+	*ClientNewDMChatData  `db:"crd"`
+	*PartnerNewDMChatData `db:"prd"`
 }
 
-func New(ctx context.Context, initiatorId int, partnerId int, initMsgContent map[string]any, createdAt time.Time) (*NewDMChat, error) {
-	newDMChat, err := helpers.QueryRowType[NewDMChat](ctx, "SELECT initiator_resp_data AS ird, partner_resp_data AS prd FROM new_dm_chat($1, $2, $3, $4)", initiatorId, partnerId, initMsgContent, createdAt)
+func New(ctx context.Context, clientUserId int, partnerUserId int, initMsgContent map[string]any, createdAt time.Time) (*NewDMChat, error) {
+	newDMChat, err := helpers.QueryRowType[NewDMChat](ctx, "SELECT client_resp_data AS crd, partner_resp_data AS prd FROM new_dm_chat($1, $2, $3, $4)", clientUserId, partnerUserId, initMsgContent, createdAt)
 	if err != nil {
 		log.Println(fmt.Errorf("DMChatModel.go: New: %s", err))
 		return nil, fiber.ErrInternalServerError
@@ -44,26 +44,26 @@ func New(ctx context.Context, initiatorId int, partnerId int, initMsgContent map
 	return newDMChat, nil
 }
 
-type SenderData struct {
+type ClientNewMsgData struct {
 	NewMsgId int `db:"new_msg_id" json:"new_msg_id"`
 }
 
-type ReceiverData struct {
+type PartnerNewMsgData struct {
 	In       string         `db:"in" json:"in"`
 	MsgId    int            `db:"msg_id" json:"msg_id"`
-	DMChatId int            `db:"dm_chat_id" json:"dm_chat_id"`
+	DMChatId string         `db:"dm_chat_id" json:"dm_chat_id"` // partner's dm chat id
 	Sender   user.User      `json:"sender"`
 	Content  map[string]any `json:"content"`
 }
 
 type NewMessage struct {
-	*SenderData   `db:"srd"`
-	*ReceiverData `db:"rrd"`
-	ReceiverId    int `db:"receiver_id"`
+	*ClientNewMsgData  `db:"crd"`
+	*PartnerNewMsgData `db:"prd"`
+	PartnerUserId      int `db:"partner_user_id"`
 }
 
-func SendMessage(ctx context.Context, dmChatId, senderId int, msgContent map[string]any, createdAt time.Time) (*NewMessage, error) {
-	newMessage, err := helpers.QueryRowType[NewMessage](ctx, "SELECT sender_resp_data AS srd, receiver_resp_data AS rrd, receiver_id FROM send_dm_chat_message($1, $2, $3, $4)", dmChatId, senderId, msgContent, createdAt)
+func SendMessage(ctx context.Context, clientDMChatId string, clientUserId int, msgContent map[string]any, createdAt time.Time) (*NewMessage, error) {
+	newMessage, err := helpers.QueryRowType[NewMessage](ctx, "SELECT client_resp_data AS crd, partner_resp_data AS prd, partner_user_id FROM send_dm_chat_message($1, $2, $3, $4)", clientDMChatId, clientUserId, msgContent, createdAt)
 	if err != nil {
 		log.Println(fmt.Errorf("DMChatModel.go: SendMessage: %s", err))
 		return nil, fiber.ErrInternalServerError
@@ -72,8 +72,8 @@ func SendMessage(ctx context.Context, dmChatId, senderId int, msgContent map[str
 	return newMessage, nil
 }
 
-func ReactToMessage(ctx context.Context, dmChatId, msgId, reactorId int, reaction rune) error {
-	_, err := helpers.QueryRowField[bool](ctx, "SELECT react_to_dm_chat_message($1, $2, $3, $4)", dmChatId, msgId, reactorId, strconv.QuoteRuneToASCII(reaction))
+func ReactToMessage(ctx context.Context, clientDMChatId string, msgId, clientUserId int, reaction rune) error {
+	_, err := helpers.QueryRowField[bool](ctx, "SELECT react_to_dm_chat_message($1, $2, $3, $4)", clientDMChatId, msgId, clientUserId, strconv.QuoteRuneToASCII(reaction))
 	if err != nil {
 		log.Println(fmt.Errorf("DMChatModel.go: ReactToMessage: %s", err))
 		return fiber.ErrInternalServerError
@@ -98,7 +98,7 @@ type Message struct {
 	Reactions      []messageReaction `json:"reactions"`
 }
 
-func GetChatHistory(ctx context.Context, dmChatId, offset int) ([]*Message, error) {
+func GetChatHistory(ctx context.Context, dmChatId string, offset int) ([]*Message, error) {
 	messages, err := helpers.QueryRowsType[Message](ctx, `
 	SELECT * FROM (
 		SELECT * FROM get_dm_chat_history($1) 
@@ -112,30 +112,36 @@ func GetChatHistory(ctx context.Context, dmChatId, offset int) ([]*Message, erro
 	return messages, nil
 }
 
-func BatchUpdateMessageDeliveryStatus(ctx context.Context, receiverId int, status string, ackDatas []*appTypes.DMChatMsgAckData) error {
+type PartnerMsgDelivStatusUpdateData struct {
+	PartnerUserId   int    `db:"partner_user_id"`
+	PartnerDMChatId string `db:"partner_dm_chat_id"`
+	MsgId           int    `db:"msg_id"`
+}
+
+func UpdateMessageDeliveryStatus(ctx context.Context, clientDMChatId string, msgId, clientUserId int, status string, updatedAt time.Time) (*PartnerMsgDelivStatusUpdateData, error) {
+	res, err := helpers.QueryRowType[PartnerMsgDelivStatusUpdateData](ctx, "SELECT partner_user_id, partner_dm_chat_id, $2 AS msg_id FROM update_dm_chat_message_delivery_status($1, $2, $3, $4, $5)", clientDMChatId, msgId, clientUserId, status, updatedAt)
+	if err != nil {
+		log.Println(fmt.Errorf("DMChatModel.go: UpdateMessageDeliveryStatus: %s", err))
+		return nil, fiber.ErrInternalServerError
+	}
+
+	return res, nil
+}
+
+func BatchUpdateMessageDeliveryStatus(ctx context.Context, clientUserId int, status string, ackDatas []*appTypes.DMChatMsgAckData) ([]*PartnerMsgDelivStatusUpdateData, error) {
 	var sqls = []string{}
 	var params = [][]any{}
 
 	for _, data := range ackDatas {
-		sqls = append(sqls, "SELECT update_dm_chat_message_delivery_status($1, $2, $3, $4, $5)")
-		params = append(params, []any{data.DMChatId, data.MsgId, receiverId, status, data.At})
+		sqls = append(sqls, "SELECT partner_user_id, partner_dm_chat_id, $2 AS msg_id FROM update_dm_chat_message_delivery_status($1, $2, $3, $4, $5)")
+		params = append(params, []any{data.ClientDMChatId, data.MsgId, clientUserId, status, data.At})
 	}
 
-	_, err := helpers.BatchQuery[bool](ctx, sqls, params)
+	res, err := helpers.BatchQuery[PartnerMsgDelivStatusUpdateData](ctx, sqls, params)
 	if err != nil {
 		log.Println(fmt.Errorf("DMChatModel.go: BatchUpdateMessageDeliveryStatus: %s", err))
-		return fiber.ErrInternalServerError
+		return nil, fiber.ErrInternalServerError
 	}
 
-	return nil
-}
-
-func UpdateMessageDeliveryStatus(ctx context.Context, dmChatId, msgId, receiverId int, status string, updatedAt time.Time) error {
-	_, err := helpers.QueryRowField[bool](ctx, "SELECT update_dm_chat_message_delivery_status($1, $2, $3, $4, $5)", dmChatId, msgId, receiverId, status, updatedAt)
-	if err != nil {
-		log.Println(fmt.Errorf("DMChatModel.go: UpdateMessageDeliveryStatus: %s", err))
-		return fiber.ErrInternalServerError
-	}
-
-	return nil
+	return res, nil
 }

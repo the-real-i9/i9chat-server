@@ -109,7 +109,7 @@ client_event_stream:
 				return c.WriteJSON(helpers.ErrResp(val_err))
 			}
 
-			go dmChatService.UpdateMessageDeliveryStatus(context.TODO(), dmChatMsgAckData.DMChatId, dmChatMsgAckData.MsgId, dmChatMsgAckData.SenderId, clientUser.Id, dmChatMsgAckData.Status, dmChatMsgAckData.At)
+			go dmChatService.UpdateMessageDeliveryStatus(context.TODO(), dmChatMsgAckData.ClientDMChatId, dmChatMsgAckData.MsgId, clientUser.Id, dmChatMsgAckData.Status, dmChatMsgAckData.At)
 
 			return nil
 		}

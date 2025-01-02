@@ -29,7 +29,7 @@ func CreateNewDMChat(c *fiber.Ctx) error {
 
 	respData, app_err := dmChatService.NewDMChat(ctx,
 		clientUser.Id,
-		body.PartnerId,
+		body.PartnerUserId,
 		body.InitMsg,
 		body.CreatedAt,
 	)
@@ -56,7 +56,7 @@ func GetChatHistory(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).SendString(val_err.Error())
 	}
 
-	respData, app_err := dmChatService.GetChatHistory(ctx, body.DMChatId, body.Offset)
+	respData, app_err := dmChatService.GetChatHistory(ctx, body.dmChatId, body.Offset)
 	if app_err != nil {
 		return app_err
 	}
@@ -70,9 +70,9 @@ func SendMessage(c *fiber.Ctx) error {
 
 	clientUser := c.Locals("user").(*appTypes.ClientUser)
 
-	var dmChatId int
+	var clientDMChatId string
 
-	_, err := fmt.Sscanf(c.Params("dm_chat_id"), "%d", &dmChatId)
+	_, err := fmt.Sscanf(c.Params("dm_chat_id"), "%s", &clientDMChatId)
 	if err != nil {
 		log.Println("DMChatControllers.go: SendMessage: fmt.Sscanf:", err)
 		return fiber.ErrInternalServerError
@@ -90,7 +90,7 @@ func SendMessage(c *fiber.Ctx) error {
 	}
 
 	respData, app_err := dmChatService.SendMessage(ctx,
-		dmChatId,
+		clientDMChatId,
 		clientUser.Id,
 		body.Msg,
 		body.At,

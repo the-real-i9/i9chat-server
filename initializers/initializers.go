@@ -5,6 +5,7 @@ import (
 	"i9chat/appGlobals"
 	"log"
 	"os"
+	"time"
 
 	"cloud.google.com/go/storage"
 	"github.com/gofiber/fiber/v2/middleware/session"
@@ -61,6 +62,14 @@ func configSessionStore() {
 		CookiePath:     "/api/auth/signup",
 		CookieDomain:   os.Getenv("APP_DOMAIN"),
 		CookieHTTPOnly: true,
+	})
+
+	appGlobals.UserSessionStore = session.New(session.Config{
+		Storage:        getStorage("user_session"),
+		CookiePath:     "/api/app",
+		CookieDomain:   os.Getenv("APP_DOMAIN"),
+		CookieHTTPOnly: true,
+		Expiration:     (10 * 24) * time.Hour,
 	})
 }
 

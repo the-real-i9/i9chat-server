@@ -11,28 +11,28 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
-func Signin(ctx context.Context, emailOrUsername string, password string) (any, error) {
+func Signin(ctx context.Context, emailOrUsername, password string) (any, string, error) {
 	theUser, err := user.FindOne(ctx, emailOrUsername)
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 
 	if theUser == nil {
-		return nil, fiber.NewError(fiber.StatusNotFound, "signin error: incorrect email/username or password")
+		return nil, "", fiber.NewError(fiber.StatusNotFound, "signin error: incorrect email/username or password")
 	}
 
 	hashedPassword, err := user.GetPassword(ctx, emailOrUsername)
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 
 	yes, err := securityServices.PasswordMatchesHash(hashedPassword, password)
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 
 	if !yes {
-		return nil, fiber.NewError(fiber.StatusNotFound, "signin error: incorrect email/username or password")
+		return nil, "", fiber.NewError(fiber.StatusNotFound, "signin error: incorrect email/username or password")
 	}
 
 	authJwt, err := securityServices.JwtSign(appTypes.ClientUser{
@@ -41,14 +41,13 @@ func Signin(ctx context.Context, emailOrUsername string, password string) (any, 
 	}, os.Getenv("AUTH_JWT_SECRET"), time.Now().UTC().Add(10*24*time.Hour))
 
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 
 	respData := map[string]any{
-		"msg":     "Signin success!",
-		"user":    theUser,
-		"authJwt": authJwt,
+		"msg":  "Signin success!",
+		"user": theUser,
 	}
 
-	return respData, nil
+	return respData, authJwt, nil
 }

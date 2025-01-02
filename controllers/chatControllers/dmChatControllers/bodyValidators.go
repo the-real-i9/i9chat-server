@@ -9,13 +9,13 @@ import (
 )
 
 type getChatHistoryBody struct {
-	DMChatId int `json:"dmChatId"`
-	Offset   int `json:"offset"`
+	dmChatId string `json:"dmChatId"`
+	Offset   int    `json:"offset"`
 }
 
 func (b getChatHistoryBody) Validate() error {
 	err := validation.ValidateStruct(&b,
-		validation.Field(&b.DMChatId, validation.Required, validation.Min(1).Error("invalid value")),
+		validation.Field(&b.dmChatId, validation.Required, validation.Min(1).Error("invalid value")),
 		validation.Field(&b.Offset, validation.Min(0).Error("invalid negative offset")),
 	)
 
@@ -47,14 +47,14 @@ func (ob sendMessageBody) Validate() error {
 }
 
 type newDMChatBody struct {
-	PartnerId int            `json:"partnerId"`
-	InitMsg   map[string]any `json:"initMsg"`
-	CreatedAt time.Time      `json:"createdAt"`
+	PartnerUserId int            `json:"partnerUserId"`
+	InitMsg       map[string]any `json:"initMsg"`
+	CreatedAt     time.Time      `json:"createdAt"`
 }
 
 func (b newDMChatBody) Validate() error {
 	err := validation.ValidateStruct(&b,
-		validation.Field(&b.PartnerId,
+		validation.Field(&b.PartnerUserId,
 			validation.Required,
 			validation.Min(1).Error("invalid value"),
 		),

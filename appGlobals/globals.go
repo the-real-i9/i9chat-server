@@ -13,4 +13,6 @@ var DBPool *pgxpool.Pool
 
 var SignupSessionStore *session.Store
 
+var UserSessionStore *session.Store
+
 var KafkaWriter *kafka.Writer

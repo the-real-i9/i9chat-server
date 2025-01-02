@@ -31,7 +31,7 @@ func RequestNewAccount(c *fiber.Ctx) error {
 		return app_err
 	}
 
-	sess, err := appGlobals.SignupSessionStore.Get(c)
+	signupSess, err := appGlobals.SignupSessionStore.Get(c)
 	if err != nil {
 		log.Println("signupControllers.go: RequestNewAccount: SignupSessionStore.Get:", err)
 		return fiber.ErrInternalServerError
@@ -43,10 +43,10 @@ func RequestNewAccount(c *fiber.Ctx) error {
 		return fiber.ErrInternalServerError
 	}
 
-	sess.Set("signup_session", sd)
+	signupSess.Set("signup_session", sd)
 
-	if err := sess.Save(); err != nil {
-		log.Println("signupControllers.go: RequestNewAccount: sess.Save:", err)
+	if err := signupSess.Save(); err != nil {
+		log.Println("signupControllers.go: RequestNewAccount: signupSess.Save:", err)
 		return fiber.ErrInternalServerError
 	}
 
@@ -75,7 +75,7 @@ func VerifyEmail(c *fiber.Ctx) error {
 		return app_err
 	}
 
-	sess, err := appGlobals.SignupSessionStore.Get(c)
+	signupSess, err := appGlobals.SignupSessionStore.Get(c)
 	if err != nil {
 		log.Println("signupControllers.go: VerifyEmail: SignupSessionStore.Get:", err)
 		return fiber.ErrInternalServerError
@@ -87,10 +87,10 @@ func VerifyEmail(c *fiber.Ctx) error {
 		return fiber.ErrInternalServerError
 	}
 
-	sess.Set("signup_session", usd)
+	signupSess.Set("signup_session", usd)
 
-	if err := sess.Save(); err != nil {
-		log.Println("signupControllers.go: VerifyEmail: sess.Save:", err)
+	if err := signupSess.Save(); err != nil {
+		log.Println("signupControllers.go: VerifyEmail: signupSess.Save:", err)
 		return fiber.ErrInternalServerError
 	}
 
@@ -114,19 +114,32 @@ func RegisterUser(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).SendString(val_err.Error())
 	}
 
-	respData, app_err := signupService.RegisterUser(ctx, sessionData, body.Username, body.Password, body.Geolocation)
+	respData, authJwt, app_err := signupService.RegisterUser(ctx, sessionData, body.Username, body.Password, body.Geolocation)
 	if app_err != nil {
 		return app_err
 	}
 
-	sess, err := appGlobals.SignupSessionStore.Get(c)
+	userSess, err := appGlobals.UserSessionStore.Get(c)
+	if err != nil {
+		log.Println("signupControllers.go: RegisterUser: UserSessionStore.Get:", err)
+		return fiber.ErrInternalServerError
+	}
+
+	userSess.Set("authJwt", authJwt)
+
+	if err := userSess.Save(); err != nil {
+		log.Println("signupControllers.go: RegisterUser: userSess.Save:", err)
+		return fiber.ErrInternalServerError
+	}
+
+	signupSess, err := appGlobals.SignupSessionStore.Get(c)
 	if err != nil {
 		log.Println("signupControllers.go: RegisterUser: SignupSessionStore.Get:", err)
 		return fiber.ErrInternalServerError
 	}
 
-	if err := sess.Destroy(); err != nil {
-		log.Println("signupControllers.go: RegisterUser: sess.Destroy:", err)
+	if err := signupSess.Destroy(); err != nil {
+		log.Println("signupControllers.go: RegisterUser: signupSess.Destroy:", err)
 		return fiber.ErrInternalServerError
 	}
 

@@ -63,24 +63,24 @@ func VerifyEmail(ctx context.Context, sessionData *appTypes.SignupSessionData, i
 	return respData, updatedSessionData, nil
 }
 
-func RegisterUser(ctx context.Context, sessionData *appTypes.SignupSessionData, username, password, geolocation string) (any, error) {
+func RegisterUser(ctx context.Context, sessionData *appTypes.SignupSessionData, username, password, geolocation string) (any, string, error) {
 	accExists, err := appModel.AccountExists(ctx, username)
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 
 	if accExists {
-		return nil, fiber.NewError(fiber.StatusBadRequest, "signup error: username", username, "is unavailable")
+		return nil, "", fiber.NewError(fiber.StatusBadRequest, "signup error: username", username, "is unavailable")
 	}
 
 	hashedPassword, err := securityServices.HashPassword(password)
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 
 	newUser, err := user.New(ctx, sessionData.Email, username, hashedPassword, geolocation)
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 
 	authJwt, err := securityServices.JwtSign(appTypes.ClientUser{
@@ -89,14 +89,13 @@ func RegisterUser(ctx context.Context, sessionData *appTypes.SignupSessionData, 
 	}, os.Getenv("AUTH_JWT_SECRET"), time.Now().UTC().Add(10*24*time.Hour)) // 1 year
 
 	if err != nil {
-		return "", err
+		return nil, "", err
 	}
 
 	respData := map[string]any{
-		"msg":     "Signup success!",
-		"user":    newUser,
-		"authJwt": authJwt,
+		"msg":  "Signup success!",
+		"user": newUser,
 	}
 
-	return respData, nil
+	return respData, authJwt, nil
 }

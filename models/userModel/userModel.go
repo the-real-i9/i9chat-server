@@ -113,9 +113,9 @@ func GetPassword(ctx context.Context, uniqueIdent string) (string, error) {
 	return *hashedPassword, nil
 }
 
-func ChangePresence(ctx context.Context, userId int, presence string, lastSeen time.Time) ([]*int, error) {
+func ChangePresence(ctx context.Context, clientUserId int, presence string, lastSeen time.Time) ([]*int, error) {
 
-	userDMChatPartnersIdList, err := helpers.QueryRowsField[int](ctx, `SELECT * FROM change_user_presence($1, $2, $3)`, userId, presence, lastSeen)
+	userDMChatPartnersIdList, err := helpers.QueryRowsField[int](ctx, `SELECT * FROM change_user_presence($1, $2, $3)`, clientUserId, presence, lastSeen)
 	if err != nil {
 		log.Println(fmt.Errorf("userModel.go: ChangePresence: %s", err))
 		return nil, fiber.ErrInternalServerError

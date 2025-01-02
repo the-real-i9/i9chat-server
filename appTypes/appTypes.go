@@ -77,17 +77,15 @@ func (m MsgContent) Validate() error {
 }
 
 type DMChatMsgAckData struct {
-	MsgId    int       `json:"msgId"`
-	DMChatId int       `json:"dmChatId"`
-	SenderId int       `json:"senderId"`
-	At       time.Time `json:"at"`
+	MsgId          int       `json:"msgId"`
+	ClientDMChatId string    `json:"dmChatId"`
+	At             time.Time `json:"at"`
 }
 
 func (d DMChatMsgAckData) Validate() error {
 	return validation.ValidateStruct(&d,
 		validation.Field(&d.MsgId, validation.Required, validation.Min(1).Error("invalid value")),
-		validation.Field(&d.DMChatId, validation.Required, validation.Min(1).Error("invalid value")),
-		validation.Field(&d.SenderId, validation.Required, validation.Min(1).Error("invalid value")),
+		validation.Field(&d.ClientDMChatId, validation.Required, validation.Min(1).Error("invalid value")),
 		validation.Field(&d.At, validation.Required, validation.Max(time.Now()).Error("invalid future time")),
 	)
 }

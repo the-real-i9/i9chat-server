@@ -229,7 +229,7 @@ BEGIN
 	WHERE id = in_user_id;
   END IF;
 
-  RETURN QUERY SELECT user_id FROM user_dm_chat WHERE partner_id = in_user_id;
+  RETURN QUERY SELECT owner_user_id FROM user_dm_chat WHERE partner_user_id = in_user_id;
 
   RETURN;
 END;
@@ -659,7 +659,7 @@ BEGIN
   partner_resp_data := json_build_object(
 	  'type', 'dm',
 	  'dm_chat_id', partner_user_dm_chat_id, 
-	  'partner', client_user_data,
+	  'partner_user', client_user_data,
 	  'init_msg', json_build_object(
 	      'sender', client_user_data,
 		  'id', init_msg_id,
@@ -901,13 +901,15 @@ ALTER FUNCTION public.search_user(in_client_id integer, search_query text) OWNER
 -- Name: send_dm_chat_message(character varying, integer, json, timestamp without time zone); Type: FUNCTION; Schema: public; Owner: i9
 --
 
-CREATE FUNCTION public.send_dm_chat_message(in_client_dm_chat_id character varying, in_client_user_id integer, in_msg_content json, in_created_at timestamp without time zone, OUT client_resp_data json, OUT partner_resp_data json, OUT partner_user_id integer, OUT partner_dm_chat_id character varying) RETURNS record
+CREATE FUNCTION public.send_dm_chat_message(in_client_dm_chat_id character varying, in_client_user_id integer, in_msg_content json, in_created_at timestamp without time zone, OUT client_resp_data json, OUT partner_resp_data json, OUT partner_user_id integer) RETURNS record
     LANGUAGE plpgsql
     AS $$
 DECLARE
   new_msg_id int;
   
-  sender_user json;
+  client_user_view json;
+
+  partner_dm_chat_id varchar;
 BEGIN
   -- create dm_chat_message
   INSERT INTO dm_chat_message (sender_id, msg_content, created_at) 
@@ -917,7 +919,7 @@ BEGIN
   -- update user_dm_chat
   UPDATE user_dm_chat 
   SET updated_at = in_created_at
-  WHERE id = in_dm_chat_id
+  WHERE id = in_client_dm_chat_id
   RETURNING partner_user_id INTO partner_user_id;
 
   SELECT id INTO partner_dm_chat_id FROM user_dm_chat WHERE owner_user_id = partner_user_id AND partner_user_id = in_client_user_id;
@@ -933,16 +935,16 @@ BEGIN
 	  'username', username,
 	  'profile_picture_url', profile_picture_url,
 	  'connection_status', connection_status
-  ) FROM i9c_user WHERE id = in_client_user_id INTO sender_user;
+  ) FROM i9c_user WHERE id = in_client_user_id INTO client_user_view;
   
   client_resp_data := json_build_object('new_msg_id', new_msg_id);
   partner_resp_data := json_build_object(
 	  'in', 'dm chat',
-	  'dm_chat_id', in_dm_chat_id,
+	  'dm_chat_id', partner_dm_chat_id,
 	  'new_message', json_build_object(
 	    'id', new_msg_id,
-	    'msg_content', in_msg_content
-	    'sender', sender_user
+	    'msg_content', in_msg_content,
+	    'sender', client_user_view
 	  )
   );
   
@@ -951,7 +953,7 @@ END;
 $$;
 
 
-ALTER FUNCTION public.send_dm_chat_message(in_client_dm_chat_id character varying, in_client_user_id integer, in_msg_content json, in_created_at timestamp without time zone, OUT client_resp_data json, OUT partner_resp_data json, OUT partner_user_id integer, OUT partner_dm_chat_id character varying) OWNER TO i9;
+ALTER FUNCTION public.send_dm_chat_message(in_client_dm_chat_id character varying, in_client_user_id integer, in_msg_content json, in_created_at timestamp without time zone, OUT client_resp_data json, OUT partner_resp_data json, OUT partner_user_id integer) OWNER TO i9;
 
 --
 -- Name: send_group_chat_message(integer, integer, json, timestamp without time zone); Type: FUNCTION; Schema: public; Owner: i9
@@ -1006,35 +1008,51 @@ $$;
 ALTER FUNCTION public.send_group_chat_message(in_group_chat_id integer, in_sender_id integer, in_msg_content json, in_created_at timestamp without time zone, OUT sender_resp_data json, OUT member_resp_data json, OUT members_ids integer[]) OWNER TO i9;
 
 --
--- Name: update_dm_chat_message_delivery_status(integer, integer, integer, character varying, timestamp without time zone); Type: FUNCTION; Schema: public; Owner: i9
+-- Name: update_dm_chat_message_delivery_status(character varying, integer, integer, character varying, timestamp without time zone); Type: FUNCTION; Schema: public; Owner: i9
 --
 
-CREATE FUNCTION public.update_dm_chat_message_delivery_status(in_dm_chat_id integer, in_msg_id integer, in_receiver_id integer, in_status character varying, in_updated_at timestamp without time zone) RETURNS boolean
+CREATE FUNCTION public.update_dm_chat_message_delivery_status(in_client_dm_chat_id character varying, in_msg_id integer, in_client_user_id integer, in_status character varying, in_updated_at timestamp without time zone, OUT partner_user_id integer, OUT partner_dm_chat_id character varying) RETURNS record
     LANGUAGE plpgsql
     AS $$
+DECLARE
+  curr_msg_delivery_status varchar;
+  msg_in_chat bool;
 BEGIN
- UPDATE dm_chat_message 
- SET delivery_status = in_status
- WHERE id = in_msg_id AND dm_chat_id = in_dm_chat_id;
+ SELECT delivery_status INTO curr_msg_delivery_status
+ FROM dm_chat_message WHERE id = in_msg_id;
+
+ SELECT EXISTS (SELECT 1 FROM msgs_in_user_dm_chat WHERE msg_id = in_msg_id AND user_dm_chat_id = in_client_dm_chat_id) INTO msg_in_chat;
  
  IF in_status = 'delivered' THEN
-   UPDATE user_dm_chat 
-   SET updated_at = in_updated_at, unread_messages_count = unread_messages_count + 1 
-   WHERE dm_chat_id = in_dm_chat_id AND user_id = in_receiver_id;
+   IF curr_msg_delivery_status = 'sent' THEN
+     UPDATE dm_chat_message 
+     SET delivery_status = 'delivered'
+     WHERE id = in_msg_id AND msg_in_chat;
+ 
+     UPDATE user_dm_chat 
+     SET updated_at = in_updated_at, unread_messages_count = unread_messages_count + 1 
+     WHERE id = in_client_dm_chat_id AND owner_user_id = in_client_user_id
+	 RETURNING user_dm_chat.partner_user_id INTO partner_user_id;
+   END IF;
  ELSIF in_status = 'seen' THEN
-   UPDATE user_dm_chat 
-   SET unread_messages_count = CASE WHEN (unread_messages_count - 1) < 0 THEN 0 ELSE unread_messages_count - 1 END
-   WHERE dm_chat_id = in_dm_chat_id AND user_id = in_receiver_id;
+   IF current_msg_delivery_status = ANY(ARRAY['sent', 'delivered']) THEN
+     UPDATE user_dm_chat 
+     SET unread_messages_count = CASE WHEN (unread_messages_count - 1) < 0 THEN 0 ELSE unread_messages_count - 1 END
+     WHERE id = in_client_dm_chat_id AND owner_user_id = in_client_user_id
+	 RETURNING user_dm_chat.partner_user_id INTO partner_user_id;
+   END IF;
  ELSE
    RAISE EXCEPTION 'Invalid update value, "%"', in_status;
  END IF;
+
+ SELECT id INTO partner_dm_chat_id FROM user_dm_chat WHERE owner_user_id = partner_user_id AND partner_user_id = in_client_user_id;
  
- RETURN true;
+ RETURN;
 END;
 $$;
 
 
-ALTER FUNCTION public.update_dm_chat_message_delivery_status(in_dm_chat_id integer, in_msg_id integer, in_receiver_id integer, in_status character varying, in_updated_at timestamp without time zone) OWNER TO i9;
+ALTER FUNCTION public.update_dm_chat_message_delivery_status(in_client_dm_chat_id character varying, in_msg_id integer, in_client_user_id integer, in_status character varying, in_updated_at timestamp without time zone, OUT partner_user_id integer, OUT partner_dm_chat_id character varying) OWNER TO i9;
 
 --
 -- Name: update_group_chat_message_delivery_status(integer, integer, integer, character varying, timestamp without time zone); Type: FUNCTION; Schema: public; Owner: i9
@@ -1544,6 +1562,19 @@ CREATE TABLE public.msgs_in_user_dm_chat (
 ALTER TABLE public.msgs_in_user_dm_chat OWNER TO i9;
 
 --
+-- Name: ongoing_signup; Type: TABLE; Schema: public; Owner: i9
+--
+
+CREATE TABLE public.ongoing_signup (
+    k character varying(64) DEFAULT ''::character varying NOT NULL,
+    v bytea NOT NULL,
+    e bigint DEFAULT '0'::bigint NOT NULL
+);
+
+
+ALTER TABLE public.ongoing_signup OWNER TO i9;
+
+--
 -- Name: user_dm_chat; Type: TABLE; Schema: public; Owner: i9
 --
 
@@ -1595,6 +1626,19 @@ ALTER SEQUENCE public.user_group_chat_id_seq OWNER TO i9;
 
 ALTER SEQUENCE public.user_group_chat_id_seq OWNED BY public.user_group_chat.id;
 
+
+--
+-- Name: user_session; Type: TABLE; Schema: public; Owner: i9
+--
+
+CREATE TABLE public.user_session (
+    k character varying(64) DEFAULT ''::character varying NOT NULL,
+    v bytea NOT NULL,
+    e bigint DEFAULT '0'::bigint NOT NULL
+);
+
+
+ALTER TABLE public.user_session OWNER TO i9;
 
 --
 -- Name: dm_chat id; Type: DEFAULT; Schema: public; Owner: i9
@@ -1770,6 +1814,14 @@ ALTER TABLE ONLY public.i9c_user
 
 
 --
+-- Name: ongoing_signup ongoing_signup_pkey; Type: CONSTRAINT; Schema: public; Owner: i9
+--
+
+ALTER TABLE ONLY public.ongoing_signup
+    ADD CONSTRAINT ongoing_signup_pkey PRIMARY KEY (k);
+
+
+--
 -- Name: user_dm_chat user_dm_chat_pkey; Type: CONSTRAINT; Schema: public; Owner: i9
 --
 
@@ -1783,6 +1835,21 @@ ALTER TABLE ONLY public.user_dm_chat
 
 ALTER TABLE ONLY public.user_group_chat
     ADD CONSTRAINT user_group_chat_user_id_group_chat_id_key UNIQUE (user_id, group_chat_id);
+
+
+--
+-- Name: user_session user_session_pkey; Type: CONSTRAINT; Schema: public; Owner: i9
+--
+
+ALTER TABLE ONLY public.user_session
+    ADD CONSTRAINT user_session_pkey PRIMARY KEY (k);
+
+
+--
+-- Name: e; Type: INDEX; Schema: public; Owner: i9
+--
+
+CREATE INDEX e ON public.ongoing_signup USING btree (e);
 
 
 --
