@@ -56,7 +56,7 @@ func GetChatHistory(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).SendString(val_err.Error())
 	}
 
-	respData, app_err := dmChatService.GetChatHistory(ctx, body.dmChatId, body.Offset)
+	respData, app_err := dmChatService.GetChatHistory(ctx, body.DMChatId, body.Offset)
 	if app_err != nil {
 		return app_err
 	}

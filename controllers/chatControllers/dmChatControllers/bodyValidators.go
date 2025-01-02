@@ -9,13 +9,13 @@ import (
 )
 
 type getChatHistoryBody struct {
-	dmChatId string `json:"dmChatId"`
+	DMChatId string `json:"dmChatId"`
 	Offset   int    `json:"offset"`
 }
 
 func (b getChatHistoryBody) Validate() error {
 	err := validation.ValidateStruct(&b,
-		validation.Field(&b.dmChatId, validation.Required, validation.Min(1).Error("invalid value")),
+		validation.Field(&b.DMChatId, validation.Required, validation.Min(1).Error("invalid value")),
 		validation.Field(&b.Offset, validation.Min(0).Error("invalid negative offset")),
 	)
 
