@@ -342,7 +342,7 @@ BEGIN
   FROM msgs_in_user_dm_chat miudc
   INNER JOIN dm_chat_message dcm ON dcm.id = miudc.msg_id
   INNER JOIN i9c_user sender ON sender.id = dcm.sender_id
-  LEFT JOIN dm_chat_message_reaction dcmr ON dcmr.message_id = dcm.id
+  LEFT JOIN dm_chat_message_reaction dcmr ON dcmr.msg_id = dcm.id
   LEFT JOIN i9c_user reactor ON reactor.id = dcmr.reactor_id
   WHERE miudc.user_dm_chat_id = in_dm_chat_id
   GROUP BY dcm.id, sender.id
@@ -632,7 +632,7 @@ BEGIN
   
   -- create user_dm_chat: partner user dm chat
   INSERT INTO user_dm_chat (id, owner_user_id, partner_user_id, updated_at) 
-  VALUES (concat(in_partner_user_id, '_', in_client_user_id)::varchar, in_partner_user_id, in_client_user_id, in_created_at);
+  VALUES (partner_user_dm_chat_id, in_partner_user_id, in_client_user_id, in_created_at);
   
   -- create dm_chat_message
   INSERT INTO dm_chat_message (msg_content, created_at, sender_id) 
@@ -655,7 +655,7 @@ BEGIN
 		  'last_seen', last_seen
 	  ) FROM i9c_user WHERE id = in_client_user_id INTO client_user_data;
   
-  client_resp_data := json_build_object('dm_chat_id', client_user_dm_chat_id, 'init_msg_id', init_msg_id);
+  client_resp_data := json_build_object('new_dm_chat_id', client_user_dm_chat_id, 'init_msg_id', init_msg_id);
   partner_resp_data := json_build_object(
 	  'type', 'dm',
 	  'dm_chat_id', partner_user_dm_chat_id, 
@@ -1237,12 +1237,10 @@ ALTER SEQUENCE public.dm_chat_message_id_seq OWNED BY public.dm_chat_message.id;
 
 CREATE TABLE public.dm_chat_message_reaction (
     id integer NOT NULL,
-    message_id integer NOT NULL,
+    msg_id integer NOT NULL,
     reactor_id integer NOT NULL,
     reaction character varying NOT NULL,
-    created_at timestamp without time zone DEFAULT now() NOT NULL,
-    dm_chat_id integer NOT NULL,
-    deleted boolean DEFAULT false NOT NULL
+    created_at timestamp without time zone DEFAULT now() NOT NULL
 );
 
 
@@ -1738,7 +1736,7 @@ ALTER TABLE ONLY public.dm_chat_message
 --
 
 ALTER TABLE ONLY public.dm_chat_message_reaction
-    ADD CONSTRAINT dm_chat_message_reaction_message_id_reactor_id_key UNIQUE (message_id, reactor_id);
+    ADD CONSTRAINT dm_chat_message_reaction_message_id_reactor_id_key UNIQUE (msg_id, reactor_id);
 
 
 --
@@ -1861,19 +1859,11 @@ ALTER TABLE ONLY public.dm_chat
 
 
 --
--- Name: dm_chat_message_reaction dm_chat_message_reaction_dm_chat_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: i9
---
-
-ALTER TABLE ONLY public.dm_chat_message_reaction
-    ADD CONSTRAINT dm_chat_message_reaction_dm_chat_id_fkey FOREIGN KEY (dm_chat_id) REFERENCES public.dm_chat(id) ON DELETE CASCADE;
-
-
---
 -- Name: dm_chat_message_reaction dm_chat_message_reaction_message_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: i9
 --
 
 ALTER TABLE ONLY public.dm_chat_message_reaction
-    ADD CONSTRAINT dm_chat_message_reaction_message_id_fkey FOREIGN KEY (message_id) REFERENCES public.dm_chat_message(id) ON DELETE CASCADE;
+    ADD CONSTRAINT dm_chat_message_reaction_message_id_fkey FOREIGN KEY (msg_id) REFERENCES public.dm_chat_message(id) ON DELETE CASCADE;
 
 
 --

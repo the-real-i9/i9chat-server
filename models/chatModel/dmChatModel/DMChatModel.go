@@ -22,10 +22,11 @@ type ClientNewDMChatData struct {
 type PartnerNewDMChatData struct {
 	Type        string    `json:"type"`
 	DMChatId    string    `db:"dm_chat_id" json:"dm_chat_id"` // partner's dm chat id
-	PartnerUser user.User `json:"partner_user"`
+	PartnerUser user.User `db:"partner_user" json:"partner_user"`
 	InitMsg     struct {
+		Sender  user.User      `db:"sender" json:"sender"`
 		Id      int            `json:"id"`
-		Content map[string]any `json:"content"`
+		Content map[string]any `json:"msg_content"`
 	} `db:"init_msg" json:"init_msg"`
 }
 
