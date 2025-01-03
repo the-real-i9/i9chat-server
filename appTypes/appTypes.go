@@ -26,15 +26,15 @@ type ClientUser struct {
 }
 
 type MsgProps struct {
-	TextContent *string `json:"textContent,omitempty" db:"textContent"`
+	TextContent *string `json:"textContent,omitempty" db:"textContent,omitempty"`
 	Data        []byte  `json:"data,omitempty"`
-	Url         *string `json:"url,omitempty" db:"url"`
-	Duration    *string `json:"duration,omitempty" db:"duration"`
-	Caption     *string `json:"caption,omitempty" db:"caption"`
-	MimeType    *string `json:"mimeType,omitempty" db:"mimeType"`
-	Size        *int    `json:"size,omitempty" db:"size"`
-	Name        *string `json:"name,omitempty" db:"name"`
-	Extension   *string `json:"extension,omitempty" db:"extension"`
+	Url         *string `json:"url,omitempty" db:"url,omitempty"`
+	Duration    *string `json:"duration,omitempty" db:"duration,omitempty"`
+	Caption     *string `json:"caption,omitempty" db:"caption,omitempty"`
+	MimeType    *string `json:"mimeType,omitempty" db:"mimeType,omitempty"`
+	Size        *int    `json:"size,omitempty" db:"size,omitempty"`
+	Name        *string `json:"name,omitempty" db:"name,omitempty"`
+	Extension   *string `json:"extension,omitempty" db:"extension,omitempty"`
 }
 
 type MsgContent struct {
