@@ -881,7 +881,6 @@ BEGIN
   
   client_resp_data := json_build_object('msg_id', new_msg_id);
   partner_resp_data := json_build_object(
-	  'in', 'dm chat',
 	  'sender', client_user_view,
 	  'msg', json_build_object(
 	    'id', new_msg_id,

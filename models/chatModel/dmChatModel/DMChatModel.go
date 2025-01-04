@@ -19,10 +19,9 @@ type ClientNewMsgData struct {
 }
 
 type PartnerNewMsgData struct {
-	In     string    `db:"in" json:"in"`
 	Sender user.User `json:"sender"`
 	Msg    struct {
-		Id      int            `db:"msg_id" json:"msg_id"`
+		Id      int            `json:"id"`
 		Content map[string]any `json:"content"`
 	} `json:"msg"`
 }
