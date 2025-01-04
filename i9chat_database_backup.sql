@@ -849,22 +849,15 @@ DECLARE
 BEGIN
   -- create a new chat betweeen these two if it doesn't yet
   -- an independent chat for client_user where partner_user is its partner
-  MERGE INTO user_dm_chat u1
-  USING user_dm_chat u2
-  ON u1.owner_user_id = in_client_user_id AND u1.partner_user_id = in_partner_user_id
-  WHEN MATCHED THEN
-    UPDATE SET updated_at = in_created_at
-  WHEN NOT MATCHED THEN
-    INSERT (owner_user_id, partner_user_id, updated_at) 
-    VALUES (in_client_user_id, in_partner_user_id, in_created_at);
+  INSERT INTO user_dm_chat (owner_user_id, partner_user_id, updated_at) 
+  VALUES (in_client_user_id, in_partner_user_id, in_created_at)
+  ON CONFLICT ON CONSTRAINT user_dm_chat_pkey DO UPDATE
+  SET updated_at = in_created_at;
 
   -- an independent chat for partner_user where client_user is its partner
-  MERGE INTO user_dm_chat u1
-  USING user_dm_chat u2
-  ON u1.owner_user_id = in_partner_user_id AND u1.partner_user_id = in_client_user_id
-  WHEN NOT MATCHED THEN
-    INSERT (owner_user_id, partner_user_id, updated_at) 
-    VALUES (in_partner_user_id, in_client_user_id, in_created_at);
+  INSERT INTO user_dm_chat (owner_user_id, partner_user_id, updated_at)
+  VALUES (in_partner_user_id, in_client_user_id, in_created_at)
+  ON CONFLICT ON CONSTRAINT user_dm_chat_pkey DO NOTHING;
   
   -- create dm_chat_message
   INSERT INTO dm_chat_message (sender_id, msg_content, created_at) 
@@ -883,7 +876,7 @@ BEGIN
 	  'id', id,
 	  'username', username,
 	  'profile_picture_url', profile_picture_url,
-	  'connection_status', connection_status
+	  'presence', presence
   ) FROM i9c_user WHERE id = in_client_user_id INTO client_user_view;
   
   client_resp_data := json_build_object('msg_id', new_msg_id);
