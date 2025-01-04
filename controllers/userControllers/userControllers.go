@@ -61,9 +61,9 @@ var OpenWSStream = websocket.New(func(c *websocket.Conn) {
 
 		c.WriteJSON(msg)
 
-		/* if err := r.CommitMessages(ctx, m); err != nil {
+		if err := r.CommitMessages(ctx, m); err != nil {
 			log.Println("failed to commit messages:", err)
-		} */
+		}
 	}
 })
 
