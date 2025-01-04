@@ -40,7 +40,7 @@ func initDBPool() error {
 
 func initKafkaWriter() error {
 	w := &kafka.Writer{
-		Addr:                   kafka.TCP("localhost:9092"),
+		Addr:                   kafka.TCP(os.Getenv("KAFKA_ADDRESS")),
 		AllowAutoTopicCreation: true,
 	}
 

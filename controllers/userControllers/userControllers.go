@@ -10,6 +10,7 @@ import (
 	"i9chat/helpers"
 	"i9chat/services/chatServices/dmChatService"
 	"i9chat/services/chatServices/groupChatService"
+	"i9chat/services/messageBrokerService"
 	"i9chat/services/userService"
 	"io"
 	"log"
@@ -17,7 +18,6 @@ import (
 
 	"github.com/gofiber/contrib/websocket"
 	"github.com/gofiber/fiber/v2"
-	"github.com/segmentio/kafka-go"
 )
 
 var OpenWSStream = websocket.New(func(c *websocket.Conn) {
@@ -35,11 +35,7 @@ var OpenWSStream = websocket.New(func(c *websocket.Conn) {
 		}
 	}
 
-	r := kafka.NewReader(kafka.ReaderConfig{
-		Brokers: []string{"localhost:9092"},
-		Topic:   fmt.Sprintf("i9chat-user-%d-topic", clientUser.Id),
-		GroupID: fmt.Sprintf("i9chat-user-%d-cgroup", clientUser.Id),
-	})
+	r := messageBrokerService.ConsumeTopic(fmt.Sprintf("i9chat-user-%d-topic", clientUser.Id))
 
 	goOff := func() {
 		if err := r.Close(); err != nil {
@@ -65,9 +61,9 @@ var OpenWSStream = websocket.New(func(c *websocket.Conn) {
 
 		c.WriteJSON(msg)
 
-		if err := r.CommitMessages(ctx, m); err != nil {
+		/* if err := r.CommitMessages(ctx, m); err != nil {
 			log.Println("failed to commit messages:", err)
-		}
+		} */
 	}
 })
 

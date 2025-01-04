@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"i9chat/appGlobals"
 	"log"
+	"os"
+	"time"
 
 	"github.com/segmentio/kafka-go"
 )
@@ -28,4 +30,13 @@ func Send(topic string, message Message) {
 	if err != nil {
 		log.Println("failed to write message:", err)
 	}
+}
+
+func ConsumeTopic(topic string) *kafka.Reader {
+	return kafka.NewReader(kafka.ReaderConfig{
+		Brokers:        []string{os.Getenv("KAFKA_ADDRESS")},
+		Topic:          topic,
+		GroupID:        "i9chat-topics",
+		CommitInterval: time.Second,
+	})
 }
