@@ -16,9 +16,21 @@ The API documentation provides a detailed integration guide. It doesn't follow t
 
 ### Open to suggestions
 
-If your needs require more features than this API server currently supports, feel free to suggest them, and it will be added as soon as possible.
+If you need a feature this API server does not currently support, feel free to suggest them, and it will be added as soon as possible.
 
 ## Technologies
+
+<img style="margin-right: 5px" alt="go" width="50" src="./attachments/tech-icons/go-original-wordmark.svg" />
+<img style="margin-right: 5px" alt="postgresql" width="50" src="./attachments/tech-icons/postgresql-original.svg" />
+<img style="margin-right: 5px" alt="nodejs" width="50" src="./attachments/tech-icons/apachekafka-original.svg" />
+<img style="margin-right: 5px" alt="nodejs" width="50" src="./attachments/tech-icons/googlecloud-original.svg" />
+
+### More
+
+- WebSockets
+- Gofiber
+- JWT
+- ozzo-validator
 
 ## Table of Contents
 
