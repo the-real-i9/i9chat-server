@@ -45,6 +45,31 @@ If you need a feature this API server does not currently support, feel free to s
 
 ## Features
 
+The following is a summary of the features supported by this API. Visit the API documentation to see the full features and their implementation details.
+
+### DM Chat
+
+- Message of different types including text, voice, video, audio, photo, and file attachments.
+- React to Messages
+- Unsend Messages
+- Delete Messages
+
+### Group Chat
+
+- Start a Group, Add members, Make Admins etc.
+- Join Group, Leave Group etc.
+- Everything in DM Chat
+
+### Make friends (*)
+
+- Search for people you know by their username, email, or phone number and send friend requests
+- Use your contact list to find those on the app.
+- Accept friend requests
+
+### Moments (*)
+
+- A say for statuses on WhatsApp, and Stories on Messenger
+
 ## API Documentation
 
 ## Notable Features and their Algorithms
