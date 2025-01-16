@@ -20,10 +20,12 @@ If you need a feature this API server does not currently support, feel free to s
 
 ## Technologies
 
-<img style="margin-right: 5px" alt="go" width="50" src="./attachments/tech-icons/go-original-wordmark.svg" />
-<img style="margin-right: 5px" alt="postgresql" width="50" src="./attachments/tech-icons/postgresql-original.svg" />
-<img style="margin-right: 5px" alt="nodejs" width="50" src="./attachments/tech-icons/apachekafka-original.svg" />
-<img style="margin-right: 5px" alt="nodejs" width="50" src="./attachments/tech-icons/googlecloud-original.svg" />
+<div style="display: flex;">
+<img style="margin-right: 5px" alt="go" width="50" src="./z_attachments/tech-icons/go-original-wordmark.svg" />
+<img style="margin-right: 5px" alt="postgresql" width="50" src="./z_attachments/tech-icons/postgresql-original.svg" />
+<img style="margin-right: 5px" alt="nodejs" width="50" src="./z_attachments/tech-icons/apachekafka-original.svg" />
+<img style="margin-right: 5px" alt="nodejs" width="50" src="./z_attachments/tech-icons/googlecloud-original.svg" />
+</div>
 
 ### More
 
