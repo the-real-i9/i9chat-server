@@ -22,6 +22,9 @@ If you need a feature this API server does not currently support, feel free to s
 
 <div style="display: flex;">
 <img style="margin-right: 10px" alt="go" width="50" src="./z_attachments/tech-icons/go-original-wordmark.svg" />
+<img style="margin-right: 10px" alt="go" width="50" src="./z_attachments/tech-icons/gofiber.svg" />
+<img style="margin-right: 10px" alt="go" width="50" src="./z_attachments/tech-icons/jwt.svg" />
+<img style="margin-right: 10px" alt="go" width="50" src="./z_attachments/tech-icons/websocket.svg" />
 <img style="margin-right: 10px" alt="postgresql" width="50" src="./z_attachments/tech-icons/postgresql-original.svg" />
 <img style="margin-right: 10px" alt="nodejs" width="50" src="./z_attachments/tech-icons/apachekafka-original.svg" />
 <img style="margin-right: 10px" alt="nodejs" width="50" src="./z_attachments/tech-icons/googlecloud-original.svg" />
@@ -29,9 +32,6 @@ If you need a feature this API server does not currently support, feel free to s
 
 ### More
 
-- WebSockets
-- Gofiber
-- JWT
 - ozzo-validator
 
 ## Table of Contents
