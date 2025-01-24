@@ -11,6 +11,7 @@ import (
 	"os"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/helmet"
 )
 
 func init() {
@@ -25,6 +26,8 @@ func main() {
 	}()
 
 	app := fiber.New()
+
+	app.Use(helmet.New())
 
 	app.Route("/api/auth", authRoutes.Init)
 
