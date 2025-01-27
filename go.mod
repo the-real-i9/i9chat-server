@@ -12,6 +12,7 @@ require (
 	github.com/golang-jwt/jwt/v5 v5.2.1
 	github.com/jackc/pgx/v5 v5.5.5
 	github.com/joho/godotenv v1.5.1
+	github.com/neo4j/neo4j-go-driver/v5 v5.27.0
 	github.com/segmentio/kafka-go v0.4.47
 	golang.org/x/crypto v0.29.0
 	google.golang.org/api v0.167.0

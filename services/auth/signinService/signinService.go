@@ -21,10 +21,7 @@ func Signin(ctx context.Context, emailOrUsername, password string) (any, string,
 		return nil, "", fiber.NewError(fiber.StatusNotFound, "signin error: incorrect email/username or password")
 	}
 
-	hashedPassword, err := user.GetPassword(ctx, emailOrUsername)
-	if err != nil {
-		return nil, "", err
-	}
+	hashedPassword := theUser.Password
 
 	yes, err := securityServices.PasswordMatchesHash(hashedPassword, password)
 	if err != nil {
@@ -36,7 +33,6 @@ func Signin(ctx context.Context, emailOrUsername, password string) (any, string,
 	}
 
 	authJwt, err := securityServices.JwtSign(appTypes.ClientUser{
-		Id:       theUser.Id,
 		Username: theUser.Username,
 	}, os.Getenv("AUTH_JWT_SECRET"), time.Now().UTC().Add(10*24*time.Hour))
 

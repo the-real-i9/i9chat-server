@@ -7,10 +7,16 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
-func MapToStruct(val map[string]any, structData any) {
+func MapToStruct(val map[string]any, yourStruct any) {
 	bt, _ := json.Marshal(val)
 
-	json.Unmarshal(bt, structData)
+	json.Unmarshal(bt, yourStruct)
+}
+
+func StructToMap(val any, yourMap *map[string]any) {
+	bt, _ := json.Marshal(val)
+
+	json.Unmarshal(bt, yourMap)
 }
 
 func ToStruct(val any, structData any) {

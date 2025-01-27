@@ -174,7 +174,7 @@ func ChangeProfilePicture(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).SendString(val_err.Error())
 	}
 
-	respData, app_err := userService.ChangeProfilePicture(ctx, clientUser.Id, clientUser.Username, body.PictureData)
+	respData, app_err := userService.ChangeProfilePicture(ctx, clientUser.Id, clientUser.Id, body.PictureData)
 	if app_err != nil {
 		return app_err
 	}
@@ -256,7 +256,7 @@ func FindNearbyUsers(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).SendString(val_err.Error())
 	}
 
-	respData, app_err := userService.FindNearbyUsers(ctx, clientUser.Id, body.LiveLocation)
+	respData, app_err := userService.FindNearbyUsers(ctx, clientUser.Username, body.LiveLocation, body.Radius)
 	if app_err != nil {
 		return app_err
 	}

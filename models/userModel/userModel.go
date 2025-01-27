@@ -3,50 +3,125 @@ package user
 import (
 	"context"
 	"fmt"
+	"i9chat/appGlobals"
+	"i9chat/appTypes"
 	"i9chat/helpers"
 	"log"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
-	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/neo4j/neo4j-go-driver/v5/neo4j"
 )
 
-type User struct {
-	Id                int               `json:"id"`
-	Username          string            `json:"username"`
-	ProfilePictureUrl string            `db:"profile_picture_url" json:"profile_picture_url"`
-	Presence          string            `json:"presence,omitempty"`
-	LastSeen          *pgtype.Timestamp `db:"last_seen" json:"last_seen,omitempty"`
-	Location          *pgtype.Circle    `json:"location,omitempty"`
+func Exists(ctx context.Context, emailOrUsername string) (bool, error) {
+	res, err := neo4j.ExecuteQuery(ctx, appGlobals.Neo4jDriver,
+		`
+		RETURN EXISTS {
+			MATCH (u:User) WHERE username = $emailOrUsername OR email = $emailOrUsername
+		} AS user_exists
+		`,
+		map[string]any{
+			"emailOrUsername": emailOrUsername,
+		},
+		neo4j.EagerResultTransformer,
+		neo4j.ExecuteQueryWithReadersRouting(),
+	)
+	if err != nil {
+		log.Println(fmt.Errorf("userModel.go: Exists: %s", err))
+		return false, fiber.ErrInternalServerError
+	}
+
+	userExists, _, err := neo4j.GetRecordValue[bool](res.Records[0], "user_exists")
+	if err != nil {
+		log.Println(fmt.Errorf("userModel.go: Exists: %s", err))
+		return false, fiber.ErrInternalServerError
+	}
+
+	return userExists, nil
 }
 
-func New(ctx context.Context, email string, username string, password string, geolocation string) (*User, error) {
+type User struct {
+	Username                  string `json:"username"`
+	ProfilePictureUrl         string `json:"profile_picture_url"`
+	Presence                  string `json:"presence,omitempty"`
+	LastSeen                  string `json:"last_seen,omitempty"`
+	Password                  string `json:"_"`
+	*appTypes.UserGeolocation `json:"geolocation,omitempty"`
+}
 
-	user, err := helpers.QueryRowType[User](ctx, "SELECT * FROM new_user($1, $2, $3, $4)", email, username, password, geolocation)
-
+func New(ctx context.Context, email, username, password string, geolocation *appTypes.UserGeolocation) (*User, error) {
+	res, err := neo4j.ExecuteQuery(ctx, appGlobals.Neo4jDriver,
+		`
+	CREATE (u:User { email: $email, username: $username, password: $password, profile_pic_url: "", geolocation: point({ longitude: toFloat($long), latitude: toFloat($lat) }) })
+	WITH u, { longitude: toFloat(u.geolocation.longitude), latitude: toFloat(u.geolocation.latitude) } AS geolocation
+	RETURN u { .username, .profile_pic_url, .presence, .last_seen, geolocation } AS new_user
+	
+	`,
+		map[string]any{
+			"email":    email,
+			"username": username,
+			"password": password,
+			"long":     geolocation.Longitude,
+			"lat":      geolocation.Latitude,
+		},
+		neo4j.EagerResultTransformer,
+		neo4j.ExecuteQueryWithWritersRouting(),
+	)
 	if err != nil {
-		log.Println(fmt.Errorf("userModel.go: NewUser: %s", err))
+		log.Println(fmt.Errorf("userModel.go: New: %s", err))
 		return nil, fiber.ErrInternalServerError
 	}
 
-	return user, nil
+	new_user, _, err := neo4j.GetRecordValue[map[string]any](res.Records[0], "new_user")
+	if err != nil {
+		log.Println(fmt.Errorf("userModel.go: New: %s", err))
+		return nil, fiber.ErrInternalServerError
+	}
+
+	var newUser User
+
+	helpers.MapToStruct(new_user, &newUser)
+
+	return &newUser, nil
 }
 
 func FindOne(ctx context.Context, uniqueIdent string) (*User, error) {
-
-	user, err := helpers.QueryRowType[User](ctx, "SELECT * FROM get_user($1)", uniqueIdent)
-
+	res, err := neo4j.ExecuteQuery(ctx, appGlobals.Neo4jDriver,
+		`
+	MATCH (u:User) WHERE u.username = $uniqueIdent OR u.email = $uniqueIdent
+	WITH u, { longitude: toFloat(u.geolocation.longitude), latitude: toFloat(u.geolocation.latitude) } AS geolocation
+	RETURN u { .username, .profile_pic_url, .presence, .last_seen, .password, geolocation } AS found_user
+	
+	`,
+		map[string]any{
+			"uniqueIdent": uniqueIdent,
+		},
+		neo4j.EagerResultTransformer,
+		neo4j.ExecuteQueryWithWritersRouting(),
+	)
 	if err != nil {
 		log.Println(fmt.Errorf("userModel.go: FindOne: %s", err))
 		return nil, fiber.ErrInternalServerError
 	}
 
-	return user, nil
+	found_user, notFound, err := neo4j.GetRecordValue[map[string]any](res.Records[0], "found_user")
+	if err != nil {
+		log.Println(fmt.Errorf("userModel.go: FindOne: %s", err))
+		return nil, fiber.ErrInternalServerError
+	}
+
+	if notFound {
+		return nil, nil
+	}
+
+	var foundUser User
+
+	helpers.MapToStruct(found_user, &foundUser)
+
+	return &foundUser, nil
 }
 
-func FindNearby(ctx context.Context, clientUserId int, liveLocation string) ([]*User, error) {
-
-	nearbyUsers, err := helpers.QueryRowsType[User](ctx, "SELECT * FROM find_nearby_users($1, $2)", clientUserId, liveLocation)
+func FindNearby(ctx context.Context, clientUsername string, liveLocation *appTypes.UserGeolocation, radius float64) ([]*User, error) {
 
 	if err != nil {
 		log.Println(fmt.Errorf("userModel.go: FindNearbyUsers: %s", err))

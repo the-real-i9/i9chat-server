@@ -32,7 +32,7 @@ func CreateNewGroupChat(c *fiber.Ctx) error {
 		body.Name,
 		body.Description,
 		body.PictureData,
-		[]string{fmt.Sprint(clientUser.Id), clientUser.Username},
+		[]string{fmt.Sprint(clientUser.Id), clientUser.Id},
 		body.InitUsers,
 	)
 	if app_err != nil {
@@ -135,7 +135,7 @@ func ExecuteAction(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).SendString(val_err.Error())
 	}
 
-	app_err := actionToHandlerMap[body.Action](ctx, []string{fmt.Sprint(clientUser.Id), clientUser.Username}, body.Data)
+	app_err := actionToHandlerMap[body.Action](ctx, []string{fmt.Sprint(clientUser.Id), clientUser.Id}, body.Data)
 	if app_err != nil {
 		return app_err
 	}

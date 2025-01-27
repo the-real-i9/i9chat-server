@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"i9chat/appTypes"
-	"i9chat/models/appModel"
 	user "i9chat/models/userModel"
 	"i9chat/services/mailService"
 	"i9chat/services/securityServices"
@@ -15,12 +14,12 @@ import (
 )
 
 func RequestNewAccount(ctx context.Context, email string) (any, *appTypes.SignupSession, error) {
-	accExists, err := appModel.AccountExists(ctx, email)
+	userExists, err := user.Exists(ctx, email)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	if accExists {
+	if userExists {
 		return nil, nil, fiber.NewError(fiber.StatusBadRequest, "signup error: an account with", email, "already exists")
 	}
 
@@ -63,13 +62,13 @@ func VerifyEmail(ctx context.Context, sessionData *appTypes.SignupSessionData, i
 	return respData, updatedSessionData, nil
 }
 
-func RegisterUser(ctx context.Context, sessionData *appTypes.SignupSessionData, username, password, geolocation string) (any, string, error) {
-	accExists, err := appModel.AccountExists(ctx, username)
+func RegisterUser(ctx context.Context, sessionData *appTypes.SignupSessionData, username, password string, geolocation *appTypes.UserGeolocation) (any, string, error) {
+	userExists, err := user.Exists(ctx, username)
 	if err != nil {
 		return nil, "", err
 	}
 
-	if accExists {
+	if userExists {
 		return nil, "", fiber.NewError(fiber.StatusBadRequest, "signup error: username", username, "is unavailable")
 	}
 
@@ -84,7 +83,6 @@ func RegisterUser(ctx context.Context, sessionData *appTypes.SignupSessionData, 
 	}
 
 	authJwt, err := securityServices.JwtSign(appTypes.ClientUser{
-		Id:       newUser.Id,
 		Username: newUser.Username,
 	}, os.Getenv("AUTH_JWT_SECRET"), time.Now().UTC().Add(10*24*time.Hour)) // 1 year
 

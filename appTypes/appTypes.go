@@ -7,6 +7,7 @@ import (
 	"time"
 
 	validation "github.com/go-ozzo/ozzo-validation/v4"
+	"github.com/go-ozzo/ozzo-validation/v4/is"
 )
 
 type SignupSessionData struct {
@@ -21,8 +22,25 @@ type SignupSession struct {
 }
 
 type ClientUser struct {
-	Id       int
 	Username string
+}
+
+type UserGeolocation struct {
+	Longitude float64 `json:"longitude"`
+	Latitude  float64 `json:"latitude"`
+}
+
+func (ug UserGeolocation) Validate() error {
+	return validation.ValidateStruct(&ug,
+		validation.Field(&ug.Longitude,
+			validation.Required,
+			is.Float.Error("value must be of type float"),
+		),
+		validation.Field(&ug.Latitude,
+			validation.Required,
+			is.Float.Error("value must be type float"),
+		),
+	)
 }
 
 type MsgProps struct {

@@ -3,6 +3,7 @@ package userService
 import (
 	"context"
 	"fmt"
+	"i9chat/appTypes"
 	user "i9chat/models/userModel"
 	"i9chat/services/cloudStorageService"
 	"i9chat/services/messageBrokerService"
@@ -103,8 +104,8 @@ func SearchUser(ctx context.Context, clientUserId int, query string) ([]*user.Us
 	return user.Search(ctx, clientUserId, query)
 }
 
-func FindNearbyUsers(ctx context.Context, clientUserId int, liveLocation string) ([]*user.User, error) {
-	return user.FindNearby(ctx, clientUserId, liveLocation)
+func FindNearbyUsers(ctx context.Context, clientUsername string, liveLocation *appTypes.UserGeolocation, radius float64) ([]*user.User, error) {
+	return user.FindNearby(ctx, clientUsername, liveLocation, radius)
 }
 
 func GetMyChats(ctx context.Context, clientUserId int) ([]*map[string]any, error) {

@@ -6,6 +6,7 @@ import (
 	"regexp"
 
 	validation "github.com/go-ozzo/ozzo-validation/v4"
+	"github.com/go-ozzo/ozzo-validation/v4/is"
 )
 
 type clientEventBody struct {
@@ -99,15 +100,14 @@ func (b changeProfilePictureBody) Validate() error {
 }
 
 type findNearbyUsersBody struct {
-	LiveLocation string `json:"liveLocation"`
+	LiveLocation *appTypes.UserGeolocation `json:"liveLocation"`
+	Radius       float64                   `json:"radius"`
 }
 
 func (b findNearbyUsersBody) Validate() error {
 	err := validation.ValidateStruct(&b,
-		validation.Field(&b.LiveLocation,
-			validation.Required,
-			validation.Match(regexp.MustCompile("^[0-9]+, ?[0-9]+, ?[0-9]+$")).Error("invalid circle format; format: pointX, pointY, radiusR"),
-		),
+		validation.Field(&b.LiveLocation, validation.Required),
+		validation.Field(&b.Radius, is.Float.Error("value must be of type float")),
 	)
 
 	return helpers.ValidationError(err, "user_bodyValidators.go", "findNearbyUsersBody")

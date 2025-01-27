@@ -22,9 +22,7 @@ func init() {
 }
 
 func main() {
-	defer func() {
-		initializers.CleanUp()
-	}()
+	defer initializers.CleanUp()
 
 	app := fiber.New()
 
