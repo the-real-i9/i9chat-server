@@ -8,8 +8,8 @@ import (
 	"time"
 )
 
-func uploadVoice(ctx context.Context, userId int, vd *appTypes.MsgProps) error {
-	voiceUrl, err := cloudStorageService.Upload(ctx, fmt.Sprintf("voice_messages/user-%d/voice-%d.ogg", userId, time.Now().UnixNano()), vd.Data)
+func uploadVoice(ctx context.Context, username string, vd *appTypes.MsgProps) error {
+	voiceUrl, err := cloudStorageService.Upload(ctx, fmt.Sprintf("voice_messages/user-%s/voice-%d.ogg", username, time.Now().UnixNano()), vd.Data)
 
 	if err != nil {
 		return err
@@ -22,8 +22,8 @@ func uploadVoice(ctx context.Context, userId int, vd *appTypes.MsgProps) error {
 	return nil
 }
 
-func uploadAudio(ctx context.Context, userId int, ad *appTypes.MsgProps) error {
-	audioUrl, err := cloudStorageService.Upload(ctx, fmt.Sprintf("audio_messages/user-%d/aud-%d.mp3", userId, time.Now().UnixNano()), ad.Data)
+func uploadAudio(ctx context.Context, username string, ad *appTypes.MsgProps) error {
+	audioUrl, err := cloudStorageService.Upload(ctx, fmt.Sprintf("audio_messages/user-%s/aud-%d.mp3", username, time.Now().UnixNano()), ad.Data)
 	if err != nil {
 		return err
 	}
@@ -35,8 +35,8 @@ func uploadAudio(ctx context.Context, userId int, ad *appTypes.MsgProps) error {
 	return nil
 }
 
-func uploadVideo(ctx context.Context, userId int, vd *appTypes.MsgProps) error {
-	videoUrl, err := cloudStorageService.Upload(ctx, fmt.Sprintf("video_messages/user-%d/vid-%d.mp4", userId, time.Now().UnixNano()), vd.Data)
+func uploadVideo(ctx context.Context, username string, vd *appTypes.MsgProps) error {
+	videoUrl, err := cloudStorageService.Upload(ctx, fmt.Sprintf("video_messages/user-%s/vid-%d.mp4", username, time.Now().UnixNano()), vd.Data)
 	if err != nil {
 		return err
 	}
@@ -48,8 +48,8 @@ func uploadVideo(ctx context.Context, userId int, vd *appTypes.MsgProps) error {
 	return nil
 }
 
-func uploadImage(ctx context.Context, userId int, id *appTypes.MsgProps) error {
-	imageUrl, err := cloudStorageService.Upload(ctx, fmt.Sprintf("image_messages/user-%d/img-%d.jpg", userId, time.Now().UnixNano()), id.Data)
+func uploadImage(ctx context.Context, username string, id *appTypes.MsgProps) error {
+	imageUrl, err := cloudStorageService.Upload(ctx, fmt.Sprintf("image_messages/user-%s/img-%d.jpg", username, time.Now().UnixNano()), id.Data)
 	if err != nil {
 		return err
 	}
@@ -61,8 +61,8 @@ func uploadImage(ctx context.Context, userId int, id *appTypes.MsgProps) error {
 	return nil
 }
 
-func uploadFile(ctx context.Context, userId int, fd *appTypes.MsgProps) error {
-	fileUrl, err := cloudStorageService.Upload(ctx, fmt.Sprintf("file_messages/user-%d/img-%d.jpg", userId, time.Now().UnixNano()), fd.Data)
+func uploadFile(ctx context.Context, username string, fd *appTypes.MsgProps) error {
+	fileUrl, err := cloudStorageService.Upload(ctx, fmt.Sprintf("file_messages/user-%s/img-%d.jpg", username, time.Now().UnixNano()), fd.Data)
 	if err != nil {
 		return err
 	}
@@ -74,19 +74,19 @@ func uploadFile(ctx context.Context, userId int, fd *appTypes.MsgProps) error {
 	return nil
 }
 
-func UploadMessageMedia(ctx context.Context, userId int, msg *appTypes.MsgContent) error {
+func UploadMessageMedia(ctx context.Context, username string, msg *appTypes.MsgContent) error {
 
 	switch msg.Type {
 	case "voice":
-		return uploadVoice(ctx, userId, msg.MsgProps)
+		return uploadVoice(ctx, username, msg.MsgProps)
 	case "audio":
-		return uploadAudio(ctx, userId, msg.MsgProps)
+		return uploadAudio(ctx, username, msg.MsgProps)
 	case "video":
-		return uploadVideo(ctx, userId, msg.MsgProps)
+		return uploadVideo(ctx, username, msg.MsgProps)
 	case "image":
-		return uploadImage(ctx, userId, msg.MsgProps)
+		return uploadImage(ctx, username, msg.MsgProps)
 	case "file":
-		return uploadFile(ctx, userId, msg.MsgProps)
+		return uploadFile(ctx, username, msg.MsgProps)
 	default:
 		return nil
 	}

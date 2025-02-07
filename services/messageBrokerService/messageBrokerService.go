@@ -13,8 +13,8 @@ import (
 )
 
 type Message struct {
-	Event string `json:"event" db:"event"`
-	Data  any    `json:"data" db:"data"`
+	Event string `json:"event"`
+	Data  any    `json:"data"`
 }
 
 func Send(topic string, message Message) {

@@ -2,6 +2,7 @@ package dmChatService
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"i9chat/appTypes"
 	dmChat "i9chat/models/chatModel/dmChatModel"
@@ -10,23 +11,25 @@ import (
 	"time"
 )
 
-func GetChatHistory(ctx context.Context, dmChatId string, offset int) ([]*dmChat.Message, error) {
-	return dmChat.GetChatHistory(ctx, dmChatId, offset)
+func GetChatHistory(ctx context.Context, clientUsername, partnerUsername string, limit int, offset time.Time) ([]any, error) {
+	return dmChat.GetChatHistory(ctx, clientUsername, partnerUsername, limit, offset)
 }
 
-func SendMessage(ctx context.Context, clientUserId, partnerUserId int, msgContent *appTypes.MsgContent, createdAt time.Time) (*dmChat.ClientNewMsgData, error) {
+func SendMessage(ctx context.Context, clientUsername, partnerUsername string, msgContent *appTypes.MsgContent, createdAt time.Time) (map[string]any, error) {
 
-	err := appServices.UploadMessageMedia(ctx, clientUserId, msgContent)
+	err := appServices.UploadMessageMedia(ctx, clientUsername, msgContent)
 	if err != nil {
 		return nil, err
 	}
 
-	newMessage, err := dmChat.SendMessage(ctx, clientUserId, partnerUserId, *msgContent, createdAt)
+	msgContentJson, _ := json.Marshal(*msgContent)
+
+	newMessage, err := dmChat.SendMessage(ctx, clientUsername, partnerUsername, msgContentJson, createdAt)
 	if err != nil {
 		return nil, err
 	}
 
-	go messageBrokerService.Send(fmt.Sprintf("user-%d-topic", partnerUserId), messageBrokerService.Message{
+	go messageBrokerService.Send(fmt.Sprintf("user-%s-topic", partnerUsername), messageBrokerService.Message{
 		Event: "new dm chat message",
 		Data:  newMessage.PartnerNewMsgData,
 	})
@@ -36,36 +39,36 @@ func SendMessage(ctx context.Context, clientUserId, partnerUserId int, msgConten
 	return respData, nil
 }
 
-func UpdateMessageDeliveryStatus(ctx context.Context, clientUserId, partnerUserId, msgId int, status string, updatedAt time.Time) {
-	if err := dmChat.UpdateMessageDeliveryStatus(ctx, clientUserId, partnerUserId, msgId, status, updatedAt); err == nil {
-
-		go messageBrokerService.Send(fmt.Sprintf("user-%d-topic", partnerUserId), messageBrokerService.Message{
-			Event: "dm chat message delivery status changed",
-			Data: map[string]any{
-				"partnerUserId": clientUserId,
-				"msgId":         msgId,
-				"status":        status,
-			},
-		})
+func AckMessageDelivered(ctx context.Context, clientUsername, partnerUsername, msgId string, deliveredAt time.Time) error {
+	if err := dmChat.AckMessageDelivered(ctx, clientUsername, partnerUsername, msgId, deliveredAt); err != nil {
+		return err
 	}
+
+	go messageBrokerService.Send(fmt.Sprintf("user-%s-topic", partnerUsername), messageBrokerService.Message{
+		Event: "dm chat message delivered",
+		Data: map[string]any{
+			"partnerUsername": clientUsername,
+			"msgId":           msgId,
+			"status":          "delivered",
+		},
+	})
+	return nil
 }
 
-func BatchUpdateMessageDeliveryStatus(ctx context.Context, clientUserId int, status string, ackDatas []*appTypes.DMChatMsgAckData) {
-	if err := dmChat.BatchUpdateMessageDeliveryStatus(ctx, clientUserId, status, ackDatas); err == nil {
-
-		for _, data := range ackDatas {
-			data := data
-
-			messageBrokerService.Send(fmt.Sprintf("user-%d-topic", data.PartnerUserId), messageBrokerService.Message{
-				Event: "dm chat message delivery status changed",
-				Data: map[string]any{
-					"partnerUserId": clientUserId,
-					"msgId":         data.MsgId,
-					"status":        status,
-				},
-			})
-		}
+func AckMessageRead(ctx context.Context, clientUsername, partnerUsername, msgId string, readAt time.Time) error {
+	if err := dmChat.AckMessageRead(ctx, clientUsername, partnerUsername, msgId, readAt); err != nil {
+		return err
 	}
+	go messageBrokerService.Send(fmt.Sprintf("user-%s-topic", partnerUsername), messageBrokerService.Message{
+		Event: "dm chat message read",
+		Data: map[string]any{
+			"partnerUsername": clientUsername,
+			"msgId":           msgId,
+			"status":          "read",
+		},
+	})
+
+	return nil
 }
 
 func React() {

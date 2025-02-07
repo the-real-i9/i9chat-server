@@ -3,106 +3,132 @@ package dmChat
 import (
 	"context"
 	"fmt"
-	"i9chat/appTypes"
 	"i9chat/helpers"
-	user "i9chat/models/userModel"
+	"i9chat/models/db"
 	"log"
-	"strconv"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
-	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/neo4j/neo4j-go-driver/v5/neo4j"
 )
 
-type ClientNewMsgData struct {
-	MsgId int `db:"msg_id" json:"msg_id"`
-}
-
-type PartnerNewMsgData struct {
-	Sender user.User `json:"sender"`
-	Msg    struct {
-		Id      int            `json:"id"`
-		Content map[string]any `json:"content"`
-	} `json:"msg"`
-}
-
 type NewMessage struct {
-	*ClientNewMsgData  `db:"crd"`
-	*PartnerNewMsgData `db:"prd"`
+	ClientNewMsgData  map[string]any `json:"client_res"`
+	PartnerNewMsgData map[string]any `json:"partner_res"`
 }
 
-func SendMessage(ctx context.Context, clientUserId, partnerUserId int, msgContent appTypes.MsgContent, createdAt time.Time) (*NewMessage, error) {
-	res, err := helpers.QueryRowType[NewMessage](ctx, "SELECT client_resp_data AS crd, partner_resp_data AS prd FROM send_dm_chat_message($1, $2, $3, $4)", clientUserId, partnerUserId, msgContent, createdAt)
+func SendMessage(ctx context.Context, clientUsername, partnerUsername string, msgContentJson []byte, createdAt time.Time) (NewMessage, error) {
+	var newMsg NewMessage
+
+	res, err := db.Query(
+		ctx,
+		`
+		MATCH (clientUser:User{ username: $client_username }), (partnerUser:User{ username: $partner_username })
+		MERGE (clientUser)-[:HAS_CHAT]->(clientChat:Chat{ owner_username: $client_username, partner_username: $partner_username })-[:WITH_USER]->(partnerUser)
+		MERGE (partnerUser)-[:HAS_CHAT]->(partnerChat:Chat{ owner_username: $partner_username, partner_username: $client_username })-[:WITH_USER]->(clientUser)
+		SET clientChat.last_activity_type = "message", 
+			partnerChat.last_activity_type = "message",
+			clientChat.last_message_at = $created_at, 
+			partnerChat.last_message_at = $created_at
+		WITH clientUser, clientChat, partnerUser, partnerChat
+		CREATE (message:Message{ id: randomUUID(), content: $message_content, delivery_status: "sent", created_at: $created_at }),
+			(clientUser)-[:SENDS_MESSAGE]->(message)-[:IN_CHAT]->(clientChat),
+			(partnerUser)-[:RECEIVES_MESSAGE]->(message)-[:IN_CHAT]->(partnerChat)
+		WITH message, toString(message.created_at) AS created_at, clientUser { .username, .profile_pic_url, .connection_status } AS sender
+		RETURN { new_msg_id: message.id } AS client_res,
+			message { .*, created_at, sender } AS partner_res
+		`,
+		map[string]any{
+			"client_username":  clientUsername,
+			"partner_username": partnerUsername,
+			"message_content":  msgContentJson,
+			"created_at":       createdAt,
+		},
+	)
 	if err != nil {
 		log.Println(fmt.Errorf("DMChatModel.go: SendMessage: %s", err))
-		return nil, fiber.ErrInternalServerError
+		return newMsg, fiber.ErrInternalServerError
 	}
 
-	return res, nil
+	helpers.MapToStruct(res.Records[0].AsMap(), &newMsg)
+
+	return newMsg, nil
 }
 
 func ReactToMessage(ctx context.Context, clientDMChatId string, msgId, clientUserId int, reaction rune) error {
-	_, err := helpers.QueryRowField[bool](ctx, "SELECT react_to_dm_chat_message($1, $2, $3, $4)", clientDMChatId, msgId, clientUserId, strconv.QuoteRuneToASCII(reaction))
-	if err != nil {
-		log.Println(fmt.Errorf("DMChatModel.go: ReactToMessage: %s", err))
-		return fiber.ErrInternalServerError
-	}
 
 	return nil
 }
 
-type messageReaction struct {
-	Reaction rune       `json:"reaction,omitempty"`
-	Reactor  *user.User `json:"reactor,omitempty"`
-}
-
-type Message struct {
-	Id             int               `db:"msg_id" json:"msg_id"`
-	Sender         user.User         `json:"sender"`
-	MsgContent     map[string]any    `db:"msg_content" json:"msg_content"`
-	DeliveryStatus string            `db:"delivery_status" json:"delivery_status"`
-	CreatedAt      pgtype.Timestamp  `db:"created_at" json:"created_at"`
-	Edited         bool              `json:"edited"`
-	EditedAt       *pgtype.Timestamp `db:"edited_at" json:"edited_at,omitempty"`
-	Reactions      []messageReaction `json:"reactions"`
-}
-
-func GetChatHistory(ctx context.Context, dmChatId string, offset int) ([]*Message, error) {
-	messages, err := helpers.QueryRowsType[Message](ctx, `
-	SELECT * FROM (
-		SELECT * FROM get_dm_chat_history($1) 
-		LIMIT 50 OFFSET $2
-	) ORDER BY created_at ASC`, dmChatId, offset)
+func GetChatHistory(ctx context.Context, clientUsername, partnerUsername string, limit int, offset time.Time) ([]any, error) {
+	res, err := db.Query(
+		ctx,
+		`
+		MATCH (clientChat:Chat{ owner_username: $client_username, partner_username: $partner_username })<-[:IN_CHAT]-(message:Message)<-[rxn:REACTS_TO_MESSAGE]-(reactor)
+		WHERE message.created_at >= $offset
+		WITH message, toString(message.created_at) AS created_at, collect({ user: reactor { .username, .profile_pic_url }, reaction: rxn.reaction }) AS reactions
+		ORDER BY message.created_at DESC
+		LIMIT $limit
+		RETURN collect(message { .*, created_at, reactions }) AS chat_history
+		`,
+		map[string]any{
+			"client_username":  clientUsername,
+			"partner_username": partnerUsername,
+			"limit":            limit,
+			"offset":           offset,
+		},
+	)
 	if err != nil {
-		log.Println(fmt.Errorf("DMChatModel.go: GetChatHistory: %s", err))
+		log.Println("DMChatModel.go: GetChatHistory", err)
 		return nil, fiber.ErrInternalServerError
 	}
+
+	messages, _, _ := neo4j.GetRecordValue[[]any](res.Records[0], "chat_history")
 
 	return messages, nil
 }
 
-func UpdateMessageDeliveryStatus(ctx context.Context, clientUserId, partnerUserId, msgId int, status string, updatedAt time.Time) error {
-	_, err := helpers.QueryRowField[bool](ctx, "SELECT update_dm_chat_message_delivery_status($1, $2, $3, $4, $5)", clientUserId, partnerUserId, msgId, status, updatedAt)
+func AckMessageDelivered(ctx context.Context, clientUsername, partnerUsername, msgId string, deliveredAt time.Time) error {
+	_, err := db.Query(
+		ctx,
+		`
+		MATCH (clientChat:Chat{ owner_username: $client_username, partner_username: $partner_username }),
+      ()-[:RECEIVES_MESSAGE]->(message:Message{ id: $message_id, delivery_status: "sent" })-[:IN_CHAT]->(clientChat)
+    SET message.delivery_status = "delivered", message.delivered_at = datetime($delivered_at), clientChat.unread_messages_count = coalesce(clientChat.unread_messages_count, 0) + 1
+		`,
+		map[string]any{
+			"client_username":  clientUsername,
+			"partner_username": partnerUsername,
+			"message_id":       msgId,
+			"delivered_at":     deliveredAt,
+		},
+	)
 	if err != nil {
-		log.Println(fmt.Errorf("DMChatModel.go: UpdateMessageDeliveryStatus: %s", err))
+		log.Println("DMChatModel.go: AckMessageDelivered", err)
 		return fiber.ErrInternalServerError
 	}
 
 	return nil
 }
 
-func BatchUpdateMessageDeliveryStatus(ctx context.Context, clientUserId int, status string, ackDatas []*appTypes.DMChatMsgAckData) error {
-	var sqls = []string{}
-	var params = [][]any{}
-
-	for _, data := range ackDatas {
-		sqls = append(sqls, "SELECT update_dm_chat_message_delivery_status($1, $2, $3, $4, $5)")
-		params = append(params, []any{clientUserId, data.PartnerUserId, data.MsgId, status, data.At})
-	}
-
-	_, err := helpers.BatchQuery[bool](ctx, sqls, params)
+func AckMessageRead(ctx context.Context, clientUsername, partnerUsername, msgId string, readAt time.Time) error {
+	_, err := db.Query(
+		ctx,
+		`
+		MATCH (clientChat:Chat{ owner_username: $client_username, partner_username: $partner_username }),
+      ()-[:RECEIVES_MESSAGE]->(message:Message{ id: $message_id } WHERE message.delivery_status IN ["sent", "delivered"])-[:IN_CHAT]->(clientChat)
+    WITH clientChat, message, CASE coalesce(clientChat.unread_messages_count, 0) WHEN <> 0 THEN clientChat.unread_messages_count - 1 ELSE 0 END AS unread_messages_count
+    SET message.delivery_status = "seen", message.read_at = datetime($read_at), clientChat.unread_messages_count = unread_messages_count
+		`,
+		map[string]any{
+			"client_username":  clientUsername,
+			"partner_username": partnerUsername,
+			"message_id":       msgId,
+			"read_at":          readAt,
+		},
+	)
 	if err != nil {
-		log.Println(fmt.Errorf("DMChatModel.go: BatchUpdateMessageDeliveryStatus: %s", err))
+		log.Println("DMChatModel.go: AckMessageDelivered", err)
 		return fiber.ErrInternalServerError
 	}
 

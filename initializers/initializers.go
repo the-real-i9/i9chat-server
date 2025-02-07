@@ -9,8 +9,7 @@ import (
 
 	"cloud.google.com/go/storage"
 	"github.com/gofiber/fiber/v2/middleware/session"
-	"github.com/gofiber/storage/postgres/v3"
-	"github.com/jackc/pgx/v5/pgxpool"
+	neo4jstore "github.com/gofiber/storage/neo4j"
 	"github.com/joho/godotenv"
 	"github.com/neo4j/neo4j-go-driver/v5/neo4j"
 	"github.com/segmentio/kafka-go"
@@ -24,17 +23,6 @@ func initGCSClient() error {
 	}
 
 	appGlobals.GCSClient = stClient
-
-	return nil
-}
-
-func initDBPool() error {
-	pool, err := pgxpool.New(context.Background(), os.Getenv("PGDATABASE_URL"))
-	if err != nil {
-		return err
-	}
-
-	appGlobals.DBPool = pool
 
 	return nil
 }
@@ -88,11 +76,11 @@ func initKafkaWriter() error {
 	return nil
 }
 
-func configSessionStore() {
-	getStorage := func(tableName string) *postgres.Storage {
-		return postgres.New(postgres.Config{
-			DB:    appGlobals.DBPool,
-			Table: tableName,
+func initSessionStore() {
+	getStorage := func(nodeName string) *neo4jstore.Storage {
+		return neo4jstore.New(neo4jstore.Config{
+			DB:   appGlobals.Neo4jDriver,
+			Node: nodeName,
 		})
 	}
 
@@ -120,15 +108,11 @@ func InitApp() error {
 		}
 	}
 
-	if err := initDBPool(); err != nil {
-		return err
-	}
-
-	configSessionStore()
-
 	if err := initNeo4jDriver(); err != nil {
 		return err
 	}
+
+	initSessionStore()
 
 	if err := initGCSClient(); err != nil {
 		return err
@@ -143,8 +127,6 @@ func CleanUp() {
 	if err := appGlobals.KafkaWriter.Close(); err != nil {
 		log.Println("failed to close writer:", err)
 	}
-
-	appGlobals.DBPool.Close()
 
 	if err := appGlobals.Neo4jDriver.Close(context.TODO()); err != nil {
 		log.Println("error closing neo4j driver", err)

@@ -7,6 +7,5 @@ import (
 )
 
 func Init(router fiber.Router) {
-	router.Post("/:partner_user_id/send_message", dmcc.SendMessage)
-	router.Get("/chat_history", dmcc.GetChatHistory)
+	router.Get("/:partner_username/history", dmcc.GetChatHistory)
 }

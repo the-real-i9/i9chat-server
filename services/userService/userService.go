@@ -12,12 +12,13 @@ import (
 	"github.com/gabriel-vasile/mimetype"
 )
 
-func GoOnline(ctx context.Context, clientUserId int) error {
-	userDMChatPartnersIdList, err := user.ChangePresence(ctx, clientUserId, "online", time.Now())
+func GoOnline(ctx context.Context, clientUsername string) error {
+	userDMChatPartnersIdList, err := user.ChangePresence(ctx, clientUsername, "online", time.Time{})
 	if err != nil {
 		return err
 	}
 
+	// work in progress
 	// "recepients" are: all users to whom you are a DMChat partner
 	go func(recepientIds []*int) {
 		for _, rId := range recepientIds {
@@ -26,7 +27,7 @@ func GoOnline(ctx context.Context, clientUserId int) error {
 			messageBrokerService.Send(fmt.Sprintf("user-%d-topic", rId), messageBrokerService.Message{
 				Event: "user presence changed",
 				Data: map[string]any{
-					"userId":   clientUserId,
+					"username": clientUsername,
 					"presence": "online",
 					"lastSeen": nil,
 				},
@@ -37,8 +38,8 @@ func GoOnline(ctx context.Context, clientUserId int) error {
 	return nil
 }
 
-func GoOffline(ctx context.Context, clientUserId int, lastSeen time.Time) {
-	userDMChatPartnersIdList, err := user.ChangePresence(ctx, clientUserId, "offline", lastSeen)
+func GoOffline(ctx context.Context, clientUsername string, lastSeen time.Time) {
+	userDMChatPartnersIdList, err := user.ChangePresence(ctx, clientUsername, "offline", lastSeen)
 	if err != nil {
 		return
 	}
@@ -51,7 +52,7 @@ func GoOffline(ctx context.Context, clientUserId int, lastSeen time.Time) {
 			messageBrokerService.Send(fmt.Sprintf("user-%d-topic", rId), messageBrokerService.Message{
 				Event: "user presence changed",
 				Data: map[string]any{
-					"userId":   clientUserId,
+					"username": clientUsername,
 					"presence": "offline",
 					"lastSeen": lastSeen,
 				},
@@ -60,7 +61,7 @@ func GoOffline(ctx context.Context, clientUserId int, lastSeen time.Time) {
 	}(userDMChatPartnersIdList)
 }
 
-func ChangeProfilePicture(ctx context.Context, clientUserId int, clientUsername string, pictureData []byte) (any, error) {
+func ChangeProfilePicture(ctx context.Context, clientUsername string, pictureData []byte) (any, error) {
 	// if any picture size validation error, do it here
 
 	ext := mimetype.Detect(pictureData).Extension()
@@ -71,7 +72,7 @@ func ChangeProfilePicture(ctx context.Context, clientUserId int, clientUsername 
 		return nil, err
 	}
 
-	_, ed_err := user.EditProfile(ctx, clientUserId, [][]string{{"profile_picture_url", newPicUrl}})
+	ed_err := user.EditProfile(ctx, clientUsername, map[string]any{"profile_picture_url": newPicUrl})
 	if ed_err != nil {
 		return nil, ed_err
 	}
@@ -83,8 +84,8 @@ func ChangeProfilePicture(ctx context.Context, clientUserId int, clientUsername 
 	return respData, nil
 }
 
-func UpdateMyLocation(ctx context.Context, clientUserId int, newGeolocation string) (any, error) {
-	err := user.UpdateLocation(ctx, clientUserId, newGeolocation)
+func UpdateMyLocation(ctx context.Context, clientUsername string, newGeolocation *appTypes.UserGeolocation) (any, error) {
+	err := user.UpdateLocation(ctx, clientUsername, newGeolocation)
 	if err != nil {
 		return nil, err
 	}
@@ -96,18 +97,14 @@ func UpdateMyLocation(ctx context.Context, clientUserId int, newGeolocation stri
 	return respData, err
 }
 
-func GetAllUsers(ctx context.Context, clientUserId int) ([]*user.User, error) {
-	return user.GetAll(ctx, clientUserId)
+func SearchUser(ctx context.Context, clientUsername, query string) ([]any, error) {
+	return user.Search(ctx, clientUsername, query)
 }
 
-func SearchUser(ctx context.Context, clientUserId int, query string) ([]*user.User, error) {
-	return user.Search(ctx, clientUserId, query)
+func FindNearbyUsers(ctx context.Context, clientUsername string, long, lat, radius float64) ([]any, error) {
+	return user.FindNearby(ctx, clientUsername, long, lat, radius)
 }
 
-func FindNearbyUsers(ctx context.Context, clientUsername string, liveLocation *appTypes.UserGeolocation, radius float64) ([]*user.User, error) {
-	return user.FindNearby(ctx, clientUsername, liveLocation, radius)
-}
-
-func GetMyChats(ctx context.Context, clientUserId int) ([]*map[string]any, error) {
-	return user.GetChats(ctx, clientUserId)
+func GetMyChats(ctx context.Context, clientUsername string) ([]any, error) {
+	return user.GetChats(ctx, clientUsername)
 }

@@ -3,6 +3,8 @@ package helpers
 import (
 	"encoding/json"
 	"i9chat/appTypes"
+	"log"
+	"strconv"
 
 	"github.com/gofiber/fiber/v2"
 )
@@ -10,19 +12,31 @@ import (
 func MapToStruct(val map[string]any, yourStruct any) {
 	bt, _ := json.Marshal(val)
 
-	json.Unmarshal(bt, yourStruct)
+	if err := json.Unmarshal(bt, yourStruct); err != nil {
+		log.Println("helpers.go: MapToStruct:", err)
+	}
 }
 
 func StructToMap(val any, yourMap *map[string]any) {
 	bt, _ := json.Marshal(val)
 
-	json.Unmarshal(bt, yourMap)
+	if err := json.Unmarshal(bt, yourMap); err != nil {
+		log.Println("helpers.go: StructToMap:", err)
+	}
 }
 
-func ToStruct(val any, structData any) {
-	bt, _ := json.Marshal(val)
+func ParseIntLimitOffset(limit, offset string) (int, int, error) {
+	limitInt, err := strconv.ParseInt(limit, 10, 0)
+	if err != nil {
+		return 0, 0, err
+	}
 
-	json.Unmarshal(bt, structData)
+	offsetInt, err := strconv.ParseInt(offset, 10, 0)
+	if err != nil {
+		return 0, 0, err
+	}
+
+	return int(limitInt), int(offsetInt), nil
 }
 
 func ErrResp(err error) appTypes.WSResp {

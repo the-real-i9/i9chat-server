@@ -44,20 +44,20 @@ func (ug UserGeolocation) Validate() error {
 }
 
 type MsgProps struct {
-	TextContent *string `json:"textContent,omitempty" db:"textContent,omitempty"`
+	TextContent *string `json:"textContent,omitempty"`
 	Data        []byte  `json:"data,omitempty"`
-	Url         *string `json:"url,omitempty" db:"url,omitempty"`
-	Duration    *string `json:"duration,omitempty" db:"duration,omitempty"`
-	Caption     *string `json:"caption,omitempty" db:"caption,omitempty"`
-	MimeType    *string `json:"mimeType,omitempty" db:"mimeType,omitempty"`
-	Size        *int    `json:"size,omitempty" db:"size,omitempty"`
-	Name        *string `json:"name,omitempty" db:"name,omitempty"`
-	Extension   *string `json:"extension,omitempty" db:"extension,omitempty"`
+	Url         *string `json:"url,omitempty"`
+	Duration    *string `json:"duration,omitempty"`
+	Caption     *string `json:"caption,omitempty"`
+	MimeType    *string `json:"mimeType,omitempty"`
+	Size        *int    `json:"size,omitempty"`
+	Name        *string `json:"name,omitempty"`
+	Extension   *string `json:"extension,omitempty"`
 }
 
 type MsgContent struct {
-	Type      string `json:"type" db:"type"`
-	*MsgProps `json:"props" db:"props"`
+	Type      string `json:"type"`
+	*MsgProps `json:"props"`
 }
 
 func (m MsgContent) Validate() error {
@@ -92,32 +92,6 @@ func (m MsgContent) Validate() error {
 		validation.Field(&m.Caption, validation.When(slices.Contains([]string{"text", "voice", "file"}, msgType), validation.Nil.Error("invalid property for the specified type")).Else(validation.Required)),
 		validation.Field(&m.Extension, validation.When(msgType != "file", validation.Nil.Error("invalid property for the specified type")).Else(validation.Required)),
 		validation.Field(&m.Name, validation.When(msgType != "file", validation.Nil.Error("invalid property for the specified type")).Else(validation.Required)),
-	)
-}
-
-type DMChatMsgAckData struct {
-	MsgId         int       `json:"msgId"`
-	PartnerUserId int       `json:"partnerUserId"`
-	At            time.Time `json:"at"`
-}
-
-func (d DMChatMsgAckData) Validate() error {
-	return validation.ValidateStruct(&d,
-		validation.Field(&d.MsgId, validation.Required, validation.Min(1).Error("invalid value")),
-		validation.Field(&d.PartnerUserId, validation.Required, validation.Min(1).Error("invalid value")),
-		validation.Field(&d.At, validation.Required, validation.Max(time.Now()).Error("invalid future time")),
-	)
-}
-
-type GroupChatMsgAckData struct {
-	MsgId int       `json:"msgId"`
-	At    time.Time `json:"at"`
-}
-
-func (d GroupChatMsgAckData) Validate() error {
-	return validation.ValidateStruct(&d,
-		validation.Field(&d.MsgId, validation.Required, validation.Min(1).Error("invalid value")),
-		validation.Field(&d.At, validation.Required, validation.Max(time.Now()).Error("invalid future time")),
 	)
 }
 

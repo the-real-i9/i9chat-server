@@ -28,13 +28,13 @@ type sendMessageBody struct {
 	At  time.Time            `json:"at"`
 }
 
-func (ob sendMessageBody) Validate() error {
-	var vb struct {
+func (vb sendMessageBody) Validate() error {
+	/* var vb struct {
 		Msg appTypes.MsgContent `json:"msg"`
 		At  time.Time           `json:"at"`
 	}
 
-	helpers.ToStruct(ob, &vb)
+	helpers.ToStruct(ob, &vb) */
 
 	err := validation.ValidateStruct(&vb,
 		validation.Field(&vb.Msg, validation.Required),
