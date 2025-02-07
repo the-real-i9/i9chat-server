@@ -193,7 +193,7 @@ func EditProfile(ctx context.Context, username string, fieldValueMap map[string]
 }
 
 // work in progress
-func ChangePresence(ctx context.Context, clientUsername, presence string, lastSeen time.Time) ([]*int, error) {
+func ChangePresence(ctx context.Context, clientUsername, presence string, lastSeen time.Time) {
 	_, err := db.Query(ctx,
 		`
 		MATCH (user:User{ username: $client_username })
@@ -207,10 +207,7 @@ func ChangePresence(ctx context.Context, clientUsername, presence string, lastSe
 	)
 	if err != nil {
 		log.Println(fmt.Errorf("userModel.go: ChangePresence: %s", err))
-		return nil, fiber.ErrInternalServerError
 	}
-
-	return nil, nil
 }
 
 func UpdateLocation(ctx context.Context, username string, newGeolocation *appTypes.UserGeolocation) error {

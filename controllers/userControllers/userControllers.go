@@ -24,14 +24,7 @@ var OpenWSStream = websocket.New(func(c *websocket.Conn) {
 
 	clientUser := c.Locals("user").(*appTypes.ClientUser)
 
-	app_err := userService.GoOnline(ctx, clientUser.Username)
-	if app_err != nil {
-		w_err := c.WriteJSON(helpers.ErrResp(app_err))
-		if w_err != nil {
-			log.Println(w_err)
-			return
-		}
-	}
+	userService.GoOnline(ctx, clientUser.Username)
 
 	r := messageBrokerService.ConsumeTopic(fmt.Sprintf("i9chat-user-%s-topic", clientUser.Username))
 

@@ -6,59 +6,17 @@ import (
 	"i9chat/appTypes"
 	user "i9chat/models/userModel"
 	"i9chat/services/cloudStorageService"
-	"i9chat/services/messageBrokerService"
 	"time"
 
 	"github.com/gabriel-vasile/mimetype"
 )
 
-func GoOnline(ctx context.Context, clientUsername string) error {
-	userDMChatPartnersIdList, err := user.ChangePresence(ctx, clientUsername, "online", time.Time{})
-	if err != nil {
-		return err
-	}
-
-	// work in progress
-	// "recepients" are: all users to whom you are a DMChat partner
-	go func(recepientIds []*int) {
-		for _, rId := range recepientIds {
-			rId := *rId
-
-			messageBrokerService.Send(fmt.Sprintf("user-%d-topic", rId), messageBrokerService.Message{
-				Event: "user presence changed",
-				Data: map[string]any{
-					"username": clientUsername,
-					"presence": "online",
-					"lastSeen": nil,
-				},
-			})
-		}
-	}(userDMChatPartnersIdList)
-
-	return nil
+func GoOnline(ctx context.Context, clientUsername string) {
+	go user.ChangePresence(ctx, clientUsername, "online", time.Time{})
 }
 
 func GoOffline(ctx context.Context, clientUsername string, lastSeen time.Time) {
-	userDMChatPartnersIdList, err := user.ChangePresence(ctx, clientUsername, "offline", lastSeen)
-	if err != nil {
-		return
-	}
-
-	// "recepients" are: all users to whom you are a DMChat partner
-	go func(recepientIds []*int) {
-		for _, rId := range recepientIds {
-			rId := *rId
-
-			messageBrokerService.Send(fmt.Sprintf("user-%d-topic", rId), messageBrokerService.Message{
-				Event: "user presence changed",
-				Data: map[string]any{
-					"username": clientUsername,
-					"presence": "offline",
-					"lastSeen": lastSeen,
-				},
-			})
-		}
-	}(userDMChatPartnersIdList)
+	go user.ChangePresence(ctx, clientUsername, "offline", lastSeen)
 }
 
 func ChangeProfilePicture(ctx context.Context, clientUsername string, pictureData []byte) (any, error) {

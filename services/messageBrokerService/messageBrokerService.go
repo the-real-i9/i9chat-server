@@ -34,7 +34,7 @@ func Send(topic string, message Message) {
 
 func ConsumeTopic(topic string) *kafka.Reader {
 	return kafka.NewReader(kafka.ReaderConfig{
-		Brokers:        []string{os.Getenv("KAFKA_ADDRESS")},
+		Brokers:        []string{os.Getenv("KAFKA_BROKER_ADDRESS")},
 		Topic:          topic,
 		GroupID:        "i9chat-topics",
 		CommitInterval: time.Second,

@@ -34,9 +34,7 @@ func SendMessage(ctx context.Context, clientUsername, partnerUsername string, ms
 		Data:  newMessage.PartnerNewMsgData,
 	})
 
-	respData := newMessage.ClientNewMsgData
-
-	return respData, nil
+	return newMessage.ClientNewMsgData, nil
 }
 
 func AckMessageDelivered(ctx context.Context, clientUsername, partnerUsername, msgId string, deliveredAt time.Time) error {
@@ -47,9 +45,9 @@ func AckMessageDelivered(ctx context.Context, clientUsername, partnerUsername, m
 	go messageBrokerService.Send(fmt.Sprintf("user-%s-topic", partnerUsername), messageBrokerService.Message{
 		Event: "dm chat message delivered",
 		Data: map[string]any{
-			"partnerUsername": clientUsername,
-			"msgId":           msgId,
-			"status":          "delivered",
+			"partner_username": clientUsername,
+			"msg_id":           msgId,
+			"status":           "delivered",
 		},
 	})
 	return nil
@@ -62,9 +60,9 @@ func AckMessageRead(ctx context.Context, clientUsername, partnerUsername, msgId 
 	go messageBrokerService.Send(fmt.Sprintf("user-%s-topic", partnerUsername), messageBrokerService.Message{
 		Event: "dm chat message read",
 		Data: map[string]any{
-			"partnerUsername": clientUsername,
-			"msgId":           msgId,
-			"status":          "read",
+			"partner_username": clientUsername,
+			"msg_id":           msgId,
+			"status":           "read",
 		},
 	})
 
