@@ -12,27 +12,26 @@ import (
 	"time"
 )
 
-func NewGroupChat(ctx context.Context, name string, description string, pictureData []byte, creator []string, initUsers [][]appTypes.String) (*groupChat.CreatorData, error) {
+func NewGroupChat(ctx context.Context, clientUsername, name, description string, pictureData []byte, initUsers []string) (map[string]any, error) {
 	picUrl, err := uploadGroupPicture(ctx, pictureData)
 	if err != nil {
 		return nil, err
 	}
 
-	newGroupChat, err := groupChat.New(ctx, name, description, picUrl, creator, initUsers)
+	newGroupChat, err := groupChat.New(ctx, clientUsername, name, description, picUrl, initUsers)
 	if err != nil {
 		return nil, err
 	}
 
 	go broadcastNewGroup(initUsers, newGroupChat.InitMemberData)
 
-	return newGroupChat.CreatorData, nil
+	return newGroupChat.ClientData, nil
 }
 
-func broadcastNewGroup(initMembers [][]appTypes.String, initMemberData *groupChat.InitMemberData) {
+func broadcastNewGroup(initMembers []string, initMemberData *groupChat.InitMemberData) {
 	for _, initMember := range initMembers {
-		initMemberId := initMember[0]
 
-		messageBrokerService.Send(fmt.Sprintf("user-%s-topic", initMemberId), messageBrokerService.Message{
+		messageBrokerService.Send(fmt.Sprintf("user-%s-topic", initMember), messageBrokerService.Message{
 			Event: "new group chat",
 			Data:  initMemberData,
 		})

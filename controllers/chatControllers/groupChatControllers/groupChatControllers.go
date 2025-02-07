@@ -32,7 +32,7 @@ func CreateNewGroupChat(c *fiber.Ctx) error {
 		body.Name,
 		body.Description,
 		body.PictureData,
-		[]string{fmt.Sprint(clientUser.Id), clientUser.Id},
+		clientUser.Username,
 		body.InitUsers,
 	)
 	if app_err != nil {

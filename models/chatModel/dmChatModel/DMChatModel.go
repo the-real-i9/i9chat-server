@@ -118,7 +118,7 @@ func AckMessageRead(ctx context.Context, clientUsername, partnerUsername, msgId 
 		MATCH (clientChat:Chat{ owner_username: $client_username, partner_username: $partner_username }),
       ()-[:RECEIVES_MESSAGE]->(message:Message{ id: $message_id } WHERE message.delivery_status IN ["sent", "delivered"])-[:IN_CHAT]->(clientChat)
     WITH clientChat, message, CASE coalesce(clientChat.unread_messages_count, 0) WHEN <> 0 THEN clientChat.unread_messages_count - 1 ELSE 0 END AS unread_messages_count
-    SET message.delivery_status = "seen", message.read_at = datetime($read_at), clientChat.unread_messages_count = unread_messages_count
+    SET message.delivery_status = "read", message.read_at = datetime($read_at), clientChat.unread_messages_count = unread_messages_count
 		`,
 		map[string]any{
 			"client_username":  clientUsername,

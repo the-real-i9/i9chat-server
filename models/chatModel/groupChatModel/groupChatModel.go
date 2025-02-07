@@ -14,24 +14,13 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-type CreatorData struct {
-	NewGroupChatId int `db:"new_group_chat_id" json:"new_group_chat_id"`
-}
-
-type InitMemberData struct {
-	Type        string `json:"type"`
-	GroupChatId int    `db:"group_chat_id" json:"group_chat_id"`
-	Name        string `json:"name"`
-	Description string `json:"description"`
-	PictureUrl  string `db:"picture_url" json:"picture_url"`
-}
-
 type NewGroupChat struct {
-	*CreatorData    `db:"crd"`
-	*InitMemberData `db:"imrd"`
+	ClientData     map[string]any `db:"client_resp"`
+	InitMemberData map[string]any `db:"member_resp"`
 }
 
-func New(ctx context.Context, name string, description string, pictureUrl string, creator []string, initUsers [][]appTypes.String) (*NewGroupChat, error) {
+func New(ctx context.Context, clientUsername, name, description, pictureUrl string, initUsers []string) (*NewGroupChat, error) {
+	// I was here before shutting down
 	newGroupChat, err := helpers.QueryRowType[NewGroupChat](ctx, "SELECT creator_resp_data AS crd, init_member_resp_data AS imrd FROM new_group_chat($1, $2, $3, $4, $5)", name, description, pictureUrl, creator, initUsers)
 	if err != nil {
 		log.Println(fmt.Errorf("groupChatModel.go: New: %s", err))
