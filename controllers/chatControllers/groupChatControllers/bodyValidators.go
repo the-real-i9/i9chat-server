@@ -49,10 +49,11 @@ func (vb sendMessageBody) Validate() error {
 }
 
 type newGroupChatBody struct {
-	Name        string   `json:"name"`
-	Description string   `json:"description"`
-	PictureData []byte   `json:"pictureData"`
-	InitUsers   []string `json:"initUsers"`
+	Name        string    `json:"name"`
+	Description string    `json:"description"`
+	PictureData []byte    `json:"pictureData"`
+	InitUsers   []string  `json:"initUsers"`
+	CreatedAt   time.Time `json:"createdAt"`
 }
 
 func (b newGroupChatBody) Validate() error {
@@ -64,6 +65,7 @@ func (b newGroupChatBody) Validate() error {
 			validation.Length(1, 2*1024*1024).Error("maximum picture size of 2mb exceeded"),
 		),
 		validation.Field(&b.InitUsers, validation.Required, validation.Length(1, 0).Error("at least 1 other user is required to start a group")),
+		validation.Field(&b.CreatedAt, validation.Required, validation.Min(time.Now()).Error("invalid future time")),
 	)
 
 	return helpers.ValidationError(err, "groupChat_bodyValidators.go", "newGroupChatBody")

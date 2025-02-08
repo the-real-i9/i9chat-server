@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"i9chat/appTypes"
 	"i9chat/helpers"
+	"i9chat/models/db"
 	user "i9chat/models/userModel"
 	"log"
 	"strconv"
@@ -19,19 +20,53 @@ type NewGroupChat struct {
 	InitMemberData map[string]any `db:"member_resp"`
 }
 
-func New(ctx context.Context, clientUsername, name, description, pictureUrl string, initUsers []string) (*NewGroupChat, error) {
-	// I was here before shutting down
-	newGroupChat, err := helpers.QueryRowType[NewGroupChat](ctx, "SELECT creator_resp_data AS crd, init_member_resp_data AS imrd FROM new_group_chat($1, $2, $3, $4, $5)", name, description, pictureUrl, creator, initUsers)
+func New(ctx context.Context, clientUsername, name, description, pictureUrl string, initUsers []string, createdAt time.Time) (NewGroupChat, error) {
+	var newGroupChat NewGroupChat
+
+	res, err := db.Query(
+		ctx,
+		`
+		CREATE (group:Group{ id: randomUUID(), name: $name, description: $description, picture_url: $picture_url, created_at: $created_at })
+
+		WITH group
+		MATCH (clientUser:User{ username: $client_username })
+		CREATE (clientUser)-[:IS_MEMBER_OF { role: "admin" }]->(group),
+			(clientUser)-[:HAS_CHAT]->(clientChat:GroupChat{ owner_username: $client_username, group_id: $group.id, last_activity_type: "group activity", last_group_activity_at: $created_at, updated_at: $created_at })-[:WITH_GROUP]->(group),
+			(clientUser)-[:RECEIVES_ACTIVITY]->(:GroupActivity{ info: "You created " + $name, created_at: $created_at })-[:IN_GROUP_CHAT]->(clientChat),
+			(clientUser)-[:RECEIVES_ACTIVITY]->(:GroupActivity{ info: "You added " + toString($init_users), created_at: $created_at })-[:IN_GROUP_CHAT]->(clientChat)
+
+		WITH group
+		MATCH (initUser:User WHERE initUser.username IN $init_users)
+		CREATE (initUser)-[:IS_MEMBER_OF { role: "member" }]->(group),
+			(initUser)-[:HAS_CHAT]->(initUserChat:GroupChat{ owner_username: initUser.username, group_id: $group.id, last_activity_type: "group activity", last_group_activity_at: $created_at, updated_at: $created_at })-[:WITH_GROUP]->(group),
+			(initUser)-[:RECEIVES_ACTIVITY]->(:GroupActivity{ info: $client_username + " created " + $name, created_at: $created_at })-[:IN_GROUP_CHAT]->(initUserChat),
+			(initUser)-[:RECEIVES_ACTIVITY]->(:GroupActivity{ info: "You were added", created_at: $created_at })-[:IN_GROUP_CHAT]->(initUserChat)
+
+		WITH group
+		RETURN group { group_chat_id: .id, .name, .description, .picture_url, last_activity: { type: "group activity", info: "You added " + toString($init_users) } } AS client_resp,
+			group { group_chat_id: .id, .name, .description, .picture_url, last_activity: { type: "group activity", info: "You were added" } } AS member_resp
+		`,
+		map[string]any{
+			"client_username": clientUsername,
+			"name":            name,
+			"description":     description,
+			"picture_url":     pictureUrl,
+			"init_users":      initUsers,
+			"created_at":      createdAt,
+		},
+	)
 	if err != nil {
 		log.Println(fmt.Errorf("groupChatModel.go: New: %s", err))
-		return nil, fiber.ErrInternalServerError
+		return newGroupChat, fiber.ErrInternalServerError
 	}
+
+	helpers.MapToStruct(res.Records[0].AsMap(), &newGroupChat)
 
 	return newGroupChat, nil
 }
 
 type NewActivity struct {
-	MembersIds   []int          `db:"members_ids"`
+	MembersIds   []string       `db:"members_ids"`
 	ActivityInfo map[string]any `db:"activity_data"`
 }
 

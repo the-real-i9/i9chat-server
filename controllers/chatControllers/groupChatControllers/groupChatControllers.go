@@ -29,11 +29,12 @@ func CreateNewGroupChat(c *fiber.Ctx) error {
 	}
 
 	respData, app_err := groupChatService.NewGroupChat(ctx,
+		clientUser.Username,
 		body.Name,
 		body.Description,
 		body.PictureData,
-		clientUser.Username,
 		body.InitUsers,
+		body.CreatedAt,
 	)
 	if app_err != nil {
 		return app_err

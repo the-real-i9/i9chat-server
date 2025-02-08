@@ -138,15 +138,15 @@ func GetChats(ctx context.Context, clientUsername string) ([]any, error) {
 		ctx,
 		`
 		MATCH (clientChat:Chat{ owner_username: $client_username })-[:WITH_USER]->(partnerUser),
-			(clientChat)<-[:IN_CHAT]-(lmsg:Message WHERE lmsg.created_at = clientChat.last_message_at),
+			(clientChat)<-[:IN_CHAT]-(lmsg:Message WHERE lmsg.id = clientChat.last_message_id),
 			(clientChat)<-[:IN_CHAT]-(:Message)<-[lrxn:REACTS_TO_MESSAGE WHERE lrxn.at = clientChat.last_reaction_at]-(reactor)
-		WITH clientChat, toString(clientChat.last_message_at) AS last_message_at, partnerUser { .username, .profile_pic_url, .connection_status } AS partner,
+		WITH clientChat, toString(clientChat.updated_at) AS updated_at, partnerUser { .username, .profile_pic_url, .connection_status } AS partner,
 			CASE clientChat.last_activity_type 
 				WHEN "message" THEN lmsg { type: "message", .content, .delivery_status }
 				WHEN "reaction" THEN lrxn { type: "reaction", .reaction, reactor: reactor.username }
 			END AS last_activity
-		ORDER BY clientChat.last_message_at DESC
-		RETURN collect(clientChat { partner, .unread_messages_count, last_message_at, last_activity }) AS my_chats
+		ORDER BY clientChat.updated_at DESC
+		RETURN collect(clientChat { partner, .unread_messages_count, updated_at, last_activity }) AS my_chats
 		`,
 		map[string]any{
 			"client_username": clientUsername,
