@@ -8,16 +8,14 @@ import (
 	"i9chat/models/db"
 	user "i9chat/models/userModel"
 	"log"
-	"strconv"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
-	"github.com/jackc/pgx/v5/pgtype"
 )
 
 type NewGroupChat struct {
-	ClientData     map[string]any `db:"client_resp"`
-	InitMemberData map[string]any `db:"member_resp"`
+	ClientData     map[string]any `json:"client_resp"`
+	InitMemberData map[string]any `json:"member_resp"`
 }
 
 func New(ctx context.Context, clientUsername, name, description, pictureUrl string, initUsers []string, createdAt time.Time) (NewGroupChat, error) {
@@ -56,7 +54,7 @@ func New(ctx context.Context, clientUsername, name, description, pictureUrl stri
 		},
 	)
 	if err != nil {
-		log.Println(fmt.Errorf("groupChatModel.go: New: %s", err))
+		log.Println("groupChatModel.go: New:", err)
 		return newGroupChat, fiber.ErrInternalServerError
 	}
 
@@ -66,21 +64,46 @@ func New(ctx context.Context, clientUsername, name, description, pictureUrl stri
 }
 
 type NewActivity struct {
-	MembersIds   []string       `db:"members_ids"`
-	ActivityInfo map[string]any `db:"activity_data"`
+	ClientData      string   `json:"client_resp"`
+	MemberData      string   `json:"member_resp"`
+	MemberUsernames []string `json:"members_usernames"`
 }
 
-func ChangeName(ctx context.Context, groupChatId int, admin []string, newName string) (*NewActivity, error) {
-	newActivity, err := helpers.QueryRowType[NewActivity](ctx, "SELECT * change_group_name($1, $2, $3)", groupChatId, admin, newName)
+func ChangeName(ctx context.Context, groupId, clientUsername, newName string) (NewActivity, error) {
+	var newActivity NewActivity
+
+	res, err := db.Query(
+		ctx,
+		`
+		MATCH (group)<-[:WITH_GROUP]-(clientChat:GroupChat{ owner_username: $client_username, group_id: $group_id })<-[:HAS_CHAT]-(clientUser),
+			(clientUser)-[:IS_MEMBER_OF { role: "admin" }]->(group)
+		CREATE (clientUser)-[:RECEIVES_ACTIVITY]->(cligact:GroupActivity{ info: "You changed group name from " + group.name + " to " + $new_name, created_at: datetime() })-[:IN_GROUP_CHAT]->(clientChat)
+
+		WITH group, cligact
+		MATCH (memberChat:GroupChat{ group_id: $group_id } WHERE memberChat.owner_username <> $client_username)<-[:HAS_CHAT]-(memberUser)
+		CREATE (memberUser)-[:RECEIVES_ACTIVITY]->(memgact:GroupActivity{ info: $client_username + " changed group name from " + group.name + " to " + $new_name, created_at: datetime() })-[:IN_GROUP_CHAT]->(clientChat)
+
+		RETURN cligact.info AS client_resp,
+			memgact.info AS member_resp,
+			collect(memberUser.username) AS member_usernames
+		`,
+		map[string]any{
+			"client_username": clientUsername,
+			"group_id":        groupId,
+			"new_name":        newName,
+		},
+	)
 	if err != nil {
-		log.Println(fmt.Errorf("groupChatModel.go: ChangeName: %s", err))
-		return nil, fiber.ErrInternalServerError
+		log.Println("groupChatModel.go: New:", err)
+		return newActivity, fiber.ErrInternalServerError
 	}
+
+	helpers.MapToStruct(res.Records[0].AsMap(), &newActivity)
 
 	return newActivity, nil
 }
 
-func ChangeDescription(ctx context.Context, groupChatId int, admin []string, newDescription string) (*NewActivity, error) {
+func ChangeDescription(ctx context.Context, groupChatId int, admin []string, newDescription string) (NewActivity, error) {
 	newActivity, err := helpers.QueryRowType[NewActivity](ctx, "SELECT * change_group_description($1, $2, $3)", groupChatId, admin, newDescription)
 	if err != nil {
 		log.Println(fmt.Errorf("groupChatModel.go: ChangeDescription: %s", err))
@@ -90,7 +113,7 @@ func ChangeDescription(ctx context.Context, groupChatId int, admin []string, new
 	return newActivity, nil
 }
 
-func ChangePicture(ctx context.Context, groupChatId int, admin []string, newPictureUrl string) (*NewActivity, error) {
+func ChangePicture(ctx context.Context, groupChatId int, admin []string, newPictureUrl string) (NewActivity, error) {
 	newActivity, err := helpers.QueryRowType[NewActivity](ctx, "SELECT * change_group_picture($1, $2, $3)", groupChatId, admin, newPictureUrl)
 	if err != nil {
 		log.Println(fmt.Errorf("groupChatModel.go: ChangePicture: %s", err))
@@ -100,7 +123,7 @@ func ChangePicture(ctx context.Context, groupChatId int, admin []string, newPict
 	return newActivity, nil
 }
 
-func AddUsers(ctx context.Context, groupChatId int, admin []string, newUsers [][]appTypes.String) (*NewActivity, error) {
+func AddUsers(ctx context.Context, groupChatId int, admin []string, newUsers [][]appTypes.String) (NewActivity, error) {
 	newActivity, err := helpers.QueryRowType[NewActivity](ctx, "SELECT * add_users_to_group($1, $2, $3)", groupChatId, admin, newUsers)
 	if err != nil {
 		log.Println(fmt.Errorf("groupChatModel.go: AddUsers: %s", err))
@@ -110,7 +133,7 @@ func AddUsers(ctx context.Context, groupChatId int, admin []string, newUsers [][
 	return newActivity, nil
 }
 
-func RemoveUser(ctx context.Context, groupChatId int, admin []string, user []appTypes.String) (*NewActivity, error) {
+func RemoveUser(ctx context.Context, groupChatId int, admin []string, user []appTypes.String) (NewActivity, error) {
 	newActivity, err := helpers.QueryRowType[NewActivity](ctx, "SELECT * remove_user_to_group($1, $2, $3)", groupChatId, admin, user)
 	if err != nil {
 		log.Println(fmt.Errorf("groupChatModel.go: RemoveUser: %s", err))
@@ -120,7 +143,7 @@ func RemoveUser(ctx context.Context, groupChatId int, admin []string, user []app
 	return newActivity, nil
 }
 
-func Join(ctx context.Context, groupChatId int, newUser []string) (*NewActivity, error) {
+func Join(ctx context.Context, groupChatId int, newUser []string) (NewActivity, error) {
 	newActivity, err := helpers.QueryRowType[NewActivity](ctx, "SELECT * join_group($1, $2)", groupChatId, newUser)
 	if err != nil {
 		log.Println(fmt.Errorf("groupChatModel.go: Join: %s", err))
@@ -130,7 +153,7 @@ func Join(ctx context.Context, groupChatId int, newUser []string) (*NewActivity,
 	return newActivity, nil
 }
 
-func Leave(ctx context.Context, groupChatId int, user []string) (*NewActivity, error) {
+func Leave(ctx context.Context, groupChatId int, user []string) (NewActivity, error) {
 	newActivity, err := helpers.QueryRowType[NewActivity](ctx, "SELECT * leave_group($1, $2)", groupChatId, user)
 	if err != nil {
 		log.Println(fmt.Errorf("groupChatModel.go: Leave: %s", err))
@@ -140,7 +163,7 @@ func Leave(ctx context.Context, groupChatId int, user []string) (*NewActivity, e
 	return newActivity, nil
 }
 
-func MakeUserAdmin(ctx context.Context, groupChatId int, admin []string, user []appTypes.String) (*NewActivity, error) {
+func MakeUserAdmin(ctx context.Context, groupChatId int, admin []string, user []appTypes.String) (NewActivity, error) {
 	newActivity, err := helpers.QueryRowType[NewActivity](ctx, "SELECT * make_user_group_admin($1, $2, $3)", groupChatId, admin, user)
 	if err != nil {
 		log.Println(fmt.Errorf("groupChatModel.go: MakeUserAdmin: %s", err))
@@ -150,7 +173,7 @@ func MakeUserAdmin(ctx context.Context, groupChatId int, admin []string, user []
 	return newActivity, nil
 }
 
-func RemoveUserFromAdmins(ctx context.Context, groupChatId int, admin []string, user []appTypes.String) (*NewActivity, error) {
+func RemoveUserFromAdmins(ctx context.Context, groupChatId int, admin []string, user []appTypes.String) (NewActivity, error) {
 	newActivity, err := helpers.QueryRowType[NewActivity](ctx, "SELECT * remove_user_from_group_admins($1, $2, $3)", groupChatId, admin, user)
 	if err != nil {
 		log.Println(fmt.Errorf("groupChatModel.go: RemoveUserFromAdmins: %s", err))
@@ -160,22 +183,10 @@ func RemoveUserFromAdmins(ctx context.Context, groupChatId int, admin []string, 
 	return newActivity, nil
 }
 
-type SenderData struct {
-	NewMsgId int `db:"new_msg_id" json:"new_msg_id"`
-}
-
-type MemberData struct {
-	In          string         `db:"in" json:"in"`
-	MsgId       int            `db:"msg_id" json:"msg_id"`
-	GroupChatId int            `db:"group_chat_id" json:"group_chat_id"`
-	Sender      user.User      `json:"sender"`
-	Content     map[string]any `json:"content"`
-}
-
 type NewMessage struct {
-	ClientData      map[string]any `db:"client_resp"`
-	MemberData      map[string]any `db:"member_resp"`
-	MemberUsernames []string       `db:"members_usernames"`
+	ClientData      map[string]any `json:"client_resp"`
+	MemberData      map[string]any `json:"member_resp"`
+	MemberUsernames []string       `json:"members_usernames"`
 }
 
 func SendMessage(ctx context.Context, groupId, clientUsername string, msgContent []byte, createdAt time.Time) (NewMessage, error) {
@@ -200,9 +211,9 @@ func SendMessage(ctx context.Context, groupId, clientUsername string, msgContent
 			memberChat.last_message_id = message.id
 		CREATE (memberUser)-[:RECEIVES_MESSAGE]->(message)-[:IN_GROUP_CHAT]->(memberChat)
 
-		WITH message, clientUser { .username, .profile_pic_url } AS sender, memberUser
+		WITH message, toString(message.created_at) AS created_at, clientUser { .username, .profile_pic_url } AS sender, memberUser
 		RETURN { new_msg_id: message.id } AS client_resp,
-			message { .* group_id: $group_id, sender } AS member_resp,
+			message { .*, created_at, group_id: $group_id, sender } AS member_resp,
 			collect(memberUser.username) AS member_usernames
 		`,
 		map[string]any{
@@ -226,9 +237,10 @@ func AckMessageDelivered(ctx context.Context, clientUsername, groupId, msgId str
 	_, err := db.Query(
 		ctx,
 		`
-		MATCH (clientChat:DMChat{ owner_username: $client_username, partner_username: $partner_username }),
-      (clientChat)<-[:IN_DM_CHAT]-(message:DMMessage{ id: $message_id, delivery_status: "sent" })<-[:RECEIVES_MESSAGE]-()
-    SET message.delivery_status = "delivered", message.delivered_at = datetime($delivered_at), clientChat.unread_messages_count = coalesce(clientChat.unread_messages_count, 0) + 1
+		MATCH (clientChat:GroupChat{ owner_username: $client_username, group_id: $group_id })<-[:HAS_CHAT]-(clientUser),
+      (clientChat)<-[:IN_GROUP_CHAT]-(message:GroupMessage{ id: $message_id })<-[:RECEIVES_MESSAGE]-()
+    SET clientChat.unread_messages_count = coalesce(clientChat.unread_messages_count, 0) + 1
+		CREATE (message)-[:DELIVERED_TO { at: $delivered_at }]->(clientUser)
 		`,
 		map[string]any{
 			"client_username": clientUsername,
@@ -238,7 +250,32 @@ func AckMessageDelivered(ctx context.Context, clientUsername, groupId, msgId str
 		},
 	)
 	if err != nil {
-		log.Println("DMChatModel.go: AckMessageDelivered", err)
+		log.Println("groupChatModel.go: AckMessageDelivered", err)
+		return fiber.ErrInternalServerError
+	}
+
+	return nil
+}
+
+func AckMessageRead(ctx context.Context, clientUsername, groupId, msgId string, readAt time.Time) error {
+	_, err := db.Query(
+		ctx,
+		`
+		MATCH (clientChat:GroupChat{ owner_username: $client_username, group_id: $group_id })<-[:HAS_CHAT]-(clientUser),
+      (clientChat)<-[:IN_GROUP_CHAT]-(message:GroupMessage{ id: $message_id })<-[:RECEIVES_MESSAGE]-()
+    WITH clientChat, message, CASE coalesce(clientChat.unread_messages_count, 0) WHEN <> 0 THEN clientChat.unread_messages_count - 1 ELSE 0 END AS unread_messages_count
+    SET clientChat.unread_messages_count = unread_messages_count
+		CREATE (message)-[:READ_BY { at: $read_at } ]->(clientUser)
+		`,
+		map[string]any{
+			"client_username": clientUsername,
+			"group_id":        groupId,
+			"message_id":      msgId,
+			"read_at":         readAt,
+		},
+	)
+	if err != nil {
+		log.Println("DMChatModel.go: AckMessageRead", err)
 		return fiber.ErrInternalServerError
 	}
 
@@ -252,26 +289,6 @@ func ReactToMessage(ctx context.Context, groupChatId, msgId, clientUsername stri
 type BatchStatusUpdateResult struct {
 	OverallDeliveryStatus string `db:"overall_delivery_status"`
 	ShouldBroadcast       bool   `db:"should_broadcast"`
-}
-
-func BatchUpdateMessageDeliveryStatus(ctx context.Context, groupChatId int, receiverId int, status string, ackDatas []*appTypes.GroupChatMsgAckData) (*BatchStatusUpdateResult, error) {
-	var sqls = []string{}
-	var params = [][]any{}
-
-	for _, data := range ackDatas {
-		sqls = append(sqls, "SELECT * FROM update_group_chat_message_delivery_status($1, $2, $3, $4, $5)")
-		params = append(params, []any{groupChatId, data.MsgId, receiverId, status, data.At})
-	}
-
-	resultList, err := helpers.BatchQuery[BatchStatusUpdateResult](ctx, sqls, params)
-	if err != nil {
-		log.Println(fmt.Errorf("groupChatModel.go: BatchUpdateMessageDeliveryStatus: %s", err))
-		return nil, fiber.ErrInternalServerError
-	}
-
-	lastResult := resultList[len(resultList)]
-
-	return lastResult, nil
 }
 
 // work in progress

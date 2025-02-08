@@ -61,7 +61,7 @@ type dmChatMsgAck struct {
 
 func (d dmChatMsgAck) Validate() error {
 	return validation.ValidateStruct(&d,
-		validation.Field(&d.MsgId, validation.Required, is.UUID.Error("invalid id string")),
+		validation.Field(&d.MsgId, validation.Required, is.UUID),
 		validation.Field(&d.PartnerUsername, validation.Required),
 		validation.Field(&d.At, validation.Required, validation.Max(time.Now()).Error("invalid future time")),
 	)
@@ -76,7 +76,7 @@ type newGroupChatMsg struct {
 func (vb newGroupChatMsg) Validate() error {
 	err := validation.ValidateStruct(&vb,
 		validation.Field(&vb.Msg, validation.Required),
-		validation.Field(&vb.GroupId, validation.Required, is.UUID.Error("invalid uuid string")),
+		validation.Field(&vb.GroupId, validation.Required, is.UUID),
 		validation.Field(&vb.CreatedAt, validation.Required, validation.Max(time.Now()).Error("invalid future time")),
 	)
 
@@ -84,15 +84,15 @@ func (vb newGroupChatMsg) Validate() error {
 }
 
 type groupChatMsgAck struct {
-	GroupChatId string    `json:"groupChatId"`
-	MsgId       string    `json:"msgId"`
-	At          time.Time `json:"at"`
+	GroupId string    `json:"groupId"`
+	MsgId   string    `json:"msgId"`
+	At      time.Time `json:"at"`
 }
 
 func (d groupChatMsgAck) Validate() error {
 	return validation.ValidateStruct(&d,
-		validation.Field(&d.GroupChatId, validation.Required, is.UUID.Error("invalid id string")),
-		validation.Field(&d.MsgId, validation.Required, is.UUID.Error("invalid id string")),
+		validation.Field(&d.GroupId, validation.Required, is.UUID),
+		validation.Field(&d.MsgId, validation.Required, is.UUID),
 		validation.Field(&d.At, validation.Required, validation.Max(time.Now()).Error("invalid future time")),
 	)
 }

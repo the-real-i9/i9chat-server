@@ -12,8 +12,8 @@ import (
 )
 
 type NewMessage struct {
-	ClientNewMsgData  map[string]any `json:"client_res"`
-	PartnerNewMsgData map[string]any `json:"partner_res"`
+	ClientNewMsgData  map[string]any `json:"client_resp"`
+	PartnerNewMsgData map[string]any `json:"partner_resp"`
 }
 
 func SendMessage(ctx context.Context, clientUsername, partnerUsername string, msgContent []byte, createdAt time.Time) (NewMessage, error) {
@@ -36,8 +36,8 @@ func SendMessage(ctx context.Context, clientUsername, partnerUsername string, ms
 		SET clientChat.last_message_id = message.id,
 			partnerChat.last_message_id = message.id
 		WITH message, toString(message.created_at) AS created_at, clientUser { .username, .profile_pic_url, .connection_status } AS sender
-		RETURN { new_msg_id: message.id } AS client_res,
-			message { .*, created_at, sender } AS partner_res
+		RETURN { new_msg_id: message.id } AS client_resp,
+			message { .*, created_at, sender } AS partner_resp
 		`,
 		map[string]any{
 			"client_username":  clientUsername,
@@ -95,7 +95,7 @@ func AckMessageDelivered(ctx context.Context, clientUsername, partnerUsername, m
 		`
 		MATCH (clientChat:DMChat{ owner_username: $client_username, partner_username: $partner_username }),
       (clientChat)<-[:IN_DM_CHAT]-(message:DMMessage{ id: $message_id, delivery_status: "sent" })<-[:RECEIVES_MESSAGE]-()
-    SET message.delivery_status = "delivered", message.delivered_at = datetime($delivered_at), clientChat.unread_messages_count = coalesce(clientChat.unread_messages_count, 0) + 1
+    SET message.delivery_status = "delivered", message.delivered_at = $delivered_at, clientChat.unread_messages_count = coalesce(clientChat.unread_messages_count, 0) + 1
 		`,
 		map[string]any{
 			"client_username":  clientUsername,
@@ -119,7 +119,7 @@ func AckMessageRead(ctx context.Context, clientUsername, partnerUsername, msgId 
 		MATCH (clientChat:DMChat{ owner_username: $client_username, partner_username: $partner_username }),
       (clientChat)<-[:IN_DM_CHAT]-(message:DMMessage{ id: $message_id } WHERE message.delivery_status IN ["sent", "delivered"])<-[:RECEIVES_MESSAGE]-()
     WITH clientChat, message, CASE coalesce(clientChat.unread_messages_count, 0) WHEN <> 0 THEN clientChat.unread_messages_count - 1 ELSE 0 END AS unread_messages_count
-    SET message.delivery_status = "read", message.read_at = datetime($read_at), clientChat.unread_messages_count = unread_messages_count
+    SET message.delivery_status = "read", message.read_at = $read_at, clientChat.unread_messages_count = unread_messages_count
 		`,
 		map[string]any{
 			"client_username":  clientUsername,
@@ -129,7 +129,7 @@ func AckMessageRead(ctx context.Context, clientUsername, partnerUsername, msgId 
 		},
 	)
 	if err != nil {
-		log.Println("DMChatModel.go: AckMessageDelivered", err)
+		log.Println("DMChatModel.go: AckMessageRead", err)
 		return fiber.ErrInternalServerError
 	}
 

@@ -110,8 +110,8 @@ func ExecuteAction(c *fiber.Ctx) error {
 	})
 }
 
-func changeGroupName(ctx context.Context, clientUser []string, data map[string]any) error {
-	var d changeGroupNameT
+func changeGroupName(ctx context.Context, clientUsername string, data map[string]any) error {
+	var d changeGroupNameAction
 
 	helpers.MapToStruct(data, &d)
 
@@ -119,7 +119,7 @@ func changeGroupName(ctx context.Context, clientUser []string, data map[string]a
 		return val_err
 	}
 
-	return groupChatService.ChangeGroupName(ctx, d.GroupChatId, clientUser, d.NewName)
+	return groupChatService.ChangeGroupName(ctx, d.GroupId, clientUsername, d.NewName)
 }
 
 func changeGroupDescription(ctx context.Context, clientUser []string, data map[string]any) error {

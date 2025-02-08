@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"i9chat/appTypes"
-	"i9chat/helpers"
 	groupChat "i9chat/models/chatModel/groupChatModel"
 	"i9chat/services/appServices"
 	"i9chat/services/cloudStorageService"
@@ -36,46 +35,6 @@ func broadcastNewGroup(initMembers []string, initMemberData map[string]any) {
 			Event: "new group chat",
 			Data:  initMemberData,
 		})
-	}
-}
-
-func BatchUpdateMessageDeliveryStatus(ctx context.Context, groupChatId, receiverId int, status string, ackDatas []*appTypes.GroupChatMsgAckData) {
-	batchStatusUpdateResult, err := groupChat.BatchUpdateMessageDeliveryStatus(ctx, groupChatId, receiverId, status, ackDatas)
-	if err != nil {
-		return
-	}
-
-	// The idea is that: the delivery status of a group message updates only
-	// when all members have acknowledged the message as either "delivered" or "seen",
-	// the new delivery status is set in the OverallDeliveryStatus, after all members have acknowledged a certain delivery status ("delivered" or "seen").
-
-	// ShouldBroadcast sets the boolean that determines if we should broadcast the OverallDeliveryStatus
-	// (if it has changed since the last one) or not (if it hasn't changed since the last one)
-	// this prevents unnecessary data transfer
-
-	if batchStatusUpdateResult.ShouldBroadcast {
-		go broadcastGroupChatMessageDeliveryStatusUpdate(groupChatId, receiverId, ackDatas, batchStatusUpdateResult.OverallDeliveryStatus)
-	}
-}
-
-func broadcastGroupChatMessageDeliveryStatusUpdate(groupChatId, clientUserId int, ackDatas []*appTypes.GroupChatMsgAckData, status string) {
-	membersIds, err := helpers.QueryRowsField[int](context.TODO(), "SELECT member_id FROM group_chat_membership WHERE group_chat_id = $1 AND member_id != $2 AND deleted = false", groupChatId, clientUserId)
-	if err == nil {
-		for _, memberId := range membersIds {
-			memberId := *memberId
-			for _, data := range ackDatas {
-				msgId := data.MsgId
-
-				messageBrokerService.Send(fmt.Sprintf("user-%d-topic", memberId), messageBrokerService.Message{
-					Event: "group chat message delivery status changed",
-					Data: map[string]any{
-						"groupChatId": groupChatId,
-						"msgId":       msgId,
-						"status":      status,
-					},
-				})
-			}
-		}
 	}
 }
 
@@ -112,8 +71,30 @@ func broadcastNewMessage(memberUsernames []string, memberData map[string]any) {
 	}
 }
 
-func ChangeGroupName(ctx context.Context, groupChatId int, clientUser []string, newName string) error {
-	newActivity, err := groupChat.ChangeName(ctx, groupChatId, clientUser, newName)
+// work in progress
+func AckMessageDelivered(ctx context.Context, clientUsername, groupId, msgId string, deliveredAt time.Time) error {
+	if err := groupChat.AckMessageDelivered(ctx, clientUsername, groupId, msgId, deliveredAt); err != nil {
+		return err
+	}
+
+	// implement broadcast message delivered when appropriate
+
+	return nil
+}
+
+// work in progress
+func AckMessageRead(ctx context.Context, clientUsername, groupId, msgId string, readAt time.Time) error {
+	if err := groupChat.AckMessageRead(ctx, clientUsername, groupId, msgId, readAt); err != nil {
+		return err
+	}
+
+	// implement broadcast message read when appropriate
+
+	return nil
+}
+
+func ChangeGroupName(ctx context.Context, groupId, clientUsername, newName string) error {
+	newActivity, err := groupChat.ChangeName(ctx, groupId, clientUsername, newName)
 	if err != nil {
 		return err
 	}
@@ -231,7 +212,7 @@ func RemoveUserFromGroupAdmins(ctx context.Context, groupChatId int, admin []str
 	return nil
 }
 
-func broadcastActivity(newActivity *groupChat.NewActivity) {
+func broadcastActivity(newActivity groupChat.NewActivity) {
 
 	for _, mId := range newActivity.MembersIds {
 		messageBrokerService.Send(fmt.Sprintf("user-%d-topic", mId), messageBrokerService.Message{

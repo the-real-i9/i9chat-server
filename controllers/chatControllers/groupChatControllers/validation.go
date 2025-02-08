@@ -6,6 +6,7 @@ import (
 	"time"
 
 	validation "github.com/go-ozzo/ozzo-validation/v4"
+	"github.com/go-ozzo/ozzo-validation/v4/is"
 )
 
 type getChatHistoryQuery struct {
@@ -67,21 +68,18 @@ func (b executeActionBody) Validate() error {
 
 }
 
-type changeGroupNameT struct {
-	GroupChatId int    `json:"groupChatId"`
-	NewName     string `json:"newName"`
+type changeGroupNameAction struct {
+	GroupId string `json:"groupId"`
+	NewName string `json:"newName"`
 }
 
-func (d changeGroupNameT) Validate() error {
+func (d changeGroupNameAction) Validate() error {
 	err := validation.ValidateStruct(&d,
-		validation.Field(&d.GroupChatId,
-			validation.Required,
-			validation.Min(1).Error("invalid value"),
-		),
+		validation.Field(&d.GroupId, validation.Required, is.UUID),
 		validation.Field(&d.NewName, validation.Required),
 	)
 
-	return helpers.ValidationError(err, "groupChat_bodyValidators.go", "changeGroupNameT")
+	return helpers.ValidationError(err, "groupChat_validation.go", "changeGroupNameAction")
 
 }
 

@@ -122,9 +122,17 @@ func clientEventStream(c *websocket.Conn, ctx context.Context, clientUser *appTy
 			}
 			c.WriteJSON(respData)
 		case "group chat message delivered ack":
-			// do
+			err := groupChatMsgDeliveredAckEventHandler(ctx, clientUser.Username, body.Data)
+			if err != nil {
+				w_err = c.WriteJSON(helpers.ErrResp(err))
+				continue
+			}
 		case "group chat message read ack":
-			// do
+			err := groupChatMsgReadAckEventHandler(ctx, clientUser.Username, body.Data)
+			if err != nil {
+				w_err = c.WriteJSON(helpers.ErrResp(err))
+				continue
+			}
 		default:
 		}
 	}

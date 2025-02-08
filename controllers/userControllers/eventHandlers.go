@@ -54,3 +54,27 @@ func newGroupChatMsgEventHandler(ctx context.Context, clientUsername string, eve
 
 	return groupChatService.SendMessage(ctx, clientUsername, body.GroupId, body.Msg, body.CreatedAt)
 }
+
+func groupChatMsgDeliveredAckEventHandler(ctx context.Context, clientUsername string, eventData map[string]any) error {
+	var body groupChatMsgAck
+
+	helpers.MapToStruct(eventData, &body)
+
+	if val_err := body.Validate(); val_err != nil {
+		return val_err
+	}
+
+	return groupChatService.AckMessageDelivered(ctx, clientUsername, body.GroupId, body.MsgId, body.At)
+}
+
+func groupChatMsgReadAckEventHandler(ctx context.Context, clientUsername string, eventData map[string]any) error {
+	var body groupChatMsgAck
+
+	helpers.MapToStruct(eventData, &body)
+
+	if val_err := body.Validate(); val_err != nil {
+		return val_err
+	}
+
+	return groupChatService.AckMessageRead(ctx, clientUsername, body.GroupId, body.MsgId, body.At)
+}
