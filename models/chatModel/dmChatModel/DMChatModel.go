@@ -2,7 +2,6 @@ package dmChat
 
 import (
 	"context"
-	"fmt"
 	"i9chat/helpers"
 	"i9chat/models/db"
 	"log"
@@ -17,7 +16,7 @@ type NewMessage struct {
 	PartnerNewMsgData map[string]any `json:"partner_res"`
 }
 
-func SendMessage(ctx context.Context, clientUsername, partnerUsername string, msgContentJson []byte, createdAt time.Time) (NewMessage, error) {
+func SendMessage(ctx context.Context, clientUsername, partnerUsername string, msgContent []byte, createdAt time.Time) (NewMessage, error) {
 	var newMsg NewMessage
 
 	res, err := db.Query(
@@ -31,7 +30,7 @@ func SendMessage(ctx context.Context, clientUsername, partnerUsername string, ms
 			clientChat.updated_at = $created_at, 
 			partnerChat.updated_at = $created_at
 		WITH clientUser, clientChat, partnerUser, partnerChat
-		CREATE (message:Message{ id: randomUUID(), content: $message_content, delivery_status: "sent", created_at: $created_at }),
+		CREATE (message:DMMessage{ id: randomUUID(), content: $message_content, delivery_status: "sent", created_at: $created_at }),
 			(clientUser)-[:SENDS_MESSAGE]->(message)-[:IN_DM_CHAT]->(clientChat),
 			(partnerUser)-[:RECEIVES_MESSAGE]->(message)-[:IN_DM_CHAT]->(partnerChat)
 		SET clientChat.last_message_id = message.id,
@@ -43,12 +42,12 @@ func SendMessage(ctx context.Context, clientUsername, partnerUsername string, ms
 		map[string]any{
 			"client_username":  clientUsername,
 			"partner_username": partnerUsername,
-			"message_content":  msgContentJson,
+			"message_content":  msgContent,
 			"created_at":       createdAt,
 		},
 	)
 	if err != nil {
-		log.Println(fmt.Errorf("DMChatModel.go: SendMessage: %s", err))
+		log.Println("DMChatModel.go: SendMessage:", err)
 		return newMsg, fiber.ErrInternalServerError
 	}
 
@@ -66,7 +65,7 @@ func GetChatHistory(ctx context.Context, clientUsername, partnerUsername string,
 	res, err := db.Query(
 		ctx,
 		`
-		MATCH (clientChat:DMChat{ owner_username: $client_username, partner_username: $partner_username })<-[:IN_DM_CHAT]-(message:Message)<-[rxn:REACTS_TO_MESSAGE]-(reactor)
+		MATCH (clientChat:DMChat{ owner_username: $client_username, partner_username: $partner_username })<-[:IN_DM_CHAT]-(message:DMMessage)<-[rxn:REACTS_TO_MESSAGE]-(reactor)
 		WHERE message.created_at >= $offset
 		WITH message, toString(message.created_at) AS created_at, collect({ user: reactor { .username, .profile_pic_url }, reaction: rxn.reaction }) AS reactions
 		ORDER BY message.created_at DESC
@@ -95,7 +94,7 @@ func AckMessageDelivered(ctx context.Context, clientUsername, partnerUsername, m
 		ctx,
 		`
 		MATCH (clientChat:DMChat{ owner_username: $client_username, partner_username: $partner_username }),
-      (clientChat)<-[:IN_DM_CHAT]-(message:Message{ id: $message_id, delivery_status: "sent" })<-[:RECEIVES_MESSAGE]-()
+      (clientChat)<-[:IN_DM_CHAT]-(message:DMMessage{ id: $message_id, delivery_status: "sent" })<-[:RECEIVES_MESSAGE]-()
     SET message.delivery_status = "delivered", message.delivered_at = datetime($delivered_at), clientChat.unread_messages_count = coalesce(clientChat.unread_messages_count, 0) + 1
 		`,
 		map[string]any{
@@ -118,7 +117,7 @@ func AckMessageRead(ctx context.Context, clientUsername, partnerUsername, msgId 
 		ctx,
 		`
 		MATCH (clientChat:DMChat{ owner_username: $client_username, partner_username: $partner_username }),
-      (clientChat)<-[:IN_DM_CHAT]-(message:Message{ id: $message_id } WHERE message.delivery_status IN ["sent", "delivered"])<-[:RECEIVES_MESSAGE]-()
+      (clientChat)<-[:IN_DM_CHAT]-(message:DMMessage{ id: $message_id } WHERE message.delivery_status IN ["sent", "delivered"])<-[:RECEIVES_MESSAGE]-()
     WITH clientChat, message, CASE coalesce(clientChat.unread_messages_count, 0) WHEN <> 0 THEN clientChat.unread_messages_count - 1 ELSE 0 END AS unread_messages_count
     SET message.delivery_status = "read", message.read_at = datetime($read_at), clientChat.unread_messages_count = unread_messages_count
 		`,

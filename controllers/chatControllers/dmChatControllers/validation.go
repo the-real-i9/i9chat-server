@@ -19,5 +19,5 @@ func (b getChatHistoryQuery) Validate() error {
 		validation.Field(&b.Offset, validation.Required, validation.Min(time.Now()).Error("invalid future time")),
 	)
 
-	return helpers.ValidationError(err, "dmChat_bodyValidators.go", "getChatHistoryBody")
+	return helpers.ValidationError(err, "dmChat_validation.go", "getChatHistoryQuery")
 }

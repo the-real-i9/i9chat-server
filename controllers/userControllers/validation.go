@@ -36,7 +36,7 @@ func (b clientEventBody) Validate() error {
 type newDMChatMsg struct {
 	PartnerUsername string               `json:"partnerUsername"`
 	Msg             *appTypes.MsgContent `json:"msg"`
-	CreatedAt       time.Time            `json:"at"`
+	CreatedAt       time.Time            `json:"createdAt"`
 }
 
 func (vb newDMChatMsg) Validate() error {
@@ -65,6 +65,22 @@ func (d dmChatMsgAck) Validate() error {
 		validation.Field(&d.PartnerUsername, validation.Required),
 		validation.Field(&d.At, validation.Required, validation.Max(time.Now()).Error("invalid future time")),
 	)
+}
+
+type newGroupChatMsg struct {
+	GroupId   string               `json:"groupId"`
+	Msg       *appTypes.MsgContent `json:"msg"`
+	CreatedAt time.Time            `json:"createdAt"`
+}
+
+func (vb newGroupChatMsg) Validate() error {
+	err := validation.ValidateStruct(&vb,
+		validation.Field(&vb.Msg, validation.Required),
+		validation.Field(&vb.GroupId, validation.Required, is.UUID.Error("invalid uuid string")),
+		validation.Field(&vb.CreatedAt, validation.Required, validation.Max(time.Now()).Error("invalid future time")),
+	)
+
+	return helpers.ValidationError(err, "userControllers_validation.go", "newGroupChatMsg")
 }
 
 type groupChatMsgAck struct {

@@ -2,6 +2,7 @@ package groupChatService
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"i9chat/appTypes"
 	"i9chat/helpers"
@@ -78,34 +79,33 @@ func broadcastGroupChatMessageDeliveryStatusUpdate(groupChatId, clientUserId int
 	}
 }
 
-func GetChatHistory(ctx context.Context, dmChatId, offset int) ([]*groupChat.HistoryItem, error) {
-	return groupChat.GetChatHistory(ctx, dmChatId, offset)
+func GetChatHistory(ctx context.Context, groupChatId string, limit int, offset time.Time) ([]any, error) {
+	return groupChat.GetChatHistory(ctx, groupChatId, limit, offset)
 }
 
-func SendMessage(ctx context.Context, groupChatId, clientUserId int, msgContent *appTypes.MsgContent, createdAt time.Time) (*groupChat.SenderData, error) {
+func SendMessage(ctx context.Context, groupId, clientUsername string, msgContent *appTypes.MsgContent, createdAt time.Time) (map[string]any, error) {
 
-	err := appServices.UploadMessageMedia(ctx, clientUserId, msgContent)
+	err := appServices.UploadMessageMedia(ctx, clientUsername, msgContent)
 	if err != nil {
 		return nil, err
 	}
 
-	newMessage, err := groupChat.SendMessage(ctx, groupChatId, clientUserId, *msgContent, createdAt)
+	msgContentJson, _ := json.Marshal(*msgContent)
+
+	newMessage, err := groupChat.SendMessage(ctx, groupId, clientUsername, msgContentJson, createdAt)
 	if err != nil {
 		return nil, err
 	}
 
-	go broadcastNewMessage(newMessage.MembersIds, newMessage.MemberData)
+	go broadcastNewMessage(newMessage.MemberUsernames, newMessage.MemberData)
 
-	respData := newMessage.SenderData
-
-	return respData, nil
+	return newMessage.ClientData, nil
 }
 
-func broadcastNewMessage(membersIds []int, memberData *groupChat.MemberData) {
-	for _, mId := range membersIds {
-		memberId := mId
+func broadcastNewMessage(memberUsernames []string, memberData map[string]any) {
+	for _, mu := range memberUsernames {
 
-		messageBrokerService.Send(fmt.Sprintf("user-%d-topic", memberId), messageBrokerService.Message{
+		messageBrokerService.Send(fmt.Sprintf("user-%s-topic", mu), messageBrokerService.Message{
 			Event: "new group chat message",
 			Data:  memberData,
 		})

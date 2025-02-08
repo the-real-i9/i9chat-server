@@ -173,28 +173,79 @@ type MemberData struct {
 }
 
 type NewMessage struct {
-	*SenderData `db:"srd"`
-	*MemberData `db:"mrd"`
-	MembersIds  []int `db:"members_ids"`
+	ClientData      map[string]any `db:"client_resp"`
+	MemberData      map[string]any `db:"member_resp"`
+	MemberUsernames []string       `db:"members_usernames"`
 }
 
-func SendMessage(ctx context.Context, groupChatId int, senderId int, msgContent appTypes.MsgContent, createdAt time.Time) (*NewMessage, error) {
-	newMessage, err := helpers.QueryRowType[NewMessage](ctx, "SELECT sender_resp_data AS srd, member_resp_data AS mrd, members_ids FROM send_group_chat_message($1, $2, $3, $4)", groupChatId, senderId, msgContent, createdAt)
+func SendMessage(ctx context.Context, groupId, clientUsername string, msgContent []byte, createdAt time.Time) (NewMessage, error) {
+	var newMessage NewMessage
+
+	res, err := db.Query(
+		ctx,
+		`
+		CREATE (message:GroupMessage{ id: randomUUID(), content: $message_content, delivery_status: "sent", created_at: $created_at })
+
+		WITH message
+		MATCH (clientChat:GroupChat{ owner_username: $client_username, group_id: $group_id })<-[:HAS_CHAT]-(clientUser)
+		SET clientChat.last_activity_type = "message", 
+			clientChat.updated_at = $created_at,
+			clientChat.last_message_id = message.id
+		CREATE (clientUser)-[:SENDS_MESSAGE]->(message)-[:IN_GROUP_CHAT]->(clientChat)
+
+		WITH message, clientUser
+		MATCH (memberChat:GroupChat{ group_id: $group_id } WHERE memberChat.owner_username <> $client_username)<-[:HAS_CHAT]-(memberUser)
+		SET memberChat.last_activity_type = "message", 
+			memberChat.updated_at = $created_at,
+			memberChat.last_message_id = message.id
+		CREATE (memberUser)-[:RECEIVES_MESSAGE]->(message)-[:IN_GROUP_CHAT]->(memberChat)
+
+		WITH message, clientUser { .username, .profile_pic_url } AS sender, memberUser
+		RETURN { new_msg_id: message.id } AS client_resp,
+			message { .* group_id: $group_id, sender } AS member_resp,
+			collect(memberUser.username) AS member_usernames
+		`,
+		map[string]any{
+			"client_username": clientUsername,
+			"group_id":        groupId,
+			"message_content": msgContent,
+			"created_at":      createdAt,
+		},
+	)
 	if err != nil {
 		log.Println(fmt.Errorf("groupChatModel.go: SendMessage: %s", err))
-		return nil, fiber.ErrInternalServerError
+		return newMessage, fiber.ErrInternalServerError
 	}
+
+	helpers.MapToStruct(res.Records[0].AsMap(), &newMessage)
 
 	return newMessage, nil
 }
 
-func ReactToMessage(ctx context.Context, groupChatId int, msgId, reactorId int, reaction rune) error {
-	_, err := helpers.QueryRowField[bool](ctx, "SELECT react_to_group_chat_message($1, $2, $3, $4)", groupChatId, msgId, reactorId, strconv.QuoteRuneToASCII(reaction))
+func AckMessageDelivered(ctx context.Context, clientUsername, groupId, msgId string, deliveredAt time.Time) error {
+	_, err := db.Query(
+		ctx,
+		`
+		MATCH (clientChat:DMChat{ owner_username: $client_username, partner_username: $partner_username }),
+      (clientChat)<-[:IN_DM_CHAT]-(message:DMMessage{ id: $message_id, delivery_status: "sent" })<-[:RECEIVES_MESSAGE]-()
+    SET message.delivery_status = "delivered", message.delivered_at = datetime($delivered_at), clientChat.unread_messages_count = coalesce(clientChat.unread_messages_count, 0) + 1
+		`,
+		map[string]any{
+			"client_username": clientUsername,
+			"group_id":        groupId,
+			"message_id":      msgId,
+			"delivered_at":    deliveredAt,
+		},
+	)
 	if err != nil {
-		log.Println(fmt.Errorf("groupChatModel.go: ReactToMessage: %s", err))
+		log.Println("DMChatModel.go: AckMessageDelivered", err)
 		return fiber.ErrInternalServerError
 	}
 
+	return nil
+}
+
+func ReactToMessage(ctx context.Context, groupChatId, msgId, clientUsername string, reaction rune) error {
 	return nil
 }
 
@@ -223,39 +274,8 @@ func BatchUpdateMessageDeliveryStatus(ctx context.Context, groupChatId int, rece
 	return lastResult, nil
 }
 
-type messageReaction struct {
-	Reaction rune       `json:"reaction,omitempty"`
-	Reactor  *user.User `json:"reactor,omitempty"`
-}
+// work in progress
+func GetChatHistory(ctx context.Context, groupChatId string, limit int, offset time.Time) ([]any, error) {
 
-type HistoryItem struct {
-	Type string `json:"type"`
-
-	// if Type = "message"
-	Id             int               `json:"id,omitempty"`
-	Sender         *user.User        `json:"sender,omitempty"`
-	Content        map[string]any    `json:"content,omitempty"`
-	DeliveryStatus string            `db:"delivery_status" json:"delivery_status,omitempty"`
-	CreatedAt      *pgtype.Timestamp `db:"created_at" json:"created_at,omitempty"`
-	Edited         bool              `json:"edited,omitempty"`
-	EditedAt       *pgtype.Timestamp `db:"edited_at" json:"edited_at,omitempty"`
-	Reactions      []messageReaction `json:"reactions,omitempty"`
-
-	// if Type = "activity"
-	ActivityType string         `db:"activity_type" json:"activity_type,omitempty"`
-	ActivityInfo map[string]any `db:"activity_info" json:"activity_info,omitempty"`
-}
-
-func GetChatHistory(ctx context.Context, groupChatId, offset int) ([]*HistoryItem, error) {
-	history, err := helpers.QueryRowsType[HistoryItem](ctx, `
-	SELECT * FROM (
-		SELECT * FROM get_group_chat_history($1)
-		LIMIT 50 OFFSET $2
-	) ORDER BY created_at ASC`, groupChatId, offset)
-	if err != nil {
-		log.Println(fmt.Errorf("groupChatModel.go: GetChatHistory: %s", err))
-		return nil, fiber.ErrInternalServerError
-	}
-
-	return history, nil
+	return nil, nil
 }

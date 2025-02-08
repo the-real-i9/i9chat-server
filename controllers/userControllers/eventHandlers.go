@@ -4,6 +4,7 @@ import (
 	"context"
 	"i9chat/helpers"
 	"i9chat/services/chatServices/dmChatService"
+	"i9chat/services/chatServices/groupChatService"
 )
 
 func newDMChatMsgEventHandler(ctx context.Context, clientUsername string, eventData map[string]any) (map[string]any, error) {
@@ -40,4 +41,16 @@ func dmChatMsgReadAckEventHandler(ctx context.Context, clientUsername string, ev
 	}
 
 	return dmChatService.AckMessageRead(ctx, clientUsername, body.PartnerUsername, body.MsgId, body.At)
+}
+
+func newGroupChatMsgEventHandler(ctx context.Context, clientUsername string, eventData map[string]any) (map[string]any, error) {
+	var body newGroupChatMsg
+
+	helpers.MapToStruct(eventData, &body)
+
+	if val_err := body.Validate(); val_err != nil {
+		return nil, val_err
+	}
+
+	return groupChatService.SendMessage(ctx, clientUsername, body.GroupId, body.Msg, body.CreatedAt)
 }

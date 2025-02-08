@@ -47,62 +47,26 @@ func GetChatHistory(c *fiber.Ctx) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	var body getChatHistoryBody
+	groupChatId := c.Params("group_chat_id")
 
-	body_err := c.BodyParser(&body)
-	if body_err != nil {
-		return body_err
+	var query getChatHistoryQuery
+
+	query_err := c.QueryParser(&query)
+	if query_err != nil {
+		return query_err
 	}
 
-	if val_err := body.Validate(); val_err != nil {
+	if val_err := query.Validate(); val_err != nil {
 		return c.Status(fiber.StatusBadRequest).SendString(val_err.Error())
 	}
 
-	respData, app_err := groupChatService.GetChatHistory(ctx, body.GroupChatId, body.Offset)
+	respData, app_err := groupChatService.GetChatHistory(ctx, groupChatId, query.Limit, query.Offset)
 	if app_err != nil {
 		return app_err
 	}
 
 	return c.JSON(respData)
 
-}
-
-func SendMessage(c *fiber.Ctx) error {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	clientUser := c.Locals("user").(*appTypes.ClientUser)
-
-	var groupChatId int
-
-	_, err := fmt.Sscanf(c.Params("group_chat_id"), "%d", &groupChatId)
-	if err != nil {
-		log.Println("GroupChatControllers.go: SendMessage: fmt.Sscanf:", err)
-		return fiber.ErrInternalServerError
-	}
-
-	var body sendMessageBody
-
-	body_err := c.BodyParser(&body)
-	if body_err != nil {
-		return body_err
-	}
-
-	if val_err := body.Validate(); val_err != nil {
-		return c.Status(fiber.StatusBadRequest).SendString(val_err.Error())
-	}
-
-	respData, app_err := groupChatService.SendMessage(ctx,
-		groupChatId,
-		clientUser.Id,
-		body.Msg,
-		body.At,
-	)
-	if app_err != nil {
-		return app_err
-	}
-
-	return c.JSON(respData)
 }
 
 func ExecuteAction(c *fiber.Ctx) error {
