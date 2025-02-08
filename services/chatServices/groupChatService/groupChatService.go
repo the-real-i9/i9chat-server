@@ -28,16 +28,6 @@ func NewGroupChat(ctx context.Context, clientUsername, name, description string,
 	return newGroupChat.ClientData, nil
 }
 
-func broadcastNewGroup(initMembers []string, initMemberData map[string]any) {
-	for _, initMember := range initMembers {
-
-		messageBrokerService.Send(fmt.Sprintf("user-%s-topic", initMember), messageBrokerService.Message{
-			Event: "new group chat",
-			Data:  initMemberData,
-		})
-	}
-}
-
 func GetChatHistory(ctx context.Context, groupChatId string, limit int, offset time.Time) ([]any, error) {
 	return groupChat.GetChatHistory(ctx, groupChatId, limit, offset)
 }
@@ -59,16 +49,6 @@ func SendMessage(ctx context.Context, groupId, clientUsername string, msgContent
 	go broadcastNewMessage(newMessage.MemberUsernames, newMessage.MemberData)
 
 	return newMessage.ClientData, nil
-}
-
-func broadcastNewMessage(memberUsernames []string, memberData map[string]any) {
-	for _, mu := range memberUsernames {
-
-		messageBrokerService.Send(fmt.Sprintf("user-%s-topic", mu), messageBrokerService.Message{
-			Event: "new group chat message",
-			Data:  memberData,
-		})
-	}
 }
 
 // work in progress
@@ -147,10 +127,12 @@ func uploadGroupPicture(ctx context.Context, pictureData []byte) (string, error)
 }
 
 func AddUsersToGroup(ctx context.Context, groupId, clientUsername string, newUsers []string) error {
-	newActivity, err := groupChat.AddUsers(ctx, groupId, clientUsername, newUsers)
+	newActivity, newUserData, err := groupChat.AddUsers(ctx, groupId, clientUsername, newUsers)
 	if err != nil {
 		return err
 	}
+
+	go broadcastNewGroup(newUsers, newUserData)
 
 	go broadcastActivity(newActivity, groupId)
 
@@ -210,17 +192,4 @@ func RemoveUserFromGroupAdmins(ctx context.Context, groupId, clientUsername, use
 	go broadcastActivity(newActivity, groupId)
 
 	return nil
-}
-
-func broadcastActivity(newActivity groupChat.NewActivity, groupId string) {
-
-	for _, mu := range newActivity.MemberUsernames {
-		messageBrokerService.Send(fmt.Sprintf("user-%s-topic", mu), messageBrokerService.Message{
-			Event: "new group chat activity",
-			Data: map[string]any{
-				"info":     newActivity.MemberData,
-				"group_id": groupId,
-			},
-		})
-	}
 }

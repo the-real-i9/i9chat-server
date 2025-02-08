@@ -6,7 +6,6 @@ import (
 	"i9chat/appTypes"
 	"i9chat/helpers"
 	"i9chat/services/chatServices/groupChatService"
-	"log"
 
 	"github.com/gofiber/fiber/v2"
 )
@@ -75,7 +74,7 @@ func ExecuteAction(c *fiber.Ctx) error {
 
 	clientUser := c.Locals("user").(*appTypes.ClientUser)
 
-	type handler func(ctx context.Context, clientUser []string, data map[string]any) error
+	type handler func(ctx context.Context, clientUsername string, data map[string]any) error
 
 	actionToHandlerMap := map[action]handler{
 		"change name":             changeGroupName,
@@ -122,8 +121,8 @@ func changeGroupName(ctx context.Context, clientUsername string, data map[string
 	return groupChatService.ChangeGroupName(ctx, d.GroupId, clientUsername, d.NewName)
 }
 
-func changeGroupDescription(ctx context.Context, clientUser []string, data map[string]any) error {
-	var d changeGroupDescriptionT
+func changeGroupDescription(ctx context.Context, clientUsername string, data map[string]any) error {
+	var d changeGroupDescriptionAction
 
 	helpers.MapToStruct(data, &d)
 
@@ -131,12 +130,12 @@ func changeGroupDescription(ctx context.Context, clientUser []string, data map[s
 		return val_err
 	}
 
-	return groupChatService.ChangeGroupDescription(ctx, d.GroupChatId, clientUser, d.NewDescription)
+	return groupChatService.ChangeGroupDescription(ctx, d.GroupId, clientUsername, d.NewDescription)
 
 }
 
-func changeGroupPicture(ctx context.Context, clientUser []string, data map[string]any) error {
-	var d changeGroupPictureT
+func changeGroupPicture(ctx context.Context, clientUsername string, data map[string]any) error {
+	var d changeGroupPictureAction
 
 	helpers.MapToStruct(data, &d)
 
@@ -144,11 +143,11 @@ func changeGroupPicture(ctx context.Context, clientUser []string, data map[strin
 		return val_err
 	}
 
-	return groupChatService.ChangeGroupPicture(ctx, d.GroupChatId, clientUser, d.NewPictureData)
+	return groupChatService.ChangeGroupPicture(ctx, d.GroupId, clientUsername, d.NewPictureData)
 }
 
-func addUsersToGroup(ctx context.Context, clientUser []string, data map[string]any) error {
-	var d addUsersToGroupT
+func addUsersToGroup(ctx context.Context, clientUsername string, data map[string]any) error {
+	var d addUsersToGroupAction
 
 	helpers.MapToStruct(data, &d)
 
@@ -156,7 +155,7 @@ func addUsersToGroup(ctx context.Context, clientUser []string, data map[string]a
 		return val_err
 	}
 
-	return groupChatService.AddUsersToGroup(ctx, d.GroupChatId, clientUser, d.NewUsers)
+	return groupChatService.AddUsersToGroup(ctx, d.GroupId, clientUsername, d.NewUsers)
 }
 
 func removeUserFromGroup(ctx context.Context, clientUser []string, data map[string]any) error {

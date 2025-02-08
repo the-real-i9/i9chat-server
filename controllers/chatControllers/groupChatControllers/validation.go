@@ -83,77 +83,62 @@ func (d changeGroupNameAction) Validate() error {
 
 }
 
-type changeGroupDescriptionT struct {
-	GroupChatId    int    `json:"groupChatId"`
+type changeGroupDescriptionAction struct {
+	GroupId        string `json:"groupId"`
 	NewDescription string `json:"newDescription"`
 }
 
-func (d changeGroupDescriptionT) Validate() error {
+func (d changeGroupDescriptionAction) Validate() error {
 	err := validation.ValidateStruct(&d,
-		validation.Field(&d.GroupChatId,
-			validation.Required,
-			validation.Min(1).Error("invalid value"),
-		),
+		validation.Field(&d.GroupId, validation.Required, is.UUID),
 		validation.Field(&d.NewDescription, validation.Required),
 	)
 
-	return helpers.ValidationError(err, "groupChat_bodyValidators.go", "changeGroupDescriptionT")
+	return helpers.ValidationError(err, "groupChat_validation.go", "changeGroupDescriptionAction")
 
 }
 
-type changeGroupPictureT struct {
-	GroupChatId    int    `json:"groupChatId"`
+type changeGroupPictureAction struct {
+	GroupId        string `json:"groupId"`
 	NewPictureData []byte `json:"newPictureData"`
 }
 
-func (d changeGroupPictureT) Validate() error {
+func (d changeGroupPictureAction) Validate() error {
 	err := validation.ValidateStruct(&d,
-		validation.Field(&d.GroupChatId,
-			validation.Required,
-			validation.Min(1).Error("invalid value"),
-		),
+		validation.Field(&d.GroupId, validation.Required, is.UUID),
 		validation.Field(&d.NewPictureData,
 			validation.Required,
 			validation.Length(1, 2*1024*1024).Error("maximum picture size of 2mb exceeded"),
 		),
 	)
 
-	return helpers.ValidationError(err, "groupChat_bodyValidators.go", "changeGroupPictureT")
+	return helpers.ValidationError(err, "groupChat_validation.go", "changeGroupPictureAction")
 
 }
 
-type addUsersToGroupT struct {
-	GroupChatId int                 `json:"groupChatId"`
-	NewUsers    [][]appTypes.String `json:"newUsers"`
+type addUsersToGroupAction struct {
+	GroupId  string   `json:"groupId"`
+	NewUsers []string `json:"newUsers"`
 }
 
-func (d addUsersToGroupT) Validate() error {
+func (d addUsersToGroupAction) Validate() error {
 	err := validation.ValidateStruct(&d,
-		validation.Field(&d.GroupChatId,
-			validation.Required,
-			validation.Min(1).Error("invalid value"),
-		),
-		validation.Field(&d.NewUsers,
-			validation.Required,
-			validation.Each(
-				validation.Length(2, 2).Error(`invalid format; should be: [{userId}, {username}] e.g. [2, "kenny"]`),
-				validation.By(helpers.UserSliceRule),
-			),
-		),
+		validation.Field(&d.GroupId, validation.Required, is.UUID),
+		validation.Field(&d.NewUsers, validation.Required, validation.Length(1, 0)),
 	)
 
-	return helpers.ValidationError(err, "groupChat_bodyValidators.go", "addUsersToGroupT")
+	return helpers.ValidationError(err, "groupChat_validation.go", "addUsersToGroupAction")
 
 }
 
 type actOnSingleUserT struct {
-	GroupChatId int               `json:"groupChatId"`
-	User        []appTypes.String `json:"user"`
+	GroupId int               `json:"groupChatId"`
+	User    []appTypes.String `json:"user"`
 }
 
 func (d actOnSingleUserT) Validate() error {
 	err := validation.ValidateStruct(&d,
-		validation.Field(&d.GroupChatId,
+		validation.Field(&d.GroupId,
 			validation.Required,
 			validation.Min(1).Error("invalid value"),
 		),
@@ -169,12 +154,12 @@ func (d actOnSingleUserT) Validate() error {
 }
 
 type joinLeaveGroupT struct {
-	GroupChatId int `json:"groupChatId"`
+	GroupId int `json:"groupChatId"`
 }
 
 func (d joinLeaveGroupT) Validate() error {
 	err := validation.ValidateStruct(&d,
-		validation.Field(&d.GroupChatId,
+		validation.Field(&d.GroupId,
 			validation.Required,
 			validation.Min(1).Error("invalid value"),
 		),
