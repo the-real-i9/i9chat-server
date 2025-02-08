@@ -83,6 +83,8 @@ func ChangeName(ctx context.Context, groupId, clientUsername, newName string) (N
 		MATCH (memberChat:GroupChat{ group_id: $group_id } WHERE memberChat.owner_username <> $client_username)<-[:HAS_CHAT]-(memberUser)
 		CREATE (memberUser)-[:RECEIVES_ACTIVITY]->(memgact:GroupActivity{ info: $client_username + " changed group name from " + group.name + " to " + $new_name, created_at: datetime() })-[:IN_GROUP_CHAT]->(clientChat)
 
+		SET group.name = $new_name
+
 		RETURN cligact.info AS client_resp,
 			memgact.info AS member_resp,
 			collect(memberUser.username) AS member_usernames
@@ -94,7 +96,7 @@ func ChangeName(ctx context.Context, groupId, clientUsername, newName string) (N
 		},
 	)
 	if err != nil {
-		log.Println("groupChatModel.go: New:", err)
+		log.Println("groupChatModel.go: ChangeName:", err)
 		return newActivity, fiber.ErrInternalServerError
 	}
 
@@ -103,32 +105,111 @@ func ChangeName(ctx context.Context, groupId, clientUsername, newName string) (N
 	return newActivity, nil
 }
 
-func ChangeDescription(ctx context.Context, groupChatId int, admin []string, newDescription string) (NewActivity, error) {
-	newActivity, err := helpers.QueryRowType[NewActivity](ctx, "SELECT * change_group_description($1, $2, $3)", groupChatId, admin, newDescription)
+func ChangeDescription(ctx context.Context, groupId, clientUsername, newDescription string) (NewActivity, error) {
+	var newActivity NewActivity
+
+	res, err := db.Query(
+		ctx,
+		`
+		MATCH (group)<-[:WITH_GROUP]-(clientChat:GroupChat{ owner_username: $client_username, group_id: $group_id })<-[:HAS_CHAT]-(clientUser),
+			(clientUser)-[:IS_MEMBER_OF { role: "admin" }]->(group)
+		CREATE (clientUser)-[:RECEIVES_ACTIVITY]->(cligact:GroupActivity{ info: "You changed group description from " + group.description + " to " + $new_description, created_at: datetime() })-[:IN_GROUP_CHAT]->(clientChat)
+
+		WITH group, cligact
+		MATCH (memberChat:GroupChat{ group_id: $group_id } WHERE memberChat.owner_username <> $client_username)<-[:HAS_CHAT]-(memberUser)
+		CREATE (memberUser)-[:RECEIVES_ACTIVITY]->(memgact:GroupActivity{ info: $client_username + " changed group description from " + group.description + " to " + $new_description, created_at: datetime() })-[:IN_GROUP_CHAT]->(clientChat)
+
+		SET group.description = $new_description
+
+		RETURN cligact.info AS client_resp,
+			memgact.info AS member_resp,
+			collect(memberUser.username) AS member_usernames
+		`,
+		map[string]any{
+			"client_username": clientUsername,
+			"group_id":        groupId,
+			"new_description": newDescription,
+		},
+	)
 	if err != nil {
-		log.Println(fmt.Errorf("groupChatModel.go: ChangeDescription: %s", err))
-		return nil, fiber.ErrInternalServerError
+		log.Println("groupChatModel.go: ChangeDescription:", err)
+		return newActivity, fiber.ErrInternalServerError
 	}
+
+	helpers.MapToStruct(res.Records[0].AsMap(), &newActivity)
 
 	return newActivity, nil
 }
 
-func ChangePicture(ctx context.Context, groupChatId int, admin []string, newPictureUrl string) (NewActivity, error) {
-	newActivity, err := helpers.QueryRowType[NewActivity](ctx, "SELECT * change_group_picture($1, $2, $3)", groupChatId, admin, newPictureUrl)
+func ChangePicture(ctx context.Context, groupId, clientUsername, newPictureUrl string) (NewActivity, error) {
+	var newActivity NewActivity
+
+	res, err := db.Query(
+		ctx,
+		`
+		MATCH (group)<-[:WITH_GROUP]-(clientChat:GroupChat{ owner_username: $client_username, group_id: $group_id })<-[:HAS_CHAT]-(clientUser),
+			(clientUser)-[:IS_MEMBER_OF { role: "admin" }]->(group)
+		CREATE (clientUser)-[:RECEIVES_ACTIVITY]->(cligact:GroupActivity{ info: "You changed group picture", created_at: datetime() })-[:IN_GROUP_CHAT]->(clientChat)
+
+		WITH group, cligact
+		MATCH (memberChat:GroupChat{ group_id: $group_id } WHERE memberChat.owner_username <> $client_username)<-[:HAS_CHAT]-(memberUser)
+		CREATE (memberUser)-[:RECEIVES_ACTIVITY]->(memgact:GroupActivity{ info: $client_username + " changed group picture", created_at: datetime() })-[:IN_GROUP_CHAT]->(clientChat)
+
+		SET group.picture_url = $new_pic_url
+
+		RETURN cligact.info AS client_resp,
+			memgact.info AS member_resp,
+			collect(memberUser.username) AS member_usernames
+		`,
+		map[string]any{
+			"client_username": clientUsername,
+			"group_id":        groupId,
+			"new_pic_url":     newPictureUrl,
+		},
+	)
 	if err != nil {
-		log.Println(fmt.Errorf("groupChatModel.go: ChangePicture: %s", err))
-		return nil, fiber.ErrInternalServerError
+		log.Println("groupChatModel.go: ChangePicture:", err)
+		return newActivity, fiber.ErrInternalServerError
 	}
+
+	helpers.MapToStruct(res.Records[0].AsMap(), &newActivity)
 
 	return newActivity, nil
 }
 
-func AddUsers(ctx context.Context, groupChatId int, admin []string, newUsers [][]appTypes.String) (NewActivity, error) {
-	newActivity, err := helpers.QueryRowType[NewActivity](ctx, "SELECT * add_users_to_group($1, $2, $3)", groupChatId, admin, newUsers)
+func AddUsers(ctx context.Context, groupId, clientUsername string, newUsers []string) (NewActivity, error) {
+	var newActivity NewActivity
+
+	res, err := db.Query(
+		ctx,
+		`
+		MATCH (group)<-[:WITH_GROUP]-(clientChat:GroupChat{ owner_username: $client_username, group_id: $group_id })<-[:HAS_CHAT]-(clientUser),
+			(clientUser)-[:IS_MEMBER_OF { role: "admin" }]->(group)
+		CREATE (clientUser)-[:RECEIVES_ACTIVITY]->(cligact:GroupActivity{ info: "You changed group picture", created_at: datetime() })-[:IN_GROUP_CHAT]->(clientChat)
+
+		WITH group, cligact
+		MATCH (memberChat:GroupChat{ group_id: $group_id } WHERE memberChat.owner_username <> $client_username)<-[:HAS_CHAT]-(memberUser)
+		CREATE (memberUser)-[:RECEIVES_ACTIVITY]->(memgact:GroupActivity{ info: $client_username + " changed group picture", created_at: datetime() })-[:IN_GROUP_CHAT]->(clientChat)
+
+		--- Add users here ---
+		SET group.picture_url = $new_pic_url
+
+		RETURN cligact.info AS client_resp,
+			memgact.info AS member_resp,
+			collect(memberUser.username) AS member_usernames
+		`,
+		map[string]any{
+			"client_username": clientUsername,
+			"group_id":        groupId,
+			"new_users":       newUsers,
+		},
+	)
 	if err != nil {
-		log.Println(fmt.Errorf("groupChatModel.go: AddUsers: %s", err))
-		return nil, fiber.ErrInternalServerError
+		log.Println("groupChatModel.go: ChangePicture:", err)
+		return newActivity, fiber.ErrInternalServerError
 	}
+
+	helpers.MapToStruct(res.Records[0].AsMap(), &newActivity)
 
 	return newActivity, nil
 }

@@ -99,34 +99,34 @@ func ChangeGroupName(ctx context.Context, groupId, clientUsername, newName strin
 		return err
 	}
 
-	go broadcastActivity(newActivity)
+	go broadcastActivity(newActivity, groupId)
 
 	return nil
 }
 
-func ChangeGroupDescription(ctx context.Context, groupChatId int, clientUser []string, newDescription string) error {
-	newActivity, err := groupChat.ChangeDescription(ctx, groupChatId, clientUser, newDescription)
+func ChangeGroupDescription(ctx context.Context, groupId, clientUsername, newDescription string) error {
+	newActivity, err := groupChat.ChangeDescription(ctx, groupId, clientUsername, newDescription)
 	if err != nil {
 		return err
 	}
 
-	go broadcastActivity(newActivity)
+	go broadcastActivity(newActivity, groupId)
 
 	return nil
 }
 
-func ChangeGroupPicture(ctx context.Context, groupChatId int, admin []string, newPictureData []byte) error {
+func ChangeGroupPicture(ctx context.Context, groupId, clientUsername string, newPictureData []byte) error {
 	newPicUrl, err := uploadGroupPicture(ctx, newPictureData)
 	if err != nil {
 		return err
 	}
 
-	newActivity, err := groupChat.ChangePicture(ctx, groupChatId, admin, newPicUrl)
+	newActivity, err := groupChat.ChangePicture(ctx, groupId, clientUsername, newPicUrl)
 	if err != nil {
 		return err
 	}
 
-	go broadcastActivity(newActivity)
+	go broadcastActivity(newActivity, groupId)
 
 	return nil
 }
@@ -146,78 +146,81 @@ func uploadGroupPicture(ctx context.Context, pictureData []byte) (string, error)
 	return picUrl, nil
 }
 
-func AddUsersToGroup(ctx context.Context, groupChatId int, admin []string, newUsers [][]appTypes.String) error {
-	newActivity, err := groupChat.AddUsers(ctx, groupChatId, admin, newUsers)
+func AddUsersToGroup(ctx context.Context, groupId, clientUsername string, newUsers []string) error {
+	newActivity, err := groupChat.AddUsers(ctx, groupId, clientUsername, newUsers)
 	if err != nil {
 		return err
 	}
 
-	go broadcastActivity(newActivity)
+	go broadcastActivity(newActivity, groupId)
 
 	return nil
 }
 
-func RemoveUserFromGroup(ctx context.Context, groupChatId int, admin []string, user []appTypes.String) error {
+func RemoveUserFromGroup(ctx context.Context, groupId, clientUsername, user string) error {
 	newActivity, err := groupChat.RemoveUser(ctx, groupChatId, admin, user)
 	if err != nil {
 		return err
 	}
 
-	go broadcastActivity(newActivity)
+	go broadcastActivity(newActivity, groupId)
 
 	return nil
 }
 
-func JoinGroup(ctx context.Context, groupChatId int, newUser []string) error {
+func JoinGroup(ctx context.Context, groupId, clientUsername string) error {
 	newActivity, err := groupChat.Join(ctx, groupChatId, newUser)
 	if err != nil {
 		return err
 	}
 
-	go broadcastActivity(newActivity)
+	go broadcastActivity(newActivity, groupId)
 
 	return nil
 }
 
-func LeaveGroup(ctx context.Context, groupChatId int, user []string) error {
+func LeaveGroup(ctx context.Context, groupId, clientUsername string) error {
 	newActivity, err := groupChat.Leave(ctx, groupChatId, user)
 	if err != nil {
 		return err
 	}
 
-	go broadcastActivity(newActivity)
+	go broadcastActivity(newActivity, groupId)
 
 	return nil
 }
 
-func MakeUserGroupAdmin(ctx context.Context, groupChatId int, admin []string, user []appTypes.String) error {
+func MakeUserGroupAdmin(ctx context.Context, groupId, clientUsername, user string) error {
 	newActivity, err := groupChat.MakeUserAdmin(ctx, groupChatId, admin, user)
 	if err != nil {
 		return err
 	}
 
-	go broadcastActivity(newActivity)
+	go broadcastActivity(newActivity, groupId)
 
 	return nil
 }
 
-func RemoveUserFromGroupAdmins(ctx context.Context, groupChatId int, admin []string, user []appTypes.String) error {
+func RemoveUserFromGroupAdmins(ctx context.Context, groupId, clientUsername, user string) error {
 	newActivity, err := groupChat.RemoveUserFromAdmins(ctx, groupChatId, admin, user)
 	if err != nil {
 		return err
 	}
 
-	go broadcastActivity(newActivity)
+	go broadcastActivity(newActivity, groupId)
 
 	return nil
 }
 
-func broadcastActivity(newActivity groupChat.NewActivity) {
+func broadcastActivity(newActivity groupChat.NewActivity, groupId string) {
 
-	for _, mId := range newActivity.MembersIds {
-		messageBrokerService.Send(fmt.Sprintf("user-%d-topic", mId), messageBrokerService.Message{
+	for _, mu := range newActivity.MemberUsernames {
+		messageBrokerService.Send(fmt.Sprintf("user-%s-topic", mu), messageBrokerService.Message{
 			Event: "new group chat activity",
-			Data:  newActivity.ActivityInfo,
+			Data: map[string]any{
+				"info":     newActivity.MemberData,
+				"group_id": groupId,
+			},
 		})
 	}
 }
