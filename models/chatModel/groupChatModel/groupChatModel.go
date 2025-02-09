@@ -488,6 +488,7 @@ func SendMessage(ctx context.Context, groupId, clientUsername string, msgContent
 	return newMessage, nil
 }
 
+// work in progress: returning whether message is delivered to all when appropriate
 func AckMessageDelivered(ctx context.Context, clientUsername, groupId, msgId string, deliveredAt time.Time) error {
 	_, err := db.Query(
 		ctx,
@@ -512,6 +513,7 @@ func AckMessageDelivered(ctx context.Context, clientUsername, groupId, msgId str
 	return nil
 }
 
+// work in progress: returning whether message is read by all when appropriate
 func AckMessageRead(ctx context.Context, clientUsername, groupId, msgId string, readAt time.Time) error {
 	_, err := db.Query(
 		ctx,
@@ -546,7 +548,7 @@ type BatchStatusUpdateResult struct {
 	ShouldBroadcast       bool   `json:"should_broadcast"`
 }
 
-// work in progress
+// work in progress: combination of messages and group activity
 func GetChatHistory(ctx context.Context, groupChatId string, limit int, offset time.Time) ([]any, error) {
 
 	return nil, nil

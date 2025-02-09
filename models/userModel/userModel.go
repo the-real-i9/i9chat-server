@@ -132,7 +132,7 @@ func Search(ctx context.Context, clientUsername, searchQuery string) ([]any, err
 	return matchUsers, nil
 }
 
-// work in progress
+// work in progress: combination of dm chats and group chat
 func GetChats(ctx context.Context, clientUsername string) ([]any, error) {
 	res, err := db.Query(
 		ctx,
@@ -192,7 +192,7 @@ func EditProfile(ctx context.Context, username string, fieldValueMap map[string]
 	return nil
 }
 
-// work in progress
+// work in progress: broadcasting presence
 func ChangePresence(ctx context.Context, clientUsername, presence string, lastSeen time.Time) {
 	_, err := db.Query(ctx,
 		`

@@ -50,7 +50,7 @@ func SendMessage(ctx context.Context, groupId, clientUsername string, msgContent
 	return newMessage.ClientData, nil
 }
 
-// work in progress
+// work in progress: broadcasting message delivered when appropriate
 func AckMessageDelivered(ctx context.Context, clientUsername, groupId, msgId string, deliveredAt time.Time) error {
 	if err := groupChat.AckMessageDelivered(ctx, clientUsername, groupId, msgId, deliveredAt); err != nil {
 		return err
@@ -61,7 +61,7 @@ func AckMessageDelivered(ctx context.Context, clientUsername, groupId, msgId str
 	return nil
 }
 
-// work in progress
+// work in progress: broadcasting message read when appropriate
 func AckMessageRead(ctx context.Context, clientUsername, groupId, msgId string, readAt time.Time) error {
 	if err := groupChat.AckMessageRead(ctx, clientUsername, groupId, msgId, readAt); err != nil {
 		return err
