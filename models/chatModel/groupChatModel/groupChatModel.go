@@ -243,7 +243,6 @@ func AddUsers(ctx context.Context, groupId, clientUsername string, newUsers []st
 	return newActivity, recMap["new_user_resp"], nil
 }
 
-// I was here before shutting down
 func RemoveUser(ctx context.Context, groupId, clientUsername, targetUser string) (NewActivity, any, error) {
 	var newActivity NewActivity
 
@@ -254,7 +253,7 @@ func RemoveUser(ctx context.Context, groupId, clientUsername, targetUser string)
 			(clientUser)-[:IS_MEMBER_OF { role: "admin" }]->(group)
 		SET clientChat.last_activity_type = "group activity",
 			clientChat.last_group_activity_at = $at
-		CREATE (clientUser)-[:RECEIVES_ACTIVITY]->(cligact:GroupActivity{ info: "You removed " + $user, created_at: $at })-[:IN_GROUP_CHAT]->(clientChat)
+		CREATE (clientUser)-[:RECEIVES_ACTIVITY]->(cligact:GroupActivity{ info: "You removed " + $target_user, created_at: $at })-[:IN_GROUP_CHAT]->(clientChat)
 
 		WITH group, cligact
 		MATCH (group)<-[mem:IS_MEMBER_OF]-(targetUser:User{ username: $target_user }),
@@ -269,14 +268,12 @@ func RemoveUser(ctx context.Context, groupId, clientUsername, targetUser string)
 			(memberChat:GroupChat{ owner_username: memberUser.username, group_id: $group_id })
 		SET memberChat.last_activity_type = "group activity",
 			memberChat.last_group_activity_at = $at
-		CREATE (memberUser)-[:RECEIVES_ACTIVITY]->(memgact:GroupActivity{ info: $client_username + " removed " + $user, created_at: $at })-[:IN_GROUP_CHAT]->(memberChat)
-
-		WITH cligact, tugact, memgact, collect(memberUser.username) AS member_usernames
+		CREATE (memberUser)-[:RECEIVES_ACTIVITY]->(memgact:GroupActivity{ info: $client_username + " removed " + $target_user, created_at: $at })-[:IN_GROUP_CHAT]->(memberChat)
 
 		RETURN cligact.info AS client_resp,
 			memgact.info AS member_resp,
 			tugact.info AS target_user_resp,
-			member_usernames AS member_usernames
+			collect(memberUser.username) AS member_usernames
 		`,
 		map[string]any{
 			"client_username": clientUsername,
@@ -337,26 +334,100 @@ func Join(ctx context.Context, groupId, clientUsername string) (NewActivity, err
 	return newActivity, nil
 }
 
-func Leave(ctx context.Context, groupChatId int, user []string) (NewActivity, error) {
-	newActivity, err := helpers.QueryRowType[NewActivity](ctx, "SELECT * leave_group($1, $2)", groupChatId, user)
+func Leave(ctx context.Context, groupId, clientUsername string) (NewActivity, error) {
+	var newActivity NewActivity
+
+	res, err := db.Query(
+		ctx,
+		`
+		MATCH (group:Group{ id: $group_id })<-[mem:IS_MEMBER_OF]-(clientUser:User{ username: $client_username }),
+			(clientChat:GroupChat{ owner_username: clientUser.username, group_id: $group_id })
+		DELETE mem
+		SET clientChat.last_activity_type = "group activity",
+			clientChat.last_group_activity_at = $at
+		CREATE (clientUser)-[:RECEIVES_ACTIVITY]->(cligact:GroupActivity{ info: "You left", created_at: $at })-[:IN_GROUP_CHAT]-(clientChat)
+
+		WITH group, cligact
+		MATCH (group)<-[:IS_MEMBER_OF]-(memberUser:User),
+			(memberChat:GroupChat{ owner_username: memberUser.username, group_id: $group_id })
+		SET memberChat.last_activity_type = "group activity",
+			memberChat.last_group_activity_at = $at
+		CREATE (memberUser)-[:RECEIVES_ACTIVITY]->(memgact:GroupActivity{ info: $client_username + " left", created_at: $at })-[:IN_GROUP_CHAT]->(memberChat)
+
+		RETURN cligact.info AS client_resp,
+			memgact.info AS member_resp,
+			collect(memberUser.username) AS member_usernames
+		`,
+		map[string]any{
+			"client_username": clientUsername,
+			"group_id":        groupId,
+			"at":              time.Now(),
+		},
+	)
 	if err != nil {
-		log.Println(fmt.Errorf("groupChatModel.go: Leave: %s", err))
-		return nil, fiber.ErrInternalServerError
+		log.Println("groupChatModel.go: Leave:", err)
+		return newActivity, fiber.ErrInternalServerError
 	}
+
+	recMap := res.Records[0].AsMap()
+
+	helpers.MapToStruct(recMap, &newActivity)
 
 	return newActivity, nil
 }
 
-func MakeUserAdmin(ctx context.Context, groupChatId int, admin []string, user []appTypes.String) (NewActivity, error) {
-	newActivity, err := helpers.QueryRowType[NewActivity](ctx, "SELECT * make_user_group_admin($1, $2, $3)", groupChatId, admin, user)
+func MakeUserAdmin(ctx context.Context, groupId, clientUsername, targetUser string) (NewActivity, any, error) {
+	var newActivity NewActivity
+
+	res, err := db.Query(
+		ctx,
+		`
+		MATCH (group)<-[:WITH_GROUP]-(clientChat:GroupChat{ owner_username: $client_username, group_id: $group_id })<-[:HAS_CHAT]-(clientUser),
+			(clientUser)-[:IS_MEMBER_OF { role: "admin" }]->(group)
+		SET clientChat.last_activity_type = "group activity",
+			clientChat.last_group_activity_at = $at
+		CREATE (clientUser)-[:RECEIVES_ACTIVITY]->(cligact:GroupActivity{ info: "You made " + $target_user + " admin", created_at: $at })-[:IN_GROUP_CHAT]->(clientChat)
+
+		WITH group, cligact
+		MATCH (group)<-[mem:IS_MEMBER_OF]-(targetUser:User{ username: $target_user }),
+			(targetUserChat:GroupChat{ owner_username: targetUser.username, group_id: $group_id })
+		SET mem.role = "admin"
+			targetUserChat.last_activity_type = "group activity",
+			targetUserChat.last_group_activity_at = $at
+		CREATE (targetUser)-[:RECEIVES_ACTIVITY]->(tugact:GroupActivity{ info: $client_username + " made you admin", created_at: $at })-[:IN_GROUP_CHAT]-(targetUserChat)
+
+		WITH group, cligact, tugact
+		MATCH (group)<-[:IS_MEMBER_OF]-(memberUser:User WHERE memberUser.username NOT IN [$client_username, $target_user]),
+			(memberChat:GroupChat{ owner_username: memberUser.username, group_id: $group_id })
+		SET memberChat.last_activity_type = "group activity",
+			memberChat.last_group_activity_at = $at
+		CREATE (memberUser)-[:RECEIVES_ACTIVITY]->(memgact:GroupActivity{ info: $client_username + " made " + $target_user + " admin", created_at: $at })-[:IN_GROUP_CHAT]->(memberChat)
+
+		RETURN cligact.info AS client_resp,
+			memgact.info AS member_resp,
+			tugact.info AS target_user_resp,
+			collect(memberUser.username) AS member_usernames
+		`,
+		map[string]any{
+			"client_username": clientUsername,
+			"group_id":        groupId,
+			"target_user":     targetUser,
+			"at":              time.Now(),
+		},
+	)
 	if err != nil {
-		log.Println(fmt.Errorf("groupChatModel.go: MakeUserAdmin: %s", err))
-		return nil, fiber.ErrInternalServerError
+		log.Println("groupChatModel.go: MakeUserAdmin:", err)
+		return newActivity, nil, fiber.ErrInternalServerError
 	}
 
-	return newActivity, nil
+	recMap := res.Records[0].AsMap()
+
+	helpers.MapToStruct(recMap, &newActivity)
+
+	return newActivity, recMap["target_user_resp"], nil
 }
 
+// I was here before shutting down
 func RemoveUserFromAdmins(ctx context.Context, groupChatId int, admin []string, user []appTypes.String) (NewActivity, error) {
 	newActivity, err := helpers.QueryRowType[NewActivity](ctx, "SELECT * remove_user_from_group_admins($1, $2, $3)", groupChatId, admin, user)
 	if err != nil {
@@ -471,8 +542,8 @@ func ReactToMessage(ctx context.Context, groupChatId, msgId, clientUsername stri
 }
 
 type BatchStatusUpdateResult struct {
-	OverallDeliveryStatus string `db:"overall_delivery_status"`
-	ShouldBroadcast       bool   `db:"should_broadcast"`
+	OverallDeliveryStatus string `json:"overall_delivery_status"`
+	ShouldBroadcast       bool   `json:"should_broadcast"`
 }
 
 // work in progress
