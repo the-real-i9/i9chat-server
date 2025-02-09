@@ -8,7 +8,6 @@ import (
 	groupChat "i9chat/models/chatModel/groupChatModel"
 	"i9chat/services/appServices"
 	"i9chat/services/cloudStorageService"
-	"i9chat/services/messageBrokerService"
 	"time"
 )
 
@@ -73,42 +72,42 @@ func AckMessageRead(ctx context.Context, clientUsername, groupId, msgId string, 
 	return nil
 }
 
-func ChangeGroupName(ctx context.Context, groupId, clientUsername, newName string) error {
+func ChangeGroupName(ctx context.Context, groupId, clientUsername, newName string) (any, error) {
 	newActivity, err := groupChat.ChangeName(ctx, groupId, clientUsername, newName)
 	if err != nil {
-		return err
+		return "", err
 	}
 
-	go broadcastActivity(newActivity, groupId)
+	go broadcastActivity(newActivity.MemberUsernames, newActivity.MemberData, groupId)
 
-	return nil
+	return newActivity.ClientData, nil
 }
 
-func ChangeGroupDescription(ctx context.Context, groupId, clientUsername, newDescription string) error {
+func ChangeGroupDescription(ctx context.Context, groupId, clientUsername, newDescription string) (any, error) {
 	newActivity, err := groupChat.ChangeDescription(ctx, groupId, clientUsername, newDescription)
 	if err != nil {
-		return err
+		return "", err
 	}
 
-	go broadcastActivity(newActivity, groupId)
+	go broadcastActivity(newActivity.MemberUsernames, newActivity.MemberData, groupId)
 
-	return nil
+	return newActivity.ClientData, nil
 }
 
-func ChangeGroupPicture(ctx context.Context, groupId, clientUsername string, newPictureData []byte) error {
+func ChangeGroupPicture(ctx context.Context, groupId, clientUsername string, newPictureData []byte) (any, error) {
 	newPicUrl, err := uploadGroupPicture(ctx, newPictureData)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	newActivity, err := groupChat.ChangePicture(ctx, groupId, clientUsername, newPicUrl)
 	if err != nil {
-		return err
+		return "", err
 	}
 
-	go broadcastActivity(newActivity, groupId)
+	go broadcastActivity(newActivity.MemberUsernames, newActivity.MemberData, groupId)
 
-	return nil
+	return newActivity.ClientData, nil
 }
 
 func uploadGroupPicture(ctx context.Context, pictureData []byte) (string, error) {
@@ -126,39 +125,41 @@ func uploadGroupPicture(ctx context.Context, pictureData []byte) (string, error)
 	return picUrl, nil
 }
 
-func AddUsersToGroup(ctx context.Context, groupId, clientUsername string, newUsers []string) error {
+func AddUsersToGroup(ctx context.Context, groupId, clientUsername string, newUsers []string) (any, error) {
 	newActivity, newUserData, err := groupChat.AddUsers(ctx, groupId, clientUsername, newUsers)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	go broadcastNewGroup(newUsers, newUserData)
 
-	go broadcastActivity(newActivity, groupId)
+	go broadcastActivity(newActivity.MemberUsernames, newActivity.MemberData, groupId)
 
-	return nil
+	return newActivity.ClientData, nil
 }
 
-func RemoveUserFromGroup(ctx context.Context, groupId, clientUsername, user string) error {
-	newActivity, err := groupChat.RemoveUser(ctx, groupChatId, admin, user)
+func RemoveUserFromGroup(ctx context.Context, groupId, clientUsername, targetUser string) (any, error) {
+	newActivity, targetUserData, err := groupChat.RemoveUser(ctx, groupId, clientUsername, targetUser)
 	if err != nil {
-		return err
+		return "", err
 	}
 
-	go broadcastActivity(newActivity, groupId)
+	go broadcastActivity([]string{targetUser}, targetUserData, groupId)
 
-	return nil
+	go broadcastActivity(newActivity.MemberUsernames, newActivity.MemberData, groupId)
+
+	return newActivity.ClientData, nil
 }
 
-func JoinGroup(ctx context.Context, groupId, clientUsername string) error {
-	newActivity, err := groupChat.Join(ctx, groupChatId, newUser)
+func JoinGroup(ctx context.Context, groupId, clientUsername string) (any, error) {
+	newActivity, err := groupChat.Join(ctx, groupId, clientUsername)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	go broadcastActivity(newActivity, groupId)
+	go broadcastActivity(newActivity.MemberUsernames, newActivity.MemberData, groupId)
 
-	return nil
+	return newActivity.ClientData, nil
 }
 
 func LeaveGroup(ctx context.Context, groupId, clientUsername string) error {
@@ -167,7 +168,7 @@ func LeaveGroup(ctx context.Context, groupId, clientUsername string) error {
 		return err
 	}
 
-	go broadcastActivity(newActivity, groupId)
+	go broadcastActivity(newActivity.MemberUsernames, newActivity.MemberData, groupId)
 
 	return nil
 }
@@ -178,7 +179,7 @@ func MakeUserGroupAdmin(ctx context.Context, groupId, clientUsername, user strin
 		return err
 	}
 
-	go broadcastActivity(newActivity, groupId)
+	go broadcastActivity(newActivity.MemberUsernames, newActivity.MemberData, groupId)
 
 	return nil
 }
@@ -189,7 +190,7 @@ func RemoveUserFromGroupAdmins(ctx context.Context, groupId, clientUsername, use
 		return err
 	}
 
-	go broadcastActivity(newActivity, groupId)
+	go broadcastActivity(newActivity.MemberUsernames, newActivity.MemberData, groupId)
 
 	return nil
 }

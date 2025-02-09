@@ -63,8 +63,8 @@ func New(ctx context.Context, clientUsername, name, description, pictureUrl stri
 }
 
 type NewActivity struct {
-	ClientData      string   `json:"client_resp"`
-	MemberData      string   `json:"member_resp"`
+	ClientData      any      `json:"client_resp"`
+	MemberData      any      `json:"member_resp"`
 	MemberUsernames []string `json:"members_usernames"`
 }
 
@@ -81,10 +81,11 @@ func ChangeName(ctx context.Context, groupId, clientUsername, newName string) (N
 		CREATE (clientUser)-[:RECEIVES_ACTIVITY]->(cligact:GroupActivity{ info: "You changed group name from " + group.name + " to " + $new_name, created_at: $at })-[:IN_GROUP_CHAT]->(clientChat)
 
 		WITH group, cligact
-		MATCH (memberChat:GroupChat{ group_id: $group_id } WHERE memberChat.owner_username <> $client_username)<-[:HAS_CHAT]-(memberUser)
-		SET clientChat.last_activity_type = "group activity",
-			clientChat.last_group_activity_at = $at
-		CREATE (memberUser)-[:RECEIVES_ACTIVITY]->(memgact:GroupActivity{ info: $client_username + " changed group name from " + group.name + " to " + $new_name, created_at: $at })-[:IN_GROUP_CHAT]->(clientChat)
+		MATCH (group)<-[:IS_MEMBER_OF]-(memberUser:User WHERE memberUser.username <> $client_username),
+			(memberChat:GroupChat{ owner_username: memberUser.username, group_id: $group_id })
+		SET memberChat.last_activity_type = "group activity",
+			memberChat.last_group_activity_at = $at
+		CREATE (memberUser)-[:RECEIVES_ACTIVITY]->(memgact:GroupActivity{ info: $client_username + " changed group name from " + group.name + " to " + $new_name, created_at: $at })-[:IN_GROUP_CHAT]->(memberChat)
 
 		SET group.name = $new_name
 
@@ -122,10 +123,11 @@ func ChangeDescription(ctx context.Context, groupId, clientUsername, newDescript
 		CREATE (clientUser)-[:RECEIVES_ACTIVITY]->(cligact:GroupActivity{ info: "You changed group description from " + group.description + " to " + $new_description, created_at: $at })-[:IN_GROUP_CHAT]->(clientChat)
 
 		WITH group, cligact
-		MATCH (memberChat:GroupChat{ group_id: $group_id } WHERE memberChat.owner_username <> $client_username)<-[:HAS_CHAT]-(memberUser)
-		SET clientChat.last_activity_type = "group activity",
-			clientChat.last_group_activity_at = $at
-		CREATE (memberUser)-[:RECEIVES_ACTIVITY]->(memgact:GroupActivity{ info: $client_username + " changed group description from " + group.description + " to " + $new_description, created_at: $at })-[:IN_GROUP_CHAT]->(clientChat)
+		MATCH (group)<-[:IS_MEMBER_OF]-(memberUser:User WHERE memberUser.username <> $client_username),
+			(memberChat:GroupChat{ owner_username: memberUser.username, group_id: $group_id })
+		SET memberChat.last_activity_type = "group activity",
+			memberChat.last_group_activity_at = $at
+		CREATE (memberUser)-[:RECEIVES_ACTIVITY]->(memgact:GroupActivity{ info: $client_username + " changed group description from " + group.description + " to " + $new_description, created_at: $at })-[:IN_GROUP_CHAT]->(memberChat)
 
 		SET group.description = $new_description
 
@@ -163,10 +165,11 @@ func ChangePicture(ctx context.Context, groupId, clientUsername, newPictureUrl s
 		CREATE (clientUser)-[:RECEIVES_ACTIVITY]->(cligact:GroupActivity{ info: "You changed group picture", created_at: $at })-[:IN_GROUP_CHAT]->(clientChat)
 
 		WITH group, cligact
-		MATCH (memberChat:GroupChat{ group_id: $group_id } WHERE memberChat.owner_username <> $client_username)<-[:HAS_CHAT]-(memberUser)
+		MATCH (group)<-[:IS_MEMBER_OF]-(memberUser:User WHERE memberUser.username <> $client_username),
+			(memberChat:GroupChat{ owner_username: memberUser.username, group_id: $group_id })
 		SET memberChat.last_activity_type = "group activity",
 			memberChat.last_group_activity_at = $at
-		CREATE (memberUser)-[:RECEIVES_ACTIVITY]->(memgact:GroupActivity{ info: $client_username + " changed group picture", created_at: $at })-[:IN_GROUP_CHAT]->(clientChat)
+		CREATE (memberUser)-[:RECEIVES_ACTIVITY]->(memgact:GroupActivity{ info: $client_username + " changed group picture", created_at: $at })-[:IN_GROUP_CHAT]->(memberChat)
 
 		SET group.picture_url = $new_pic_url
 
@@ -199,15 +202,16 @@ func AddUsers(ctx context.Context, groupId, clientUsername string, newUsers []st
 		`
 		MATCH (group)<-[:WITH_GROUP]-(clientChat:GroupChat{ owner_username: $client_username, group_id: $group_id })<-[:HAS_CHAT]-(clientUser),
 			(clientUser)-[:IS_MEMBER_OF { role: "admin" }]->(group)
-		SET memberChat.last_activity_type = "group activity",
-			memberChat.last_group_activity_at = $at
+		SET clientChat.last_activity_type = "group activity",
+			clientChat.last_group_activity_at = $at
 		CREATE (clientUser)-[:RECEIVES_ACTIVITY]->(cligact:GroupActivity{ info: "You added " + toString($new_users), created_at: $at })-[:IN_GROUP_CHAT]->(clientChat)
 
 		WITH group, cligact
-		MATCH (memberChat:GroupChat{ group_id: $group_id } WHERE memberChat.owner_username <> $client_username)<-[:HAS_CHAT]-(memberUser)
+		MATCH (group)<-[:IS_MEMBER_OF]-(memberUser:User WHERE memberUser.username <> $client_username),
+			(memberChat:GroupChat{ owner_username: memberUser.username, group_id: $group_id })
 		SET memberChat.last_activity_type = "group activity",
 			memberChat.last_group_activity_at = $at
-		CREATE (memberUser)-[:RECEIVES_ACTIVITY]->(memgact:GroupActivity{ info: $client_username + " added " + toString($new_users), created_at: $at })-[:IN_GROUP_CHAT]->(clientChat)
+		CREATE (memberUser)-[:RECEIVES_ACTIVITY]->(memgact:GroupActivity{ info: $client_username + " added " + toString($new_users), created_at: $at })-[:IN_GROUP_CHAT]->(memberChat)
 
 		WITH group, cligact, memgact, collect(memberUser.username) AS member_usernames
 		MATCH (newUser:User WHERE newUser.username IN $new_users)
@@ -217,7 +221,7 @@ func AddUsers(ctx context.Context, groupId, clientUsername string, newUsers []st
 
 		RETURN cligact.info AS client_resp,
 			memgact.info AS member_resp,
-			group { group_chat_id: .id, .name, .picture_url, last_activity: { type: "group activity", info: "You were added" } } AS new_user_resp,
+			group { .id, .name, .picture_url, last_activity: { type: "group activity", info: "You were added" } } AS new_user_resp,
 			member_usernames AS member_usernames
 		`,
 		map[string]any{
@@ -240,22 +244,95 @@ func AddUsers(ctx context.Context, groupId, clientUsername string, newUsers []st
 }
 
 // I was here before shutting down
-func RemoveUser(ctx context.Context, groupChatId int, admin []string, user []appTypes.String) (NewActivity, error) {
-	newActivity, err := helpers.QueryRowType[NewActivity](ctx, "SELECT * remove_user_to_group($1, $2, $3)", groupChatId, admin, user)
+func RemoveUser(ctx context.Context, groupId, clientUsername, targetUser string) (NewActivity, any, error) {
+	var newActivity NewActivity
+
+	res, err := db.Query(
+		ctx,
+		`
+		MATCH (group)<-[:WITH_GROUP]-(clientChat:GroupChat{ owner_username: $client_username, group_id: $group_id })<-[:HAS_CHAT]-(clientUser),
+			(clientUser)-[:IS_MEMBER_OF { role: "admin" }]->(group)
+		SET clientChat.last_activity_type = "group activity",
+			clientChat.last_group_activity_at = $at
+		CREATE (clientUser)-[:RECEIVES_ACTIVITY]->(cligact:GroupActivity{ info: "You removed " + $user, created_at: $at })-[:IN_GROUP_CHAT]->(clientChat)
+
+		WITH group, cligact
+		MATCH (group)<-[mem:IS_MEMBER_OF]-(targetUser:User{ username: $target_user }),
+			(targetUserChat:GroupChat{ owner_username: targetUser.username, group_id: $group_id })
+		DELETE mem
+		SET targetUserChat.last_activity_type = "group activity",
+			targetUserChat.last_group_activity_at = $at
+		CREATE (targetUser)-[:RECEIVES_ACTIVITY]->(tugact:GroupActivity{ info: $client_username + " removed you", created_at: $at })-[:IN_GROUP_CHAT]-(targetUserChat)
+
+		WITH group, cligact, tugact
+		MATCH (group)<-[:IS_MEMBER_OF]-(memberUser:User WHERE memberUser.username <> $client_username),
+			(memberChat:GroupChat{ owner_username: memberUser.username, group_id: $group_id })
+		SET memberChat.last_activity_type = "group activity",
+			memberChat.last_group_activity_at = $at
+		CREATE (memberUser)-[:RECEIVES_ACTIVITY]->(memgact:GroupActivity{ info: $client_username + " removed " + $user, created_at: $at })-[:IN_GROUP_CHAT]->(memberChat)
+
+		WITH cligact, tugact, memgact, collect(memberUser.username) AS member_usernames
+
+		RETURN cligact.info AS client_resp,
+			memgact.info AS member_resp,
+			tugact.info AS target_user_resp,
+			member_usernames AS member_usernames
+		`,
+		map[string]any{
+			"client_username": clientUsername,
+			"group_id":        groupId,
+			"target_user":     targetUser,
+			"at":              time.Now(),
+		},
+	)
 	if err != nil {
-		log.Println(fmt.Errorf("groupChatModel.go: RemoveUser: %s", err))
-		return nil, fiber.ErrInternalServerError
+		log.Println("groupChatModel.go: RemoveUser:", err)
+		return newActivity, nil, fiber.ErrInternalServerError
 	}
 
-	return newActivity, nil
+	recMap := res.Records[0].AsMap()
+
+	helpers.MapToStruct(recMap, &newActivity)
+
+	return newActivity, recMap["target_user_resp"], nil
 }
 
-func Join(ctx context.Context, groupChatId int, newUser []string) (NewActivity, error) {
-	newActivity, err := helpers.QueryRowType[NewActivity](ctx, "SELECT * join_group($1, $2)", groupChatId, newUser)
+func Join(ctx context.Context, groupId, clientUsername string) (NewActivity, error) {
+	var newActivity NewActivity
+
+	res, err := db.Query(
+		ctx,
+		`
+		MATCH (group:Group{ id: $group_id })<-[:IS_MEMBER_OF]-(memberUser:User),
+			(memberChat:GroupChat{ owner_username: memberUser.username, group_id: $group_id })
+		SET memberChat.last_activity_type = "group activity",
+			memberChat.last_group_activity_at = $at
+		CREATE (memberUser)-[:RECEIVES_ACTIVITY]->(memgact:GroupActivity{ info: $client_username + " joined", created_at: $at })-[:IN_GROUP_CHAT]->(memberChat)
+
+		WITH group, memgact, collect(memberUser.username) AS member_usernames
+		MATCH (newUser:User{ username: $client_username })
+		CREATE (newUser)-[:IS_MEMBER_OF { role: "member" }]->(group),
+			(newUser)-[:HAS_CHAT]->(newUserChat:GroupChat{ owner_username: newUser.username, group_id: $group.id, last_activity_type: "group activity", last_group_activity_at: $at, updated_at: $at })-[:WITH_GROUP]->(group),
+			(newUser)-[:RECEIVES_ACTIVITY]->(:GroupActivity{ info: "You joined", created_at: $at })-[:IN_GROUP_CHAT]->(newUserChat)
+
+		RETURN group { .id, .name, .picture_url, last_activity: { type: "group activity", info: "You joined" } } AS client_resp,
+			memgact.info AS member_resp,
+			member_usernames AS member_usernames
+		`,
+		map[string]any{
+			"client_username": clientUsername,
+			"group_id":        groupId,
+			"at":              time.Now(),
+		},
+	)
 	if err != nil {
-		log.Println(fmt.Errorf("groupChatModel.go: Join: %s", err))
-		return nil, fiber.ErrInternalServerError
+		log.Println("groupChatModel.go: Join:", err)
+		return newActivity, fiber.ErrInternalServerError
 	}
+
+	recMap := res.Records[0].AsMap()
+
+	helpers.MapToStruct(recMap, &newActivity)
 
 	return newActivity, nil
 }
@@ -347,7 +424,7 @@ func AckMessageDelivered(ctx context.Context, clientUsername, groupId, msgId str
 		MATCH (clientChat:GroupChat{ owner_username: $client_username, group_id: $group_id })<-[:HAS_CHAT]-(clientUser),
       (clientChat)<-[:IN_GROUP_CHAT]-(message:GroupMessage{ id: $message_id })<-[:RECEIVES_MESSAGE]-()
     SET clientChat.unread_messages_count = coalesce(clientChat.unread_messages_count, 0) + 1
-		CREATE (message)-[:DELIVERED_TO { at: $delivered_at }]->(clientUser)
+		CREATE (message)-[:DELIVERED_TO { at: $delivered_at, group_id: $group_id }]->(clientUser)
 		`,
 		map[string]any{
 			"client_username": clientUsername,
@@ -372,7 +449,7 @@ func AckMessageRead(ctx context.Context, clientUsername, groupId, msgId string, 
       (clientChat)<-[:IN_GROUP_CHAT]-(message:GroupMessage{ id: $message_id })<-[:RECEIVES_MESSAGE]-()
     WITH clientChat, message, CASE coalesce(clientChat.unread_messages_count, 0) WHEN <> 0 THEN clientChat.unread_messages_count - 1 ELSE 0 END AS unread_messages_count
     SET clientChat.unread_messages_count = unread_messages_count
-		CREATE (message)-[:READ_BY { at: $read_at } ]->(clientUser)
+		CREATE (message)-[:READ_BY { at: $read_at, group_id: $group_id } ]->(clientUser)
 		`,
 		map[string]any{
 			"client_username": clientUsername,

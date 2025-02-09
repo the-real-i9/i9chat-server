@@ -2,37 +2,36 @@ package groupChatService
 
 import (
 	"fmt"
-	groupChat "i9chat/models/chatModel/groupChatModel"
 	"i9chat/services/messageBrokerService"
 )
 
-func broadcastNewGroup(targetUsers []string, targetUserData any) {
+func broadcastNewGroup(targetUsers []string, data any) {
 	for _, tu := range targetUsers {
 
 		messageBrokerService.Send(fmt.Sprintf("user-%s-topic", tu), messageBrokerService.Message{
 			Event: "new group chat",
-			Data:  targetUserData,
+			Data:  data,
 		})
 	}
 }
 
-func broadcastNewMessage(memberUsernames []string, memberData map[string]any) {
+func broadcastNewMessage(memberUsernames []string, data any) {
 	for _, mu := range memberUsernames {
 
 		messageBrokerService.Send(fmt.Sprintf("user-%s-topic", mu), messageBrokerService.Message{
 			Event: "new group chat message",
-			Data:  memberData,
+			Data:  data,
 		})
 	}
 }
 
-func broadcastActivity(newActivity groupChat.NewActivity, groupId string) {
+func broadcastActivity(memberUsernames []string, data any, groupId string) {
 
-	for _, mu := range newActivity.MemberUsernames {
+	for _, mu := range memberUsernames {
 		messageBrokerService.Send(fmt.Sprintf("user-%s-topic", mu), messageBrokerService.Message{
 			Event: "new group chat activity",
 			Data: map[string]any{
-				"info":     newActivity.MemberData,
+				"info":     data,
 				"group_id": groupId,
 			},
 		})

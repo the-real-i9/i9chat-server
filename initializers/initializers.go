@@ -49,6 +49,31 @@ func initNeo4jDriver() error {
 			return nil, err
 		}
 
+		_, err3 := tx.Run(ctx, `CREATE CONSTRAINT unique_dm_chat IF NOT EXISTS FOR (dmc:DMChat) REQUIRE (dmc.owner_username, dmc.partner_username) IS UNIQUE`, nil)
+		if err3 != nil {
+			return nil, err
+		}
+
+		_, err4 := tx.Run(ctx, `CREATE CONSTRAINT unique_dm_msg IF NOT EXISTS FOR (dmm:DMMessage) REQUIRE dmm.id IS UNIQUE`, nil)
+		if err4 != nil {
+			return nil, err
+		}
+
+		_, err5 := tx.Run(ctx, `CREATE CONSTRAINT unique_group IF NOT EXISTS FOR (g:Group) REQUIRE g.id IS UNIQUE`, nil)
+		if err5 != nil {
+			return nil, err
+		}
+
+		_, err6 := tx.Run(ctx, `CREATE CONSTRAINT unique_group_chat IF NOT EXISTS FOR (gc:GroupChat) REQUIRE (gc.owner_username, gc.group_id) IS UNIQUE`, nil)
+		if err6 != nil {
+			return nil, err
+		}
+
+		_, err7 := tx.Run(ctx, `CREATE CONSTRAINT unique_group_msg IF NOT EXISTS FOR (gm:GroupMessage) REQUIRE gm.id IS UNIQUE`, nil)
+		if err7 != nil {
+			return nil, err
+		}
+
 		return nil, nil
 	})
 
