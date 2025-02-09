@@ -186,14 +186,15 @@ func MakeUserGroupAdmin(ctx context.Context, groupId, clientUsername, targetUser
 	return newActivity.ClientData, nil
 }
 
-// I was here before shutting down
-func RemoveUserFromGroupAdmins(ctx context.Context, groupId, clientUsername, user string) error {
-	newActivity, err := groupChat.RemoveUserFromAdmins(ctx, groupChatId, admin, user)
+func RemoveUserFromGroupAdmins(ctx context.Context, groupId, clientUsername, targetUser string) (any, error) {
+	newActivity, oldAdminData, err := groupChat.RemoveUserFromAdmins(ctx, groupId, clientUsername, targetUser)
 	if err != nil {
-		return err
+		return nil, err
 	}
+
+	go broadcastActivity([]string{targetUser}, oldAdminData, groupId)
 
 	go broadcastActivity(newActivity.MemberUsernames, newActivity.MemberData, groupId)
 
-	return nil
+	return newActivity.ClientData, nil
 }
