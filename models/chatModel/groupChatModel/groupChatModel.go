@@ -653,13 +653,15 @@ func ReactToMessage(ctx context.Context, groupChatId, msgId, clientUsername stri
 }
 
 type HistoryItem struct {
-	HistoryItemType string `json:"hist_item_type,omitempty"`
+	HistoryItemType string `json:"hist_item_type"`
 
+	// for message
 	Id             string `json:"id,omitempty"`
 	Content        string `json:"content,omitempty"`
 	DeliveryStatus string `json:"delivery_status,omitempty"`
 	CreatedAt      string `json:"created_at,omitempty"`
 
+	// for group activity
 	Info string `json:"info,omitempty"`
 }
 

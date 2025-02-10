@@ -133,14 +133,17 @@ func Search(ctx context.Context, clientUsername, searchQuery string) ([]any, err
 	return matchUsers, nil
 }
 
-// work in progress: combination of dm chats and group chat
 type ChatItem struct {
-	Partner   map[string]any `json:"partner,omitempty"`
-	GroupInfo map[string]any `json:"group_info,omitempty"`
-
+	ChatItemType string         `json:"chat_item_type"`
 	UnreadMC     int            `json:"unread_messages_count"`
 	UpdatedAt    string         `json:"updated_at"`
 	LastActivity map[string]any `json:"last_activity"`
+
+	// for dm chat
+	Partner map[string]any `json:"partner,omitempty"`
+
+	// for group chat
+	GroupInfo map[string]any `json:"group_info,omitempty"`
 }
 
 func GetChats(ctx context.Context, clientUsername string) ([]ChatItem, error) {
@@ -158,7 +161,7 @@ func GetChats(ctx context.Context, clientUsername string) ([]ChatItem, error) {
 					WHEN "message" THEN lmsg { type: "message", .content, .delivery_status }
 					WHEN "reaction" THEN lrxn { type: "reaction", .reaction, reactor: reactor.username }
 				END AS last_activity
-			RETURN clientChat { partner, .unread_messages_count, updated_at, last_activity } AS chat_item, clientChat.updated_at AS updated_at
+			RETURN clientChat { partner, .unread_messages_count, updated_at, last_activity, chat_item_type: "dm" } AS chat_item, clientChat.updated_at AS updated_at
 		UNION
 			MATCH (clientChat:GroupChat{ owner_username: $client_username })-[:WITH_GROUP]->(group)
 			OPTIONAL MATCH (clientChat)<-[:IN_GROUP_CHAT]-(lmsg:GroupMessage WHERE lmsg.id = clientChat.last_message_id),
@@ -170,7 +173,7 @@ func GetChats(ctx context.Context, clientUsername string) ([]ChatItem, error) {
 					WHEN "reaction" THEN lrxn { type: "reaction", .reaction, reactor: reactor.username }
 					WHEN "group activity" THEN lgact { type: "group activity", .info }
 				END AS last_activity
-			RETURN clientChat { group_info, .unread_messages_count, updated_at, last_activity } AS chat_item, clientChat.updated_at AS updated_at
+			RETURN clientChat { group_info, .unread_messages_count, updated_at, last_activity, chat_item_type: "group" } AS chat_item, clientChat.updated_at AS updated_at
 		}
 		WITH chat_item, updated_at
 		ORDER BY updated_at DESC
