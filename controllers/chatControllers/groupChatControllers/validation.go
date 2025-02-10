@@ -1,7 +1,6 @@
 package groupChatControllers
 
 import (
-	"i9chat/appTypes"
 	"i9chat/helpers"
 	"time"
 
@@ -131,40 +130,30 @@ func (d addUsersToGroupAction) Validate() error {
 
 }
 
-type actOnSingleUserT struct {
-	GroupId int               `json:"groupChatId"`
-	User    []appTypes.String `json:"user"`
+type actOnSingleUserAction struct {
+	GroupId string `json:"groupId"`
+	User    string `json:"user"`
 }
 
-func (d actOnSingleUserT) Validate() error {
+func (d actOnSingleUserAction) Validate() error {
 	err := validation.ValidateStruct(&d,
-		validation.Field(&d.GroupId,
-			validation.Required,
-			validation.Min(1).Error("invalid value"),
-		),
-		validation.Field(&d.User,
-			validation.Required,
-			validation.Length(2, 2).Error(`invalid format; should be: [{userId}, {username}] e.g. [2, "kenny"]`),
-			validation.By(helpers.UserSliceRule),
-		),
+		validation.Field(&d.GroupId, validation.Required),
+		validation.Field(&d.User, validation.Required),
 	)
 
-	return helpers.ValidationError(err, "groupChat_bodyValidators.go", "actOnSingleUserT")
+	return helpers.ValidationError(err, "groupChat_validation.go", "actOnSingleUserAction")
 
 }
 
-type joinLeaveGroupT struct {
-	GroupId int `json:"groupChatId"`
+type joinLeaveGroupAction struct {
+	GroupId string `json:"groupId"`
 }
 
-func (d joinLeaveGroupT) Validate() error {
+func (d joinLeaveGroupAction) Validate() error {
 	err := validation.ValidateStruct(&d,
-		validation.Field(&d.GroupId,
-			validation.Required,
-			validation.Min(1).Error("invalid value"),
-		),
+		validation.Field(&d.GroupId, validation.Required),
 	)
 
-	return helpers.ValidationError(err, "groupChat_bodyValidators.go", "joinLeaveGroupT")
+	return helpers.ValidationError(err, "groupChat_validation.go", "joinLeaveGroupAction")
 
 }

@@ -3,13 +3,13 @@ package groupChat
 import (
 	"context"
 	"fmt"
-	"i9chat/appTypes"
 	"i9chat/helpers"
 	"i9chat/models/db"
 	"log"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/neo4j/neo4j-go-driver/v5/neo4j"
 )
 
 type NewGroupChat struct {
@@ -214,10 +214,14 @@ func AddUsers(ctx context.Context, groupId, clientUsername string, newUsers []st
 		CREATE (memberUser)-[:RECEIVES_ACTIVITY]->(memgact:GroupActivity{ info: $client_username + " added " + toString($new_users), created_at: $at })-[:IN_GROUP_CHAT]->(memberChat)
 
 		WITH group, cligact, memgact, collect(memberUser.username) AS member_usernames
-		MATCH (newUser:User WHERE newUser.username IN $new_users)
-		CREATE (newUser)-[:IS_MEMBER_OF { role: "member" }]->(group),
-			(newUser)-[:HAS_CHAT]->(newUserChat:GroupChat{ owner_username: newUser.username, group_id: $group.id, last_activity_type: "group activity", last_group_activity_at: $at, updated_at: $at })-[:WITH_GROUP]->(group),
-			(newUser)-[:RECEIVES_ACTIVITY]->(:GroupActivity{ info: "You were added", created_at: $at })-[:IN_GROUP_CHAT]->(newUserChat)
+		MATCH (newUser:User WHERE newUser.username IN $new_users AND NOT EXISTS { (newUser)-[:LEFT_GROUP]->(group) })
+		MATCH (group)-[rur:REMOVED_USER]->(newUser) DELETE rur
+		CREATE (newUser)-[:IS_MEMBER_OF { role: "member" }]->(group)
+		MERGE (newUser)-[:HAS_CHAT]->(newUserChat:GroupChat{ owner_username: newUser.username, group_id: $group.id })-[:WITH_GROUP]->(group)
+		ON CREATE SET newUserChat.updated_at = $at
+		SET newUserChat.last_activity_type = "group activity",
+			newUserChat.last_group_activity_at = $at
+		CREATE (newUser)-[:RECEIVES_ACTIVITY]->(:GroupActivity{ info: "You were added", created_at: $at })-[:IN_GROUP_CHAT]->(newUserChat)
 
 		RETURN cligact.info AS client_resp,
 			memgact.info AS member_resp,
@@ -258,10 +262,12 @@ func RemoveUser(ctx context.Context, groupId, clientUsername, targetUser string)
 		WITH group, cligact
 		MATCH (group)<-[mem:IS_MEMBER_OF]-(targetUser:User{ username: $target_user }),
 			(targetUserChat:GroupChat{ owner_username: targetUser.username, group_id: $group_id })
-		DELETE mem
+		OPTIONAL MATCH (targetUser)<-[md:DELIVERED_TO|READ_BY]-(:GroupMessage) WHERE md.group_id = $group_id
+		DELETE mem, md
 		SET targetUserChat.last_activity_type = "group activity",
 			targetUserChat.last_group_activity_at = $at
-		CREATE (targetUser)-[:RECEIVES_ACTIVITY]->(tugact:GroupActivity{ info: $client_username + " removed you", created_at: $at })-[:IN_GROUP_CHAT]-(targetUserChat)
+		CREATE (group)-[:REMOVED_USER]->(targetUser),
+			(targetUser)-[:RECEIVES_ACTIVITY]->(tugact:GroupActivity{ info: $client_username + " removed you", created_at: $at })-[:IN_GROUP_CHAT]-(targetUserChat)
 
 		WITH group, cligact, tugact
 		MATCH (group)<-[:IS_MEMBER_OF]-(memberUser:User WHERE memberUser.username <> $client_username),
@@ -297,6 +303,28 @@ func RemoveUser(ctx context.Context, groupId, clientUsername, targetUser string)
 func Join(ctx context.Context, groupId, clientUsername string) (NewActivity, error) {
 	var newActivity NewActivity
 
+	res_c, err_c := db.Query(
+		ctx,
+		`
+		RETURN NOT EXISTS {
+			(:Group{ id: $group_id })-[:REMOVED_USER]->(:User{ username: $client_username })
+		} AS can_join
+		`,
+		map[string]any{
+			"client_username": clientUsername,
+			"group_id":        groupId,
+		},
+	)
+	if err_c != nil {
+		log.Println("groupChatModel.go: Join:", err_c)
+		return newActivity, fiber.ErrInternalServerError
+	}
+
+	canJoin, _, _ := neo4j.GetRecordValue[bool](res_c.Records[0], "can_join")
+	if !canJoin {
+		return newActivity, fiber.NewError(400, "You can't join this group because you've been removed. See the admins adding you back")
+	}
+
 	res, err := db.Query(
 		ctx,
 		`
@@ -307,10 +335,14 @@ func Join(ctx context.Context, groupId, clientUsername string) (NewActivity, err
 		CREATE (memberUser)-[:RECEIVES_ACTIVITY]->(memgact:GroupActivity{ info: $client_username + " joined", created_at: $at })-[:IN_GROUP_CHAT]->(memberChat)
 
 		WITH group, memgact, collect(memberUser.username) AS member_usernames
-		MATCH (newUser:User{ username: $client_username })
-		CREATE (newUser)-[:IS_MEMBER_OF { role: "member" }]->(group),
-			(newUser)-[:HAS_CHAT]->(newUserChat:GroupChat{ owner_username: newUser.username, group_id: $group.id, last_activity_type: "group activity", last_group_activity_at: $at, updated_at: $at })-[:WITH_GROUP]->(group),
-			(newUser)-[:RECEIVES_ACTIVITY]->(:GroupActivity{ info: "You joined", created_at: $at })-[:IN_GROUP_CHAT]->(newUserChat)
+		MATCH (clientUser:User{ username: $client_username })
+		MATCH (clientUser)-[lgr:LEFT_GROUP]->(group) DELETE lgr
+		CREATE (clientUser)-[:IS_MEMBER_OF { role: "member" }]->(group)
+			MERGE (clientUser)-[:HAS_CHAT]->(clientChat:GroupChat{ owner_username: clientUser.username, group_id: $group.id })-[:WITH_GROUP]->(group)
+		ON CREATE SET clientChat.updated_at = $at
+		SET clientChat.last_activity_type = "group activity",
+			clientChat.last_group_activity_at = $at
+		CREATE (clientUser)-[:RECEIVES_ACTIVITY]->(:GroupActivity{ info: "You joined", created_at: $at })-[:IN_GROUP_CHAT]->(clientChat)
 
 		RETURN group { .id, .name, .picture_url, last_activity: { type: "group activity", info: "You joined" } } AS client_resp,
 			memgact.info AS member_resp,
@@ -342,10 +374,12 @@ func Leave(ctx context.Context, groupId, clientUsername string) (NewActivity, er
 		`
 		MATCH (group:Group{ id: $group_id })<-[mem:IS_MEMBER_OF]-(clientUser:User{ username: $client_username }),
 			(clientChat:GroupChat{ owner_username: clientUser.username, group_id: $group_id })
-		DELETE mem
+		OPTIONAL MATCH (targetUser)<-[md:DELIVERED_TO|READ_BY]-(:GroupMessage) WHERE md.group_id = $group_id
+		DELETE mem, md
 		SET clientChat.last_activity_type = "group activity",
 			clientChat.last_group_activity_at = $at
-		CREATE (clientUser)-[:RECEIVES_ACTIVITY]->(cligact:GroupActivity{ info: "You left", created_at: $at })-[:IN_GROUP_CHAT]-(clientChat)
+		CREATE (clientUser)-[:LEFT_GROUP]->(group),
+			(clientUser)-[:RECEIVES_ACTIVITY]->(cligact:GroupActivity{ info: "You left", created_at: $at })-[:IN_GROUP_CHAT]-(clientChat)
 
 		WITH group, cligact
 		MATCH (group)<-[:IS_MEMBER_OF]-(memberUser:User),
@@ -493,14 +527,15 @@ func SendMessage(ctx context.Context, groupId, clientUsername string, msgContent
 		CREATE (message:GroupMessage{ id: randomUUID(), content: $message_content, delivery_status: "sent", created_at: $created_at })
 
 		WITH message
-		MATCH (clientChat:GroupChat{ owner_username: $client_username, group_id: $group_id })<-[:HAS_CHAT]-(clientUser)
+		MATCH (group)<-[:WITH_GROUP]-(clientChat:GroupChat{ owner_username: $client_username, group_id: $group_id })<-[:HAS_CHAT]-(clientUser)
 		SET clientChat.last_activity_type = "message", 
 			clientChat.updated_at = $created_at,
 			clientChat.last_message_id = message.id
 		CREATE (clientUser)-[:SENDS_MESSAGE]->(message)-[:IN_GROUP_CHAT]->(clientChat)
 
-		WITH message, clientUser
-		MATCH (memberChat:GroupChat{ group_id: $group_id } WHERE memberChat.owner_username <> $client_username)<-[:HAS_CHAT]-(memberUser)
+		WITH message, clientUser, group
+		MATCH (group)<-[:IS_MEMBER_OF]-(memberUser:User WHERE memberUser.username <> $client_username),
+			(memberChat:GroupChat{ owner_username: memberUser.username, group_id: $group_id })
 		SET memberChat.last_activity_type = "message", 
 			memberChat.updated_at = $created_at,
 			memberChat.last_message_id = message.id

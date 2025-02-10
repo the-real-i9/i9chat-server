@@ -2,7 +2,6 @@ package groupChatControllers
 
 import (
 	"context"
-	"fmt"
 	"i9chat/appTypes"
 	"i9chat/helpers"
 	"i9chat/services/chatServices/groupChatService"
@@ -74,7 +73,7 @@ func ExecuteAction(c *fiber.Ctx) error {
 
 	clientUser := c.Locals("user").(*appTypes.ClientUser)
 
-	type handler func(ctx context.Context, clientUsername string, data map[string]any) error
+	type handler func(ctx context.Context, clientUsername string, data map[string]any) (any, error)
 
 	actionToHandlerMap := map[action]handler{
 		"change name":             changeGroupName,
@@ -99,121 +98,119 @@ func ExecuteAction(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).SendString(val_err.Error())
 	}
 
-	app_err := actionToHandlerMap[body.Action](ctx, []string{fmt.Sprint(clientUser.Id), clientUser.Id}, body.Data)
+	resp, app_err := actionToHandlerMap[body.Action](ctx, clientUser.Username, body.Data)
 	if app_err != nil {
 		return app_err
 	}
 
-	return c.JSON(fiber.Map{
-		"msg": "Operation Successful!",
-	})
+	return c.JSON(resp)
 }
 
-func changeGroupName(ctx context.Context, clientUsername string, data map[string]any) error {
+func changeGroupName(ctx context.Context, clientUsername string, data map[string]any) (any, error) {
 	var d changeGroupNameAction
 
 	helpers.MapToStruct(data, &d)
 
 	if val_err := d.Validate(); val_err != nil {
-		return val_err
+		return nil, val_err
 	}
 
 	return groupChatService.ChangeGroupName(ctx, d.GroupId, clientUsername, d.NewName)
 }
 
-func changeGroupDescription(ctx context.Context, clientUsername string, data map[string]any) error {
+func changeGroupDescription(ctx context.Context, clientUsername string, data map[string]any) (any, error) {
 	var d changeGroupDescriptionAction
 
 	helpers.MapToStruct(data, &d)
 
 	if val_err := d.Validate(); val_err != nil {
-		return val_err
+		return nil, val_err
 	}
 
 	return groupChatService.ChangeGroupDescription(ctx, d.GroupId, clientUsername, d.NewDescription)
 
 }
 
-func changeGroupPicture(ctx context.Context, clientUsername string, data map[string]any) error {
+func changeGroupPicture(ctx context.Context, clientUsername string, data map[string]any) (any, error) {
 	var d changeGroupPictureAction
 
 	helpers.MapToStruct(data, &d)
 
 	if val_err := d.Validate(); val_err != nil {
-		return val_err
+		return nil, val_err
 	}
 
 	return groupChatService.ChangeGroupPicture(ctx, d.GroupId, clientUsername, d.NewPictureData)
 }
 
-func addUsersToGroup(ctx context.Context, clientUsername string, data map[string]any) error {
+func addUsersToGroup(ctx context.Context, clientUsername string, data map[string]any) (any, error) {
 	var d addUsersToGroupAction
 
 	helpers.MapToStruct(data, &d)
 
 	if val_err := d.Validate(); val_err != nil {
-		return val_err
+		return nil, val_err
 	}
 
 	return groupChatService.AddUsersToGroup(ctx, d.GroupId, clientUsername, d.NewUsers)
 }
 
-func removeUserFromGroup(ctx context.Context, clientUser []string, data map[string]any) error {
-	var d actOnSingleUserT
+func removeUserFromGroup(ctx context.Context, clientUsername string, data map[string]any) (any, error) {
+	var d actOnSingleUserAction
 
 	helpers.MapToStruct(data, &d)
 
 	if val_err := d.Validate(); val_err != nil {
-		return val_err
+		return nil, val_err
 	}
 
-	return groupChatService.RemoveUserFromGroup(ctx, d.GroupChatId, clientUser, d.User)
+	return groupChatService.RemoveUserFromGroup(ctx, d.GroupId, clientUsername, d.User)
 }
 
-func joinGroup(ctx context.Context, clientUser []string, data map[string]any) error {
-	var d joinLeaveGroupT
+func joinGroup(ctx context.Context, clientUsername string, data map[string]any) (any, error) {
+	var d joinLeaveGroupAction
 
 	helpers.MapToStruct(data, &d)
 
 	if val_err := d.Validate(); val_err != nil {
-		return val_err
+		return nil, val_err
 	}
 
-	return groupChatService.JoinGroup(ctx, d.GroupChatId, clientUser)
+	return groupChatService.JoinGroup(ctx, d.GroupId, clientUsername)
 }
 
-func leaveGroup(ctx context.Context, clientUser []string, data map[string]any) error {
-	var d joinLeaveGroupT
+func leaveGroup(ctx context.Context, clientUsername string, data map[string]any) (any, error) {
+	var d joinLeaveGroupAction
 
 	helpers.MapToStruct(data, &d)
 
 	if val_err := d.Validate(); val_err != nil {
-		return val_err
+		return nil, val_err
 	}
 
-	return groupChatService.LeaveGroup(ctx, d.GroupChatId, clientUser)
+	return groupChatService.LeaveGroup(ctx, d.GroupId, clientUsername)
 }
 
-func makeUserGroupAdmin(ctx context.Context, clientUser []string, data map[string]any) error {
-	var d actOnSingleUserT
+func makeUserGroupAdmin(ctx context.Context, clientUsername string, data map[string]any) (any, error) {
+	var d actOnSingleUserAction
 
 	helpers.MapToStruct(data, &d)
 
 	if val_err := d.Validate(); val_err != nil {
-		return val_err
+		return nil, val_err
 	}
 
-	return groupChatService.MakeUserGroupAdmin(ctx, d.GroupChatId, clientUser, d.User)
+	return groupChatService.MakeUserGroupAdmin(ctx, d.GroupId, clientUsername, d.User)
 }
 
-func removeUserFromGroupAdmins(ctx context.Context, clientUser []string, data map[string]any) error {
-	var d actOnSingleUserT
+func removeUserFromGroupAdmins(ctx context.Context, clientUsername string, data map[string]any) (any, error) {
+	var d actOnSingleUserAction
 
 	helpers.MapToStruct(data, &d)
 
 	if val_err := d.Validate(); val_err != nil {
-		return val_err
+		return nil, val_err
 	}
 
-	return groupChatService.RemoveUserFromGroupAdmins(ctx, d.GroupChatId, clientUser, d.User)
+	return groupChatService.RemoveUserFromGroupAdmins(ctx, d.GroupId, clientUsername, d.User)
 }
