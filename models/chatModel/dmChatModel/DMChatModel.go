@@ -65,8 +65,8 @@ func GetChatHistory(ctx context.Context, clientUsername, partnerUsername string,
 	res, err := db.Query(
 		ctx,
 		`
-		MATCH (clientChat:DMChat{ owner_username: $client_username, partner_username: $partner_username })<-[:IN_DM_CHAT]-(message:DMMessage)<-[rxn:REACTS_TO_MESSAGE]-(reactor)
-		WHERE message.created_at >= $offset
+		MATCH (clientChat:DMChat{ owner_username: $client_username, partner_username: $partner_username })<-[:IN_DM_CHAT]-(message:DMMessage WHERE message.created_at >= $offset)
+		OPTIONAL MATCH (message)<-[rxn:REACTS_TO_MESSAGE]-(reactor)
 		WITH message, toString(message.created_at) AS created_at, collect({ user: reactor { .username, .profile_pic_url }, reaction: rxn.reaction }) AS reactions
 		ORDER BY message.created_at DESC
 		LIMIT $limit

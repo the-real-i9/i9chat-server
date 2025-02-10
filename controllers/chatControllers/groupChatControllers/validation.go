@@ -49,32 +49,30 @@ func (b newGroupChatBody) Validate() error {
 
 type action string
 
-type executeActionBody struct {
-	Action action         `json:"action"`
-	Data   map[string]any `json:"data"`
+type executeActionParams struct {
+	GroupId string `json:"groupId"`
+	Action  action `json:"action"`
 }
 
-func (b executeActionBody) Validate() error {
+func (b executeActionParams) Validate() error {
 	err := validation.ValidateStruct(&b,
 		validation.Field(&b.Action,
 			validation.Required,
 			validation.In("change name", "change description", "change picture", "add users", "remove user", "join", "leave", "make user admin", "remove user from admins").Error("invalid group action"),
 		),
-		validation.Field(&b.Data, validation.Required),
+		validation.Field(&b.GroupId, validation.Required, is.UUID),
 	)
 
-	return helpers.ValidationError(err, "groupChat_bodyValidators.go", "executeActionBody")
+	return helpers.ValidationError(err, "groupChat_validation.go", "executeActionParams")
 
 }
 
 type changeGroupNameAction struct {
-	GroupId string `json:"groupId"`
 	NewName string `json:"newName"`
 }
 
 func (d changeGroupNameAction) Validate() error {
 	err := validation.ValidateStruct(&d,
-		validation.Field(&d.GroupId, validation.Required, is.UUID),
 		validation.Field(&d.NewName, validation.Required),
 	)
 
@@ -83,13 +81,11 @@ func (d changeGroupNameAction) Validate() error {
 }
 
 type changeGroupDescriptionAction struct {
-	GroupId        string `json:"groupId"`
 	NewDescription string `json:"newDescription"`
 }
 
 func (d changeGroupDescriptionAction) Validate() error {
 	err := validation.ValidateStruct(&d,
-		validation.Field(&d.GroupId, validation.Required, is.UUID),
 		validation.Field(&d.NewDescription, validation.Required),
 	)
 
@@ -98,13 +94,11 @@ func (d changeGroupDescriptionAction) Validate() error {
 }
 
 type changeGroupPictureAction struct {
-	GroupId        string `json:"groupId"`
 	NewPictureData []byte `json:"newPictureData"`
 }
 
 func (d changeGroupPictureAction) Validate() error {
 	err := validation.ValidateStruct(&d,
-		validation.Field(&d.GroupId, validation.Required, is.UUID),
 		validation.Field(&d.NewPictureData,
 			validation.Required,
 			validation.Length(1, 2*1024*1024).Error("maximum picture size of 2mb exceeded"),
@@ -116,13 +110,11 @@ func (d changeGroupPictureAction) Validate() error {
 }
 
 type addUsersToGroupAction struct {
-	GroupId  string   `json:"groupId"`
 	NewUsers []string `json:"newUsers"`
 }
 
 func (d addUsersToGroupAction) Validate() error {
 	err := validation.ValidateStruct(&d,
-		validation.Field(&d.GroupId, validation.Required, is.UUID),
 		validation.Field(&d.NewUsers, validation.Required, validation.Length(1, 0)),
 	)
 
@@ -131,29 +123,14 @@ func (d addUsersToGroupAction) Validate() error {
 }
 
 type actOnSingleUserAction struct {
-	GroupId string `json:"groupId"`
-	User    string `json:"user"`
+	User string `json:"user"`
 }
 
 func (d actOnSingleUserAction) Validate() error {
 	err := validation.ValidateStruct(&d,
-		validation.Field(&d.GroupId, validation.Required),
 		validation.Field(&d.User, validation.Required),
 	)
 
 	return helpers.ValidationError(err, "groupChat_validation.go", "actOnSingleUserAction")
-
-}
-
-type joinLeaveGroupAction struct {
-	GroupId string `json:"groupId"`
-}
-
-func (d joinLeaveGroupAction) Validate() error {
-	err := validation.ValidateStruct(&d,
-		validation.Field(&d.GroupId, validation.Required),
-	)
-
-	return helpers.ValidationError(err, "groupChat_validation.go", "joinLeaveGroupAction")
 
 }

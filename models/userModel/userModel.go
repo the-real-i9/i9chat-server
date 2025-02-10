@@ -192,7 +192,6 @@ func EditProfile(ctx context.Context, username string, fieldValueMap map[string]
 	return nil
 }
 
-// work in progress: broadcasting presence
 func ChangePresence(ctx context.Context, clientUsername, presence string, lastSeen time.Time) {
 	_, err := db.Query(ctx,
 		`

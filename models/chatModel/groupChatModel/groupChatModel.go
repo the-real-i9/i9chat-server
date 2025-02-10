@@ -561,7 +561,6 @@ func SendMessage(ctx context.Context, groupId, clientUsername string, msgContent
 	return newMessage, nil
 }
 
-// work in progress: returning whether message is delivered to all when appropriate
 type MsgAck struct {
 	All             bool     `json:"all"`
 	MemberUsernames []string `json:"member_usernames"`
@@ -653,13 +652,59 @@ func ReactToMessage(ctx context.Context, groupChatId, msgId, clientUsername stri
 	return nil
 }
 
-type BatchStatusUpdateResult struct {
-	OverallDeliveryStatus string `json:"overall_delivery_status"`
-	ShouldBroadcast       bool   `json:"should_broadcast"`
+type HistoryItem struct {
+	HistoryItemType string `json:"hist_item_type,omitempty"`
+
+	Id             string `json:"id,omitempty"`
+	Content        string `json:"content,omitempty"`
+	DeliveryStatus string `json:"delivery_status,omitempty"`
+	CreatedAt      string `json:"created_at,omitempty"`
+
+	Info string `json:"info,omitempty"`
 }
 
 // work in progress: combination of messages and group activity
-func GetChatHistory(ctx context.Context, groupChatId string, limit int, offset time.Time) ([]any, error) {
+// a UNION of group messages and activites
+// ORDERed BY created_at
+// LIMIT and OFFSET applied
+func GetChatHistory(ctx context.Context, clientUsername, groupId string, limit int, offset time.Time) ([]HistoryItem, error) {
+	var chatHistory []HistoryItem
 
-	return nil, nil
+	res, err := db.Query(
+		ctx,
+		`
+		MATCH (clientChat:GroupChat{ owner_username: $client_username, group_id: $group_id })
+		CALL (clientChat) {
+			OPTONAL MATCH (clientChat)<-[:IN_GROUP_CHAT]-(message:GroupMessage)
+			OPTIONAL MATCH (message)<-[rxn:REACTS_TO_MESSAGE]-(reactor)
+			WHERE message.created_at >= $offset
+			WITH message, toString(message.created_at) AS created_at, collect({ user: reactor { .username, .profile_pic_url }, reaction: rxn.reaction }) AS reactions
+			RETURN message { .*, created_at, reactions, hist_item_type: "message" } AS hist_item, message.created_at AS created_at
+		UNION
+			MATCH (clientChat)<-[:IN_GROUP_CHAT]-(gactiv:GroupActivity)
+			WHERE gactiv.created_at >= $offset
+			RETURN { info: gactiv.info, hist_item_type: "activity" } AS hist_item, gactiv.created_at AS created_at
+		}
+		WITH hist_item, created_at ORDER BY created_at DESC
+		LIMIT $limit
+
+		RETURN collect(hist_item) AS chat_history
+		`,
+		map[string]any{
+			"group_id":        groupId,
+			"client_username": clientUsername,
+			"limit":           limit,
+			"offset":          offset,
+		},
+	)
+	if err != nil {
+		log.Println("DMChatModel.go: GetChatHistory", err)
+		return chatHistory, fiber.ErrInternalServerError
+	}
+
+	ch, _, _ := neo4j.GetRecordValue[[]any](res.Records[0], "chat_history")
+
+	helpers.AnyToStruct(ch, &chatHistory)
+
+	return chatHistory, nil
 }

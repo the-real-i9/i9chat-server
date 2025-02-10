@@ -16,7 +16,6 @@ func Init(router fiber.Router) {
 		return fiber.ErrUpgradeRequired
 	})
 
-	// work in progress
 	router.Get("/go_online", UC.OpenWSStream)
 
 	router.Post("/change_profile_picture", UC.ChangeProfilePicture)
@@ -25,7 +24,6 @@ func Init(router fiber.Router) {
 	router.Get("/search_user", UC.SearchUser)
 	router.Get("/find_nearby_users", UC.FindNearbyUsers)
 
-	// work in progress
 	router.Get("/my_chats", UC.GetMyChats)
 
 	router.Get("/logout", UC.Logout)

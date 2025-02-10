@@ -28,8 +28,8 @@ func NewGroupChat(ctx context.Context, clientUsername, name, description string,
 	return newGroupChat.ClientData, nil
 }
 
-func GetChatHistory(ctx context.Context, groupChatId string, limit int, offset time.Time) ([]any, error) {
-	return groupChat.GetChatHistory(ctx, groupChatId, limit, offset)
+func GetChatHistory(ctx context.Context, clientUsername, groupId string, limit int, offset time.Time) ([]groupChat.HistoryItem, error) {
+	return groupChat.GetChatHistory(ctx, clientUsername, groupId, limit, offset)
 }
 
 func SendMessage(ctx context.Context, groupId, clientUsername string, msgContent *appTypes.MsgContent, createdAt time.Time) (map[string]any, error) {
