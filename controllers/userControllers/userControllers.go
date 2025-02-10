@@ -84,7 +84,7 @@ func clientEventStream(c *websocket.Conn, ctx context.Context, clientUser *appTy
 		}
 
 		if val_err := body.Validate(); val_err != nil {
-			w_err = c.WriteJSON(helpers.ErrResp(val_err))
+			w_err = c.WriteJSON(helpers.WSErrResp(val_err, body.Event))
 			continue
 		}
 
@@ -93,7 +93,7 @@ func clientEventStream(c *websocket.Conn, ctx context.Context, clientUser *appTy
 			// do
 			respData, err := newDMChatMsgEventHandler(ctx, clientUser.Username, body.Data)
 			if err != nil {
-				w_err = c.WriteJSON(helpers.ErrResp(err))
+				w_err = c.WriteJSON(helpers.WSErrResp(err, body.Event))
 				continue
 			}
 			c.WriteJSON(respData)
@@ -101,7 +101,7 @@ func clientEventStream(c *websocket.Conn, ctx context.Context, clientUser *appTy
 
 			err := dmChatMsgDeliveredAckEventHandler(ctx, clientUser.Username, body.Data)
 			if err != nil {
-				w_err = c.WriteJSON(helpers.ErrResp(err))
+				w_err = c.WriteJSON(helpers.WSErrResp(err, body.Event))
 				continue
 			}
 
@@ -109,7 +109,7 @@ func clientEventStream(c *websocket.Conn, ctx context.Context, clientUser *appTy
 
 			err := dmChatMsgReadAckEventHandler(ctx, clientUser.Username, body.Data)
 			if err != nil {
-				w_err = c.WriteJSON(helpers.ErrResp(err))
+				w_err = c.WriteJSON(helpers.WSErrResp(err, body.Event))
 				continue
 			}
 
@@ -117,20 +117,20 @@ func clientEventStream(c *websocket.Conn, ctx context.Context, clientUser *appTy
 			// do
 			respData, err := newGroupChatMsgEventHandler(ctx, clientUser.Username, body.Data)
 			if err != nil {
-				w_err = c.WriteJSON(helpers.ErrResp(err))
+				w_err = c.WriteJSON(helpers.WSErrResp(err, body.Event))
 				continue
 			}
 			c.WriteJSON(respData)
 		case "group chat message delivered ack":
 			err := groupChatMsgDeliveredAckEventHandler(ctx, clientUser.Username, body.Data)
 			if err != nil {
-				w_err = c.WriteJSON(helpers.ErrResp(err))
+				w_err = c.WriteJSON(helpers.WSErrResp(err, body.Event))
 				continue
 			}
 		case "group chat message read ack":
 			err := groupChatMsgReadAckEventHandler(ctx, clientUser.Username, body.Data)
 			if err != nil {
-				w_err = c.WriteJSON(helpers.ErrResp(err))
+				w_err = c.WriteJSON(helpers.WSErrResp(err, body.Event))
 				continue
 			}
 		default:

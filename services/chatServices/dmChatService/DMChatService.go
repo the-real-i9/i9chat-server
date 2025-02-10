@@ -31,10 +31,15 @@ func SendMessage(ctx context.Context, clientUsername, partnerUsername string, ms
 
 	go messageBrokerService.Send(fmt.Sprintf("user-%s-topic", partnerUsername), messageBrokerService.Message{
 		Event: "new dm chat message",
-		Data:  newMessage.PartnerNewMsgData,
+		Data:  newMessage.PartnerData,
 	})
 
-	return newMessage.ClientNewMsgData, nil
+	clientResp := map[string]any{
+		"event":   "server response",
+		"toEvent": "new dm chat message",
+		"data":    newMessage.ClientData,
+	}
+	return clientResp, nil
 }
 
 func AckMessageDelivered(ctx context.Context, clientUsername, partnerUsername, msgId string, deliveredAt time.Time) error {

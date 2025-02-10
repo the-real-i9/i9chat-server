@@ -1,7 +1,6 @@
 package appTypes
 
 import (
-	"bytes"
 	"regexp"
 	"slices"
 	"time"
@@ -93,20 +92,4 @@ func (m MsgContent) Validate() error {
 		validation.Field(&m.Extension, validation.When(msgType != "file", validation.Nil.Error("invalid property for the specified type")).Else(validation.Required)),
 		validation.Field(&m.Name, validation.When(msgType != "file", validation.Nil.Error("invalid property for the specified type")).Else(validation.Required)),
 	)
-}
-
-type WSResp struct {
-	StatusCode int    `json:"statusCode"`
-	Body       any    `json:"body"`
-	Error      string `json:"error"`
-}
-
-type String string
-
-func (s *String) UnmarshalJSON(b []byte) error {
-	nb := bytes.Trim(b, "\"")
-
-	*s = String(nb)
-
-	return nil
 }

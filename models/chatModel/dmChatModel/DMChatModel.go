@@ -12,8 +12,8 @@ import (
 )
 
 type NewMessage struct {
-	ClientNewMsgData  map[string]any `json:"client_resp"`
-	PartnerNewMsgData map[string]any `json:"partner_resp"`
+	ClientData  map[string]any `json:"client_resp"`
+	PartnerData map[string]any `json:"partner_resp"`
 }
 
 func SendMessage(ctx context.Context, clientUsername, partnerUsername string, msgContent []byte, createdAt time.Time) (NewMessage, error) {

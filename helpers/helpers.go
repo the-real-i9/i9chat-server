@@ -2,7 +2,6 @@ package helpers
 
 import (
 	"encoding/json"
-	"i9chat/appTypes"
 	"log"
 	"strconv"
 
@@ -47,7 +46,7 @@ func ParseIntLimitOffset(limit, offset string) (int, int, error) {
 	return int(limitInt), int(offsetInt), nil
 }
 
-func ErrResp(err error) appTypes.WSResp {
+func WSErrResp(err error, onEvent string) map[string]any {
 
 	errCode := fiber.StatusInternalServerError
 
@@ -55,5 +54,14 @@ func ErrResp(err error) appTypes.WSResp {
 		errCode = ferr.Code
 	}
 
-	return appTypes.WSResp{StatusCode: errCode, Error: err.Error()}
+	errResp := map[string]any{
+		"event":   "server error",
+		"onEvent": onEvent,
+		"data": map[string]any{
+			"statusCode": errCode,
+			"errorMsg":   err.Error(),
+		},
+	}
+
+	return errResp
 }

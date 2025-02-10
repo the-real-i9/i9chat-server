@@ -48,7 +48,13 @@ func SendMessage(ctx context.Context, groupId, clientUsername string, msgContent
 
 	go broadcastNewMessage(newMessage.MemberUsernames, newMessage.MemberData)
 
-	return newMessage.ClientData, nil
+	clientResp := map[string]any{
+		"event":   "server response",
+		"toEvent": "new group chat message",
+		"data":    newMessage.ClientData,
+	}
+
+	return clientResp, nil
 }
 
 func AckMessageDelivered(ctx context.Context, clientUsername, groupId, msgId string, deliveredAt time.Time) error {
