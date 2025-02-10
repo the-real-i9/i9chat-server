@@ -24,7 +24,7 @@ func GetChatHistory(c *fiber.Ctx) error {
 	}
 
 	if val_err := query.Validate(); val_err != nil {
-		return c.Status(fiber.StatusBadRequest).SendString(val_err.Error())
+		return fiber.NewError(400, val_err.Error())
 	}
 
 	respData, app_err := dmChatService.GetChatHistory(ctx, clientUser.Username, partnerUsername, query.Limit, query.Offset)
