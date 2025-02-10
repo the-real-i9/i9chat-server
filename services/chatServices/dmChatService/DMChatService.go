@@ -47,7 +47,6 @@ func AckMessageDelivered(ctx context.Context, clientUsername, partnerUsername, m
 		Data: map[string]any{
 			"partner_username": clientUsername,
 			"msg_id":           msgId,
-			"status":           "delivered",
 		},
 	})
 	return nil
@@ -62,7 +61,6 @@ func AckMessageRead(ctx context.Context, clientUsername, partnerUsername, msgId 
 		Data: map[string]any{
 			"partner_username": clientUsername,
 			"msg_id":           msgId,
-			"status":           "read",
 		},
 	})
 

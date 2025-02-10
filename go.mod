@@ -11,9 +11,7 @@ require (
 	github.com/gofiber/contrib/websocket v1.3.0
 	github.com/gofiber/fiber/v2 v2.52.5
 	github.com/gofiber/storage/neo4j v0.1.0
-	github.com/gofiber/storage/postgres/v3 v3.0.0
 	github.com/golang-jwt/jwt/v5 v5.2.1
-	github.com/jackc/pgx/v5 v5.5.5
 	github.com/joho/godotenv v1.5.1
 	github.com/neo4j/neo4j-go-driver/v5 v5.27.0
 	github.com/segmentio/kafka-go v0.4.47
@@ -39,9 +37,6 @@ require (
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/googleapis/enterprise-certificate-proxy v0.3.2 // indirect
 	github.com/googleapis/gax-go/v2 v2.12.2 // indirect
-	github.com/jackc/pgpassfile v1.0.0 // indirect
-	github.com/jackc/pgservicefile v0.0.0-20221227161230-091c0ba34f0a // indirect
-	github.com/jackc/puddle/v2 v2.2.1 // indirect
 	github.com/klauspost/compress v1.17.7 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect

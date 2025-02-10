@@ -262,8 +262,7 @@ func RemoveUser(ctx context.Context, groupId, clientUsername, targetUser string)
 		WITH group, cligact
 		MATCH (group)<-[mem:IS_MEMBER_OF]-(targetUser:User{ username: $target_user }),
 			(targetUserChat:GroupChat{ owner_username: targetUser.username, group_id: $group_id })
-		OPTIONAL MATCH (targetUser)<-[md:DELIVERED_TO|READ_BY]-(:GroupMessage) WHERE md.group_id = $group_id
-		DELETE mem, md
+		DELETE mem
 		SET targetUserChat.last_activity_type = "group activity",
 			targetUserChat.last_group_activity_at = $at
 		CREATE (group)-[:REMOVED_USER]->(targetUser),
@@ -374,8 +373,7 @@ func Leave(ctx context.Context, groupId, clientUsername string) (NewActivity, er
 		`
 		MATCH (group:Group{ id: $group_id })<-[mem:IS_MEMBER_OF]-(clientUser:User{ username: $client_username }),
 			(clientChat:GroupChat{ owner_username: clientUser.username, group_id: $group_id })
-		OPTIONAL MATCH (targetUser)<-[md:DELIVERED_TO|READ_BY]-(:GroupMessage) WHERE md.group_id = $group_id
-		DELETE mem, md
+		DELETE mem
 		SET clientChat.last_activity_type = "group activity",
 			clientChat.last_group_activity_at = $at
 		CREATE (clientUser)-[:LEFT_GROUP]->(group),
@@ -564,14 +562,34 @@ func SendMessage(ctx context.Context, groupId, clientUsername string, msgContent
 }
 
 // work in progress: returning whether message is delivered to all when appropriate
-func AckMessageDelivered(ctx context.Context, clientUsername, groupId, msgId string, deliveredAt time.Time) error {
-	_, err := db.Query(
+type MsgAck struct {
+	All             bool     `json:"all"`
+	MemberUsernames []string `json:"member_usernames"`
+}
+
+// Note the logic used to check if message has been delivered to all members of the group
+func AckMessageDelivered(ctx context.Context, clientUsername, groupId, msgId string, deliveredAt time.Time) (MsgAck, error) {
+	var msgAck MsgAck
+
+	res, err := db.Query(
 		ctx,
 		`
-		MATCH (clientChat:GroupChat{ owner_username: $client_username, group_id: $group_id })<-[:HAS_CHAT]-(clientUser),
-      (clientChat)<-[:IN_GROUP_CHAT]-(message:GroupMessage{ id: $message_id })<-[:RECEIVES_MESSAGE]-()
+		MATCH (group)<-[:WITH_GROUP]-(clientChat:GroupChat{ owner_username: $client_username, group_id: $group_id })<-[:HAS_CHAT]-(clientUser),
+      (clientChat)<-[:IN_GROUP_CHAT]-(message:GroupMessage{ id: $message_id, delivery_status: "sent" })<-[:RECEIVES_MESSAGE]-()
     SET clientChat.unread_messages_count = coalesce(clientChat.unread_messages_count, 0) + 1
-		CREATE (message)-[:DELIVERED_TO { at: $delivered_at, group_id: $group_id }]->(clientUser)
+		CREATE (message)-[:DELIVERED_TO { at: $delivered_at }]->(clientUser)
+
+		WITH group, message
+		MATCH (message)-[:DELIVERED_TO]->(delUser:User), (group)<-[:IS_MEMBER_OF]-(memUser:User WHERE memUser.username <> $client_username)
+
+		WITH collect(memUser.username) AS members, collect(delUser.username) AS del_users, message
+		UNWIND members AS mem
+		WITH collect(mem IN del_users) AS check_list, message, members
+
+		WITH CASE false WHEN IN check_list THEN "sent" ELSE "delivered" AS new_del_status, message, members
+		SET message.delivery_status = new_del_status
+
+		RETURN new_del_status = "delivered" AS all, members AS member_usernames
 		`,
 		map[string]any{
 			"client_username": clientUsername,
@@ -582,22 +600,37 @@ func AckMessageDelivered(ctx context.Context, clientUsername, groupId, msgId str
 	)
 	if err != nil {
 		log.Println("groupChatModel.go: AckMessageDelivered", err)
-		return fiber.ErrInternalServerError
+		return msgAck, fiber.ErrInternalServerError
 	}
 
-	return nil
+	helpers.MapToStruct(res.Records[0].AsMap(), &msgAck)
+
+	return msgAck, nil
 }
 
-// work in progress: returning whether message is read by all when appropriate
-func AckMessageRead(ctx context.Context, clientUsername, groupId, msgId string, readAt time.Time) error {
-	_, err := db.Query(
+// Note the logic used to check if message has been read by all members of the group
+func AckMessageRead(ctx context.Context, clientUsername, groupId, msgId string, readAt time.Time) (MsgAck, error) {
+	var msgAck MsgAck
+	res, err := db.Query(
 		ctx,
 		`
 		MATCH (clientChat:GroupChat{ owner_username: $client_username, group_id: $group_id })<-[:HAS_CHAT]-(clientUser),
-      (clientChat)<-[:IN_GROUP_CHAT]-(message:GroupMessage{ id: $message_id })<-[:RECEIVES_MESSAGE]-()
+      (clientChat)<-[:IN_GROUP_CHAT]-(message:GroupMessage{ id: $message_id } WHERE message.delivery_status IN ["sent", "delivered"])<-[:RECEIVES_MESSAGE]-()
     WITH clientChat, message, CASE coalesce(clientChat.unread_messages_count, 0) WHEN <> 0 THEN clientChat.unread_messages_count - 1 ELSE 0 END AS unread_messages_count
     SET clientChat.unread_messages_count = unread_messages_count
-		CREATE (message)-[:READ_BY { at: $read_at, group_id: $group_id } ]->(clientUser)
+		CREATE (message)-[:READ_BY { at: $read_at } ]->(clientUser)
+
+		WITH group, message
+		MATCH (message)-[:READ_BY]->(readUser:User), (group)<-[:IS_MEMBER_OF]-(memUser:User WHERE memUser.username <> $client_username)
+
+		WITH collect(memUser.username) AS members, collect(readUser.username) AS read_users, message
+		UNWIND members AS mem
+		WITH collect(mem IN read_users) AS check_list, message, members
+
+		WITH CASE false WHEN IN check_list THEN message.delivery_status ELSE "read" AS new_del_status, message, members
+		SET message.delivery_status = new_del_status
+
+		RETURN new_del_status = "read" AS all, members AS member_usernames
 		`,
 		map[string]any{
 			"client_username": clientUsername,
@@ -608,10 +641,12 @@ func AckMessageRead(ctx context.Context, clientUsername, groupId, msgId string, 
 	)
 	if err != nil {
 		log.Println("DMChatModel.go: AckMessageRead", err)
-		return fiber.ErrInternalServerError
+		return msgAck, fiber.ErrInternalServerError
 	}
 
-	return nil
+	helpers.MapToStruct(res.Records[0].AsMap(), &msgAck)
+
+	return msgAck, nil
 }
 
 func ReactToMessage(ctx context.Context, groupChatId, msgId, clientUsername string, reaction rune) error {

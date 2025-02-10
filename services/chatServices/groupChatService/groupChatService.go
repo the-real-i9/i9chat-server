@@ -8,6 +8,7 @@ import (
 	groupChat "i9chat/models/chatModel/groupChatModel"
 	"i9chat/services/appServices"
 	"i9chat/services/cloudStorageService"
+	"i9chat/services/messageBrokerService"
 	"time"
 )
 
@@ -50,24 +51,48 @@ func SendMessage(ctx context.Context, groupId, clientUsername string, msgContent
 	return newMessage.ClientData, nil
 }
 
-// work in progress: broadcasting message delivered when appropriate
 func AckMessageDelivered(ctx context.Context, clientUsername, groupId, msgId string, deliveredAt time.Time) error {
-	if err := groupChat.AckMessageDelivered(ctx, clientUsername, groupId, msgId, deliveredAt); err != nil {
+	msgAck, err := groupChat.AckMessageDelivered(ctx, clientUsername, groupId, msgId, deliveredAt)
+	if err != nil {
 		return err
 	}
 
-	// implement broadcast message delivered when appropriate
+	if msgAck.All {
+		for _, mu := range msgAck.MemberUsernames {
+			go func() {
+				messageBrokerService.Send(fmt.Sprintf("user-%s-topic", mu), messageBrokerService.Message{
+					Event: "group chat message delivered",
+					Data: map[string]any{
+						"group_id": groupId,
+						"msg_id":   msgId,
+					},
+				})
+			}()
+		}
+	}
 
 	return nil
 }
 
-// work in progress: broadcasting message read when appropriate
 func AckMessageRead(ctx context.Context, clientUsername, groupId, msgId string, readAt time.Time) error {
-	if err := groupChat.AckMessageRead(ctx, clientUsername, groupId, msgId, readAt); err != nil {
+	msgAck, err := groupChat.AckMessageRead(ctx, clientUsername, groupId, msgId, readAt)
+	if err != nil {
 		return err
 	}
 
-	// implement broadcast message read when appropriate
+	if msgAck.All {
+		for _, mu := range msgAck.MemberUsernames {
+			go func() {
+				messageBrokerService.Send(fmt.Sprintf("user-%s-topic", mu), messageBrokerService.Message{
+					Event: "group chat message read",
+					Data: map[string]any{
+						"group_id": groupId,
+						"msg_id":   msgId,
+					},
+				})
+			}()
+		}
+	}
 
 	return nil
 }
