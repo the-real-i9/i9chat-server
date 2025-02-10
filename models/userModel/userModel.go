@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"i9chat/appTypes"
+	"i9chat/helpers"
 	"i9chat/models/db"
 	"log"
 	"time"
@@ -66,7 +67,7 @@ func New(ctx context.Context, email, username, password string, geolocation *app
 func FindOne(ctx context.Context, uniqueIdent string) (map[string]any, error) {
 	res, err := db.Query(ctx,
 		`
-	MATCH (u:User) WHERE u.username = $uniqueIdent OR u.email = $uniqueIdent
+	OPTIONAL MATCH (u:User) WHERE u.username = $uniqueIdent OR u.email = $uniqueIdent
 	WITH u, { longitude: toFloat(u.geolocation.longitude), latitude: toFloat(u.geolocation.latitude) } AS geolocation
 	RETURN u { .username, .profile_pic_url, .presence, .last_seen, .password, geolocation } AS found_user
 	`,
@@ -87,7 +88,7 @@ func FindOne(ctx context.Context, uniqueIdent string) (map[string]any, error) {
 func FindNearby(ctx context.Context, clientUsername string, long, lat, radius float64) ([]any, error) {
 	res, err := db.Query(ctx,
 		`
-		MATCH (u:User)
+		OPTIONAL MATCH (u:User)
 		WHERE u.username <> $client_username AND point.distance(point({ longitude: $live_long, latitude: $live_lat }), u.geolocation) <= $radius
 		WITH u, { longitude: toFloat(u.geolocation.longitude), latitude: toFloat(u.geolocation.latitude) } AS geolocation
 		RETURN collect(u { .username, .profile_pic_url, .presence, .last_seen, .password, geolocation }) AS nearby_users
@@ -112,7 +113,7 @@ func FindNearby(ctx context.Context, clientUsername string, long, lat, radius fl
 func Search(ctx context.Context, clientUsername, searchQuery string) ([]any, error) {
 	res, err := db.Query(ctx,
 		`
-		MATCH (u:User)
+		OPTIONAL MATCH (u:User)
 		WHERE u.username <> $client_username AND $query <> "" AND lower($query) CONTAINS lower(u.username)
 		WITH u, { longitude: toFloat(u.geolocation.longitude), latitude: toFloat(u.geolocation.latitude) } AS geolocation
 		RETURN collect(u { .username, .profile_pic_url, .presence, .last_seen, .password, geolocation }) AS match_users
@@ -133,20 +134,48 @@ func Search(ctx context.Context, clientUsername, searchQuery string) ([]any, err
 }
 
 // work in progress: combination of dm chats and group chat
-func GetChats(ctx context.Context, clientUsername string) ([]any, error) {
+type ChatItem struct {
+	Partner   map[string]any `json:"partner,omitempty"`
+	GroupInfo map[string]any `json:"group_info,omitempty"`
+
+	UnreadMC     int            `json:"unread_messages_count"`
+	UpdatedAt    string         `json:"updated_at"`
+	LastActivity map[string]any `json:"last_activity"`
+}
+
+func GetChats(ctx context.Context, clientUsername string) ([]ChatItem, error) {
+	var myChats []ChatItem
+
 	res, err := db.Query(
 		ctx,
 		`
-		MATCH (clientChat:Chat{ owner_username: $client_username })-[:WITH_USER]->(partnerUser),
-			(clientChat)<-[:IN_CHAT]-(lmsg:Message WHERE lmsg.id = clientChat.last_message_id),
-			(clientChat)<-[:IN_CHAT]-(:Message)<-[lrxn:REACTS_TO_MESSAGE WHERE lrxn.at = clientChat.last_reaction_at]-(reactor)
-		WITH clientChat, toString(clientChat.updated_at) AS updated_at, partnerUser { .username, .profile_pic_url, .connection_status } AS partner,
-			CASE clientChat.last_activity_type 
-				WHEN "message" THEN lmsg { type: "message", .content, .delivery_status }
-				WHEN "reaction" THEN lrxn { type: "reaction", .reaction, reactor: reactor.username }
-			END AS last_activity
-		ORDER BY clientChat.updated_at DESC
-		RETURN collect(clientChat { partner, .unread_messages_count, updated_at, last_activity }) AS my_chats
+		CALL () {
+			MATCH (clientChat:DMChat{ owner_username: $client_username })-[:WITH_USER]->(partnerUser),
+				(clientChat)<-[:IN_DM_CHAT]-(lmsg:DMMessage WHERE lmsg.id = clientChat.last_message_id)
+			OPTIONAL MATCH (clientChat)<-[:IN_DM_CHAT]-(:DMMessage)<-[lrxn:REACTS_TO_MESSAGE WHERE lrxn.at = clientChat.last_reaction_at]-(reactor)
+			WITH clientChat, toString(clientChat.updated_at) AS updated_at, partnerUser { .username, .profile_pic_url, .connection_status } AS partner,
+				CASE clientChat.last_activity_type 
+					WHEN "message" THEN lmsg { type: "message", .content, .delivery_status }
+					WHEN "reaction" THEN lrxn { type: "reaction", .reaction, reactor: reactor.username }
+				END AS last_activity
+			RETURN clientChat { partner, .unread_messages_count, updated_at, last_activity } AS chat_item, clientChat.updated_at AS updated_at
+		UNION
+			MATCH (clientChat:GroupChat{ owner_username: $client_username })-[:WITH_GROUP]->(group)
+			OPTIONAL MATCH (clientChat)<-[:IN_GROUP_CHAT]-(lmsg:GroupMessage WHERE lmsg.id = clientChat.last_message_id),
+				(clientChat)<-[:IN_GROUP_CHAT]-(:GroupMessage)<-[lrxn:REACTS_TO_MESSAGE WHERE lrxn.at = clientChat.last_reaction_at]-(reactor),
+				(clientChat)<-[:IN_GROUP_CHAT]-(lgact:GroupActivity WHERE lgact.created_at = clientChat.last_group_activity_at)
+			WITH clientChat, toString(clientChat.updated_at) AS updated_at, group { .name, .picture_url } AS group_info,
+				CASE clientChat.last_activity_type
+					WHEN "message" THEN lmsg { type: "message", .content, .delivery_status }
+					WHEN "reaction" THEN lrxn { type: "reaction", .reaction, reactor: reactor.username }
+					WHEN "group activity" THEN lgact { type: "group activity", .info }
+				END AS last_activity
+			RETURN clientChat { group_info, .unread_messages_count, updated_at, last_activity } AS chat_item, clientChat.updated_at AS updated_at
+		}
+		WITH chat_item, updated_at
+		ORDER BY updated_at DESC
+
+		RETURN collect(chat_item) AS my_chats
 		`,
 		map[string]any{
 			"client_username": clientUsername,
@@ -154,10 +183,12 @@ func GetChats(ctx context.Context, clientUsername string) ([]any, error) {
 	)
 	if err != nil {
 		log.Println(fmt.Errorf("userModel.go: GetChats: %s", err))
-		return nil, fiber.ErrInternalServerError
+		return myChats, fiber.ErrInternalServerError
 	}
 
-	myChats, _, _ := neo4j.GetRecordValue[[]any](res.Records[0], "my_chats")
+	mc, _, _ := neo4j.GetRecordValue[[]any](res.Records[0], "my_chats")
+
+	helpers.AnyToStruct(mc, &myChats)
 
 	return myChats, nil
 }
@@ -167,7 +198,7 @@ func EditProfile(ctx context.Context, username string, fieldValueMap map[string]
 
 	setArgs := ""
 
-	for k, _ := range paramsMap {
+	for k := range paramsMap {
 		if setArgs != "" {
 			setArgs += ", "
 		}

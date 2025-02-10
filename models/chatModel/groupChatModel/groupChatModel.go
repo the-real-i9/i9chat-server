@@ -215,7 +215,7 @@ func AddUsers(ctx context.Context, groupId, clientUsername string, newUsers []st
 
 		WITH group, cligact, memgact, collect(memberUser.username) AS member_usernames
 		MATCH (newUser:User WHERE newUser.username IN $new_users AND NOT EXISTS { (newUser)-[:LEFT_GROUP]->(group) })
-		MATCH (group)-[rur:REMOVED_USER]->(newUser) DELETE rur
+		OPTIONAL MATCH (group)-[rur:REMOVED_USER]->(newUser) DELETE rur
 		CREATE (newUser)-[:IS_MEMBER_OF { role: "member" }]->(group)
 		MERGE (newUser)-[:HAS_CHAT]->(newUserChat:GroupChat{ owner_username: newUser.username, group_id: $group.id })-[:WITH_GROUP]->(group)
 		ON CREATE SET newUserChat.updated_at = $at
@@ -335,7 +335,7 @@ func Join(ctx context.Context, groupId, clientUsername string) (NewActivity, err
 
 		WITH group, memgact, collect(memberUser.username) AS member_usernames
 		MATCH (clientUser:User{ username: $client_username })
-		MATCH (clientUser)-[lgr:LEFT_GROUP]->(group) DELETE lgr
+		OPTIONAL MATCH (clientUser)-[lgr:LEFT_GROUP]->(group) DELETE lgr
 		CREATE (clientUser)-[:IS_MEMBER_OF { role: "member" }]->(group)
 			MERGE (clientUser)-[:HAS_CHAT]->(clientChat:GroupChat{ owner_username: clientUser.username, group_id: $group.id })-[:WITH_GROUP]->(group)
 		ON CREATE SET clientChat.updated_at = $at
@@ -663,10 +663,6 @@ type HistoryItem struct {
 	Info string `json:"info,omitempty"`
 }
 
-// work in progress: combination of messages and group activity
-// a UNION of group messages and activites
-// ORDERed BY created_at
-// LIMIT and OFFSET applied
 func GetChatHistory(ctx context.Context, clientUsername, groupId string, limit int, offset time.Time) ([]HistoryItem, error) {
 	var chatHistory []HistoryItem
 
