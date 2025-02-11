@@ -87,7 +87,7 @@ func RegisterUser(ctx context.Context, sessionData appTypes.SignupSessionData, u
 	}
 
 	authJwt, err := securityServices.JwtSign(appTypes.ClientUser{
-		Username: newUser["username"].(string),
+		Username: username,
 	}, os.Getenv("AUTH_JWT_SECRET"), time.Now().UTC().Add(10*24*time.Hour)) // 1 year
 
 	if err != nil {
