@@ -2,7 +2,6 @@ package groupChat
 
 import (
 	"context"
-	"fmt"
 	"i9chat/helpers"
 	"i9chat/models/db"
 	"log"
@@ -552,7 +551,7 @@ func SendMessage(ctx context.Context, groupId, clientUsername string, msgContent
 		},
 	)
 	if err != nil {
-		log.Println(fmt.Errorf("groupChatModel.go: SendMessage: %s", err))
+		log.Println("groupChatModel.go: SendMessage:", err)
 		return newMessage, fiber.ErrInternalServerError
 	}
 

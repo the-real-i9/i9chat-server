@@ -25,13 +25,13 @@ func Exists(ctx context.Context, emailOrUsername string) (bool, error) {
 		},
 	)
 	if err != nil {
-		log.Println(fmt.Errorf("userModel.go: Exists: %s", err))
+		log.Println("userModel.go: Exists:", err)
 		return false, fiber.ErrInternalServerError
 	}
 
 	userExists, _, err := neo4j.GetRecordValue[bool](res.Records[0], "user_exists")
 	if err != nil {
-		log.Println(fmt.Errorf("userModel.go: Exists: %s", err))
+		log.Println("userModel.go: Exists:", err)
 		return false, fiber.ErrInternalServerError
 	}
 
@@ -55,7 +55,7 @@ func New(ctx context.Context, email, username, password string, geolocation *app
 		},
 	)
 	if err != nil {
-		log.Println(fmt.Errorf("userModel.go: New: %s", err))
+		log.Println("userModel.go: New:", err)
 		return nil, fiber.ErrInternalServerError
 	}
 
@@ -76,7 +76,7 @@ func FindOne(ctx context.Context, uniqueIdent string) (map[string]any, error) {
 		},
 	)
 	if err != nil {
-		log.Println(fmt.Errorf("userModel.go: FindOne: %s", err))
+		log.Println("userModel.go: FindOne:", err)
 		return nil, fiber.ErrInternalServerError
 	}
 
@@ -101,7 +101,7 @@ func FindNearby(ctx context.Context, clientUsername string, long, lat, radius fl
 		},
 	)
 	if err != nil {
-		log.Println(fmt.Errorf("userModel.go: FindNearbyUsers: %s", err))
+		log.Println("userModel.go: FindNearbyUsers:", err)
 		return nil, fiber.ErrInternalServerError
 	}
 
@@ -124,7 +124,7 @@ func Search(ctx context.Context, clientUsername, searchQuery string) ([]any, err
 		},
 	)
 	if err != nil {
-		log.Println(fmt.Errorf("userModel.go: Search: %s", err))
+		log.Println("userModel.go: Search:", err)
 		return nil, fiber.ErrInternalServerError
 	}
 
@@ -185,7 +185,7 @@ func GetChats(ctx context.Context, clientUsername string) ([]ChatItem, error) {
 		},
 	)
 	if err != nil {
-		log.Println(fmt.Errorf("userModel.go: GetChats: %s", err))
+		log.Println("userModel.go: GetChats:", err)
 		return myChats, fiber.ErrInternalServerError
 	}
 
@@ -219,7 +219,7 @@ func EditProfile(ctx context.Context, username string, fieldValueMap map[string]
 		paramsMap,
 	)
 	if err != nil {
-		log.Println(fmt.Errorf("userModel.go: EditProfile: %s", err))
+		log.Println("userModel.go: EditProfile:", err)
 		return fiber.ErrInternalServerError
 	}
 
@@ -239,7 +239,7 @@ func ChangePresence(ctx context.Context, clientUsername, presence string, lastSe
 		},
 	)
 	if err != nil {
-		log.Println(fmt.Errorf("userModel.go: ChangePresence: %s", err))
+		log.Println("userModel.go: ChangePresence:", err)
 	}
 }
 
@@ -256,7 +256,7 @@ func UpdateLocation(ctx context.Context, username string, newGeolocation *appTyp
 		},
 	)
 	if err != nil {
-		log.Println(fmt.Errorf("userModel.go: UpdateLocation: %s", err))
+		log.Println("userModel.go: UpdateLocation:", err)
 		return fiber.ErrInternalServerError
 	}
 
