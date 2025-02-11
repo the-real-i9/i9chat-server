@@ -23,7 +23,7 @@ func CreateNewGroupChat(c *fiber.Ctx) error {
 	}
 
 	if val_err := body.Validate(); val_err != nil {
-		return fiber.NewError(fiber.StatusBadRequest, val_err.Error())
+		return val_err
 	}
 
 	respData, app_err := groupChatService.NewGroupChat(ctx,
@@ -57,7 +57,7 @@ func GetChatHistory(c *fiber.Ctx) error {
 	}
 
 	if val_err := query.Validate(); val_err != nil {
-		return fiber.NewError(fiber.StatusBadRequest, val_err.Error())
+		return val_err
 	}
 
 	respData, app_err := groupChatService.GetChatHistory(ctx, clientUser.Username, groupId, query.Limit, query.Offset)
@@ -96,7 +96,7 @@ func ExecuteAction(c *fiber.Ctx) error {
 	}
 
 	if val_err := params.Validate(); val_err != nil {
-		return fiber.NewError(fiber.StatusBadRequest, val_err.Error())
+		return val_err
 	}
 
 	var actionData map[string]any

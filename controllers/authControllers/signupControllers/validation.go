@@ -4,12 +4,10 @@ import (
 	"fmt"
 	"i9chat/appTypes"
 	"i9chat/helpers"
-	"log"
 	"regexp"
 
 	validation "github.com/go-ozzo/ozzo-validation/v4"
 	"github.com/go-ozzo/ozzo-validation/v4/is"
-	"github.com/gofiber/fiber/v2"
 )
 
 type requestNewAccountBody struct {
@@ -24,16 +22,7 @@ func (b requestNewAccountBody) Validate() error {
 		),
 	)
 
-	if err != nil {
-		if e, ok := err.(validation.InternalError); ok {
-			log.Println("signup_bodyValidators.go: requestNewAccountBody", e.InternalError())
-			return fiber.ErrInternalServerError
-		}
-
-		return fiber.NewError(fiber.StatusBadRequest, "validation error:", err.Error())
-	}
-
-	return nil
+	return helpers.ValidationError(err, "signupControllers_validation.go", "requestNewAccountBody")
 }
 
 type verifyEmailBody struct {
@@ -52,7 +41,7 @@ func (b verifyEmailBody) Validate() error {
 		),
 	)
 
-	return helpers.ValidationError(err, "signup_bodyValidators.go", "verifyEmailBody")
+	return helpers.ValidationError(err, "signupControllers_validation.go", "verifyEmailBody")
 }
 
 type registerUserBody struct {
@@ -76,5 +65,5 @@ func (b registerUserBody) Validate() error {
 		validation.Field(&b.Geolocation, validation.Required),
 	)
 
-	return helpers.ValidationError(err, "signup_bodyValidators.go", "registerUserBody")
+	return helpers.ValidationError(err, "signupControllers_validation.go", "registerUserBody")
 }

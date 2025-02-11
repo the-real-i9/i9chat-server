@@ -30,7 +30,7 @@ func (b clientEventBody) Validate() error {
 		validation.Field(&b.Data, validation.Required),
 	)
 
-	return helpers.ValidationError(err, "user_bodyValidators.go", "clientEventBody")
+	return helpers.ValidationError(err, "userControllers_validation.go", "clientEventBody")
 }
 
 type newDMChatMsg struct {
@@ -40,7 +40,6 @@ type newDMChatMsg struct {
 }
 
 func (vb newDMChatMsg) Validate() error {
-
 	err := validation.ValidateStruct(&vb,
 		validation.Field(&vb.PartnerUsername, validation.Required),
 		validation.Field(&vb.Msg, validation.Required),
@@ -50,7 +49,7 @@ func (vb newDMChatMsg) Validate() error {
 		),
 	)
 
-	return helpers.ValidationError(err, "dmChat_bodyValidators.go", "newDMChatMsg")
+	return helpers.ValidationError(err, "userControllers_validation.go", "newDMChatMsg")
 }
 
 type dmChatMsgAck struct {
@@ -60,11 +59,13 @@ type dmChatMsgAck struct {
 }
 
 func (d dmChatMsgAck) Validate() error {
-	return validation.ValidateStruct(&d,
+	err := validation.ValidateStruct(&d,
 		validation.Field(&d.MsgId, validation.Required, is.UUID),
 		validation.Field(&d.PartnerUsername, validation.Required),
 		validation.Field(&d.At, validation.Required, validation.Max(time.Now()).Error("invalid future time")),
 	)
+
+	return helpers.ValidationError(err, "userControllers_validation.go", "dmChatMsgAck")
 }
 
 type newGroupChatMsg struct {
@@ -90,11 +91,13 @@ type groupChatMsgAck struct {
 }
 
 func (d groupChatMsgAck) Validate() error {
-	return validation.ValidateStruct(&d,
+	err := validation.ValidateStruct(&d,
 		validation.Field(&d.GroupId, validation.Required, is.UUID),
 		validation.Field(&d.MsgId, validation.Required, is.UUID),
 		validation.Field(&d.At, validation.Required, validation.Max(time.Now()).Error("invalid future time")),
 	)
+
+	return helpers.ValidationError(err, "userControllers_validation.go", "groupChatMsgAck")
 }
 
 // ---------
@@ -111,7 +114,7 @@ func (b changeProfilePictureBody) Validate() error {
 		),
 	)
 
-	return helpers.ValidationError(err, "user_bodyValidators.go", "changeProfilePictureBody")
+	return helpers.ValidationError(err, "userControllers_validation.go", "changeProfilePictureBody")
 
 }
 
@@ -128,7 +131,7 @@ func (b findNearbyUsersQuery) Validate() error {
 		validation.Field(&b.Radius, is.Float.Error("value must be of type float")),
 	)
 
-	return helpers.ValidationError(err, "user_bodyValidators.go", "findNearbyUsersQuery")
+	return helpers.ValidationError(err, "userControllers_validation.go", "findNearbyUsersQuery")
 
 }
 
@@ -141,6 +144,6 @@ func (b updateMyGeolocationBody) Validate() error {
 		validation.Field(&b.NewGeolocation, validation.Required),
 	)
 
-	return helpers.ValidationError(err, "user_bodyValidators.go", "updateMyGeolocationBody")
+	return helpers.ValidationError(err, "userControllers_validation.go", "updateMyGeolocationBody")
 
 }

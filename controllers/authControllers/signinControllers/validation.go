@@ -29,6 +29,6 @@ func (b signInBody) Validate() error {
 		),
 	)
 
-	return helpers.ValidationError(err, "signin_bodyValidators.go", "signInBody")
+	return helpers.ValidationError(err, "signinControllers_validation.go", "signInBody")
 
 }

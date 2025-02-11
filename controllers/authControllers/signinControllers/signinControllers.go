@@ -21,7 +21,7 @@ func Signin(c *fiber.Ctx) error {
 	}
 
 	if val_err := body.Validate(); val_err != nil {
-		return fiber.NewError(fiber.StatusBadRequest, val_err.Error())
+		return val_err
 	}
 
 	respData, authJwt, app_err := signinService.Signin(ctx, body.EmailOrUsername, body.Password)

@@ -43,7 +43,7 @@ func (b newGroupChatBody) Validate() error {
 		validation.Field(&b.CreatedAt, validation.Required, validation.Min(time.Now()).Error("invalid future time")),
 	)
 
-	return helpers.ValidationError(err, "groupChat_bodyValidators.go", "newGroupChatBody")
+	return helpers.ValidationError(err, "groupChat_validation.go", "newGroupChatBody")
 
 }
 

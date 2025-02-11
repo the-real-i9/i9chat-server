@@ -154,7 +154,7 @@ func ChangeProfilePicture(c *fiber.Ctx) error {
 	}
 
 	if val_err := body.Validate(); val_err != nil {
-		return fiber.NewError(fiber.StatusBadRequest, val_err.Error())
+		return val_err
 	}
 
 	respData, app_err := userService.ChangeProfilePicture(ctx, clientUser.Username, body.PictureData)
@@ -179,7 +179,7 @@ func UpdateMyLocation(c *fiber.Ctx) error {
 	}
 
 	if val_err := body.Validate(); val_err != nil {
-		return fiber.NewError(fiber.StatusBadRequest, val_err.Error())
+		return val_err
 	}
 
 	respData, app_err := userService.UpdateMyLocation(ctx, clientUser.Username, body.NewGeolocation)
@@ -222,7 +222,7 @@ func FindNearbyUsers(c *fiber.Ctx) error {
 	}
 
 	if val_err := query.Validate(); val_err != nil {
-		return fiber.NewError(fiber.StatusBadRequest, val_err.Error())
+		return val_err
 	}
 
 	respData, app_err := userService.FindNearbyUsers(ctx, clientUser.Username, query.Long, query.Lat, query.Radius)
@@ -259,5 +259,5 @@ func Logout(c *fiber.Ctx) error {
 		return fiber.ErrInternalServerError
 	}
 
-	return c.Status(fiber.StatusOK).SendString("You've been logged out!")
+	return fiber.NewError(fiber.StatusOK, "You've been logged out!")
 }
