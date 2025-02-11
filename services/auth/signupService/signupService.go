@@ -13,56 +13,60 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
-func RequestNewAccount(ctx context.Context, email string) (any, *appTypes.SignupSession, error) {
+func RequestNewAccount(ctx context.Context, email string) (any, appTypes.SignupSession, error) {
+	var session appTypes.SignupSession
+
 	userExists, err := user.Exists(ctx, email)
 	if err != nil {
-		return nil, nil, err
+		return nil, session, err
 	}
 
 	if userExists {
-		return nil, nil, fiber.NewError(fiber.StatusBadRequest, "signup error: an account with", email, "already exists")
+		return nil, session, fiber.NewError(fiber.StatusBadRequest, "signup error: an account with", email, "already exists")
 	}
 
 	verfCode, expires := securityServices.GenerateVerifCodeExp()
 
 	go mailService.SendMail(email, "Email Verification", fmt.Sprintf("Your email verification code is: <b>%d</b>", verfCode))
 
-	sessionData := &appTypes.SignupSession{
+	session = appTypes.SignupSession{
 		Step: "verify email",
-		Data: &appTypes.SignupSessionData{Email: email, VerificationCode: verfCode, VerificationCodeExpires: expires},
+		Data: appTypes.SignupSessionData{Email: email, VerificationCode: verfCode, VerificationCodeExpires: expires},
 	}
 
 	respData := map[string]any{
 		"msg": "A 6-digit verification code has been sent to " + email,
 	}
 
-	return respData, sessionData, nil
+	return respData, session, nil
 }
 
-func VerifyEmail(ctx context.Context, sessionData *appTypes.SignupSessionData, inputVerfCode int) (any, *appTypes.SignupSession, error) {
+func VerifyEmail(ctx context.Context, sessionData appTypes.SignupSessionData, inputVerfCode int) (any, appTypes.SignupSession, error) {
+	var updatedSession appTypes.SignupSession
+
 	if sessionData.VerificationCode != inputVerfCode {
-		return "", nil, fiber.NewError(fiber.StatusBadRequest, "email verification error: incorrect verification code")
+		return "", updatedSession, fiber.NewError(fiber.StatusBadRequest, "email verification error: incorrect verification code")
 	}
 
 	if sessionData.VerificationCodeExpires.Before(time.Now()) {
-		return "", nil, fiber.NewError(fiber.StatusBadRequest, "email verification error: verification code expired")
+		return "", updatedSession, fiber.NewError(fiber.StatusBadRequest, "email verification error: verification code expired")
 	}
 
 	go mailService.SendMail(sessionData.Email, "Email Verification Success", fmt.Sprintf("Your email %s has been verified!", sessionData.Email))
 
-	updatedSessionData := &appTypes.SignupSession{
+	updatedSession = appTypes.SignupSession{
 		Step: "register user",
-		Data: &appTypes.SignupSessionData{Email: sessionData.Email},
+		Data: appTypes.SignupSessionData{Email: sessionData.Email},
 	}
 
 	respData := map[string]any{
 		"msg": fmt.Sprintf("Your email '%s' has been verified!", sessionData.Email),
 	}
 
-	return respData, updatedSessionData, nil
+	return respData, updatedSession, nil
 }
 
-func RegisterUser(ctx context.Context, sessionData *appTypes.SignupSessionData, username, password string, geolocation *appTypes.UserGeolocation) (any, string, error) {
+func RegisterUser(ctx context.Context, sessionData appTypes.SignupSessionData, username, password string, geolocation *appTypes.UserGeolocation) (any, string, error) {
 	userExists, err := user.Exists(ctx, username)
 	if err != nil {
 		return nil, "", err

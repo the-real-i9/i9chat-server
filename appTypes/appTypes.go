@@ -16,8 +16,8 @@ type SignupSessionData struct {
 }
 
 type SignupSession struct {
-	Step string             `json:"step"`
-	Data *SignupSessionData `json:"data"`
+	Step string            `json:"step"`
+	Data SignupSessionData `json:"data"`
 }
 
 type ClientUser struct {

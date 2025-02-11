@@ -321,7 +321,7 @@ func Join(ctx context.Context, groupId, clientUsername string) (NewActivity, err
 
 	canJoin, _, _ := neo4j.GetRecordValue[bool](res_c.Records[0], "can_join")
 	if !canJoin {
-		return newActivity, fiber.NewError(400, "You can't join this group because you've been removed. See the admins adding you back")
+		return newActivity, fiber.NewError(fiber.StatusBadRequest, "You can't join this group because you've been removed. See the admins adding you back")
 	}
 
 	res, err := db.Query(

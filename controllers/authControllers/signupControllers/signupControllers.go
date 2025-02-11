@@ -23,7 +23,7 @@ func RequestNewAccount(c *fiber.Ctx) error {
 	}
 
 	if val_err := body.Validate(); val_err != nil {
-		return fiber.NewError(400, val_err.Error())
+		return fiber.NewError(fiber.StatusBadRequest, val_err.Error())
 	}
 
 	respData, sessionData, app_err := signupService.RequestNewAccount(ctx, body.Email)
@@ -57,7 +57,7 @@ func VerifyEmail(c *fiber.Ctx) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	sessionData := c.Locals("signup_session_data").(*appTypes.SignupSessionData)
+	sessionData := c.Locals("signup_session_data").(appTypes.SignupSessionData)
 
 	var body verifyEmailBody
 
@@ -67,10 +67,10 @@ func VerifyEmail(c *fiber.Ctx) error {
 	}
 
 	if val_err := body.Validate(); val_err != nil {
-		return fiber.NewError(400, val_err.Error())
+		return fiber.NewError(fiber.StatusBadRequest, val_err.Error())
 	}
 
-	respData, updatedSessionData, app_err := signupService.VerifyEmail(ctx, sessionData, body.Code)
+	respData, updatedSession, app_err := signupService.VerifyEmail(ctx, sessionData, body.Code)
 	if app_err != nil {
 		return app_err
 	}
@@ -81,9 +81,9 @@ func VerifyEmail(c *fiber.Ctx) error {
 		return fiber.ErrInternalServerError
 	}
 
-	usd, err := json.Marshal(updatedSessionData)
+	usd, err := json.Marshal(updatedSession)
 	if err != nil {
-		log.Println("signupControllers.go: RequestNewAccount: json.Marshal:", err)
+		log.Println("signupControllers.go: VerifyEmail: json.Marshal:", err)
 		return fiber.ErrInternalServerError
 	}
 
@@ -101,7 +101,7 @@ func RegisterUser(c *fiber.Ctx) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	sessionData := c.Locals("signup_session_data").(*appTypes.SignupSessionData)
+	sessionData := c.Locals("signup_session_data").(appTypes.SignupSessionData)
 
 	var body registerUserBody
 
@@ -111,7 +111,7 @@ func RegisterUser(c *fiber.Ctx) error {
 	}
 
 	if val_err := body.Validate(); val_err != nil {
-		return fiber.NewError(400, val_err.Error())
+		return fiber.NewError(fiber.StatusBadRequest, val_err.Error())
 	}
 
 	respData, authJwt, app_err := signupService.RegisterUser(ctx, sessionData, body.Username, body.Password, body.Geolocation)
