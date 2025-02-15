@@ -13,7 +13,7 @@ func CreateNewGroupChat(c *fiber.Ctx) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	clientUser := c.Locals("user").(*appTypes.ClientUser)
+	clientUser := c.Locals("user").(appTypes.ClientUser)
 
 	var body newGroupChatBody
 
@@ -45,7 +45,7 @@ func GetChatHistory(c *fiber.Ctx) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	clientUser := c.Locals("user").(*appTypes.ClientUser)
+	clientUser := c.Locals("user").(appTypes.ClientUser)
 
 	groupId := c.Params("group_id")
 
@@ -73,7 +73,7 @@ func ExecuteAction(c *fiber.Ctx) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	clientUser := c.Locals("user").(*appTypes.ClientUser)
+	clientUser := c.Locals("user").(appTypes.ClientUser)
 
 	type handler func(ctx context.Context, clientUsername, groupId string, data map[string]any) (any, error)
 

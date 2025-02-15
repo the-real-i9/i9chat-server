@@ -24,14 +24,6 @@ func AnyToStruct(val any, yourStruct any) {
 	}
 }
 
-func StructToMap(val any, yourMap *map[string]any) {
-	bt, _ := json.Marshal(val)
-
-	if err := json.Unmarshal(bt, yourMap); err != nil {
-		log.Println("helpers.go: StructToMap:", err)
-	}
-}
-
 func ParseIntLimitOffset(limit, offset string) (int, int, error) {
 	limitInt, err := strconv.ParseInt(limit, 10, 0)
 	if err != nil {

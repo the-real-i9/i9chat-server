@@ -12,7 +12,7 @@ func GetChatHistory(c *fiber.Ctx) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	clientUser := c.Locals("user").(*appTypes.ClientUser)
+	clientUser := c.Locals("user").(appTypes.ClientUser)
 
 	partnerUsername := c.Params("partner_username")
 

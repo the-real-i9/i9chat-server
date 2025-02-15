@@ -22,7 +22,7 @@ var OpenWSStream = websocket.New(func(c *websocket.Conn) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	clientUser := c.Locals("user").(*appTypes.ClientUser)
+	clientUser := c.Locals("user").(appTypes.ClientUser)
 
 	userService.GoOnline(ctx, clientUser.Username)
 
@@ -65,7 +65,7 @@ var OpenWSStream = websocket.New(func(c *websocket.Conn) {
 //   - new group chat message
 //   - group chat message delivered ack
 //   - group chat message read ack
-func clientEventStream(c *websocket.Conn, ctx context.Context, clientUser *appTypes.ClientUser, goOff func()) {
+func clientEventStream(c *websocket.Conn, ctx context.Context, clientUser appTypes.ClientUser, goOff func()) {
 
 	var w_err error
 
@@ -144,7 +144,7 @@ func ChangeProfilePicture(c *fiber.Ctx) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	clientUser := c.Locals("user").(*appTypes.ClientUser)
+	clientUser := c.Locals("user").(appTypes.ClientUser)
 
 	var body changeProfilePictureBody
 
@@ -169,7 +169,7 @@ func UpdateMyLocation(c *fiber.Ctx) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	clientUser := c.Locals("user").(*appTypes.ClientUser)
+	clientUser := c.Locals("user").(appTypes.ClientUser)
 
 	var body updateMyGeolocationBody
 
@@ -195,7 +195,7 @@ func SearchUser(c *fiber.Ctx) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	clientUser := c.Locals("user").(*appTypes.ClientUser)
+	clientUser := c.Locals("user").(appTypes.ClientUser)
 
 	var body searchUserBody
 
@@ -217,7 +217,7 @@ func FindNearbyUsers(c *fiber.Ctx) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	clientUser := c.Locals("user").(*appTypes.ClientUser)
+	clientUser := c.Locals("user").(appTypes.ClientUser)
 
 	var query findNearbyUsersQuery
 
@@ -242,7 +242,7 @@ func GetMyChats(c *fiber.Ctx) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	clientUser := c.Locals("user").(*appTypes.ClientUser)
+	clientUser := c.Locals("user").(appTypes.ClientUser)
 
 	respData, app_err := userService.GetMyChats(ctx, clientUser.Username)
 	if app_err != nil {

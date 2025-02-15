@@ -61,7 +61,9 @@ func JwtSign(data any, secret string, expires time.Time) (string, error) {
 	return jwt, err
 }
 
-func JwtVerify[T any](tokenString, secret string) (*T, error) {
+func JwtVerify[T any](tokenString, secret string) (T, error) {
+	var data T
+
 	parser := jwt.NewParser()
 	token, err := parser.Parse(tokenString, func(t *jwt.Token) (interface{}, error) {
 
@@ -79,16 +81,14 @@ func JwtVerify[T any](tokenString, secret string) (*T, error) {
 			errors.Is(err, jwt.ErrTokenInvalidClaims) ||
 			errors.Is(err, jwt.ErrTokenExpired) {
 
-			return nil, fiber.NewError(fiber.StatusUnauthorized, "jwt error:", err.Error())
+			return data, fiber.NewError(fiber.StatusUnauthorized, "jwt error:", err.Error())
 		}
 
 		log.Println("securityServices.go: JwtVerify:", err)
-		return nil, fiber.ErrInternalServerError
+		return data, fiber.ErrInternalServerError
 	}
 
-	var data T
+	helpers.AnyToStruct(token.Claims.(jwt.MapClaims)["data"], &data)
 
-	helpers.MapToStruct(token.Claims.(jwt.MapClaims)["data"].(map[string]any), &data)
-
-	return &data, nil
+	return data, nil
 }
