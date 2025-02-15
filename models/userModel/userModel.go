@@ -38,17 +38,18 @@ func Exists(ctx context.Context, emailOrUsername string) (bool, error) {
 	return userExists, nil
 }
 
-func New(ctx context.Context, email, username, password string, geolocation *appTypes.UserGeolocation) (map[string]any, error) {
+func New(ctx context.Context, email, username, phone, password string, geolocation *appTypes.UserGeolocation) (map[string]any, error) {
 	res, err := db.Query(
 		ctx,
 		`
-		CREATE (u:User { email: $email, username: $username, password: $password, profile_pic_url: "", geolocation: point({ longitude: $long, latitude: $lat }) })
+		CREATE (u:User { email: $email, username: $username, phone: $phone, password: $password, profile_pic_url: "", geolocation: point({ longitude: $long, latitude: $lat }) })
 		WITH u, { longitude: toFloat(u.geolocation.longitude), latitude: toFloat(u.geolocation.latitude) } AS geolocation
 		RETURN u { .username, .profile_pic_url, .presence, .last_seen, geolocation } AS new_user
 		`,
 		map[string]any{
 			"email":    email,
 			"username": username,
+			"phone":    phone,
 			"password": password,
 			"long":     geolocation.Longitude,
 			"lat":      geolocation.Latitude,
@@ -67,7 +68,7 @@ func New(ctx context.Context, email, username, password string, geolocation *app
 func FindOne(ctx context.Context, uniqueIdent string) (map[string]any, error) {
 	res, err := db.Query(ctx,
 		`
-	OPTIONAL MATCH (u:User) WHERE u.username = $uniqueIdent OR u.email = $uniqueIdent
+	OPTIONAL MATCH (u:User) WHERE u.username = $uniqueIdent OR u.email = $uniqueIdent OR  u.phone = $uniqueIdent
 	WITH u, { longitude: toFloat(u.geolocation.longitude), latitude: toFloat(u.geolocation.latitude) } AS geolocation
 	RETURN u { .username, .profile_pic_url, .presence, .last_seen, .password, geolocation } AS found_user
 	`,
@@ -110,17 +111,17 @@ func FindNearby(ctx context.Context, clientUsername string, long, lat, radius fl
 	return nearbyUsers, nil
 }
 
-func Search(ctx context.Context, clientUsername, searchQuery string) ([]any, error) {
+func Search(ctx context.Context, clientUsername, emailUsernamePhone string) ([]any, error) {
 	res, err := db.Query(ctx,
 		`
 		OPTIONAL MATCH (u:User)
-		WHERE u.username <> $client_username AND $query <> "" AND lower($query) CONTAINS lower(u.username)
+		WHERE u.username <> $client_username AND (u.username = $eup OR u.email = $eup OR u.phone = $eup)
 		WITH u, { longitude: toFloat(u.geolocation.longitude), latitude: toFloat(u.geolocation.latitude) } AS geolocation
 		RETURN collect(u { .username, .profile_pic_url, .presence, .last_seen, .password, geolocation }) AS match_users
 		`,
 		map[string]any{
 			"client_username": clientUsername,
-			"query":           searchQuery,
+			"eur":             emailUsernamePhone,
 		},
 	)
 	if err != nil {

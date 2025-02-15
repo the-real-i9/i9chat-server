@@ -147,3 +147,16 @@ func (b updateMyGeolocationBody) Validate() error {
 	return helpers.ValidationError(err, "userControllers_validation.go", "updateMyGeolocationBody")
 
 }
+
+type searchUserBody struct {
+	EmailUsernamePhone string `json:"emailUsernamePhone"`
+}
+
+func (b searchUserBody) Validate() error {
+	err := validation.ValidateStruct(&b,
+		validation.Field(&b.EmailUsernamePhone, validation.Required),
+	)
+
+	return helpers.ValidationError(err, "userControllers_validation.go", "searchUserBody")
+
+}

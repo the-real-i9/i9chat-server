@@ -197,9 +197,14 @@ func SearchUser(c *fiber.Ctx) error {
 
 	clientUser := c.Locals("user").(*appTypes.ClientUser)
 
-	query := c.Query("q")
+	var body searchUserBody
 
-	respData, app_err := userService.SearchUser(ctx, clientUser.Username, query)
+	body_err := c.BodyParser(&body)
+	if body_err != nil {
+		return body_err
+	}
+
+	respData, app_err := userService.SearchUser(ctx, clientUser.Username, body.EmailUsernamePhone)
 
 	if app_err != nil {
 		return app_err

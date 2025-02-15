@@ -39,38 +39,45 @@ func initNeo4jDriver() error {
 	sess := driver.NewSession(ctx, neo4j.SessionConfig{})
 
 	_, err2 := sess.ExecuteWrite(ctx, func(tx neo4j.ManagedTransaction) (any, error) {
-		_, err := tx.Run(ctx, `CREATE CONSTRAINT unique_username IF NOT EXISTS FOR (u:User) REQUIRE u.username IS UNIQUE`, nil)
+		var err error
+
+		_, err = tx.Run(ctx, `CREATE CONSTRAINT unique_username IF NOT EXISTS FOR (u:User) REQUIRE u.username IS UNIQUE`, nil)
 		if err != nil {
 			return nil, err
 		}
 
-		_, err2 := tx.Run(ctx, `CREATE CONSTRAINT unique_email IF NOT EXISTS FOR (u:User) REQUIRE u.email IS UNIQUE`, nil)
-		if err2 != nil {
+		_, err = tx.Run(ctx, `CREATE CONSTRAINT unique_email IF NOT EXISTS FOR (u:User) REQUIRE u.email IS UNIQUE`, nil)
+		if err != nil {
 			return nil, err
 		}
 
-		_, err3 := tx.Run(ctx, `CREATE CONSTRAINT unique_dm_chat IF NOT EXISTS FOR (dmc:DMChat) REQUIRE (dmc.owner_username, dmc.partner_username) IS UNIQUE`, nil)
-		if err3 != nil {
+		_, err = tx.Run(ctx, `CREATE CONSTRAINT unique_phone IF NOT EXISTS FOR (u:User) REQUIRE u.phone IS UNIQUE`, nil)
+		if err != nil {
 			return nil, err
 		}
 
-		_, err4 := tx.Run(ctx, `CREATE CONSTRAINT unique_dm_msg IF NOT EXISTS FOR (dmm:DMMessage) REQUIRE dmm.id IS UNIQUE`, nil)
-		if err4 != nil {
+		_, err = tx.Run(ctx, `CREATE CONSTRAINT unique_dm_chat IF NOT EXISTS FOR (dmc:DMChat) REQUIRE (dmc.owner_username, dmc.partner_username) IS UNIQUE`, nil)
+		if err != nil {
 			return nil, err
 		}
 
-		_, err5 := tx.Run(ctx, `CREATE CONSTRAINT unique_group IF NOT EXISTS FOR (g:Group) REQUIRE g.id IS UNIQUE`, nil)
-		if err5 != nil {
+		_, err = tx.Run(ctx, `CREATE CONSTRAINT unique_dm_msg IF NOT EXISTS FOR (dmm:DMMessage) REQUIRE dmm.id IS UNIQUE`, nil)
+		if err != nil {
 			return nil, err
 		}
 
-		_, err6 := tx.Run(ctx, `CREATE CONSTRAINT unique_group_chat IF NOT EXISTS FOR (gc:GroupChat) REQUIRE (gc.owner_username, gc.group_id) IS UNIQUE`, nil)
-		if err6 != nil {
+		_, err = tx.Run(ctx, `CREATE CONSTRAINT unique_group IF NOT EXISTS FOR (g:Group) REQUIRE g.id IS UNIQUE`, nil)
+		if err != nil {
 			return nil, err
 		}
 
-		_, err7 := tx.Run(ctx, `CREATE CONSTRAINT unique_group_msg IF NOT EXISTS FOR (gm:GroupMessage) REQUIRE gm.id IS UNIQUE`, nil)
-		if err7 != nil {
+		_, err = tx.Run(ctx, `CREATE CONSTRAINT unique_group_chat IF NOT EXISTS FOR (gc:GroupChat) REQUIRE (gc.owner_username, gc.group_id) IS UNIQUE`, nil)
+		if err != nil {
+			return nil, err
+		}
+
+		_, err = tx.Run(ctx, `CREATE CONSTRAINT unique_group_msg IF NOT EXISTS FOR (gm:GroupMessage) REQUIRE gm.id IS UNIQUE`, nil)
+		if err != nil {
 			return nil, err
 		}
 

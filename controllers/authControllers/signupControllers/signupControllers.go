@@ -114,7 +114,7 @@ func RegisterUser(c *fiber.Ctx) error {
 		return val_err
 	}
 
-	respData, authJwt, app_err := signupService.RegisterUser(ctx, sessionData, body.Username, body.Password, body.Geolocation)
+	respData, authJwt, app_err := signupService.RegisterUser(ctx, sessionData, body.Username, body.Password, body.Phone, body.Geolocation)
 	if app_err != nil {
 		return app_err
 	}

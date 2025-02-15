@@ -64,17 +64,10 @@ func AckMessageDelivered(ctx context.Context, clientUsername, groupId, msgId str
 	}
 
 	if msgAck.All {
-		for _, mu := range msgAck.MemberUsernames {
-			go func() {
-				messageBrokerService.Send(fmt.Sprintf("user-%s-topic", mu), messageBrokerService.Message{
-					Event: "group chat message delivered",
-					Data: map[string]any{
-						"group_id": groupId,
-						"msg_id":   msgId,
-					},
-				})
-			}()
-		}
+		go broadcastMsgDelivered(msgAck.MemberUsernames, map[string]any{
+			"group_id": groupId,
+			"msg_id":   msgId,
+		})
 	}
 
 	return nil
@@ -87,17 +80,10 @@ func AckMessageRead(ctx context.Context, clientUsername, groupId, msgId string, 
 	}
 
 	if msgAck.All {
-		for _, mu := range msgAck.MemberUsernames {
-			go func() {
-				messageBrokerService.Send(fmt.Sprintf("user-%s-topic", mu), messageBrokerService.Message{
-					Event: "group chat message read",
-					Data: map[string]any{
-						"group_id": groupId,
-						"msg_id":   msgId,
-					},
-				})
-			}()
-		}
+		go broadcastMsgRead(msgAck.MemberUsernames, map[string]any{
+			"group_id": groupId,
+			"msg_id":   msgId,
+		})
 	}
 
 	return nil
@@ -162,6 +148,7 @@ func AddUsersToGroup(ctx context.Context, groupId, clientUsername string, newUse
 		return nil, err
 	}
 
+	// a user with already existing group chat must check
 	go broadcastNewGroup(newUsers, newUserData)
 
 	go broadcastActivity(newActivity.MemberUsernames, newActivity.MemberData, groupId)
@@ -175,7 +162,16 @@ func RemoveUserFromGroup(ctx context.Context, groupId, clientUsername, targetUse
 		return nil, err
 	}
 
-	go broadcastActivity([]string{targetUser}, targetUserData, groupId)
+	go func() {
+		messageBrokerService.Send(fmt.Sprintf("user-%s-topic", targetUser), messageBrokerService.Message{
+			Event: "removed from group",
+			Data: map[string]any{
+				"group_id": groupId,
+			},
+		})
+
+		broadcastActivity([]string{targetUser}, targetUserData, groupId)
+	}()
 
 	go broadcastActivity(newActivity.MemberUsernames, newActivity.MemberData, groupId)
 

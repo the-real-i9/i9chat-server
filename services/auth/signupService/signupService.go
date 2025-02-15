@@ -66,7 +66,7 @@ func VerifyEmail(ctx context.Context, sessionData appTypes.SignupSessionData, in
 	return respData, updatedSession, nil
 }
 
-func RegisterUser(ctx context.Context, sessionData appTypes.SignupSessionData, username, password string, geolocation *appTypes.UserGeolocation) (any, string, error) {
+func RegisterUser(ctx context.Context, sessionData appTypes.SignupSessionData, username, password, phone string, geolocation *appTypes.UserGeolocation) (any, string, error) {
 	userExists, err := user.Exists(ctx, username)
 	if err != nil {
 		return nil, "", err
@@ -81,7 +81,7 @@ func RegisterUser(ctx context.Context, sessionData appTypes.SignupSessionData, u
 		return nil, "", err
 	}
 
-	newUser, err := user.New(ctx, sessionData.Email, username, hashedPassword, geolocation)
+	newUser, err := user.New(ctx, sessionData.Email, username, phone, hashedPassword, geolocation)
 	if err != nil {
 		return nil, "", err
 	}

@@ -18,7 +18,7 @@ func (b requestNewAccountBody) Validate() error {
 	err := validation.ValidateStruct(&b,
 		validation.Field(&b.Email,
 			validation.Required,
-			is.Email,
+			is.EmailFormat,
 		),
 	)
 
@@ -46,6 +46,7 @@ func (b verifyEmailBody) Validate() error {
 
 type registerUserBody struct {
 	Username    string                    `json:"username"`
+	Phone       string                    `json:"phone"`
 	Password    string                    `json:"password"`
 	Geolocation *appTypes.UserGeolocation `json:"geolocation"`
 }

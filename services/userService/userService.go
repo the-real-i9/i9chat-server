@@ -55,8 +55,8 @@ func UpdateMyLocation(ctx context.Context, clientUsername string, newGeolocation
 	return respData, err
 }
 
-func SearchUser(ctx context.Context, clientUsername, query string) ([]any, error) {
-	return user.Search(ctx, clientUsername, query)
+func SearchUser(ctx context.Context, clientUsername, emailUsernamePhone string) ([]any, error) {
+	return user.Search(ctx, clientUsername, emailUsernamePhone)
 }
 
 func FindNearbyUsers(ctx context.Context, clientUsername string, long, lat, radius float64) ([]any, error) {

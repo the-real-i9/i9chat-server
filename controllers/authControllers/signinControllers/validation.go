@@ -19,7 +19,7 @@ func (b signInBody) Validate() error {
 		validation.Field(&b.EmailOrUsername,
 			validation.Required,
 			validation.When(strings.ContainsAny(b.EmailOrUsername, "@"),
-				is.Email.Error("invalid email or username"),
+				is.EmailFormat.Error("invalid email or username"),
 			).Else(
 				validation.Length(3, 0).Error("invalid email or username"),
 			),

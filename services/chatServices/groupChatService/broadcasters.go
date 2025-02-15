@@ -37,3 +37,21 @@ func broadcastActivity(memberUsernames []string, data any, groupId string) {
 		})
 	}
 }
+
+func broadcastMsgDelivered(memberUsernames []string, data any) {
+	for _, mu := range memberUsernames {
+		messageBrokerService.Send(fmt.Sprintf("user-%s-topic", mu), messageBrokerService.Message{
+			Event: "group chat message delivered",
+			Data:  data,
+		})
+	}
+}
+
+func broadcastMsgRead(memberUsernames []string, data any) {
+	for _, mu := range memberUsernames {
+		messageBrokerService.Send(fmt.Sprintf("user-%s-topic", mu), messageBrokerService.Message{
+			Event: "group chat message read",
+			Data:  data,
+		})
+	}
+}
