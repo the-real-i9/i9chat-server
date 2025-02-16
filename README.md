@@ -24,7 +24,7 @@ If you need a feature this API server does not currently support, feel free to s
 <img style="margin-right: 10px" alt="go" width="50" src="./z_attachments/tech-icons/go-original-wordmark.svg" />
 <img style="margin-right: 10px" alt="go" width="50" src="./z_attachments/tech-icons/gofiber.svg" />
 <img style="margin-right: 10px" alt="go" width="50" src="./z_attachments/tech-icons/websocket.svg" />
-<img style="margin-right: 10px" alt="neo4j" width="50" src="./z_attachments/tech-icons/neo4j-original.svg" />
+<img style="margin-right: 10px" alt="neo4j" width="70" src="./z_attachments/tech-icons/neo4j-original.svg" />
 <img style="margin-right: 10px" alt="nodejs" width="50" src="./z_attachments/tech-icons/apachekafka-original.svg" />
 <img style="margin-right: 10px" alt="go" width="50" src="./z_attachments/tech-icons/jwt.svg" />
 <img style="margin-right: 10px" alt="nodejs" width="50" src="./z_attachments/tech-icons/googlecloud-original.svg" />
@@ -63,17 +63,18 @@ The following is a summary of the features supported by this API. Visit the API 
 - Join Group, Leave Group etc.
 - Everything in DM Chat
 
-### Make friends (*)
+### Search for people you know
 
-- Search for people you know by their username, email, or phone number and send friend requests
-- Use your contact list to find those on the app.
-- Accept friend requests
+- You can search for users by their emails, usernames, or phone numbers.
+- You can also exchange a bunch of numbers from a phonebook for corresponding accounts.
 
-### Moments (*)
+### Moments (Upcoming)
 
-- A say for statuses on WhatsApp, and Stories on Messenger
+- A say for Statuses on WhatsApp, and Stories on Messenger
 
 ## API Documentation
+
+[Click Here](./API%20doc.md)
 
 ## Notable Features and their Algorithms
 

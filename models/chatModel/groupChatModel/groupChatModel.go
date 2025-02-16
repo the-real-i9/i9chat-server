@@ -56,6 +56,10 @@ func New(ctx context.Context, clientUsername, name, description, pictureUrl stri
 		return newGroupChat, fiber.ErrInternalServerError
 	}
 
+	if len(res.Records) == 0 {
+		return newGroupChat, fiber.NewError(fiber.StatusBadRequest, "check that you're specifying valid usernames")
+	}
+
 	helpers.MapToStruct(res.Records[0].AsMap(), &newGroupChat)
 
 	return newGroupChat, nil
@@ -104,6 +108,10 @@ func ChangeName(ctx context.Context, groupId, clientUsername, newName string) (N
 		return newActivity, fiber.ErrInternalServerError
 	}
 
+	if len(res.Records) == 0 {
+		return newActivity, fiber.NewError(fiber.StatusBadRequest, "you're either specifying an incorrect 'groupId', or you're not the admin of this group")
+	}
+
 	helpers.MapToStruct(res.Records[0].AsMap(), &newActivity)
 
 	return newActivity, nil
@@ -146,6 +154,10 @@ func ChangeDescription(ctx context.Context, groupId, clientUsername, newDescript
 		return newActivity, fiber.ErrInternalServerError
 	}
 
+	if len(res.Records) == 0 {
+		return newActivity, fiber.NewError(fiber.StatusBadRequest, "you're either specifying an incorrect 'groupId', or you're not the admin of this group")
+	}
+
 	helpers.MapToStruct(res.Records[0].AsMap(), &newActivity)
 
 	return newActivity, nil
@@ -186,6 +198,10 @@ func ChangePicture(ctx context.Context, groupId, clientUsername, newPictureUrl s
 	if err != nil {
 		log.Println("groupChatModel.go: ChangePicture:", err)
 		return newActivity, fiber.ErrInternalServerError
+	}
+
+	if len(res.Records) == 0 {
+		return newActivity, fiber.NewError(fiber.StatusBadRequest, "you're either specifying an incorrect 'groupId', or you're not the admin of this group")
 	}
 
 	helpers.MapToStruct(res.Records[0].AsMap(), &newActivity)
@@ -237,6 +253,10 @@ func AddUsers(ctx context.Context, groupId, clientUsername string, newUsers []st
 	if err != nil {
 		log.Println("groupChatModel.go: AddUsers:", err)
 		return newActivity, nil, fiber.ErrInternalServerError
+	}
+
+	if len(res.Records) == 0 {
+		return newActivity, nil, fiber.NewError(fiber.StatusBadRequest, "you're either specifying an incorrect 'groupId' or invalid users, otherwise, you're not the admin of this group")
 	}
 
 	recMap := res.Records[0].AsMap()
@@ -291,6 +311,10 @@ func RemoveUser(ctx context.Context, groupId, clientUsername, targetUser string)
 		return newActivity, nil, fiber.ErrInternalServerError
 	}
 
+	if len(res.Records) == 0 {
+		return newActivity, nil, fiber.NewError(fiber.StatusBadRequest, "you're either specifying an incorrect 'groupId' or an invalid user, otherwise, you're not the admin of this group")
+	}
+
 	recMap := res.Records[0].AsMap()
 
 	helpers.MapToStruct(recMap, &newActivity)
@@ -301,32 +325,11 @@ func RemoveUser(ctx context.Context, groupId, clientUsername, targetUser string)
 func Join(ctx context.Context, groupId, clientUsername string) (NewActivity, error) {
 	var newActivity NewActivity
 
-	res_c, err_c := db.Query(
-		ctx,
-		`
-		RETURN NOT EXISTS {
-			(:Group{ id: $group_id })-[:REMOVED_USER]->(:User{ username: $client_username })
-		} AS can_join
-		`,
-		map[string]any{
-			"client_username": clientUsername,
-			"group_id":        groupId,
-		},
-	)
-	if err_c != nil {
-		log.Println("groupChatModel.go: Join:", err_c)
-		return newActivity, fiber.ErrInternalServerError
-	}
-
-	canJoin, _, _ := neo4j.GetRecordValue[bool](res_c.Records[0], "can_join")
-	if !canJoin {
-		return newActivity, fiber.NewError(fiber.StatusBadRequest, "You can't join this group because you've been removed. See the admins adding you back")
-	}
-
 	res, err := db.Query(
 		ctx,
 		`
-		MATCH (group:Group{ id: $group_id })<-[:IS_MEMBER_OF]-(memberUser:User),
+		MATCH (group:Group{ id: $group_id } WHERE NOT EXISTS { (group)-[:REMOVED_USER]->(:User{ username: $client_username }) } )
+		MATCH (group)<-[:IS_MEMBER_OF]-(memberUser:User),
 			(memberChat:GroupChat{ owner_username: memberUser.username, group_id: $group_id })
 		SET memberChat.last_activity_type = "group activity",
 			memberChat.last_group_activity_at = $at
@@ -355,6 +358,10 @@ func Join(ctx context.Context, groupId, clientUsername string) (NewActivity, err
 	if err != nil {
 		log.Println("groupChatModel.go: Join:", err)
 		return newActivity, fiber.ErrInternalServerError
+	}
+
+	if len(res.Records) == 0 {
+		return newActivity, fiber.NewError(fiber.StatusBadRequest, "you're either specifying an incorrect 'groupId', or you've been removed from this group (see the admins to get added)")
 	}
 
 	recMap := res.Records[0].AsMap()
@@ -398,6 +405,10 @@ func Leave(ctx context.Context, groupId, clientUsername string) (NewActivity, er
 	if err != nil {
 		log.Println("groupChatModel.go: Leave:", err)
 		return newActivity, fiber.ErrInternalServerError
+	}
+
+	if len(res.Records) == 0 {
+		return newActivity, fiber.NewError(fiber.StatusBadRequest, "you're either specifying an incorrect 'groupId', or you're not a member of this group")
 	}
 
 	recMap := res.Records[0].AsMap()
@@ -451,6 +462,10 @@ func MakeUserAdmin(ctx context.Context, groupId, clientUsername, targetUser stri
 		return newActivity, nil, fiber.ErrInternalServerError
 	}
 
+	if len(res.Records) == 0 {
+		return newActivity, nil, fiber.NewError(fiber.StatusBadRequest, "you're either specifying an incorrect 'groupId' or an invalid user, otherwise, you're not the admin of this group")
+	}
+
 	recMap := res.Records[0].AsMap()
 
 	helpers.MapToStruct(recMap, &newActivity)
@@ -500,6 +515,10 @@ func RemoveUserFromAdmins(ctx context.Context, groupId, clientUsername, targetUs
 	if err != nil {
 		log.Println("groupChatModel.go: RemoveUserFromAdmins:", err)
 		return newActivity, nil, fiber.ErrInternalServerError
+	}
+
+	if len(res.Records) == 0 {
+		return newActivity, nil, fiber.NewError(fiber.StatusBadRequest, "you're either specifying an incorrect 'groupId' or an invalid user, otherwise, you're not the admin of this group")
 	}
 
 	recMap := res.Records[0].AsMap()
@@ -555,6 +574,10 @@ func SendMessage(ctx context.Context, groupId, clientUsername string, msgContent
 		return newMessage, fiber.ErrInternalServerError
 	}
 
+	if len(res.Records) == 0 {
+		return newMessage, fiber.NewError(fiber.StatusBadRequest, "check that you're specifying a correct 'groupId'")
+	}
+
 	helpers.MapToStruct(res.Records[0].AsMap(), &newMessage)
 
 	return newMessage, nil
@@ -601,6 +624,10 @@ func AckMessageDelivered(ctx context.Context, clientUsername, groupId, msgId str
 		return msgAck, fiber.ErrInternalServerError
 	}
 
+	if len(res.Records) == 0 {
+		return msgAck, fiber.NewError(fiber.StatusBadRequest, "check that you're specifying correct 'groupId' and 'messageId'")
+	}
+
 	helpers.MapToStruct(res.Records[0].AsMap(), &msgAck)
 
 	return msgAck, nil
@@ -640,6 +667,10 @@ func AckMessageRead(ctx context.Context, clientUsername, groupId, msgId string, 
 	if err != nil {
 		log.Println("DMChatModel.go: AckMessageRead", err)
 		return msgAck, fiber.ErrInternalServerError
+	}
+
+	if len(res.Records) == 0 {
+		return msgAck, fiber.NewError(fiber.StatusBadRequest, "check that you're specifying correct 'groupId' and 'messageId'")
 	}
 
 	helpers.MapToStruct(res.Records[0].AsMap(), &msgAck)
@@ -697,6 +728,10 @@ func GetChatHistory(ctx context.Context, clientUsername, groupId string, limit i
 	if err != nil {
 		log.Println("DMChatModel.go: GetChatHistory", err)
 		return chatHistory, fiber.ErrInternalServerError
+	}
+
+	if len(res.Records) == 0 {
+		return chatHistory, fiber.NewError(fiber.StatusBadRequest, "check that you're specifying a correct 'groupId'")
 	}
 
 	ch, _, _ := neo4j.GetRecordValue[[]any](res.Records[0], "chat_history")

@@ -157,6 +157,7 @@ func GetChats(ctx context.Context, clientUsername string) ([]ChatItem, error) {
 			MATCH (clientChat:DMChat{ owner_username: $client_username })-[:WITH_USER]->(partnerUser),
 				(clientChat)<-[:IN_DM_CHAT]-(lmsg:DMMessage WHERE lmsg.id = clientChat.last_message_id)
 			OPTIONAL MATCH (clientChat)<-[:IN_DM_CHAT]-(:DMMessage)<-[lrxn:REACTS_TO_MESSAGE WHERE lrxn.at = clientChat.last_reaction_at]-(reactor)
+
 			WITH clientChat, toString(clientChat.updated_at) AS updated_at, partnerUser { .username, .profile_pic_url, .connection_status } AS partner,
 				CASE clientChat.last_activity_type 
 					WHEN "message" THEN lmsg { type: "message", .content, .delivery_status }
@@ -190,6 +191,10 @@ func GetChats(ctx context.Context, clientUsername string) ([]ChatItem, error) {
 		return myChats, fiber.ErrInternalServerError
 	}
 
+	if len(res.Records) == 0 {
+		return myChats, nil
+	}
+
 	mc, _, _ := neo4j.GetRecordValue[[]any](res.Records[0], "my_chats")
 
 	helpers.AnyToStruct(mc, &myChats)
@@ -197,7 +202,7 @@ func GetChats(ctx context.Context, clientUsername string) ([]ChatItem, error) {
 	return myChats, nil
 }
 
-func EditProfile(ctx context.Context, username string, fieldValueMap map[string]any) error {
+func EditProfile(ctx context.Context, clientUsername string, fieldValueMap map[string]any) error {
 	paramsMap := fieldValueMap
 
 	setArgs := ""
@@ -210,11 +215,11 @@ func EditProfile(ctx context.Context, username string, fieldValueMap map[string]
 		setArgs = fmt.Sprintf("%s%s = $%[2]s", setArgs, k)
 	}
 
-	paramsMap["username"] = username
+	paramsMap["client_username"] = clientUsername
 
 	_, err := db.Query(ctx,
 		fmt.Sprintf(`
-		MATCH (u:User{ username: $username })
+		MATCH (u:User{ username: $client_username })
 		SET %s
 		`, setArgs),
 		paramsMap,
@@ -244,16 +249,16 @@ func ChangePresence(ctx context.Context, clientUsername, presence string, lastSe
 	}
 }
 
-func UpdateLocation(ctx context.Context, username string, newGeolocation *appTypes.UserGeolocation) error {
+func UpdateLocation(ctx context.Context, clientUsername string, newGeolocation *appTypes.UserGeolocation) error {
 	_, err := db.Query(ctx,
 		`
-		MATCH (u:User{ username: $username })
+		MATCH (u:User{ username: $client_username })
 		SET u.geolocation.longitude = $long, u.geolocation.latitude = $lat
 		`,
 		map[string]any{
-			"username": username,
-			"long":     newGeolocation.Longitude,
-			"lat":      newGeolocation.Latitude,
+			"client_username": clientUsername,
+			"long":            newGeolocation.Longitude,
+			"lat":             newGeolocation.Latitude,
 		},
 	)
 	if err != nil {

@@ -51,6 +51,10 @@ func SendMessage(ctx context.Context, clientUsername, partnerUsername string, ms
 		return newMsg, fiber.ErrInternalServerError
 	}
 
+	if len(res.Records) == 0 {
+		return newMsg, fiber.NewError(fiber.StatusBadRequest, "check that you're specifying a correct username")
+	}
+
 	helpers.MapToStruct(res.Records[0].AsMap(), &newMsg)
 
 	return newMsg, nil
@@ -82,6 +86,10 @@ func GetChatHistory(ctx context.Context, clientUsername, partnerUsername string,
 	if err != nil {
 		log.Println("DMChatModel.go: GetChatHistory", err)
 		return nil, fiber.ErrInternalServerError
+	}
+
+	if len(res.Records) == 0 {
+		return nil, fiber.NewError(fiber.StatusBadRequest, "check that you're specifying a correct username")
 	}
 
 	messages, _, _ := neo4j.GetRecordValue[[]any](res.Records[0], "chat_history")
