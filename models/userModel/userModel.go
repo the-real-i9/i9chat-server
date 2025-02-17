@@ -2,7 +2,6 @@ package user
 
 import (
 	"context"
-	"fmt"
 	"i9chat/appTypes"
 	"i9chat/helpers"
 	"i9chat/models/db"
@@ -202,30 +201,38 @@ func GetChats(ctx context.Context, clientUsername string) ([]ChatItem, error) {
 	return myChats, nil
 }
 
-func EditProfile(ctx context.Context, clientUsername string, fieldValueMap map[string]any) error {
-	paramsMap := fieldValueMap
-
-	setArgs := ""
-
-	for k := range paramsMap {
-		if setArgs != "" {
-			setArgs += ", "
-		}
-
-		setArgs = fmt.Sprintf("%s%s = $%[2]s", setArgs, k)
-	}
-
-	paramsMap["client_username"] = clientUsername
-
+func ChangeProfilePicture(ctx context.Context, clientUsername, newPicUrl string) error {
 	_, err := db.Query(ctx,
-		fmt.Sprintf(`
+		`
 		MATCH (u:User{ username: $client_username })
-		SET %s
-		`, setArgs),
-		paramsMap,
+		SET u.profile_pic_url = $new_pic_url
+		`,
+		map[string]any{
+			"client_username": clientUsername,
+			"new_pic_url":     newPicUrl,
+		},
 	)
 	if err != nil {
-		log.Println("userModel.go: EditProfile:", err)
+		log.Println("userModel.go: ChangeProfilePicture:", err)
+		return fiber.ErrInternalServerError
+	}
+
+	return nil
+}
+
+func ChangePhone(ctx context.Context, clientUsername, newPhone string) error {
+	_, err := db.Query(ctx,
+		`
+		MATCH (u:User{ username: $client_username })
+		SET u.phone = $new_phone
+		`,
+		map[string]any{
+			"client_username": clientUsername,
+			"new_phone":       newPhone,
+		},
+	)
+	if err != nil {
+		log.Println("userModel.go: ChangePhone:", err)
 		return fiber.ErrInternalServerError
 	}
 

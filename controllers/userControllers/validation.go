@@ -115,6 +115,18 @@ func (b changeProfilePictureBody) Validate() error {
 	)
 
 	return helpers.ValidationError(err, "userControllers_validation.go", "changeProfilePictureBody")
+}
+
+type changePhoneBody struct {
+	Phone string `json:"newPhoneNumber"`
+}
+
+func (b changePhoneBody) Validate() error {
+	err := validation.ValidateStruct(&b,
+		validation.Field(&b.Phone, validation.Required),
+	)
+
+	return helpers.ValidationError(err, "userControllers_validation.go", "changePhoneBody")
 
 }
 

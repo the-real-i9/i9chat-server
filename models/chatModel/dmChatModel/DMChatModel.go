@@ -52,7 +52,7 @@ func SendMessage(ctx context.Context, clientUsername, partnerUsername string, ms
 	}
 
 	if len(res.Records) == 0 {
-		return newMsg, fiber.NewError(fiber.StatusBadRequest, "check that you're specifying a correct username")
+		return newMsg, fiber.NewError(fiber.StatusBadRequest, "you're going against business logic! check that: you're specifying a valid 'partnerUsername'")
 	}
 
 	helpers.MapToStruct(res.Records[0].AsMap(), &newMsg)
@@ -89,7 +89,7 @@ func GetChatHistory(ctx context.Context, clientUsername, partnerUsername string,
 	}
 
 	if len(res.Records) == 0 {
-		return nil, fiber.NewError(fiber.StatusBadRequest, "check that you're specifying a correct username")
+		return nil, fiber.NewError(fiber.StatusBadRequest, "you're going against business logic! check that: you're specifying a valid 'partnerUsername'")
 	}
 
 	messages, _, _ := neo4j.GetRecordValue[[]any](res.Records[0], "chat_history")
@@ -98,12 +98,14 @@ func GetChatHistory(ctx context.Context, clientUsername, partnerUsername string,
 }
 
 func AckMessageDelivered(ctx context.Context, clientUsername, partnerUsername, msgId string, deliveredAt time.Time) error {
-	_, err := db.Query(
+	res, err := db.Query(
 		ctx,
 		`
 		MATCH (clientChat:DMChat{ owner_username: $client_username, partner_username: $partner_username }),
       (clientChat)<-[:IN_DM_CHAT]-(message:DMMessage{ id: $message_id, delivery_status: "sent" })<-[:RECEIVES_MESSAGE]-()
     SET message.delivery_status = "delivered", message.delivered_at = $delivered_at, clientChat.unread_messages_count = coalesce(clientChat.unread_messages_count, 0) + 1
+
+		RETURN true AS workdone
 		`,
 		map[string]any{
 			"client_username":  clientUsername,
@@ -117,11 +119,15 @@ func AckMessageDelivered(ctx context.Context, clientUsername, partnerUsername, m
 		return fiber.ErrInternalServerError
 	}
 
+	if len(res.Records) == 0 {
+		return fiber.NewError(fiber.StatusBadRequest, "you're going against business logic! check that: you're specifying a valid 'partnerUsername'")
+	}
+
 	return nil
 }
 
 func AckMessageRead(ctx context.Context, clientUsername, partnerUsername, msgId string, readAt time.Time) error {
-	_, err := db.Query(
+	res, err := db.Query(
 		ctx,
 		`
 		MATCH (clientChat:DMChat{ owner_username: $client_username, partner_username: $partner_username }),
@@ -139,6 +145,10 @@ func AckMessageRead(ctx context.Context, clientUsername, partnerUsername, msgId 
 	if err != nil {
 		log.Println("DMChatModel.go: AckMessageRead", err)
 		return fiber.ErrInternalServerError
+	}
+
+	if len(res.Records) == 0 {
+		return fiber.NewError(fiber.StatusBadRequest, "you're going against business logic! check that: you're specifying a valid 'partnerUsername'")
 	}
 
 	return nil

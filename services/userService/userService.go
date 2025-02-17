@@ -30,9 +30,22 @@ func ChangeProfilePicture(ctx context.Context, clientUsername string, pictureDat
 		return nil, err
 	}
 
-	ed_err := user.EditProfile(ctx, clientUsername, map[string]any{"profile_picture_url": newPicUrl})
-	if ed_err != nil {
-		return nil, ed_err
+	err2 := user.ChangeProfilePicture(ctx, clientUsername, newPicUrl)
+	if err2 != nil {
+		return nil, err2
+	}
+
+	respData := map[string]any{
+		"msg": "Operation Successful",
+	}
+
+	return respData, nil
+}
+
+func ChangePhone(ctx context.Context, clientUsername string, newPhone string) (any, error) {
+	err := user.ChangePhone(ctx, clientUsername, newPhone)
+	if err != nil {
+		return nil, err
 	}
 
 	respData := map[string]any{

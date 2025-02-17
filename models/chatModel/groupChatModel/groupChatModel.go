@@ -57,7 +57,7 @@ func New(ctx context.Context, clientUsername, name, description, pictureUrl stri
 	}
 
 	if len(res.Records) == 0 {
-		return newGroupChat, fiber.NewError(fiber.StatusBadRequest, "check that you're specifying valid usernames")
+		return newGroupChat, fiber.NewError(fiber.StatusBadRequest, "check that you're specifying valid usernames for 'initUsers'")
 	}
 
 	helpers.MapToStruct(res.Records[0].AsMap(), &newGroupChat)
@@ -109,7 +109,7 @@ func ChangeName(ctx context.Context, groupId, clientUsername, newName string) (N
 	}
 
 	if len(res.Records) == 0 {
-		return newActivity, fiber.NewError(fiber.StatusBadRequest, "you're either specifying an incorrect 'groupId', or you're not the admin of this group")
+		return newActivity, fiber.NewError(fiber.StatusBadRequest, "you're going against business logic! check that: you're specifying a correct 'groupId' | you're a member and an admin of this group")
 	}
 
 	helpers.MapToStruct(res.Records[0].AsMap(), &newActivity)
@@ -155,7 +155,7 @@ func ChangeDescription(ctx context.Context, groupId, clientUsername, newDescript
 	}
 
 	if len(res.Records) == 0 {
-		return newActivity, fiber.NewError(fiber.StatusBadRequest, "you're either specifying an incorrect 'groupId', or you're not the admin of this group")
+		return newActivity, fiber.NewError(fiber.StatusBadRequest, "you're going against business logic! check that: you're specifying a correct 'groupId' | you're a member and an admin of this group")
 	}
 
 	helpers.MapToStruct(res.Records[0].AsMap(), &newActivity)
@@ -201,7 +201,7 @@ func ChangePicture(ctx context.Context, groupId, clientUsername, newPictureUrl s
 	}
 
 	if len(res.Records) == 0 {
-		return newActivity, fiber.NewError(fiber.StatusBadRequest, "you're either specifying an incorrect 'groupId', or you're not the admin of this group")
+		return newActivity, fiber.NewError(fiber.StatusBadRequest, "you're going against business logic! check that: you're specifying a correct 'groupId' | you're a member and an admin of this group")
 	}
 
 	helpers.MapToStruct(res.Records[0].AsMap(), &newActivity)
@@ -229,8 +229,11 @@ func AddUsers(ctx context.Context, groupId, clientUsername string, newUsers []st
 		CREATE (memberUser)-[:RECEIVES_ACTIVITY]->(memgact:GroupActivity{ info: $client_username + " added " + toString($new_users), created_at: $at })-[:IN_GROUP_CHAT]->(memberChat)
 
 		WITH group, cligact, memgact, collect(memberUser.username) AS member_usernames
-		MATCH (newUser:User WHERE newUser.username IN $new_users AND NOT EXISTS { (newUser)-[:LEFT_GROUP]->(group) })
-		OPTIONAL MATCH (group)-[rur:REMOVED_USER]->(newUser) DELETE rur
+		MATCH (newUser:User WHERE newUser.username IN $new_users AND NOT EXISTS { (newUser)-[:LEFT_GROUP]->(group) } AND NOT EXISTS { (newUser)-[:IS_MEMBER_OF]->(group) })
+		OPTIONAL MATCH (group)-[rur:REMOVED_USER]->(newUser) 
+		DELETE rur
+
+		WITH group, cligact, memgact, member_usernames, newUser
 		CREATE (newUser)-[:IS_MEMBER_OF { role: "member" }]->(group)
 		MERGE (newUser)-[:HAS_CHAT]->(newUserChat:GroupChat{ owner_username: newUser.username, group_id: $group.id })-[:WITH_GROUP]->(group)
 		ON CREATE SET newUserChat.updated_at = $at
@@ -256,7 +259,7 @@ func AddUsers(ctx context.Context, groupId, clientUsername string, newUsers []st
 	}
 
 	if len(res.Records) == 0 {
-		return newActivity, nil, fiber.NewError(fiber.StatusBadRequest, "you're either specifying an incorrect 'groupId' or invalid users, otherwise, you're not the admin of this group")
+		return newActivity, nil, fiber.NewError(fiber.StatusBadRequest, "you're going against business logic! check that: you're specifying a correct 'groupId' | valid usernames are in 'newUsers' | a 'newUser' isn't already a member | a 'newUser' hasn't already left this group | you're a member and an admin of this group")
 	}
 
 	recMap := res.Records[0].AsMap()
@@ -282,6 +285,8 @@ func RemoveUser(ctx context.Context, groupId, clientUsername, targetUser string)
 		MATCH (group)<-[mem:IS_MEMBER_OF]-(targetUser:User{ username: $target_user }),
 			(targetUserChat:GroupChat{ owner_username: targetUser.username, group_id: $group_id })
 		DELETE mem
+
+		WITH group, cligact, targetUser, targetUserChat
 		SET targetUserChat.last_activity_type = "group activity",
 			targetUserChat.last_group_activity_at = $at
 		CREATE (group)-[:REMOVED_USER]->(targetUser),
@@ -312,7 +317,7 @@ func RemoveUser(ctx context.Context, groupId, clientUsername, targetUser string)
 	}
 
 	if len(res.Records) == 0 {
-		return newActivity, nil, fiber.NewError(fiber.StatusBadRequest, "you're either specifying an incorrect 'groupId' or an invalid user, otherwise, you're not the admin of this group")
+		return newActivity, nil, fiber.NewError(fiber.StatusBadRequest, "you're going against business logic! check that: you're specifying a correct 'groupId' | the username of 'user' is valid | 'user' is a member of this group | you're a member and an admin of this group")
 	}
 
 	recMap := res.Records[0].AsMap()
@@ -336,10 +341,13 @@ func Join(ctx context.Context, groupId, clientUsername string) (NewActivity, err
 		CREATE (memberUser)-[:RECEIVES_ACTIVITY]->(memgact:GroupActivity{ info: $client_username + " joined", created_at: $at })-[:IN_GROUP_CHAT]->(memberChat)
 
 		WITH group, memgact, collect(memberUser.username) AS member_usernames
-		MATCH (clientUser:User{ username: $client_username })
-		OPTIONAL MATCH (clientUser)-[lgr:LEFT_GROUP]->(group) DELETE lgr
+		MATCH (clientUser:User{ username: $client_username } WHERE NOT EXISTS { (clientUser)-[:IS_MEMBER_OF]->(group) })
+		OPTIONAL MATCH (clientUser)-[lgr:LEFT_GROUP]->(group) 
+		DELETE lgr
+
+		WITH group, memgact, member_usernames, clientUser
 		CREATE (clientUser)-[:IS_MEMBER_OF { role: "member" }]->(group)
-			MERGE (clientUser)-[:HAS_CHAT]->(clientChat:GroupChat{ owner_username: clientUser.username, group_id: $group.id })-[:WITH_GROUP]->(group)
+		MERGE (clientUser)-[:HAS_CHAT]->(clientChat:GroupChat{ owner_username: clientUser.username, group_id: $group.id })-[:WITH_GROUP]->(group)
 		ON CREATE SET clientChat.updated_at = $at
 		SET clientChat.last_activity_type = "group activity",
 			clientChat.last_group_activity_at = $at
@@ -361,7 +369,7 @@ func Join(ctx context.Context, groupId, clientUsername string) (NewActivity, err
 	}
 
 	if len(res.Records) == 0 {
-		return newActivity, fiber.NewError(fiber.StatusBadRequest, "you're either specifying an incorrect 'groupId', or you've been removed from this group (see the admins to get added)")
+		return newActivity, fiber.NewError(fiber.StatusBadRequest, "you're going against business logic! check that: you're specifying a correct 'groupId' | you're not already a member of this group | you've not been previously removed from this group")
 	}
 
 	recMap := res.Records[0].AsMap()
@@ -380,6 +388,8 @@ func Leave(ctx context.Context, groupId, clientUsername string) (NewActivity, er
 		MATCH (group:Group{ id: $group_id })<-[mem:IS_MEMBER_OF]-(clientUser:User{ username: $client_username }),
 			(clientChat:GroupChat{ owner_username: clientUser.username, group_id: $group_id })
 		DELETE mem
+
+		WITH group, clientUser, clientChat
 		SET clientChat.last_activity_type = "group activity",
 			clientChat.last_group_activity_at = $at
 		CREATE (clientUser)-[:LEFT_GROUP]->(group),
@@ -408,7 +418,7 @@ func Leave(ctx context.Context, groupId, clientUsername string) (NewActivity, er
 	}
 
 	if len(res.Records) == 0 {
-		return newActivity, fiber.NewError(fiber.StatusBadRequest, "you're either specifying an incorrect 'groupId', or you're not a member of this group")
+		return newActivity, fiber.NewError(fiber.StatusBadRequest, "you're going against business logic! check that: you're specifying a correct 'groupId' | you're a member of this group")
 	}
 
 	recMap := res.Records[0].AsMap()
@@ -431,7 +441,7 @@ func MakeUserAdmin(ctx context.Context, groupId, clientUsername, targetUser stri
 		CREATE (clientUser)-[:RECEIVES_ACTIVITY]->(cligact:GroupActivity{ info: "You made " + $target_user + " group admin", created_at: $at })-[:IN_GROUP_CHAT]->(clientChat)
 
 		WITH group, cligact
-		MATCH (group)<-[mem:IS_MEMBER_OF]-(targetUser:User{ username: $target_user }),
+		MATCH (group)<-[mem:IS_MEMBER_OF { role: "member" }]-(targetUser:User{ username: $target_user }),
 			(targetUserChat:GroupChat{ owner_username: targetUser.username, group_id: $group_id })
 		SET mem.role = "admin"
 			targetUserChat.last_activity_type = "group activity",
@@ -463,7 +473,7 @@ func MakeUserAdmin(ctx context.Context, groupId, clientUsername, targetUser stri
 	}
 
 	if len(res.Records) == 0 {
-		return newActivity, nil, fiber.NewError(fiber.StatusBadRequest, "you're either specifying an incorrect 'groupId' or an invalid user, otherwise, you're not the admin of this group")
+		return newActivity, nil, fiber.NewError(fiber.StatusBadRequest, "you're going against business logic! check that: you're specifying a correct 'groupId' | 'user' is a member, and not already an admin of this group | you're a member and an admin this group")
 	}
 
 	recMap := res.Records[0].AsMap()
@@ -486,7 +496,7 @@ func RemoveUserFromAdmins(ctx context.Context, groupId, clientUsername, targetUs
 		CREATE (clientUser)-[:RECEIVES_ACTIVITY]->(cligact:GroupActivity{ info: "You removed " + $target_user + " from group admins", created_at: $at })-[:IN_GROUP_CHAT]->(clientChat)
 
 		WITH group, cligact
-		MATCH (group)<-[mem:IS_MEMBER_OF]-(targetUser:User{ username: $target_user }),
+		MATCH (group)<-[mem:IS_MEMBER_OF{ role: "admin" }]-(targetUser:User{ username: $target_user }),
 			(targetUserChat:GroupChat{ owner_username: targetUser.username, group_id: $group_id })
 		SET mem.role = "member"
 			targetUserChat.last_activity_type = "group activity",
@@ -518,7 +528,7 @@ func RemoveUserFromAdmins(ctx context.Context, groupId, clientUsername, targetUs
 	}
 
 	if len(res.Records) == 0 {
-		return newActivity, nil, fiber.NewError(fiber.StatusBadRequest, "you're either specifying an incorrect 'groupId' or an invalid user, otherwise, you're not the admin of this group")
+		return newActivity, nil, fiber.NewError(fiber.StatusBadRequest, "you're going against business logic! check that: you're specifying a correct 'groupId' | 'user' is a member and an admin of this group | you're a member and an admin this group")
 	}
 
 	recMap := res.Records[0].AsMap()
@@ -575,7 +585,7 @@ func SendMessage(ctx context.Context, groupId, clientUsername string, msgContent
 	}
 
 	if len(res.Records) == 0 {
-		return newMessage, fiber.NewError(fiber.StatusBadRequest, "check that you're specifying a correct 'groupId'")
+		return newMessage, fiber.NewError(fiber.StatusBadRequest, "you're going against business logic! check that: you're specifying a correct 'groupId'")
 	}
 
 	helpers.MapToStruct(res.Records[0].AsMap(), &newMessage)
@@ -625,7 +635,7 @@ func AckMessageDelivered(ctx context.Context, clientUsername, groupId, msgId str
 	}
 
 	if len(res.Records) == 0 {
-		return msgAck, fiber.NewError(fiber.StatusBadRequest, "check that you're specifying correct 'groupId' and 'messageId'")
+		return msgAck, fiber.NewError(fiber.StatusBadRequest, "you're going against business logic! check that: you're specifying a correct 'groupId' and 'msgId'")
 	}
 
 	helpers.MapToStruct(res.Records[0].AsMap(), &msgAck)
@@ -670,7 +680,7 @@ func AckMessageRead(ctx context.Context, clientUsername, groupId, msgId string, 
 	}
 
 	if len(res.Records) == 0 {
-		return msgAck, fiber.NewError(fiber.StatusBadRequest, "check that you're specifying correct 'groupId' and 'messageId'")
+		return msgAck, fiber.NewError(fiber.StatusBadRequest, "you're going against business logic! check that: you're specifying a correct 'groupId' and 'msgId'")
 	}
 
 	helpers.MapToStruct(res.Records[0].AsMap(), &msgAck)
@@ -731,7 +741,7 @@ func GetChatHistory(ctx context.Context, clientUsername, groupId string, limit i
 	}
 
 	if len(res.Records) == 0 {
-		return chatHistory, fiber.NewError(fiber.StatusBadRequest, "check that you're specifying a correct 'groupId'")
+		return chatHistory, fiber.NewError(fiber.StatusBadRequest, "you're going against business logic! check that: you're specifying a correct 'groupId'")
 	}
 
 	ch, _, _ := neo4j.GetRecordValue[[]any](res.Records[0], "chat_history")
