@@ -46,7 +46,7 @@ func SendMessage(ctx context.Context, groupId, clientUsername string, msgContent
 		return nil, err
 	}
 
-	go broadcastNewMessage(newMessage.MemberUsernames, newMessage.MemberData)
+	go broadcastNewMessage(newMessage.MemberUsernames, newMessage.MemberData, groupId)
 
 	clientResp := map[string]any{
 		"event":   "server response",

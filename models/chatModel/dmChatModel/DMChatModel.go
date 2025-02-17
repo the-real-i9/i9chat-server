@@ -52,7 +52,7 @@ func SendMessage(ctx context.Context, clientUsername, partnerUsername string, ms
 	}
 
 	if len(res.Records) == 0 {
-		return newMsg, fiber.NewError(fiber.StatusBadRequest, "you're going against business logic! check that: you're specifying a valid 'partnerUsername'")
+		return newMsg, fiber.NewError(fiber.StatusBadRequest, "logical error! check that: you're specifying a valid 'partnerUsername'")
 	}
 
 	helpers.MapToStruct(res.Records[0].AsMap(), &newMsg)
@@ -69,12 +69,14 @@ func GetChatHistory(ctx context.Context, clientUsername, partnerUsername string,
 	res, err := db.Query(
 		ctx,
 		`
-		MATCH (clientChat:DMChat{ owner_username: $client_username, partner_username: $partner_username })<-[:IN_DM_CHAT]-(message:DMMessage WHERE message.created_at >= $offset)
-		OPTIONAL MATCH (message)<-[rxn:REACTS_TO_MESSAGE]-(reactor)
-		WITH message, toString(message.created_at) AS created_at, collect({ user: reactor { .username, .profile_pic_url }, reaction: rxn.reaction }) AS reactions
+		MATCH (clientChat:DMChat{ owner_username: $client_username, partner_username: $partner_username })
+		OPTIONAL MATCH (clientChat)<-[:IN_DM_CHAT]-(message:DMMessage WHERE message.created_at >= $offset),
+			(message)<-[:SENDS_MESSAGE]-(senderUser),
+			(message)<-[rxn:REACTS_TO_MESSAGE]-(reactorUser)
+		WITH message, toString(message.created_at) AS created_at, senderUser { .username, .profile_pic_url } AS sender, collect({ user: reactorUser { .username, .profile_pic_url }, reaction: rxn.reaction }) AS reactions
 		ORDER BY message.created_at DESC
 		LIMIT $limit
-		RETURN collect(message { .*, created_at, reactions }) AS chat_history
+		RETURN collect(message { .*, created_at, sender, reactions }) AS chat_history
 		`,
 		map[string]any{
 			"client_username":  clientUsername,
@@ -89,7 +91,7 @@ func GetChatHistory(ctx context.Context, clientUsername, partnerUsername string,
 	}
 
 	if len(res.Records) == 0 {
-		return nil, fiber.NewError(fiber.StatusBadRequest, "you're going against business logic! check that: you're specifying a valid 'partnerUsername'")
+		return nil, fiber.NewError(fiber.StatusBadRequest, "logical error! check that: you're specifying a valid 'partnerUsername'")
 	}
 
 	messages, _, _ := neo4j.GetRecordValue[[]any](res.Records[0], "chat_history")
@@ -120,7 +122,7 @@ func AckMessageDelivered(ctx context.Context, clientUsername, partnerUsername, m
 	}
 
 	if len(res.Records) == 0 {
-		return fiber.NewError(fiber.StatusBadRequest, "you're going against business logic! check that: you're specifying a valid 'partnerUsername'")
+		return fiber.NewError(fiber.StatusBadRequest, "logical error! check that: you're specifying a valid 'partnerUsername' and 'msgId'")
 	}
 
 	return nil
@@ -148,7 +150,7 @@ func AckMessageRead(ctx context.Context, clientUsername, partnerUsername, msgId 
 	}
 
 	if len(res.Records) == 0 {
-		return fiber.NewError(fiber.StatusBadRequest, "you're going against business logic! check that: you're specifying a valid 'partnerUsername'")
+		return fiber.NewError(fiber.StatusBadRequest, "logical error! check that: you're specifying a valid 'partnerUsername' and 'msgId'")
 	}
 
 	return nil

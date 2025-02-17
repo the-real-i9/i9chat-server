@@ -57,3 +57,27 @@ func WSErrResp(err error, onEvent string) map[string]any {
 
 	return errResp
 }
+
+func AllAinB[T comparable](sA []T, sB []T) bool {
+	if len(sB) == 0 {
+		return false
+	}
+
+	if len(sA) == 0 {
+		return true
+	}
+
+	trk := make(map[T]bool, len(sB))
+
+	for _, el := range sB {
+		trk[el] = true
+	}
+
+	for _, el := range sA {
+		if !trk[el] {
+			return false
+		}
+	}
+
+	return true
+}

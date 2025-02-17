@@ -15,12 +15,15 @@ func broadcastNewGroup(targetUsers []string, data any) {
 	}
 }
 
-func broadcastNewMessage(memberUsernames []string, data any) {
+func broadcastNewMessage(memberUsernames []string, data any, groupId string) {
 	for _, mu := range memberUsernames {
 
 		messageBrokerService.Send(fmt.Sprintf("user-%s-topic", mu), messageBrokerService.Message{
 			Event: "new group chat message",
-			Data:  data,
+			Data: map[string]any{
+				"message":  data,
+				"group_id": groupId,
+			},
 		})
 	}
 }
