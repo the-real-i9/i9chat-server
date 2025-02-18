@@ -80,7 +80,7 @@ func ChangePhone(ctx context.Context, clientUsername string, newPhone string) (a
 	return respData, nil
 }
 
-func UpdateMyLocation(ctx context.Context, clientUsername string, newGeolocation *appTypes.UserGeolocation) (any, error) {
+func UpdateMyLocation(ctx context.Context, clientUsername string, newGeolocation appTypes.UserGeolocation) (any, error) {
 	err := user.UpdateLocation(ctx, clientUsername, newGeolocation)
 	if err != nil {
 		return nil, err

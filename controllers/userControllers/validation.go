@@ -172,7 +172,7 @@ func (b findNearbyUsersQuery) Validate() error {
 }
 
 type updateMyGeolocationBody struct {
-	NewGeolocation *appTypes.UserGeolocation `json:"newGeolocation"`
+	NewGeolocation appTypes.UserGeolocation `json:"newGeolocation"`
 }
 
 func (b updateMyGeolocationBody) Validate() error {

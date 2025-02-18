@@ -111,12 +111,24 @@ func RegisterUser(c *fiber.Ctx) error {
 	}
 
 	if val_err := body.Validate(); val_err != nil {
+		log.Println(val_err)
 		return val_err
 	}
 
 	respData, authJwt, app_err := signupService.RegisterUser(ctx, sessionData, body.Username, body.Password, body.Phone, body.Geolocation)
 	if app_err != nil {
 		return app_err
+	}
+
+	signupSess, err := appGlobals.SignupSessionStore.Get(c)
+	if err != nil {
+		log.Println("signupControllers.go: RegisterUser: SignupSessionStore.Get:", err)
+		return fiber.ErrInternalServerError
+	}
+
+	if err := signupSess.Destroy(); err != nil {
+		log.Println("signupControllers.go: RegisterUser: signupSess.Destroy:", err)
+		return fiber.ErrInternalServerError
 	}
 
 	userSess, err := appGlobals.UserSessionStore.Get(c)
@@ -129,17 +141,6 @@ func RegisterUser(c *fiber.Ctx) error {
 
 	if err := userSess.Save(); err != nil {
 		log.Println("signupControllers.go: RegisterUser: userSess.Save:", err)
-		return fiber.ErrInternalServerError
-	}
-
-	signupSess, err := appGlobals.SignupSessionStore.Get(c)
-	if err != nil {
-		log.Println("signupControllers.go: RegisterUser: SignupSessionStore.Get:", err)
-		return fiber.ErrInternalServerError
-	}
-
-	if err := signupSess.Destroy(); err != nil {
-		log.Println("signupControllers.go: RegisterUser: signupSess.Destroy:", err)
 		return fiber.ErrInternalServerError
 	}
 

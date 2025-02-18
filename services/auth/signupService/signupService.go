@@ -66,7 +66,7 @@ func VerifyEmail(ctx context.Context, sessionData appTypes.SignupSessionData, in
 	return respData, updatedSession, nil
 }
 
-func RegisterUser(ctx context.Context, sessionData appTypes.SignupSessionData, username, password, phone string, geolocation *appTypes.UserGeolocation) (any, string, error) {
+func RegisterUser(ctx context.Context, sessionData appTypes.SignupSessionData, username, password, phone string, geolocation appTypes.UserGeolocation) (any, string, error) {
 	userExists, err := user.Exists(ctx, username)
 	if err != nil {
 		return nil, "", err

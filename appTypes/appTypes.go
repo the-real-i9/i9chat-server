@@ -6,7 +6,6 @@ import (
 	"time"
 
 	validation "github.com/go-ozzo/ozzo-validation/v4"
-	"github.com/go-ozzo/ozzo-validation/v4/is"
 )
 
 type SignupSessionData struct {
@@ -31,14 +30,8 @@ type UserGeolocation struct {
 
 func (ug UserGeolocation) Validate() error {
 	return validation.ValidateStruct(&ug,
-		validation.Field(&ug.Longitude,
-			validation.Required,
-			is.Float.Error("value must be of type float"),
-		),
-		validation.Field(&ug.Latitude,
-			validation.Required,
-			is.Float.Error("value must be type float"),
-		),
+		validation.Field(&ug.Longitude, validation.Required),
+		validation.Field(&ug.Latitude, validation.Required),
 	)
 }
 

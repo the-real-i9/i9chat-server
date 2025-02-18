@@ -37,7 +37,7 @@ func Exists(ctx context.Context, emailOrUsername string) (bool, error) {
 	return userExists, nil
 }
 
-func New(ctx context.Context, email, username, phone, password string, geolocation *appTypes.UserGeolocation) (map[string]any, error) {
+func New(ctx context.Context, email, username, phone, password string, geolocation appTypes.UserGeolocation) (map[string]any, error) {
 	res, err := db.Query(
 		ctx,
 		`
@@ -263,7 +263,7 @@ func ChangePresence(ctx context.Context, clientUsername, presence string, lastSe
 	return pus
 }
 
-func UpdateLocation(ctx context.Context, clientUsername string, newGeolocation *appTypes.UserGeolocation) error {
+func UpdateLocation(ctx context.Context, clientUsername string, newGeolocation appTypes.UserGeolocation) error {
 	_, err := db.Query(ctx,
 		`
 		MATCH (u:User{ username: $client_username })
