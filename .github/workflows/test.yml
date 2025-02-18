@@ -1,0 +1,52 @@
+on:
+  push:
+    branches:
+      - maix
+name: "Test i9chat"
+jobs:
+  Tests:
+    runs-on: ubuntu-latest
+    services:
+      neo4j:
+        image: 'neo4j:5.26'
+        ports:
+          - '7687:7687'
+        env:
+          NEO4J_AUTH: "neo4j/pa@sw$*d"
+      broker:
+        image: 'apache/kafka:latest'
+        ports:
+          - '9092:9092'
+    strategy:
+      matrix:
+        go-version:
+          - 1.23.x
+    steps:
+      - name: Fetch Repository
+        uses: actions/checkout@v4
+      - name: Install Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '${{ matrix.go-version }}'
+      - name: Build server
+        run: go build -o i9chat_server
+      - name: Start server
+        run: ./i9chat_server &
+        env:
+          NEO4J_URL: "neo4j://localhost"
+          NEO4J_USER: neo4j
+          NEO4J_PASSWORD: "pa@sw$*d"
+          AUTH_JWT_SECRET: ${{ secrets.AUTH_JWT_SECRET }}
+          MAILING_EMAIL: ${{ secrets.MAILING_EMAIL }}
+          MAILING_PASSWORD: ${{ secrets.MAILING_PASSWORD }}
+          GCS_API_KEY: ${{ secrets.GCS_API_KEY }}
+          SERVER_HOST: ${{ vars.SERVER_HOST }}
+          DUMMY_VERF_TOKEN: ${{ secrets.DUMMY_VERF_TOKEN }}
+          GO_ENV: test
+      - name: Run Test
+        run: sleep 5; cd ./tests && go test ./... -v -race
+        env:
+          NEO4J_URL: "neo4j://localhost"
+          NEO4J_USER: neo4j
+          NEO4J_PASSWORD: "pa@sw$*d"
+          DUMMY_VERF_TOKEN: ${{ secrets.DUMMY_VERF_TOKEN }}

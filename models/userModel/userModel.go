@@ -16,7 +16,7 @@ func Exists(ctx context.Context, emailOrUsername string) (bool, error) {
 	res, err := db.Query(ctx,
 		`
 		RETURN EXISTS {
-			MATCH (u:User) WHERE username = $emailOrUsername OR email = $emailOrUsername
+			MATCH (u:User) WHERE u.username = $emailOrUsername OR u.email = $emailOrUsername
 		} AS user_exists
 		`,
 		map[string]any{

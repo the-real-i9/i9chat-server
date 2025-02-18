@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"log"
 	"math/rand"
+	"os"
+	"strconv"
 	"time"
 
 	"i9chat/helpers"
@@ -40,7 +42,16 @@ func PasswordMatchesHash(hash string, password string) (bool, error) {
 }
 
 func GenerateVerifCodeExp() (int, time.Time) {
-	return rand.Intn(899999) + 100000, time.Now().UTC().Add(1 * time.Hour)
+	var token int
+	expires := time.Now().UTC().Add(1 * time.Hour)
+
+	if os.Getenv("GO_ENV") != "production" {
+		token, _ = strconv.Atoi(os.Getenv("DUMMY_VERF_TOKEN"))
+	} else {
+		token = rand.Intn(899999) + 100000
+	}
+
+	return token, expires
 }
 
 func JwtSign(data any, secret string, expires time.Time) (string, error) {
