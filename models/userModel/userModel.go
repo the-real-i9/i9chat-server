@@ -110,27 +110,26 @@ func FindNearby(ctx context.Context, clientUsername string, long, lat, radius fl
 	return nearbyUsers, nil
 }
 
-func Search(ctx context.Context, clientUsername, emailUsernamePhone string) ([]any, error) {
+func Find(ctx context.Context, emailUsernamePhone string) (map[string]any, error) {
 	res, err := db.Query(ctx,
 		`
 		OPTIONAL MATCH (u:User)
-		WHERE u.username <> $client_username AND (u.username = $eup OR u.email = $eup OR u.phone = $eup)
+		WHERE u.username = $eup OR u.email = $eup OR u.phone = $eup
 		WITH u, { longitude: toFloat(u.geolocation.longitude), latitude: toFloat(u.geolocation.latitude) } AS geolocation
-		RETURN collect(u { .username, .profile_pic_url, .presence, .last_seen, .password, geolocation }) AS match_users
+		RETURN u { .username, .email, .phone, .profile_pic_url, .presence, .last_seen, geolocation } AS found_user
 		`,
 		map[string]any{
-			"client_username": clientUsername,
-			"eur":             emailUsernamePhone,
+			"eup": emailUsernamePhone,
 		},
 	)
 	if err != nil {
-		log.Println("userModel.go: Search:", err)
+		log.Println("userModel.go: Find:", err)
 		return nil, fiber.ErrInternalServerError
 	}
 
-	matchUsers, _, _ := neo4j.GetRecordValue[[]any](res.Records[0], "match_user")
+	foundUser, _, _ := neo4j.GetRecordValue[map[string]any](res.Records[0], "found_user")
 
-	return matchUsers, nil
+	return foundUser, nil
 }
 
 type ChatItem struct {
@@ -146,7 +145,7 @@ type ChatItem struct {
 	GroupInfo map[string]any `json:"group_info,omitempty"`
 }
 
-func GetChats(ctx context.Context, clientUsername string) ([]ChatItem, error) {
+func GetMyChats(ctx context.Context, clientUsername string) ([]ChatItem, error) {
 	var myChats []ChatItem
 
 	res, err := db.Query(
@@ -199,6 +198,32 @@ func GetChats(ctx context.Context, clientUsername string) ([]ChatItem, error) {
 	helpers.AnyToStruct(mc, &myChats)
 
 	return myChats, nil
+}
+
+func GetMyProfile(ctx context.Context, clientUsername string) (map[string]any, error) {
+	res, err := db.Query(
+		ctx,
+		`
+		MATCH (u:User{ username: $client_username })
+		WITH u, { longitude: toFloat(u.geolocation.longitude), latitude: toFloat(u.geolocation.latitude) } AS geolocation
+		RETURN u { .username, .email, .profile_pic_url, .presence, .last_seen, geolocation } AS my_profile
+		`,
+		map[string]any{
+			"client_username": clientUsername,
+		},
+	)
+	if err != nil {
+		log.Println("userModel.go: GetChats:", err)
+		return nil, fiber.ErrInternalServerError
+	}
+
+	if len(res.Records) == 0 {
+		return nil, nil
+	}
+
+	mp, _, _ := neo4j.GetRecordValue[map[string]any](res.Records[0], "my_profile")
+
+	return mp, nil
 }
 
 func ChangeProfilePicture(ctx context.Context, clientUsername, newPicUrl string) error {

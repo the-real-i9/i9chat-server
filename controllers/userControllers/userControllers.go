@@ -228,20 +228,18 @@ func UpdateMyLocation(c *fiber.Ctx) error {
 	return c.JSON(respData)
 }
 
-func SearchUser(c *fiber.Ctx) error {
+func FindUser(c *fiber.Ctx) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	clientUser := c.Locals("user").(appTypes.ClientUser)
+	var query searchUserQuery
 
-	var body searchUserBody
-
-	body_err := c.BodyParser(&body)
-	if body_err != nil {
-		return body_err
+	q_err := c.QueryParser(&query)
+	if q_err != nil {
+		return q_err
 	}
 
-	respData, app_err := userService.SearchUser(ctx, clientUser.Username, body.EmailUsernamePhone)
+	respData, app_err := userService.FindUser(ctx, query.EmailUsernamePhone)
 
 	if app_err != nil {
 		return app_err
@@ -282,6 +280,20 @@ func GetMyChats(c *fiber.Ctx) error {
 	clientUser := c.Locals("user").(appTypes.ClientUser)
 
 	respData, app_err := userService.GetMyChats(ctx, clientUser.Username)
+	if app_err != nil {
+		return app_err
+	}
+
+	return c.JSON(respData)
+}
+
+func GetMyProfile(c *fiber.Ctx) error {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	clientUser := c.Locals("user").(appTypes.ClientUser)
+
+	respData, app_err := userService.GetMyProfile(ctx, clientUser.Username)
 	if app_err != nil {
 		return app_err
 	}

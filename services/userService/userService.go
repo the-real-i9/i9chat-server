@@ -93,8 +93,8 @@ func UpdateMyLocation(ctx context.Context, clientUsername string, newGeolocation
 	return respData, err
 }
 
-func SearchUser(ctx context.Context, clientUsername, emailUsernamePhone string) ([]any, error) {
-	return user.Search(ctx, clientUsername, emailUsernamePhone)
+func FindUser(ctx context.Context, emailUsernamePhone string) (map[string]any, error) {
+	return user.Find(ctx, emailUsernamePhone)
 }
 
 func FindNearbyUsers(ctx context.Context, clientUsername string, long, lat, radius float64) ([]any, error) {
@@ -102,5 +102,9 @@ func FindNearbyUsers(ctx context.Context, clientUsername string, long, lat, radi
 }
 
 func GetMyChats(ctx context.Context, clientUsername string) ([]user.ChatItem, error) {
-	return user.GetChats(ctx, clientUsername)
+	return user.GetMyChats(ctx, clientUsername)
+}
+
+func GetMyProfile(ctx context.Context, clientUsername string) (map[string]any, error) {
+	return user.GetMyProfile(ctx, clientUsername)
 }
