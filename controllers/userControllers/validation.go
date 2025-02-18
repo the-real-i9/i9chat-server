@@ -185,7 +185,7 @@ func (b updateMyGeolocationBody) Validate() error {
 }
 
 type searchUserQuery struct {
-	EmailUsernamePhone string `json:"eup"`
+	EmailUsernamePhone string `json:"emailUsernamePhone"`
 }
 
 func (b searchUserQuery) Validate() error {

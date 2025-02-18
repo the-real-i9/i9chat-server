@@ -46,9 +46,8 @@ func reqBody(data map[string]any) (io.Reader, error) {
 	return bytes.NewReader(dataBt), err
 }
 
-func resBody(body io.ReadCloser) (string, error) {
+func resBody(body io.ReadCloser) ([]byte, error) {
 	defer body.Close()
 
-	bt, err := io.ReadAll(body)
-	return string(bt), err
+	return io.ReadAll(body)
 }

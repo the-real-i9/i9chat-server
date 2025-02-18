@@ -239,6 +239,10 @@ func FindUser(c *fiber.Ctx) error {
 		return q_err
 	}
 
+	if val_err := query.Validate(); val_err != nil {
+		return val_err
+	}
+
 	respData, app_err := userService.FindUser(ctx, query.EmailUsernamePhone)
 
 	if app_err != nil {

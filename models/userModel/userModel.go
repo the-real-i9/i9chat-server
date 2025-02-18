@@ -41,7 +41,7 @@ func New(ctx context.Context, email, username, phone, password string, geolocati
 	res, err := db.Query(
 		ctx,
 		`
-		CREATE (u:User { email: $email, username: $username, phone: $phone, password: $password, profile_pic_url: "", geolocation: point({ longitude: $long, latitude: $lat }) })
+		CREATE (u:User { email: $email, username: $username, phone: $phone, password: $password, profile_pic_url: "", geolocation: point({ longitude: $long, latitude: $lat }), presence: "offline" })
 		WITH u, { longitude: toFloat(u.geolocation.longitude), latitude: toFloat(u.geolocation.latitude) } AS geolocation
 		RETURN u { .username, .profile_pic_url, .presence, .last_seen, geolocation } AS new_user
 		`,
@@ -206,7 +206,7 @@ func GetMyProfile(ctx context.Context, clientUsername string) (map[string]any, e
 		`
 		MATCH (u:User{ username: $client_username })
 		WITH u, { longitude: toFloat(u.geolocation.longitude), latitude: toFloat(u.geolocation.latitude) } AS geolocation
-		RETURN u { .username, .email, .profile_pic_url, .presence, .last_seen, geolocation } AS my_profile
+		RETURN u { .username, .email, .phone, .profile_pic_url, .presence, .last_seen, geolocation } AS my_profile
 		`,
 		map[string]any{
 			"client_username": clientUsername,
@@ -292,7 +292,7 @@ func UpdateLocation(ctx context.Context, clientUsername string, newGeolocation a
 	_, err := db.Query(ctx,
 		`
 		MATCH (u:User{ username: $client_username })
-		SET u.geolocation.longitude = $long, u.geolocation.latitude = $lat
+		SET u.geolocation = point({ longitude: $long, latitude: $lat })
 		`,
 		map[string]any{
 			"client_username": clientUsername,

@@ -15,7 +15,7 @@ const signinPath = HOST_URL + "/api/auth/signin"
 const signoutPath = HOST_URL + "/api/app/user/signout"
 
 func TestUserAuth(t *testing.T) {
-	t.Parallel()
+	// t.Parallel()
 
 	t.Run("User-A Scenario", func(t *testing.T) {
 
@@ -163,4 +163,6 @@ func TestUserAuth(t *testing.T) {
 			assert.Equal(t, http.StatusBadRequest, res.StatusCode)
 		})
 	})
+
+	// cleanUpDB()
 }
