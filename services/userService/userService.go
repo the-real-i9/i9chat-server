@@ -6,17 +6,42 @@ import (
 	"i9chat/appTypes"
 	user "i9chat/models/userModel"
 	"i9chat/services/cloudStorageService"
+	"i9chat/services/messageBrokerService"
 	"time"
 
 	"github.com/gabriel-vasile/mimetype"
 )
 
 func GoOnline(ctx context.Context, clientUsername string) {
-	go user.ChangePresence(ctx, clientUsername, "online", time.Time{})
+	go func() {
+		dmPartners := user.ChangePresence(ctx, clientUsername, "online", time.Time{})
+
+		for _, dmp := range dmPartners {
+			messageBrokerService.Send(fmt.Sprintf("user-%s-topic", dmp), messageBrokerService.Message{
+				Event: "user online",
+				Data: map[string]any{
+					"user": clientUsername,
+				},
+			})
+		}
+	}()
+
 }
 
 func GoOffline(ctx context.Context, clientUsername string, lastSeen time.Time) {
-	go user.ChangePresence(ctx, clientUsername, "offline", lastSeen)
+	go func() {
+		dmPartners := user.ChangePresence(ctx, clientUsername, "offline", lastSeen)
+
+		for _, dmp := range dmPartners {
+			messageBrokerService.Send(fmt.Sprintf("user-%s-topic", dmp), messageBrokerService.Message{
+				Event: "user offline",
+				Data: map[string]any{
+					"user":      clientUsername,
+					"last_seen": lastSeen,
+				},
+			})
+		}
+	}()
 }
 
 func ChangeProfilePicture(ctx context.Context, clientUsername string, pictureData []byte) (any, error) {

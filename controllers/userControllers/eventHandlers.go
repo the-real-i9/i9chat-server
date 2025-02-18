@@ -7,7 +7,7 @@ import (
 	"i9chat/services/chatServices/groupChatService"
 )
 
-func newDMChatMsgEventHandler(ctx context.Context, clientUsername string, eventData map[string]any) (map[string]any, error) {
+func newDMChatMsgEvHd(ctx context.Context, clientUsername string, eventData map[string]any) (map[string]any, error) {
 	var body newDMChatMsg
 
 	helpers.MapToStruct(eventData, &body)
@@ -19,7 +19,7 @@ func newDMChatMsgEventHandler(ctx context.Context, clientUsername string, eventD
 	return dmChatService.SendMessage(ctx, clientUsername, body.PartnerUsername, body.Msg, body.CreatedAt)
 }
 
-func dmChatMsgDeliveredAckEventHandler(ctx context.Context, clientUsername string, eventData map[string]any) error {
+func dmChatMsgDeliveredAckEvHd(ctx context.Context, clientUsername string, eventData map[string]any) error {
 	var body dmChatMsgAck
 
 	helpers.MapToStruct(eventData, &body)
@@ -31,7 +31,7 @@ func dmChatMsgDeliveredAckEventHandler(ctx context.Context, clientUsername strin
 	return dmChatService.AckMessageDelivered(ctx, clientUsername, body.PartnerUsername, body.MsgId, body.At)
 }
 
-func dmChatMsgReadAckEventHandler(ctx context.Context, clientUsername string, eventData map[string]any) error {
+func dmChatMsgReadAckEvHd(ctx context.Context, clientUsername string, eventData map[string]any) error {
 	var body dmChatMsgAck
 
 	helpers.MapToStruct(eventData, &body)
@@ -43,7 +43,7 @@ func dmChatMsgReadAckEventHandler(ctx context.Context, clientUsername string, ev
 	return dmChatService.AckMessageRead(ctx, clientUsername, body.PartnerUsername, body.MsgId, body.At)
 }
 
-func newGroupChatMsgEventHandler(ctx context.Context, clientUsername string, eventData map[string]any) (map[string]any, error) {
+func newGroupChatMsgEvHd(ctx context.Context, clientUsername string, eventData map[string]any) (map[string]any, error) {
 	var body newGroupChatMsg
 
 	helpers.MapToStruct(eventData, &body)
@@ -55,7 +55,7 @@ func newGroupChatMsgEventHandler(ctx context.Context, clientUsername string, eve
 	return groupChatService.SendMessage(ctx, clientUsername, body.GroupId, body.Msg, body.CreatedAt)
 }
 
-func groupChatMsgDeliveredAckEventHandler(ctx context.Context, clientUsername string, eventData map[string]any) error {
+func groupChatMsgDeliveredAckEvHd(ctx context.Context, clientUsername string, eventData map[string]any) error {
 	var body groupChatMsgAck
 
 	helpers.MapToStruct(eventData, &body)
@@ -67,7 +67,7 @@ func groupChatMsgDeliveredAckEventHandler(ctx context.Context, clientUsername st
 	return groupChatService.AckMessageDelivered(ctx, clientUsername, body.GroupId, body.MsgId, body.At)
 }
 
-func groupChatMsgReadAckEventHandler(ctx context.Context, clientUsername string, eventData map[string]any) error {
+func groupChatMsgReadAckEvHd(ctx context.Context, clientUsername string, eventData map[string]any) error {
 	var body groupChatMsgAck
 
 	helpers.MapToStruct(eventData, &body)
@@ -77,4 +77,28 @@ func groupChatMsgReadAckEventHandler(ctx context.Context, clientUsername string,
 	}
 
 	return groupChatService.AckMessageRead(ctx, clientUsername, body.GroupId, body.MsgId, body.At)
+}
+
+func groupInfoEvHd(ctx context.Context, eventData map[string]any) (map[string]any, error) {
+	var body groupInfo
+
+	helpers.MapToStruct(eventData, &body)
+
+	if val_err := body.Validate(); val_err != nil {
+		return nil, val_err
+	}
+
+	return groupChatService.GetGroupInfo(ctx, body.GroupId)
+}
+
+func groupMemInfoEvHd(ctx context.Context, clientUsername string, eventData map[string]any) (map[string]any, error) {
+	var body groupMemInfo
+
+	helpers.MapToStruct(eventData, &body)
+
+	if val_err := body.Validate(); val_err != nil {
+		return nil, val_err
+	}
+
+	return groupChatService.GetGroupMemInfo(ctx, clientUsername, body.GroupId)
 }

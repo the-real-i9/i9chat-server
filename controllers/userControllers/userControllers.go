@@ -90,8 +90,7 @@ func clientEventStream(c *websocket.Conn, ctx context.Context, clientUser appTyp
 
 		switch body.Event {
 		case "new dm chat message":
-			// do
-			respData, err := newDMChatMsgEventHandler(ctx, clientUser.Username, body.Data)
+			respData, err := newDMChatMsgEvHd(ctx, clientUser.Username, body.Data)
 			if err != nil {
 				w_err = c.WriteJSON(helpers.WSErrResp(err, body.Event))
 				continue
@@ -99,7 +98,7 @@ func clientEventStream(c *websocket.Conn, ctx context.Context, clientUser appTyp
 			c.WriteJSON(respData)
 		case "dm chat message delivered ack":
 
-			err := dmChatMsgDeliveredAckEventHandler(ctx, clientUser.Username, body.Data)
+			err := dmChatMsgDeliveredAckEvHd(ctx, clientUser.Username, body.Data)
 			if err != nil {
 				w_err = c.WriteJSON(helpers.WSErrResp(err, body.Event))
 				continue
@@ -107,35 +106,45 @@ func clientEventStream(c *websocket.Conn, ctx context.Context, clientUser appTyp
 
 		case "dm chat message read ack":
 
-			err := dmChatMsgReadAckEventHandler(ctx, clientUser.Username, body.Data)
+			err := dmChatMsgReadAckEvHd(ctx, clientUser.Username, body.Data)
 			if err != nil {
 				w_err = c.WriteJSON(helpers.WSErrResp(err, body.Event))
 				continue
 			}
 
 		case "new group chat message":
-			// do
-			respData, err := newGroupChatMsgEventHandler(ctx, clientUser.Username, body.Data)
+			respData, err := newGroupChatMsgEvHd(ctx, clientUser.Username, body.Data)
 			if err != nil {
 				w_err = c.WriteJSON(helpers.WSErrResp(err, body.Event))
 				continue
 			}
 			c.WriteJSON(respData)
 		case "group chat message delivered ack":
-			err := groupChatMsgDeliveredAckEventHandler(ctx, clientUser.Username, body.Data)
+			err := groupChatMsgDeliveredAckEvHd(ctx, clientUser.Username, body.Data)
 			if err != nil {
 				w_err = c.WriteJSON(helpers.WSErrResp(err, body.Event))
 				continue
 			}
 		case "group chat message read ack":
-			err := groupChatMsgReadAckEventHandler(ctx, clientUser.Username, body.Data)
+			err := groupChatMsgReadAckEvHd(ctx, clientUser.Username, body.Data)
 			if err != nil {
 				w_err = c.WriteJSON(helpers.WSErrResp(err, body.Event))
 				continue
 			}
-		case "group chat live info":
+		case "group info":
+			respData, err := groupInfoEvHd(ctx, body.Data)
+			if err != nil {
+				w_err = c.WriteJSON(helpers.WSErrResp(err, body.Event))
+				continue
+			}
+			c.WriteJSON(respData)
 		case "group membership info":
-		case "user presence info":
+			respData, err := groupMemInfoEvHd(ctx, clientUser.Username, body.Data)
+			if err != nil {
+				w_err = c.WriteJSON(helpers.WSErrResp(err, body.Event))
+				continue
+			}
+			c.WriteJSON(respData)
 		default:
 		}
 	}

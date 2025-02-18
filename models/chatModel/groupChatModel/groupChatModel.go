@@ -1292,3 +1292,66 @@ func GetChatHistory(ctx context.Context, clientUsername, groupId string, limit i
 
 	return chatHistory, nil
 }
+
+func GetGroupInfo(ctx context.Context, groupId string) (map[string]any, error) {
+	res, err := db.Query(
+		ctx,
+		`
+		MATCH (group:Group{ id: $group_id }),
+		OPTIONAL MATCH (group)<-[:IS_MEMBER_OF]-(memberUser),
+			(group)<-[:IS_MEMBER_OF]-(memberUserOnline:User{ presence: "online" })
+
+		WITH count(memberUser) AS members_count, count(memberUserOnline) AS online_members
+		RETURN group { .name, .description, .picture_url, members_count, online_members } AS group_info
+		`,
+		map[string]any{
+			"group_id": groupId,
+		},
+	)
+	if err != nil {
+		log.Println("DMChatModel.go: GetGroupInfo", err)
+		return nil, fiber.ErrInternalServerError
+	}
+
+	if len(res.Records) == 0 {
+		return nil, fiber.NewError(fiber.StatusBadRequest, "logical error! check that: you're specifying a correct 'groupId'")
+	}
+
+	gi, _, _ := neo4j.GetRecordValue[map[string]any](res.Records[0], "group_info")
+
+	return gi, nil
+}
+
+func GetGroupMemInfo(ctx context.Context, clientUsername, groupId string) (map[string]any, error) {
+	res, err := db.Query(
+		ctx,
+		`
+		MATCH (group:Group{ id: $group_id }),
+		OPTIONAL MATCH (group)<-[mr:IS_MEMBER_OF]-(isMember:User{ id: $client_username }),
+			(group)-[:REMOVED_USER]->(userRemoved:User{ id: $client_username }),
+			(group)<-[:LEFT_GROUP]-(userLeft:User{ id: $client_username })
+
+		WITH CASE isMember WHEN IS NULL false ELSE true END AS member,
+			CASE isMember WHEN IS NULL null ELSE mr.role END AS role,
+			CASE userRemoved WHEN IS NULL false ELSE true END AS removed,
+			CASE userLeft WHEN IS NULL false ELSE true END AS left
+		RETURN { member, role, removed, left } AS group_mem_info
+		`,
+		map[string]any{
+			"client_username": clientUsername,
+			"group_id":        groupId,
+		},
+	)
+	if err != nil {
+		log.Println("DMChatModel.go: GetGroupMemInfo", err)
+		return nil, fiber.ErrInternalServerError
+	}
+
+	if len(res.Records) == 0 {
+		return nil, fiber.NewError(fiber.StatusBadRequest, "logical error! check that: you're specifying a correct 'groupId'")
+	}
+
+	gmi, _, _ := neo4j.GetRecordValue[map[string]any](res.Records[0], "group_mem_info")
+
+	return gmi, nil
+}

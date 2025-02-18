@@ -100,6 +100,30 @@ func (d groupChatMsgAck) Validate() error {
 	return helpers.ValidationError(err, "userControllers_validation.go", "groupChatMsgAck")
 }
 
+type groupInfo struct {
+	GroupId string `json:"groupId"`
+}
+
+func (d groupInfo) Validate() error {
+	err := validation.ValidateStruct(&d,
+		validation.Field(&d.GroupId, validation.Required, is.UUID),
+	)
+
+	return helpers.ValidationError(err, "userControllers_validation.go", "groupInfo")
+}
+
+type groupMemInfo struct {
+	GroupId string `json:"groupId"`
+}
+
+func (d groupMemInfo) Validate() error {
+	err := validation.ValidateStruct(&d,
+		validation.Field(&d.GroupId, validation.Required, is.UUID),
+	)
+
+	return helpers.ValidationError(err, "userControllers_validation.go", "groupMemInfo")
+}
+
 // ---------
 
 type changeProfilePictureBody struct {

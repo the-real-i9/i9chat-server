@@ -239,11 +239,14 @@ func ChangePhone(ctx context.Context, clientUsername, newPhone string) error {
 	return nil
 }
 
-func ChangePresence(ctx context.Context, clientUsername, presence string, lastSeen time.Time) {
-	_, err := db.Query(ctx,
+func ChangePresence(ctx context.Context, clientUsername, presence string, lastSeen time.Time) []any {
+	res, err := db.Query(ctx,
 		`
 		MATCH (user:User{ username: $client_username })
 		SET user.presence = $presence, user.last_seen = $last_seen)
+
+		OPTIONAL MATCH (user)-[:HAS_DM_CHAT]->()-[:WITH_USER]->(partnerUser)
+		RETURN collect(partnerUser.username) AS partner_usernames
 		`,
 		map[string]any{
 			"client_username": clientUsername,
@@ -254,6 +257,10 @@ func ChangePresence(ctx context.Context, clientUsername, presence string, lastSe
 	if err != nil {
 		log.Println("userModel.go: ChangePresence:", err)
 	}
+
+	pus, _, _ := neo4j.GetRecordValue[[]any](res.Records[0], "partner_usernames")
+
+	return pus
 }
 
 func UpdateLocation(ctx context.Context, clientUsername string, newGeolocation *appTypes.UserGeolocation) error {

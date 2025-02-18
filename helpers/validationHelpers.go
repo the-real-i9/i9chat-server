@@ -1,6 +1,7 @@
 package helpers
 
 import (
+	"fmt"
 	"log"
 
 	validation "github.com/go-ozzo/ozzo-validation/v4"
@@ -14,7 +15,7 @@ func ValidationError(err error, filename, structname string) error {
 			return fiber.ErrInternalServerError
 		}
 
-		return fiber.NewError(fiber.StatusBadRequest, "validation error:", err.Error())
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Sprint("validation error:", err))
 	}
 
 	return nil

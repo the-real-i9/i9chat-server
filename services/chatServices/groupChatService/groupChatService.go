@@ -32,6 +32,14 @@ func GetChatHistory(ctx context.Context, clientUsername, groupId string, limit i
 	return groupChat.GetChatHistory(ctx, clientUsername, groupId, limit, offset)
 }
 
+func GetGroupInfo(ctx context.Context, groupId string) (map[string]any, error) {
+	return groupChat.GetGroupInfo(ctx, groupId)
+}
+
+func GetGroupMemInfo(ctx context.Context, clientUsername, groupId string) (map[string]any, error) {
+	return groupChat.GetGroupMemInfo(ctx, clientUsername, groupId)
+}
+
 func SendMessage(ctx context.Context, groupId, clientUsername string, msgContent *appTypes.MsgContent, createdAt time.Time) (map[string]any, error) {
 
 	err := appServices.UploadMessageMedia(ctx, clientUsername, msgContent)
@@ -49,7 +57,7 @@ func SendMessage(ctx context.Context, groupId, clientUsername string, msgContent
 	go broadcastNewMessage(newMessage.MemberUsernames, newMessage.MemberData, groupId)
 
 	clientResp := map[string]any{
-		"event":   "server response",
+		"event":   "ws reply",
 		"toEvent": "new group chat message",
 		"data":    newMessage.ClientData,
 	}
