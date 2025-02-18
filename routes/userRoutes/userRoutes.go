@@ -27,5 +27,5 @@ func Init(router fiber.Router) {
 
 	router.Get("/my_chats", UC.GetMyChats)
 
-	router.Get("/logout", UC.Logout)
+	router.Get("/signout", UC.SignOut)
 }

@@ -289,7 +289,7 @@ func GetMyChats(c *fiber.Ctx) error {
 	return c.JSON(respData)
 }
 
-func Logout(c *fiber.Ctx) error {
+func SignOut(c *fiber.Ctx) error {
 	sess, err := appGlobals.UserSessionStore.Get(c)
 	if err != nil {
 		log.Println("userControllers.go: Logout: UserSignupSession.Get:", err)
@@ -301,5 +301,5 @@ func Logout(c *fiber.Ctx) error {
 		return fiber.ErrInternalServerError
 	}
 
-	return fiber.NewError(fiber.StatusOK, "You've been logged out!")
+	return c.SendString("You've been logged out!")
 }

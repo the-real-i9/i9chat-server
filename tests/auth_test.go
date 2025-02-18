@@ -12,11 +12,13 @@ import (
 
 const signupPath = HOST_URL + "/api/auth/signup"
 const signinPath = HOST_URL + "/api/auth/signin"
+const signoutPath = HOST_URL + "/api/app/user/signout"
 
 func TestUserAuth(t *testing.T) {
 	t.Run("User-A Scenario", func(t *testing.T) {
 
 		signupSessionCookie := ""
+		userSessionCookie := ""
 
 		t.Run("requests a new account", func(t *testing.T) {
 			reqBody, err := reqBody(map[string]any{"email": "suberu@gmail.com"})
@@ -90,6 +92,23 @@ func TestUserAuth(t *testing.T) {
 			assert.NoError(t, err)
 			req.Header.Add("Content-Type", "application/json")
 			req.Header.Set("Cookie", signupSessionCookie)
+
+			res, err := http.DefaultClient.Do(req)
+			assert.NoError(t, err)
+
+			if !assert.Equal(t, http.StatusOK, res.StatusCode) {
+				bd, err := resBody(res.Body)
+				assert.NoError(t, err)
+				t.Log(bd)
+			}
+
+			userSessionCookie = res.Header.Get("Set-Cookie")
+		})
+
+		t.Run("user signs out", func(t *testing.T) {
+			req, err := http.NewRequest("GET", signoutPath, nil)
+			assert.NoError(t, err)
+			req.Header.Set("Cookie", userSessionCookie)
 
 			res, err := http.DefaultClient.Do(req)
 			assert.NoError(t, err)
