@@ -134,7 +134,7 @@ func initSessionStore() {
 
 func InitApp() error {
 
-	if os.Getenv("GO_ENV") != "production" {
+	if os.Getenv("GO_ENV") != "production" && os.Getenv("GO_ENV") != "test" {
 		if err := godotenv.Load(".env"); err != nil {
 			return err
 		}
