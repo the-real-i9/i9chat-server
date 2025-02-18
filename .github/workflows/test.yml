@@ -1,7 +1,7 @@
 on:
   push:
     branches:
-      - maix
+      - main
 name: "Test i9chat"
 jobs:
   Tests:
@@ -36,9 +36,11 @@ jobs:
           NEO4J_URL: "neo4j://localhost"
           NEO4J_USER: neo4j
           NEO4J_PASSWORD: "pa@sw$*d"
+          KAFKA_BROKER_ADDRESS: "localhost:9092"
           AUTH_JWT_SECRET: ${{ secrets.AUTH_JWT_SECRET }}
           MAILING_EMAIL: ${{ secrets.MAILING_EMAIL }}
           MAILING_PASSWORD: ${{ secrets.MAILING_PASSWORD }}
+          GCS_BUCKET: ${{ vars.GCS_BUCKET }}
           GCS_API_KEY: ${{ secrets.GCS_API_KEY }}
           SERVER_HOST: ${{ vars.SERVER_HOST }}
           DUMMY_VERF_TOKEN: ${{ secrets.DUMMY_VERF_TOKEN }}
