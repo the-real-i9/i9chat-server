@@ -269,7 +269,7 @@ func FindNearbyUsers(c *fiber.Ctx) error {
 		return val_err
 	}
 
-	respData, app_err := userService.FindNearbyUsers(ctx, clientUser.Username, query.Long, query.Lat, query.Radius)
+	respData, app_err := userService.FindNearbyUsers(ctx, clientUser.Username, query.X, query.Y, query.Radius)
 	if app_err != nil {
 		return app_err
 	}

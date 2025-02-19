@@ -41,17 +41,17 @@ func New(ctx context.Context, email, username, phone, password string, geolocati
 	res, err := db.Query(
 		ctx,
 		`
-		CREATE (u:User { email: $email, username: $username, phone: $phone, password: $password, profile_pic_url: "", geolocation: point({ longitude: $long, latitude: $lat }), presence: "offline" })
-		WITH u, { longitude: toFloat(u.geolocation.longitude), latitude: toFloat(u.geolocation.latitude) } AS geolocation
-		RETURN u { .username, .profile_pic_url, .presence, .last_seen, geolocation } AS new_user
+		CREATE (u:User { email: $email, username: $username, phone: $phone, password: $password, profile_pic_url: "", geolocation: point({ x: $x, y: $y, crs: "cartesian" }), presence: "offline" })
+		WITH u, { x: toFloat(u.geolocation.x), y: toFloat(u.geolocation.y) } AS geolocation, toString(u.last_seen) AS last_seen
+		RETURN u { .username, .phone, .email, .profile_pic_url, .presence, last_seen, geolocation } AS new_user
 		`,
 		map[string]any{
 			"email":    email,
 			"username": username,
 			"phone":    phone,
 			"password": password,
-			"long":     geolocation.Longitude,
-			"lat":      geolocation.Latitude,
+			"x":        geolocation.X,
+			"y":        geolocation.Y,
 		},
 	)
 	if err != nil {
@@ -64,19 +64,19 @@ func New(ctx context.Context, email, username, phone, password string, geolocati
 	return new_user, nil
 }
 
-func FindOne(ctx context.Context, uniqueIdent string) (map[string]any, error) {
+func SigninFind(ctx context.Context, uniqueIdent string) (map[string]any, error) {
 	res, err := db.Query(ctx,
 		`
 	OPTIONAL MATCH (u:User) WHERE u.username = $uniqueIdent OR u.email = $uniqueIdent OR  u.phone = $uniqueIdent
-	WITH u, { longitude: toFloat(u.geolocation.longitude), latitude: toFloat(u.geolocation.latitude) } AS geolocation
-	RETURN u { .username, .profile_pic_url, .presence, .last_seen, .password, geolocation } AS found_user
+	WITH u, { x: toFloat(u.geolocation.x), y: toFloat(u.geolocation.y) } AS geolocation, toString(u.last_seen) AS last_seen
+	RETURN u { .username, .phone, .email, .profile_pic_url, .presence, last_seen, .password, geolocation } AS found_user
 	`,
 		map[string]any{
 			"uniqueIdent": uniqueIdent,
 		},
 	)
 	if err != nil {
-		log.Println("userModel.go: FindOne:", err)
+		log.Println("userModel.go: SigninFind:", err)
 		return nil, fiber.ErrInternalServerError
 	}
 
@@ -85,18 +85,18 @@ func FindOne(ctx context.Context, uniqueIdent string) (map[string]any, error) {
 	return found_user, nil
 }
 
-func FindNearby(ctx context.Context, clientUsername string, long, lat, radius float64) ([]any, error) {
+func FindNearby(ctx context.Context, clientUsername string, x, y, radius float64) ([]any, error) {
 	res, err := db.Query(ctx,
 		`
 		OPTIONAL MATCH (u:User)
-		WHERE u.username <> $client_username AND point.distance(point({ longitude: $live_long, latitude: $live_lat }), u.geolocation) <= $radius
-		WITH u, { longitude: toFloat(u.geolocation.longitude), latitude: toFloat(u.geolocation.latitude) } AS geolocation
-		RETURN collect(u { .username, .profile_pic_url, .presence, .last_seen, .password, geolocation }) AS nearby_users
+		WHERE u.username <> $client_username AND point.distance(point({ x: $live_long, y: $live_lat }), u.geolocation) <= $radius
+		WITH u, { x: toFloat(u.geolocation.x), y: toFloat(u.geolocation.y) } AS geolocation, toString(u.last_seen) AS last_seen
+		RETURN collect(u { .username, .phone, .email, .profile_pic_url, .presence, last_seen, geolocation }) AS nearby_users
 	`,
 		map[string]any{
 			"client_username": clientUsername,
-			"live_long":       long,
-			"live_lat":        lat,
+			"live_long":       x,
+			"live_lat":        y,
 			"radius":          radius,
 		},
 	)
@@ -110,20 +110,20 @@ func FindNearby(ctx context.Context, clientUsername string, long, lat, radius fl
 	return nearbyUsers, nil
 }
 
-func Find(ctx context.Context, emailUsernamePhone string) (map[string]any, error) {
+func FindOne(ctx context.Context, emailUsernamePhone string) (map[string]any, error) {
 	res, err := db.Query(ctx,
 		`
 		OPTIONAL MATCH (u:User)
 		WHERE u.username = $eup OR u.email = $eup OR u.phone = $eup
-		WITH u, { longitude: toFloat(u.geolocation.longitude), latitude: toFloat(u.geolocation.latitude) } AS geolocation
-		RETURN u { .username, .email, .phone, .profile_pic_url, .presence, .last_seen, geolocation } AS found_user
+		WITH u, { x: toFloat(u.geolocation.x), y: toFloat(u.geolocation.y) } AS geolocation, toString(u.last_seen) AS last_seen
+		RETURN u { .username, .email, .phone, .profile_pic_url, .presence, last_seen, geolocation } AS found_user
 		`,
 		map[string]any{
 			"eup": emailUsernamePhone,
 		},
 	)
 	if err != nil {
-		log.Println("userModel.go: Find:", err)
+		log.Println("userModel.go: FindOne:", err)
 		return nil, fiber.ErrInternalServerError
 	}
 
@@ -205,8 +205,8 @@ func GetMyProfile(ctx context.Context, clientUsername string) (map[string]any, e
 		ctx,
 		`
 		MATCH (u:User{ username: $client_username })
-		WITH u, { longitude: toFloat(u.geolocation.longitude), latitude: toFloat(u.geolocation.latitude) } AS geolocation
-		RETURN u { .username, .email, .phone, .profile_pic_url, .presence, .last_seen, geolocation } AS my_profile
+		WITH u, { x: toFloat(u.geolocation.x), y: toFloat(u.geolocation.y) } AS geolocation, toString(u.last_seen) AS last_seen
+		RETURN u { .username, .email, .phone, .profile_pic_url, .presence, last_seen, geolocation } AS my_profile
 		`,
 		map[string]any{
 			"client_username": clientUsername,
@@ -292,12 +292,12 @@ func UpdateLocation(ctx context.Context, clientUsername string, newGeolocation a
 	_, err := db.Query(ctx,
 		`
 		MATCH (u:User{ username: $client_username })
-		SET u.geolocation = point({ longitude: $long, latitude: $lat })
+		SET u.geolocation = point({ x: $x, y: $y })
 		`,
 		map[string]any{
 			"client_username": clientUsername,
-			"long":            newGeolocation.Longitude,
-			"lat":             newGeolocation.Latitude,
+			"x":               newGeolocation.X,
+			"y":               newGeolocation.Y,
 		},
 	)
 	if err != nil {

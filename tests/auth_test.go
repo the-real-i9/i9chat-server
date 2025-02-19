@@ -84,8 +84,8 @@ func TestUserAuth(t *testing.T) {
 				"password": "sketeppy",
 				"phone":    "08283443588",
 				"geolocation": map[string]any{
-					"longitude": 5.0,
-					"latitude":  2.0,
+					"x": 5.0,
+					"y": 2.0,
 				},
 			})
 			assert.NoError(t, err)
@@ -164,5 +164,5 @@ func TestUserAuth(t *testing.T) {
 		})
 	})
 
-	// cleanUpDB()
+	cleanUpDB()
 }

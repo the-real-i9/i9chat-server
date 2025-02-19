@@ -2,6 +2,8 @@ package tests
 
 import (
 	"encoding/json"
+	"fmt"
+	"maps"
 	"net/http"
 	"os"
 	"strconv"
@@ -22,8 +24,8 @@ func TestUserRoutes(t *testing.T) {
 			"password": "recheal_zane",
 			"phone":    "08183443588",
 			"geolocation": map[string]any{
-				"longitude": 5.0,
-				"latitude":  2.0,
+				"x": 5.0,
+				"y": 2.0,
 			},
 		},
 		"user2": {
@@ -32,8 +34,8 @@ func TestUserRoutes(t *testing.T) {
 			"password": "scottie_",
 			"phone":    "08183443589",
 			"geolocation": map[string]any{
-				"longitude": 4.0,
-				"latitude":  3.0,
+				"x": 4.0,
+				"y": 3.0,
 			},
 		},
 		"user3": {
@@ -42,8 +44,8 @@ func TestUserRoutes(t *testing.T) {
 			"password": "jeff_malone",
 			"phone":    "08183443590",
 			"geolocation": map[string]any{
-				"longitude": 3.0,
-				"latitude":  4.0,
+				"x": 3.0,
+				"y": 4.0,
 			},
 		},
 	}
@@ -119,6 +121,10 @@ func TestUserRoutes(t *testing.T) {
 		}
 	})
 
+	t.Run("bring users online", func(t *testing.T) {
+
+	})
+
 	t.Run("change user1's phone number", func(t *testing.T) {
 		reqBody, err := reqBody(map[string]any{"newPhoneNumber": "07083249523"})
 		assert.NoError(t, err)
@@ -156,13 +162,13 @@ func TestUserRoutes(t *testing.T) {
 
 		assert.NoError(t, json.Unmarshal(bd, &data))
 
-		accounts["user1"] = data
+		maps.Copy(accounts["user1"], data)
 
 		assert.Equal(t, accounts["user1"]["phone"], "07083249523")
 	})
 
 	t.Run("change user2's geolocation", func(t *testing.T) {
-		reqBody, err := reqBody(map[string]any{"newGeolocation": map[string]any{"longitude": 3.0, "latitude": 3.0}})
+		reqBody, err := reqBody(map[string]any{"newGeolocation": map[string]any{"x": 3.0, "y": 3.0}})
 		assert.NoError(t, err)
 
 		req, err := http.NewRequest("POST", userPath+"/update_geolocation", reqBody)
@@ -200,9 +206,32 @@ func TestUserRoutes(t *testing.T) {
 
 		assert.NoError(t, json.Unmarshal(bd, &data))
 
-		accounts["user2"] = data
+		maps.Copy(accounts["user2"], data)
 
-		assert.Equal(t, accounts["user2"]["geolocation"], map[string]any{"longitude": 3.0, "latitude": 3.0})
+		assert.Equal(t, accounts["user2"]["geolocation"], map[string]any{"x": 3.0, "y": 3.0})
+	})
+
+	t.Run("find nearby users", func(t *testing.T) {
+		x, y, radius := 2.0, 2.0, 10.0
+
+		req, err := http.NewRequest("GET", fmt.Sprintf("%s%s?x=%f&y=%f&radius=%f", userPath, "/find_nearby_users", x, y, radius), nil)
+		assert.NoError(t, err)
+		req.Header.Set("Cookie", accounts["user1"]["user_session_cookie"].(string))
+
+		res, err := http.DefaultClient.Do(req)
+		assert.NoError(t, err)
+
+		assert.Equal(t, http.StatusOK, res.StatusCode)
+
+		bd, err := resBody(res.Body)
+		assert.NoError(t, err)
+		assert.NotEmpty(t, bd)
+
+		var data []any
+
+		assert.NoError(t, json.Unmarshal(bd, &data))
+
+		assert.NotEmpty(t, data)
 	})
 
 	// cleanUpDB()

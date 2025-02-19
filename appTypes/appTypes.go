@@ -24,14 +24,14 @@ type ClientUser struct {
 }
 
 type UserGeolocation struct {
-	Longitude float64 `json:"longitude"`
-	Latitude  float64 `json:"latitude"`
+	X float64 `json:"x"`
+	Y float64 `json:"y"`
 }
 
 func (ug UserGeolocation) Validate() error {
 	return validation.ValidateStruct(&ug,
-		validation.Field(&ug.Longitude, validation.Required),
-		validation.Field(&ug.Latitude, validation.Required),
+		validation.Field(&ug.X, validation.Required),
+		validation.Field(&ug.Y, validation.Required),
 	)
 }
 

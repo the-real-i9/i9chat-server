@@ -155,16 +155,16 @@ func (b changePhoneBody) Validate() error {
 }
 
 type findNearbyUsersQuery struct {
-	Long   float64 `json:"long"`
-	Lat    float64 `json:"lat"`
+	X      float64 `json:"x"`
+	Y      float64 `json:"y"`
 	Radius float64 `json:"radius"`
 }
 
 func (b findNearbyUsersQuery) Validate() error {
 	err := validation.ValidateStruct(&b,
-		validation.Field(&b.Long, is.Float.Error("value must be of type float")),
-		validation.Field(&b.Lat, is.Float.Error("value must be of type float")),
-		validation.Field(&b.Radius, is.Float.Error("value must be of type float")),
+		validation.Field(&b.X, validation.Required),
+		validation.Field(&b.Y, validation.Required),
+		validation.Field(&b.Radius, validation.Required),
 	)
 
 	return helpers.ValidationError(err, "userControllers_validation.go", "findNearbyUsersQuery")

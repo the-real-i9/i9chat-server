@@ -12,7 +12,7 @@ import (
 )
 
 func Signin(ctx context.Context, emailOrUsername, password string) (any, string, error) {
-	theUser, err := user.FindOne(ctx, emailOrUsername)
+	theUser, err := user.SigninFind(ctx, emailOrUsername)
 	if err != nil {
 		return nil, "", err
 	}
