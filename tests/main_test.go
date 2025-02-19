@@ -14,6 +14,7 @@ import (
 )
 
 const HOST_URL string = "http://localhost:8000"
+const WSHOST_URL string = "ws://localhost:8000"
 
 var dbDriver neo4j.DriverWithContext
 

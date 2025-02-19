@@ -13,6 +13,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+const userWSPath = WSHOST_URL + "/api/app/user/go_online"
+
 func Test(t *testing.T) {
 	// t.Parallel()
 
@@ -123,7 +125,7 @@ func Test(t *testing.T) {
 	t.Run("bring user1 online", func(t *testing.T) {
 		header := http.Header{}
 		header.Set("Cookie", accounts["user1"]["user_session_cookie"].(string))
-		user1wsConn, user1res, user1err = websocket.DefaultDialer.Dial(userPath+"/go_online", header)
+		user1wsConn, user1res, user1err = websocket.DefaultDialer.Dial(userWSPath, header)
 
 		require.NoError(t, user1err)
 		require.Equal(t, http.StatusOK, user1res.StatusCode)
@@ -132,7 +134,7 @@ func Test(t *testing.T) {
 	t.Run("bring user2 online", func(t *testing.T) {
 		header := http.Header{}
 		header.Set("Cookie", accounts["user2"]["user_session_cookie"].(string))
-		user2wsConn, user2res, user2err = websocket.DefaultDialer.Dial(userPath+"/go_online", header)
+		user2wsConn, user2res, user2err = websocket.DefaultDialer.Dial(userWSPath, header)
 
 		require.NoError(t, user2err)
 		require.Equal(t, http.StatusOK, user2res.StatusCode)
