@@ -26,7 +26,7 @@ var OpenWSStream = websocket.New(func(c *websocket.Conn) {
 
 	userService.GoOnline(ctx, clientUser.Username)
 
-	r := messageBrokerService.ConsumeTopic(fmt.Sprintf("i9chat-user-%s-topic", clientUser.Username))
+	r := messageBrokerService.ConsumeTopic(fmt.Sprintf("user-%s-topic", clientUser.Username))
 
 	goOff := func() {
 		if err := r.Close(); err != nil {
@@ -58,13 +58,6 @@ var OpenWSStream = websocket.New(func(c *websocket.Conn) {
 	}
 })
 
-// Events
-//   - new dm chat message
-//   - dm chat message delivered ack
-//   - dm chat message read ack
-//   - new group chat message
-//   - group chat message delivered ack
-//   - group chat message read ack
 func clientEventStream(c *websocket.Conn, ctx context.Context, clientUser appTypes.ClientUser, goOff func()) {
 
 	var w_err error

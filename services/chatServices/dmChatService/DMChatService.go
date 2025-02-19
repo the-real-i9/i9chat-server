@@ -35,7 +35,7 @@ func SendMessage(ctx context.Context, clientUsername, partnerUsername string, ms
 	})
 
 	clientResp := map[string]any{
-		"event":   "server response",
+		"event":   "server reply",
 		"toEvent": "new dm chat message",
 		"data":    newMessage.ClientData,
 	}

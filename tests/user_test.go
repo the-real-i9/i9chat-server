@@ -14,7 +14,7 @@ import (
 
 const userPath = HOST_URL + "/api/app/user"
 
-func TestUserRoutes(t *testing.T) {
+func TestUserOps(t *testing.T) {
 	// t.Parallel()
 
 	accounts := map[string]map[string]any{

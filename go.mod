@@ -6,6 +6,7 @@ toolchain go1.23.5
 
 require (
 	cloud.google.com/go/storage v1.39.1
+	github.com/fasthttp/websocket v1.5.7
 	github.com/gabriel-vasile/mimetype v1.4.7
 	github.com/go-ozzo/ozzo-validation/v4 v4.3.0
 	github.com/gofiber/contrib/websocket v1.3.0
@@ -29,7 +30,6 @@ require (
 	github.com/andybalholm/brotli v1.1.0 // indirect
 	github.com/asaskevich/govalidator v0.0.0-20200108200545-475eaeb16496 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
-	github.com/fasthttp/websocket v1.5.7 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
 	github.com/go-logr/logr v1.4.1 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
