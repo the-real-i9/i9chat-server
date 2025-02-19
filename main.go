@@ -4,7 +4,6 @@ import (
 	"i9chat/initializers"
 	"i9chat/middlewares"
 	"i9chat/routes/authRoutes"
-	"i9chat/routes/chatRoutes/dmChatRoutes"
 	"i9chat/routes/chatRoutes/groupChatRoutes"
 	"i9chat/routes/userRoutes"
 	"log"
@@ -35,7 +34,6 @@ func main() {
 
 	app.Route("/api/app/user", userRoutes.Init)
 
-	app.Route("/api/app/dm_chat", dmChatRoutes.Init)
 	app.Route("/api/app/group_chat", groupChatRoutes.Init)
 
 	var PORT string

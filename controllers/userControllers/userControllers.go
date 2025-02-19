@@ -90,56 +90,76 @@ func clientEventStream(c *websocket.Conn, ctx context.Context, clientUser appTyp
 
 		switch body.Event {
 		case "new dm chat message":
-			respData, err := newDMChatMsgEvHd(ctx, clientUser.Username, body.Data)
+			respData, err := newDMChatMsgHndl(ctx, clientUser.Username, body.Data)
 			if err != nil {
 				w_err = c.WriteJSON(helpers.WSErrResp(err, body.Event))
 				continue
 			}
 			c.WriteJSON(respData)
-		case "dm chat message delivered ack":
+		case "ack dm chat message delivered":
 
-			err := dmChatMsgDeliveredAckEvHd(ctx, clientUser.Username, body.Data)
+			err := ackDMChatMsgDeliveredHndl(ctx, clientUser.Username, body.Data)
+			if err != nil {
+				w_err = c.WriteJSON(helpers.WSErrResp(err, body.Event))
+				continue
+			}
+		case "ack dm chat message read":
+
+			err := ackDMChatMsgReadHndl(ctx, clientUser.Username, body.Data)
 			if err != nil {
 				w_err = c.WriteJSON(helpers.WSErrResp(err, body.Event))
 				continue
 			}
 
-		case "dm chat message read ack":
+		case "get dm chat history":
 
-			err := dmChatMsgReadAckEvHd(ctx, clientUser.Username, body.Data)
+			respData, err := getDMChatHistoryHndl(ctx, clientUser.Username, body.Data)
 			if err != nil {
 				w_err = c.WriteJSON(helpers.WSErrResp(err, body.Event))
 				continue
 			}
-
+			c.WriteJSON(respData)
 		case "new group chat message":
-			respData, err := newGroupChatMsgEvHd(ctx, clientUser.Username, body.Data)
+
+			respData, err := newGroupChatMsgHndl(ctx, clientUser.Username, body.Data)
 			if err != nil {
 				w_err = c.WriteJSON(helpers.WSErrResp(err, body.Event))
 				continue
 			}
 			c.WriteJSON(respData)
-		case "group chat message delivered ack":
-			err := groupChatMsgDeliveredAckEvHd(ctx, clientUser.Username, body.Data)
+		case "ack group chat message delivered":
+
+			err := ackGroupChatMsgDeliveredHndl(ctx, clientUser.Username, body.Data)
 			if err != nil {
 				w_err = c.WriteJSON(helpers.WSErrResp(err, body.Event))
 				continue
 			}
-		case "group chat message read ack":
-			err := groupChatMsgReadAckEvHd(ctx, clientUser.Username, body.Data)
+		case "ack group chat message read":
+
+			err := ackGroupChatMsgReadHndl(ctx, clientUser.Username, body.Data)
 			if err != nil {
 				w_err = c.WriteJSON(helpers.WSErrResp(err, body.Event))
 				continue
 			}
-		case "group info":
-			respData, err := groupInfoEvHd(ctx, body.Data)
+		case "get group chat history":
+
+			respData, err := getGroupChatHistoryHndl(ctx, clientUser.Username, body.Data)
 			if err != nil {
 				w_err = c.WriteJSON(helpers.WSErrResp(err, body.Event))
 				continue
 			}
 			c.WriteJSON(respData)
-		case "group membership info":
-			respData, err := groupMemInfoEvHd(ctx, clientUser.Username, body.Data)
+		case "get group info":
+
+			respData, err := getGroupInfoHndl(ctx, body.Data)
+			if err != nil {
+				w_err = c.WriteJSON(helpers.WSErrResp(err, body.Event))
+				continue
+			}
+			c.WriteJSON(respData)
+		case "get group membership info":
+
+			respData, err := getGroupMemInfoHndl(ctx, clientUser.Username, body.Data)
 			if err != nil {
 				w_err = c.WriteJSON(helpers.WSErrResp(err, body.Event))
 				continue

@@ -41,34 +41,6 @@ func CreateNewGroupChat(c *fiber.Ctx) error {
 	return c.JSON(respData)
 }
 
-func GetChatHistory(c *fiber.Ctx) error {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	clientUser := c.Locals("user").(appTypes.ClientUser)
-
-	groupId := c.Params("group_id")
-
-	var query getChatHistoryQuery
-
-	query_err := c.QueryParser(&query)
-	if query_err != nil {
-		return query_err
-	}
-
-	if val_err := query.Validate(); val_err != nil {
-		return val_err
-	}
-
-	respData, app_err := groupChatService.GetChatHistory(ctx, clientUser.Username, groupId, query.Limit, query.Offset)
-	if app_err != nil {
-		return app_err
-	}
-
-	return c.JSON(respData)
-
-}
-
 func ExecuteAction(c *fiber.Ctx) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()

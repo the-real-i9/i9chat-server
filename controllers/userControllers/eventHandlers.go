@@ -7,98 +7,122 @@ import (
 	"i9chat/services/chatServices/groupChatService"
 )
 
-func newDMChatMsgEvHd(ctx context.Context, clientUsername string, eventData map[string]any) (map[string]any, error) {
-	var body newDMChatMsg
+func newDMChatMsgHndl(ctx context.Context, clientUsername string, eventData map[string]any) (map[string]any, error) {
+	var evd newDMChatMsg
 
-	helpers.MapToStruct(eventData, &body)
+	helpers.MapToStruct(eventData, &evd)
 
-	if val_err := body.Validate(); val_err != nil {
+	if val_err := evd.Validate(); val_err != nil {
 		return nil, val_err
 	}
 
-	return dmChatService.SendMessage(ctx, clientUsername, body.PartnerUsername, body.Msg, body.CreatedAt)
+	return dmChatService.SendMessage(ctx, clientUsername, evd.PartnerUsername, evd.Msg, evd.CreatedAt)
 }
 
-func dmChatMsgDeliveredAckEvHd(ctx context.Context, clientUsername string, eventData map[string]any) error {
-	var body dmChatMsgAck
+func ackDMChatMsgDeliveredHndl(ctx context.Context, clientUsername string, eventData map[string]any) error {
+	var evd dmChatMsgAck
 
-	helpers.MapToStruct(eventData, &body)
+	helpers.MapToStruct(eventData, &evd)
 
-	if val_err := body.Validate(); val_err != nil {
+	if val_err := evd.Validate(); val_err != nil {
 		return val_err
 	}
 
-	return dmChatService.AckMessageDelivered(ctx, clientUsername, body.PartnerUsername, body.MsgId, body.At)
+	return dmChatService.AckMessageDelivered(ctx, clientUsername, evd.PartnerUsername, evd.MsgId, evd.At)
 }
 
-func dmChatMsgReadAckEvHd(ctx context.Context, clientUsername string, eventData map[string]any) error {
-	var body dmChatMsgAck
+func ackDMChatMsgReadHndl(ctx context.Context, clientUsername string, eventData map[string]any) error {
+	var evd dmChatMsgAck
 
-	helpers.MapToStruct(eventData, &body)
+	helpers.MapToStruct(eventData, &evd)
 
-	if val_err := body.Validate(); val_err != nil {
+	if val_err := evd.Validate(); val_err != nil {
 		return val_err
 	}
 
-	return dmChatService.AckMessageRead(ctx, clientUsername, body.PartnerUsername, body.MsgId, body.At)
+	return dmChatService.AckMessageRead(ctx, clientUsername, evd.PartnerUsername, evd.MsgId, evd.At)
 }
 
-func newGroupChatMsgEvHd(ctx context.Context, clientUsername string, eventData map[string]any) (map[string]any, error) {
-	var body newGroupChatMsg
+func newGroupChatMsgHndl(ctx context.Context, clientUsername string, eventData map[string]any) (map[string]any, error) {
+	var evd newGroupChatMsg
 
-	helpers.MapToStruct(eventData, &body)
+	helpers.MapToStruct(eventData, &evd)
 
-	if val_err := body.Validate(); val_err != nil {
+	if val_err := evd.Validate(); val_err != nil {
 		return nil, val_err
 	}
 
-	return groupChatService.SendMessage(ctx, clientUsername, body.GroupId, body.Msg, body.CreatedAt)
+	return groupChatService.SendMessage(ctx, clientUsername, evd.GroupId, evd.Msg, evd.CreatedAt)
 }
 
-func groupChatMsgDeliveredAckEvHd(ctx context.Context, clientUsername string, eventData map[string]any) error {
-	var body groupChatMsgAck
+func ackGroupChatMsgDeliveredHndl(ctx context.Context, clientUsername string, eventData map[string]any) error {
+	var evd groupChatMsgAck
 
-	helpers.MapToStruct(eventData, &body)
+	helpers.MapToStruct(eventData, &evd)
 
-	if val_err := body.Validate(); val_err != nil {
+	if val_err := evd.Validate(); val_err != nil {
 		return val_err
 	}
 
-	return groupChatService.AckMessageDelivered(ctx, clientUsername, body.GroupId, body.MsgId, body.At)
+	return groupChatService.AckMessageDelivered(ctx, clientUsername, evd.GroupId, evd.MsgId, evd.At)
 }
 
-func groupChatMsgReadAckEvHd(ctx context.Context, clientUsername string, eventData map[string]any) error {
-	var body groupChatMsgAck
+func ackGroupChatMsgReadHndl(ctx context.Context, clientUsername string, eventData map[string]any) error {
+	var evd groupChatMsgAck
 
-	helpers.MapToStruct(eventData, &body)
+	helpers.MapToStruct(eventData, &evd)
 
-	if val_err := body.Validate(); val_err != nil {
+	if val_err := evd.Validate(); val_err != nil {
 		return val_err
 	}
 
-	return groupChatService.AckMessageRead(ctx, clientUsername, body.GroupId, body.MsgId, body.At)
+	return groupChatService.AckMessageRead(ctx, clientUsername, evd.GroupId, evd.MsgId, evd.At)
 }
 
-func groupInfoEvHd(ctx context.Context, eventData map[string]any) (map[string]any, error) {
-	var body groupInfo
+func getGroupInfoHndl(ctx context.Context, eventData map[string]any) (map[string]any, error) {
+	var evd groupInfo
 
-	helpers.MapToStruct(eventData, &body)
+	helpers.MapToStruct(eventData, &evd)
 
-	if val_err := body.Validate(); val_err != nil {
+	if val_err := evd.Validate(); val_err != nil {
 		return nil, val_err
 	}
 
-	return groupChatService.GetGroupInfo(ctx, body.GroupId)
+	return groupChatService.GetGroupInfo(ctx, evd.GroupId)
 }
 
-func groupMemInfoEvHd(ctx context.Context, clientUsername string, eventData map[string]any) (map[string]any, error) {
-	var body groupMemInfo
+func getGroupMemInfoHndl(ctx context.Context, clientUsername string, eventData map[string]any) (map[string]any, error) {
+	var evd groupMemInfo
 
-	helpers.MapToStruct(eventData, &body)
+	helpers.MapToStruct(eventData, &evd)
 
-	if val_err := body.Validate(); val_err != nil {
+	if val_err := evd.Validate(); val_err != nil {
 		return nil, val_err
 	}
 
-	return groupChatService.GetGroupMemInfo(ctx, clientUsername, body.GroupId)
+	return groupChatService.GetGroupMemInfo(ctx, clientUsername, evd.GroupId)
+}
+
+func getDMChatHistoryHndl(ctx context.Context, clientUsername string, eventData map[string]any) ([]any, error) {
+	var evd dmChatHistory
+
+	helpers.MapToStruct(eventData, &evd)
+
+	if val_err := evd.Validate(); val_err != nil {
+		return nil, val_err
+	}
+
+	return dmChatService.GetChatHistory(ctx, clientUsername, evd.PartnerUsername, evd.Limit, evd.Offset)
+}
+
+func getGroupChatHistoryHndl(ctx context.Context, clientUsername string, eventData map[string]any) (any, error) {
+	var evd groupChatHistory
+
+	helpers.MapToStruct(eventData, &evd)
+
+	if val_err := evd.Validate(); val_err != nil {
+		return nil, val_err
+	}
+
+	return groupChatService.GetChatHistory(ctx, clientUsername, evd.GroupId, evd.Limit, evd.Offset)
 }

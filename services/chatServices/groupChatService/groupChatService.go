@@ -28,7 +28,7 @@ func NewGroupChat(ctx context.Context, clientUsername, name, description string,
 	return newGroupChat.ClientData, nil
 }
 
-func GetChatHistory(ctx context.Context, clientUsername, groupId string, limit int, offset time.Time) ([]groupChat.HistoryItem, error) {
+func GetChatHistory(ctx context.Context, clientUsername, groupId string, limit int, offset time.Time) (any, error) {
 	return groupChat.GetChatHistory(ctx, clientUsername, groupId, limit, offset)
 }
 

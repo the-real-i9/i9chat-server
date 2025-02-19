@@ -12,7 +12,7 @@ import (
 
 const signupPath = HOST_URL + "/api/auth/signup"
 const signinPath = HOST_URL + "/api/auth/signin"
-const signoutPath = HOST_URL + "/api/app/user/signout"
+const signoutPath = userPath + "/signout"
 
 func TestUserAuth(t *testing.T) {
 	// t.Parallel()
