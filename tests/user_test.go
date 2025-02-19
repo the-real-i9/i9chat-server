@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 const userPath = HOST_URL + "/api/app/user"
@@ -55,40 +55,38 @@ func TestUserOps(t *testing.T) {
 		for user, info := range accounts {
 			t.Run("step one: request new account", func(t *testing.T) {
 				reqBody, err := reqBody(map[string]any{"email": info["email"]})
-				assert.NoError(t, err)
+				require.NoError(t, err)
 
 				res, err := http.Post(signupPath+"/request_new_account", "application/json", reqBody)
-				assert.NoError(t, err)
+				require.NoError(t, err)
 
-				if !assert.Equal(t, http.StatusOK, res.StatusCode) {
-					bd, err := resBody(res.Body)
-					assert.NoError(t, err)
-					t.Logf("%s", bd)
-				}
+				require.Equal(t, http.StatusOK, res.StatusCode)
+				bd, err := resBody(res.Body)
+				require.NoError(t, err)
+				require.NotEmpty(t, bd)
 
 				accounts[user]["signup_session_cookie"] = res.Header.Get("Set-Cookie")
 			})
 
 			t.Run("step two: verify email", func(t *testing.T) {
 				verfCode, err := strconv.Atoi(os.Getenv("DUMMY_VERF_TOKEN"))
-				assert.NoError(t, err)
+				require.NoError(t, err)
 
 				reqBody, err := reqBody(map[string]any{"code": verfCode})
-				assert.NoError(t, err)
+				require.NoError(t, err)
 
 				req, err := http.NewRequest("POST", signupPath+"/verify_email", reqBody)
-				assert.NoError(t, err)
+				require.NoError(t, err)
 				req.Header.Set("Cookie", accounts[user]["signup_session_cookie"].(string))
 				req.Header.Add("Content-Type", "application/json")
 
 				res, err := http.DefaultClient.Do(req)
-				assert.NoError(t, err)
+				require.NoError(t, err)
 
-				if !assert.Equal(t, http.StatusOK, res.StatusCode) {
-					bd, err := resBody(res.Body)
-					assert.NoError(t, err)
-					t.Logf("%s", bd)
-				}
+				require.Equal(t, http.StatusOK, res.StatusCode)
+				bd, err := resBody(res.Body)
+				require.NoError(t, err)
+				require.NotEmpty(t, bd)
 			})
 
 			t.Run("step three: register user", func(t *testing.T) {
@@ -98,21 +96,20 @@ func TestUserOps(t *testing.T) {
 					"phone":       info["phone"],
 					"geolocation": info["geolocation"],
 				})
-				assert.NoError(t, err)
+				require.NoError(t, err)
 
 				req, err := http.NewRequest("POST", signupPath+"/register_user", reqBody)
-				assert.NoError(t, err)
+				require.NoError(t, err)
 				req.Header.Add("Content-Type", "application/json")
 				req.Header.Set("Cookie", accounts[user]["signup_session_cookie"].(string))
 
 				res, err := http.DefaultClient.Do(req)
-				assert.NoError(t, err)
+				require.NoError(t, err)
 
-				if !assert.Equal(t, http.StatusOK, res.StatusCode) {
-					bd, err := resBody(res.Body)
-					assert.NoError(t, err)
-					t.Logf("%s", bd)
-				}
+				require.Equal(t, http.StatusOK, res.StatusCode)
+				bd, err := resBody(res.Body)
+				require.NoError(t, err)
+				require.NotEmpty(t, bd)
 
 				accounts[user]["user_session_cookie"] = res.Header.Get("Set-Cookie")
 
@@ -127,111 +124,109 @@ func TestUserOps(t *testing.T) {
 
 	t.Run("change user1's phone number", func(t *testing.T) {
 		reqBody, err := reqBody(map[string]any{"newPhoneNumber": "07083249523"})
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		req, err := http.NewRequest("POST", userPath+"/change_phone_number", reqBody)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		req.Header.Set("Cookie", accounts["user1"]["user_session_cookie"].(string))
 		req.Header.Add("Content-Type", "application/json")
 
 		res, err := http.DefaultClient.Do(req)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
-		if !assert.Equal(t, http.StatusOK, res.StatusCode) {
-			bd, err := resBody(res.Body)
-			assert.NoError(t, err)
-			t.Logf("%s", bd)
-		}
+		require.Equal(t, http.StatusOK, res.StatusCode)
+		bd, err := resBody(res.Body)
+		require.NoError(t, err)
+		require.NotEmpty(t, bd)
 	})
 
 	t.Run("confirm user1's updated profile", func(t *testing.T) {
 		req, err := http.NewRequest("GET", userPath+"/my_profile", nil)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		req.Header.Set("Cookie", accounts["user1"]["user_session_cookie"].(string))
 
 		res, err := http.DefaultClient.Do(req)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
-		assert.Equal(t, http.StatusOK, res.StatusCode)
+		require.Equal(t, http.StatusOK, res.StatusCode)
 
 		bd, err := resBody(res.Body)
-		assert.NoError(t, err)
-		assert.NotEmpty(t, bd)
+		require.NoError(t, err)
+		require.NotEmpty(t, bd)
 
 		var data map[string]any
 
-		assert.NoError(t, json.Unmarshal(bd, &data))
+		require.NoError(t, json.Unmarshal(bd, &data))
 
 		maps.Copy(accounts["user1"], data)
 
-		assert.Equal(t, accounts["user1"]["phone"], "07083249523")
+		require.Equal(t, accounts["user1"]["phone"], "07083249523")
 	})
 
 	t.Run("change user2's geolocation", func(t *testing.T) {
 		reqBody, err := reqBody(map[string]any{"newGeolocation": map[string]any{"x": 3.0, "y": 3.0}})
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		req, err := http.NewRequest("POST", userPath+"/update_geolocation", reqBody)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		req.Header.Set("Cookie", accounts["user2"]["user_session_cookie"].(string))
 		req.Header.Add("Content-Type", "application/json")
 
 		res, err := http.DefaultClient.Do(req)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
-		if !assert.Equal(t, http.StatusOK, res.StatusCode) {
-			bd, err := resBody(res.Body)
-			assert.NoError(t, err)
-			t.Logf("%s", bd)
-		}
+		require.Equal(t, http.StatusOK, res.StatusCode)
+		bd, err := resBody(res.Body)
+		require.NoError(t, err)
+		require.NotEmpty(t, bd)
 	})
 
 	t.Run("confirm user2's updated profile", func(t *testing.T) {
 		username := accounts["user2"]["username"].(string)
 
 		req, err := http.NewRequest("GET", userPath+"/find_user?emailUsernamePhone="+username, nil)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		req.Header.Set("Cookie", accounts["user2"]["user_session_cookie"].(string))
 
 		res, err := http.DefaultClient.Do(req)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
-		assert.Equal(t, http.StatusOK, res.StatusCode)
+		require.Equal(t, http.StatusOK, res.StatusCode)
 
 		bd, err := resBody(res.Body)
-		assert.NoError(t, err)
-		assert.NotEmpty(t, bd)
+		require.NoError(t, err)
+		require.NotEmpty(t, bd)
 
 		var data map[string]any
 
-		assert.NoError(t, json.Unmarshal(bd, &data))
+		require.NoError(t, json.Unmarshal(bd, &data))
 
 		maps.Copy(accounts["user2"], data)
 
-		assert.Equal(t, accounts["user2"]["geolocation"], map[string]any{"x": 3.0, "y": 3.0})
+		require.Equal(t, accounts["user2"]["geolocation"], map[string]any{"x": 3.0, "y": 3.0})
 	})
 
 	t.Run("find nearby users", func(t *testing.T) {
 		x, y, radius := 2.0, 2.0, 10.0
 
 		req, err := http.NewRequest("GET", fmt.Sprintf("%s%s?x=%f&y=%f&radius=%f", userPath, "/find_nearby_users", x, y, radius), nil)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		req.Header.Set("Cookie", accounts["user1"]["user_session_cookie"].(string))
 
 		res, err := http.DefaultClient.Do(req)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
-		assert.Equal(t, http.StatusOK, res.StatusCode)
+		require.Equal(t, http.StatusOK, res.StatusCode)
 
 		bd, err := resBody(res.Body)
-		assert.NoError(t, err)
-		assert.NotEmpty(t, bd)
+		require.NoError(t, err)
+		require.NotEmpty(t, bd)
 
 		var data []any
 
-		assert.NoError(t, json.Unmarshal(bd, &data))
+		require.NoError(t, json.Unmarshal(bd, &data))
 
-		assert.NotEmpty(t, data)
+		require.NotEmpty(t, data)
 	})
 
 	// cleanUpDB()

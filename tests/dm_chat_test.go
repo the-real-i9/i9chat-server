@@ -55,7 +55,7 @@ func Test(t *testing.T) {
 
 				bd, err := resBody(res.Body)
 				require.NoError(t, err)
-				t.Logf("%s", bd)
+				require.NotEmpty(t, bd)
 
 				accounts[user]["signup_session_cookie"] = res.Header.Get("Set-Cookie")
 			})
@@ -79,7 +79,7 @@ func Test(t *testing.T) {
 
 				bd, err := resBody(res.Body)
 				require.NoError(t, err)
-				t.Logf("%s", bd)
+				require.NotEmpty(t, bd)
 			})
 
 			t.Run("step three: register user", func(t *testing.T) {
@@ -103,7 +103,7 @@ func Test(t *testing.T) {
 
 				bd, err := resBody(res.Body)
 				require.NoError(t, err)
-				t.Logf("%s", bd)
+				require.NotEmpty(t, bd)
 
 				accounts[user]["user_session_cookie"] = res.Header.Get("Set-Cookie")
 
@@ -128,7 +128,7 @@ func Test(t *testing.T) {
 		user1wsConn, user1res, user1err = websocket.DefaultDialer.Dial(userWSPath, header)
 
 		require.NoError(t, user1err)
-		require.Equal(t, http.StatusOK, user1res.StatusCode)
+		require.Equal(t, http.StatusSwitchingProtocols, user1res.StatusCode)
 	})
 
 	t.Run("bring user2 online", func(t *testing.T) {
@@ -137,7 +137,7 @@ func Test(t *testing.T) {
 		user2wsConn, user2res, user2err = websocket.DefaultDialer.Dial(userWSPath, header)
 
 		require.NoError(t, user2err)
-		require.Equal(t, http.StatusOK, user2res.StatusCode)
+		require.Equal(t, http.StatusSwitchingProtocols, user2res.StatusCode)
 	})
 
 	t.Run("confirm user1 is online", func(t *testing.T) {
