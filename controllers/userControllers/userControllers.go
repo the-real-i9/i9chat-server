@@ -27,21 +27,20 @@ var OpenWSStream = websocket.New(func(c *websocket.Conn) {
 
 	r := messageBrokerService.ConsumeTopic(fmt.Sprintf("user-%s-topic", clientUser.Username))
 
-	goOff := func() {
+	closeStream := func() {
 		if err := r.Close(); err != nil {
 			log.Println("failed to close reader:", err)
 		}
-		userService.GoOffline(ctx, clientUser.Username)
 	}
 
-	go clientEventStream(c, ctx, clientUser, goOff)
+	go clientToServerStream(c, ctx, clientUser, closeStream)
 
+	// serverToClientStream
 	for {
-		m, err := r.FetchMessage(ctx)
+		m, err := r.ReadMessage(ctx)
 		if err != nil {
 			if !errors.Is(err, io.EOF) {
-				log.Println(err)
-				goOff()
+				log.Println("userControllers.go: OpenWSStream: r.ReadMessage:", err)
 			}
 			break
 		}
@@ -50,14 +49,12 @@ var OpenWSStream = websocket.New(func(c *websocket.Conn) {
 		json.Unmarshal(m.Value, &msg)
 
 		c.WriteJSON(msg)
-
-		if err := r.CommitMessages(ctx, m); err != nil {
-			log.Println("failed to commit messages:", err)
-		}
 	}
+
+	userService.GoOffline(ctx, clientUser.Username)
 })
 
-func clientEventStream(c *websocket.Conn, ctx context.Context, clientUser appTypes.ClientUser, goOff func()) {
+func clientToServerStream(c *websocket.Conn, ctx context.Context, clientUser appTypes.ClientUser, closeStream func()) {
 
 	var w_err error
 
@@ -158,10 +155,12 @@ func clientEventStream(c *websocket.Conn, ctx context.Context, clientUser appTyp
 			}
 			c.WriteJSON(respData)
 		default:
+			w_err = c.WriteJSON(helpers.WSErrResp(fmt.Errorf("invalid event"), body.Event))
+			continue
 		}
 	}
 
-	goOff()
+	closeStream()
 }
 
 func ChangeProfilePicture(c *fiber.Ctx) error {

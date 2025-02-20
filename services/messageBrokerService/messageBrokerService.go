@@ -7,7 +7,6 @@ import (
 	"i9chat/appGlobals"
 	"log"
 	"os"
-	"time"
 
 	"github.com/segmentio/kafka-go"
 )
@@ -34,9 +33,9 @@ func Send(topic string, message Message) {
 
 func ConsumeTopic(topic string) *kafka.Reader {
 	return kafka.NewReader(kafka.ReaderConfig{
-		Brokers:        []string{os.Getenv("KAFKA_BROKER_ADDRESS")},
-		Topic:          "i9chat-" + topic,
-		GroupID:        "i9chat-topics",
-		CommitInterval: time.Second,
+		Brokers: []string{os.Getenv("KAFKA_BROKER_ADDRESS")},
+		Topic:   "i9chat-" + topic,
+		GroupID: "i9chat-topics",
+		// CommitInterval: time.Second,
 	})
 }

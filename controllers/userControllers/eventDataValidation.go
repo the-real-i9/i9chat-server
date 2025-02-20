@@ -16,21 +16,7 @@ type clientEventBody struct {
 
 func (b clientEventBody) Validate() error {
 	err := validation.ValidateStruct(&b,
-		validation.Field(&b.Event,
-			validation.Required,
-			validation.In(
-				"new dm chat message",
-				"ack dm chat message delivered",
-				"ack dm chat message read",
-				"get dm chat history",
-				"new group chat message",
-				"ack group chat message delivered",
-				"ack group chat message read",
-				"get group chat history",
-				"get group info",
-				"get group membership info",
-			).Error("invalid event"),
-		),
+		validation.Field(&b.Event, validation.Required),
 		validation.Field(&b.Data, validation.Required),
 	)
 

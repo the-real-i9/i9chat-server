@@ -16,29 +16,29 @@ import (
 const HOST_URL string = "http://localhost:8000"
 const WSHOST_URL string = "ws://localhost:8000"
 
-var dbDriver neo4j.DriverWithContext
+// var dbDriver neo4j.DriverWithContext
 
 func TestMain(m *testing.M) {
-	driver, err := neo4j.NewDriverWithContext(os.Getenv("NEO4J_URL"), neo4j.BasicAuth(os.Getenv("NEO4J_USER"), os.Getenv("NEO4J_PASSWORD"), ""))
+	dbDriver, err := neo4j.NewDriverWithContext(os.Getenv("NEO4J_URL"), neo4j.BasicAuth(os.Getenv("NEO4J_USER"), os.Getenv("NEO4J_PASSWORD"), ""))
 	if err != nil {
 		log.Fatalln(err)
 	}
-
-	dbDriver = driver
 
 	ctx := context.Background()
 
 	defer dbDriver.Close(ctx)
 
-	c := m.Run()
+	neo4j.ExecuteQuery(ctx, dbDriver, `MATCH (n) DETACH DELETE n`, nil, neo4j.EagerResultTransformer)
 
 	cleanUpDB()
+
+	c := m.Run()
 
 	os.Exit(c)
 }
 
 func cleanUpDB() {
-	neo4j.ExecuteQuery(context.Background(), dbDriver, `MATCH (n) DETACH DELETE n`, nil, neo4j.EagerResultTransformer)
+
 }
 
 func reqBody(data map[string]any) (io.Reader, error) {

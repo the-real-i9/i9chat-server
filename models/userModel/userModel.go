@@ -2,6 +2,7 @@ package user
 
 import (
 	"context"
+	"fmt"
 	"i9chat/appTypes"
 	"i9chat/helpers"
 	"i9chat/models/db"
@@ -264,16 +265,22 @@ func ChangePhone(ctx context.Context, clientUsername, newPhone string) error {
 	return nil
 }
 
-func ChangePresence(ctx context.Context, clientUsername, presence string, lastSeen time.Time) []any {
+func ChangePresence(ctx context.Context, clientUsername, presence string, lastSeen time.Time) ([]any, error) {
+	var lastSeenVal string
+	if presence == "online" {
+		lastSeenVal = "null"
+	} else {
+		lastSeenVal = "$last_seen"
+	}
 	res, err := db.Query(ctx,
-		`
+		fmt.Sprintf(`
 		MATCH (user:User{ username: $client_username })
-		SET user.presence = $presence, user.last_seen = $last_seen
+		SET user.presence = $presence, user.last_seen = %s
 
 		WITH user
 		OPTIONAL MATCH (user)-[:HAS_DM_CHAT]->()-[:WITH_USER]->(partnerUser)
 		RETURN collect(partnerUser.username) AS partner_usernames
-		`,
+		`, lastSeenVal),
 		map[string]any{
 			"client_username": clientUsername,
 			"presence":        presence,
@@ -282,11 +289,12 @@ func ChangePresence(ctx context.Context, clientUsername, presence string, lastSe
 	)
 	if err != nil {
 		log.Println("userModel.go: ChangePresence:", err)
+		return nil, err
 	}
 
 	pus, _, _ := neo4j.GetRecordValue[[]any](res.Records[0], "partner_usernames")
 
-	return pus
+	return pus, nil
 }
 
 func UpdateLocation(ctx context.Context, clientUsername string, newGeolocation appTypes.UserGeolocation) error {

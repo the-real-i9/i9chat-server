@@ -227,6 +227,8 @@ func Test(t *testing.T) {
 		var user2NewMsgReceipt map[string]any
 
 		require.NoError(t, user2wsConn.ReadJSON(&user2NewMsgReceipt))
+		require.Contains(t, user2NewMsgReceipt, "event")
+		require.Equal(t, user2NewMsgReceipt["event"], "new dm chat message")
 		require.Contains(t, user2NewMsgReceipt["data"], "id")
 		require.Contains(t, user2NewMsgReceipt["data"], "content")
 

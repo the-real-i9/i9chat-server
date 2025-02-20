@@ -13,9 +13,12 @@ import (
 )
 
 func GoOnline(ctx context.Context, clientUsername string) {
-	go func() {
-		dmPartners := user.ChangePresence(ctx, clientUsername, "online", time.Time{}.UTC())
+	dmPartners, err := user.ChangePresence(ctx, clientUsername, "online", time.Time{}.UTC())
+	if err != nil {
+		return
+	}
 
+	go func(dmPartners []any) {
 		for _, dmp := range dmPartners {
 			messageBrokerService.Send(fmt.Sprintf("user-%s-topic", dmp), messageBrokerService.Message{
 				Event: "user online",
@@ -24,16 +27,19 @@ func GoOnline(ctx context.Context, clientUsername string) {
 				},
 			})
 		}
-	}()
+	}(dmPartners)
 
 }
 
 func GoOffline(ctx context.Context, clientUsername string) {
 	lastSeen := time.Now().UTC()
 
-	go func() {
-		dmPartners := user.ChangePresence(ctx, clientUsername, "offline", lastSeen)
+	dmPartners, err := user.ChangePresence(ctx, clientUsername, "offline", lastSeen)
+	if err != nil {
+		return
+	}
 
+	go func(dmPartners []any) {
 		for _, dmp := range dmPartners {
 			messageBrokerService.Send(fmt.Sprintf("user-%s-topic", dmp), messageBrokerService.Message{
 				Event: "user offline",
@@ -43,7 +49,7 @@ func GoOffline(ctx context.Context, clientUsername string) {
 				},
 			})
 		}
-	}()
+	}(dmPartners)
 }
 
 func ChangeProfilePicture(ctx context.Context, clientUsername string, pictureData []byte) (any, error) {
