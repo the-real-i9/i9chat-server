@@ -13,12 +13,7 @@ jobs:
           - '7687:7687'
         env:
           NEO4J_AUTH: "neo4j/pa@sw$*d"
-
-      kafka:
-        image: apache/kafka:latest
-        ports:
-          - 9092:9092
-
+      
     strategy:
       matrix:
         go-version:
@@ -27,25 +22,11 @@ jobs:
       - name: Fetch Repository
         uses: actions/checkout@v4
 
-      - name: Install Kafka CLI
-        run: |
-          wget -qO- https://downloads.apache.org/kafka/3.6.0/kafka_2.13-3.6.0.tgz | tar xvz
-          mv kafka_2.13-3.6.0 /opt/kafka
-          echo "export PATH=/opt/kafka/bin:$PATH" >> $GITHUB_ENV
-
-      - name: Wait for Kafka to be ready
-        run: |
-          for i in {1..30}; do
-            nc -z localhost 9092 && echo "Kafka is up" && exit 0
-            echo "Waiting for Kafka..."
-            sleep 2
-          done
-          echo "Kafka did not start in time" && exit 1
-
-      - name: Create kafka topics
-        run: |
-          kafka-topics.sh --bootstrap-server localhost:9092 --create --topic i9chat-user-louislitt-topic;
-          kafka-topics.sh --bootstrap-server localhost:9092 --create --topic i9chat-user-jeffyboy-topic;
+      - name: Start kafka broker
+        uses: spicyparrot/kafka-kraft-action@v1.1.0
+        with:
+          kafka-version: "latest"
+          kafka-topics: ${{ secrets.KAFKA_TOPICS }}
 
       - name: Install Go
         uses: actions/setup-go@v5
@@ -61,7 +42,7 @@ jobs:
           NEO4J_URL: "neo4j://localhost"
           NEO4J_USER: neo4j
           NEO4J_PASSWORD: "pa@sw$*d"
-          KAFKA_BROKER_ADDRESS: "PLAINTEXT://localhost:9092"
+          KAFKA_BROKER_ADDRESS: "localhost:9092"
           AUTH_JWT_SECRET: ${{ secrets.AUTH_JWT_SECRET }}
           MAILING_EMAIL: ${{ secrets.MAILING_EMAIL }}
           MAILING_PASSWORD: ${{ secrets.MAILING_PASSWORD }}
