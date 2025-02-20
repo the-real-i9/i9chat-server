@@ -14,7 +14,7 @@ jobs:
         env:
           NEO4J_AUTH: "neo4j/pa@sw$*d"
 
-      kafka:
+      broker:
         image: apache/kafka:latest
         ports:
           - 9092:9092
