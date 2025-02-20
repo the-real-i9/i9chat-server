@@ -24,6 +24,7 @@ jobs:
         uses: spicyparrot/kafka-kraft-action@v1.1.0
         with:
           kafka-version: "3.7.0"
+          kafka-topics: "i9chat-user-jeffyboy-topic,i9chat-user-louislitt-topic"
       - name: Install Go
         uses: actions/setup-go@v5
         with:
