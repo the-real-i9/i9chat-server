@@ -12,7 +12,6 @@ import (
 	"i9chat/services/userService"
 	"io"
 	"log"
-	"time"
 
 	"github.com/gofiber/contrib/websocket"
 	"github.com/gofiber/fiber/v2"
@@ -32,7 +31,7 @@ var OpenWSStream = websocket.New(func(c *websocket.Conn) {
 		if err := r.Close(); err != nil {
 			log.Println("failed to close reader:", err)
 		}
-		userService.GoOffline(ctx, clientUser.Username, time.Now())
+		userService.GoOffline(ctx, clientUser.Username)
 	}
 
 	go clientEventStream(c, ctx, clientUser, goOff)

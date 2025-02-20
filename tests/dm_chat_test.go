@@ -211,7 +211,7 @@ func Test(t *testing.T) {
 						"textContent": "Hi. How're you doing?",
 					},
 				},
-				"createdAt": time.Now(),
+				"createdAt": time.Now().UTC(),
 			},
 		})
 		require.NoError(t, err)
@@ -230,7 +230,7 @@ func Test(t *testing.T) {
 		require.Contains(t, user2NewMsgReceipt["data"], "id")
 		require.Contains(t, user2NewMsgReceipt["data"], "content")
 
-		recvdMsgId := user1Reply["data"].(map[string]any)["id"].(string)
+		recvdMsgId := user2NewMsgReceipt["data"].(map[string]any)["id"].(string)
 
 		// user2 acknowledges message as 'delivered'
 		err = user2wsConn.WriteJSON(map[string]any{
@@ -238,7 +238,7 @@ func Test(t *testing.T) {
 			"data": map[string]any{
 				"partnerUsername": user1Username,
 				"msgId":           recvdMsgId,
-				"at":              time.Now(),
+				"at":              time.Now().UTC(),
 			},
 		})
 		require.NoError(t, err)

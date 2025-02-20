@@ -99,6 +99,8 @@ func ChangeName(ctx context.Context, groupId, clientUsername, newName string) (N
 
 			SET group.name = $new_name
 
+			WITH group, cligact, old_name
+
 			OPTIONAL MATCH (group)<-[:IS_MEMBER_OF]-(memberUser:User WHERE memberUser.username <> $client_username)
 
 			RETURN cligact.info AS client_resp, collect(memberUser.username) AS member_usernames, old_name
@@ -191,6 +193,8 @@ func ChangeDescription(ctx context.Context, groupId, clientUsername, newDescript
 
 			SET group.description = $new_description
 
+			WITH group, cligact, old_description
+
 			OPTIONAL MATCH (group)<-[:IS_MEMBER_OF]-(memberUser:User WHERE memberUser.username <> $client_username)
 
 			RETURN cligact.info AS client_resp, collect(memberUser.username) AS member_usernames, old_description
@@ -262,7 +266,7 @@ func ChangePicture(ctx context.Context, groupId, clientUsername, newPictureUrl s
 	var newActivity NewActivity
 
 	res, err := db.MultiQuery(ctx, func(tx neo4j.ManagedTransaction) (any, error) {
-		resMap := make(map[string]any, 4)
+		resMap := make(map[string]any, 3)
 
 		var (
 			res neo4j.ResultWithContext
@@ -281,9 +285,11 @@ func ChangePicture(ctx context.Context, groupId, clientUsername, newPictureUrl s
 
 			SET group.picture_url = $new_pic_url
 
+			WITH group, cligact
+
 			OPTIONAL MATCH (group)<-[:IS_MEMBER_OF]-(memberUser:User WHERE memberUser.username <> $client_username)
 
-			RETURN cligact.info AS client_resp, collect(memberUser.username) AS member_usernames, old_description
+			RETURN cligact.info AS client_resp, collect(memberUser.username) AS member_usernames
 			`,
 			map[string]any{
 				"client_username": clientUsername,
@@ -486,6 +492,8 @@ func RemoveUser(ctx context.Context, groupId, clientUsername, targetUser string)
 			CREATE (group)-[:REMOVED_USER]->(targetUser),
 				(targetUser)-[:RECEIVES_ACTIVITY]->(tugact:GroupActivity{ info: $client_username + " removed you", created_at: $at })-[:IN_GROUP_CHAT]-(targetUserChat)
 
+			WITH group, cligact, tugact
+
 			OPTIONAL MATCH (group)<-[:IS_MEMBER_OF]-(memberUser:User WHERE memberUser.username <> $client_username)
 
 			RETURN cligact.info AS client_resp, 
@@ -677,7 +685,9 @@ func Leave(ctx context.Context, groupId, clientUsername string) (NewActivity, er
 			CREATE (clientUser)-[:LEFT_GROUP]->(group),
 				(clientUser)-[:RECEIVES_ACTIVITY]->(cligact:GroupActivity{ info: "You left", created_at: $at })-[:IN_GROUP_CHAT]-(clientChat)
 
-			OPTIONAL MATCH (group)<-[:IS_MEMBER_OF]-(memberUser:User)
+			WITH group, cligact
+
+			OPTIONAL MATCH (group)<-[:IS_MEMBER_OF]-(memberUser)
 
 			RETURN cligact.info AS client_resp,
 				collect(memberUser.username) AS member_usernames
@@ -761,9 +771,8 @@ func MakeUserAdmin(ctx context.Context, groupId, clientUsername, targetUser stri
 				(clientUser)-[:IS_MEMBER_OF { role: "admin" }]->(group),
 				(group)<-[mem:IS_MEMBER_OF { role: "member" }]-(targetUser:User{ username: $target_user })
 
-			SET mem.role = "admin"
-
-			SET clientChat.last_activity_type = "group activity",
+			SET mem.role = "admin",
+				clientChat.last_activity_type = "group activity",
 				clientChat.last_group_activity_at = $at
 			CREATE (clientUser)-[:RECEIVES_ACTIVITY]->(cligact:GroupActivity{ info: "You made " + $target_user + " group admin", created_at: $at })-[:IN_GROUP_CHAT]->(clientChat)
 
@@ -864,9 +873,8 @@ func RemoveUserFromAdmins(ctx context.Context, groupId, clientUsername, targetUs
 				(clientUser)-[:IS_MEMBER_OF { role: "admin" }]->(group),
 				(group)<-[mem:IS_MEMBER_OF { role: "admin" }]-(targetUser:User{ username: $target_user })
 
-			SET mem.role = "member"
-
-			SET clientChat.last_activity_type = "group activity",
+			SET mem.role = "member",
+				clientChat.last_activity_type = "group activity",
 				clientChat.last_group_activity_at = $at
 			CREATE (clientUser)-[:RECEIVES_ACTIVITY]->(cligact:GroupActivity{ info: "You removed " + $target_user + " from group admins", created_at: $at })-[:IN_GROUP_CHAT]->(clientChat)
 

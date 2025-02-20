@@ -159,5 +159,5 @@ func TestUserAuth(t *testing.T) {
 		})
 	})
 
-	cleanUpDB()
+	// cleanUpDB()
 }

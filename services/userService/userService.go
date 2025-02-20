@@ -14,7 +14,7 @@ import (
 
 func GoOnline(ctx context.Context, clientUsername string) {
 	go func() {
-		dmPartners := user.ChangePresence(ctx, clientUsername, "online", time.Time{})
+		dmPartners := user.ChangePresence(ctx, clientUsername, "online", time.Time{}.UTC())
 
 		for _, dmp := range dmPartners {
 			messageBrokerService.Send(fmt.Sprintf("user-%s-topic", dmp), messageBrokerService.Message{
@@ -28,7 +28,9 @@ func GoOnline(ctx context.Context, clientUsername string) {
 
 }
 
-func GoOffline(ctx context.Context, clientUsername string, lastSeen time.Time) {
+func GoOffline(ctx context.Context, clientUsername string) {
+	lastSeen := time.Now().UTC()
+
 	go func() {
 		dmPartners := user.ChangePresence(ctx, clientUsername, "offline", lastSeen)
 

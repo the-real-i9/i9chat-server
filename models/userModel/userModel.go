@@ -268,15 +268,16 @@ func ChangePresence(ctx context.Context, clientUsername, presence string, lastSe
 	res, err := db.Query(ctx,
 		`
 		MATCH (user:User{ username: $client_username })
-		SET user.presence = $presence, user.last_seen = $last_seen)
+		SET user.presence = $presence, user.last_seen = $last_seen
 
+		WITH user
 		OPTIONAL MATCH (user)-[:HAS_DM_CHAT]->()-[:WITH_USER]->(partnerUser)
 		RETURN collect(partnerUser.username) AS partner_usernames
 		`,
 		map[string]any{
 			"client_username": clientUsername,
 			"presence":        presence,
-			"last_seen":       nil,
+			"last_seen":       lastSeen,
 		},
 	)
 	if err != nil {
