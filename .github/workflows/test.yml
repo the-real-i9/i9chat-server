@@ -13,10 +13,6 @@ jobs:
           - '7687:7687'
         env:
           NEO4J_AUTH: "neo4j/pa@sw$*d"
-      broker:
-        image: 'apache/kafka:latest'
-        ports:
-          - '9092:9092'
     strategy:
       matrix:
         go-version:
@@ -28,6 +24,8 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version: '${{ matrix.go-version }}'
+      - name: Start kafka broker
+        uses: bbcCorp/kafka-actions@v1
       - name: Build server
         run: go build -o i9chat_server
       - name: Start server
