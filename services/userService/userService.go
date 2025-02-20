@@ -18,16 +18,16 @@ func GoOnline(ctx context.Context, clientUsername string) {
 		return
 	}
 
-	go func(dmPartners []any) {
-		for _, dmp := range dmPartners {
-			messageBrokerService.Send(fmt.Sprintf("user-%s-topic", dmp), messageBrokerService.Message{
-				Event: "user online",
-				Data: map[string]any{
-					"user": clientUsername,
-				},
-			})
-		}
-	}(dmPartners)
+	// go func(dmPartners []any) {
+	for _, dmp := range dmPartners {
+		messageBrokerService.Send(fmt.Sprintf("user-%s-topic", dmp), messageBrokerService.Message{
+			Event: "user online",
+			Data: map[string]any{
+				"user": clientUsername,
+			},
+		})
+	}
+	// }(dmPartners)
 
 }
 
@@ -39,17 +39,17 @@ func GoOffline(ctx context.Context, clientUsername string) {
 		return
 	}
 
-	go func(dmPartners []any) {
-		for _, dmp := range dmPartners {
-			messageBrokerService.Send(fmt.Sprintf("user-%s-topic", dmp), messageBrokerService.Message{
-				Event: "user offline",
-				Data: map[string]any{
-					"user":      clientUsername,
-					"last_seen": lastSeen,
-				},
-			})
-		}
-	}(dmPartners)
+	// go func(dmPartners []any) {
+	for _, dmp := range dmPartners {
+		messageBrokerService.Send(fmt.Sprintf("user-%s-topic", dmp), messageBrokerService.Message{
+			Event: "user offline",
+			Data: map[string]any{
+				"user":      clientUsername,
+				"last_seen": lastSeen,
+			},
+		})
+	}
+	// }(dmPartners)
 }
 
 func ChangeProfilePicture(ctx context.Context, clientUsername string, pictureData []byte) (any, error) {

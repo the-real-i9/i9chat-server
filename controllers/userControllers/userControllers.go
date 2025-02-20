@@ -15,6 +15,7 @@ import (
 
 	"github.com/gofiber/contrib/websocket"
 	"github.com/gofiber/fiber/v2"
+	"github.com/segmentio/kafka-go"
 )
 
 var OpenWSStream = websocket.New(func(c *websocket.Conn) {
@@ -23,39 +24,13 @@ var OpenWSStream = websocket.New(func(c *websocket.Conn) {
 
 	clientUser := c.Locals("user").(appTypes.ClientUser)
 
-	userService.GoOnline(ctx, clientUser.Username)
+	go userService.GoOnline(ctx, clientUser.Username)
 
 	r := messageBrokerService.ConsumeTopic(fmt.Sprintf("user-%s-topic", clientUser.Username))
 
-	closeStream := func() {
-		if err := r.Close(); err != nil {
-			log.Println("failed to close reader:", err)
-		}
-	}
+	go serverToClientStream(c, r)
 
-	go clientToServerStream(c, ctx, clientUser, closeStream)
-
-	// serverToClientStream
-	for {
-		m, err := r.ReadMessage(ctx)
-		if err != nil {
-			if !errors.Is(err, io.EOF) {
-				log.Println("userControllers.go: OpenWSStream: r.ReadMessage:", err)
-			}
-			break
-		}
-
-		var msg any
-		json.Unmarshal(m.Value, &msg)
-
-		c.WriteJSON(msg)
-	}
-
-	userService.GoOffline(ctx, clientUser.Username)
-})
-
-func clientToServerStream(c *websocket.Conn, ctx context.Context, clientUser appTypes.ClientUser, closeStream func()) {
-
+	// clientToServerStream
 	var w_err error
 
 	for {
@@ -160,7 +135,33 @@ func clientToServerStream(c *websocket.Conn, ctx context.Context, clientUser app
 		}
 	}
 
-	closeStream()
+	go func() {
+		userService.GoOffline(context.Background(), clientUser.Username)
+
+		if err := r.Close(); err != nil {
+			log.Println("failed to close reader:", err)
+		}
+	}()
+})
+
+func serverToClientStream(c *websocket.Conn, r *kafka.Reader) {
+
+	ctx := context.Background()
+
+	for {
+		m, err := r.ReadMessage(ctx)
+		if err != nil {
+			if !errors.Is(err, io.EOF) {
+				log.Println("userControllers.go: serverToClientStream: r.ReadMessage:", err)
+			}
+			break
+		}
+
+		var msg any
+		json.Unmarshal(m.Value, &msg)
+
+		c.WriteJSON(msg)
+	}
 }
 
 func ChangeProfilePicture(c *fiber.Ctx) error {
