@@ -13,6 +13,10 @@ jobs:
           - '7687:7687'
         env:
           NEO4J_AUTH: "neo4j/pa@sw$*d"
+      broker:
+        image: 'apache/kafka:latest'
+        ports:
+          - '9092:9092'
     strategy:
       matrix:
         go-version:
@@ -20,11 +24,8 @@ jobs:
     steps:
       - name: Fetch Repository
         uses: actions/checkout@v4
-      - name: Run Kafka KRaft Broker
-        uses: spicyparrot/kafka-kraft-action@v1.1.0
-        with:
-          kafka-version: "3.7.0"
-          kafka-topics: ${{ secrets.KAFKA_TOPICS }}
+      - name: Start kafka
+        run: docker run -d -p 9092:9092 --name broker apache/kafka:latest
       - name: Install Go
         uses: actions/setup-go@v5
         with:
