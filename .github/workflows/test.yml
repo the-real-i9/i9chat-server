@@ -13,6 +13,10 @@ jobs:
           - '7687:7687'
         env:
           NEO4J_AUTH: "neo4j/pa@sw$*d"
+      broker:
+        image: 'apache/kafka:latest'
+        ports:
+          - '9092:9092'
     strategy:
       matrix:
         go-version:
@@ -24,8 +28,6 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version: '${{ matrix.go-version }}'
-      - name: Start kafka broker
-        uses: bbcCorp/kafka-actions@v1
       - name: Build server
         run: go build -o i9chat_server
       - name: Start server
@@ -44,7 +46,7 @@ jobs:
           DUMMY_VERF_TOKEN: ${{ secrets.DUMMY_VERF_TOKEN }}
           GO_ENV: test
       - name: Run Test
-        run: sleep 5; cd ./tests && go test ./... -v -race
+        run: sleep 15; cd ./tests && go test ./... -v -race
         env:
           NEO4J_URL: "neo4j://localhost"
           NEO4J_USER: neo4j
