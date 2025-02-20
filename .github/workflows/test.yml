@@ -20,7 +20,7 @@ jobs:
           - 2181:2181
 
       kafka:
-        image: apacke/kafka:latest
+        image: apache/kafka:latest
         ports:
           - 9092:9092
 
