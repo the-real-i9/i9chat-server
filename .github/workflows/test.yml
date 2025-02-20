@@ -14,11 +14,6 @@ jobs:
         env:
           NEO4J_AUTH: "neo4j/pa@sw$*d"
 
-      zookeeper:
-        image: zookeeper:latest
-        ports:
-          - 2181:2181
-
       kafka:
         image: apache/kafka:latest
         ports:
@@ -31,6 +26,11 @@ jobs:
     steps:
       - name: Fetch Repository
         uses: actions/checkout@v4
+      - name: Create kafka topics
+        run: |
+          docker exec --workdir /opt/kafka/bin/ -it broker sh
+          ./kafka-topics.sh --bootstrap-server localhost:9092 --create --topic i9chat-user-louislitt-topic
+          ./kafka-topics.sh --bootstrap-server localhost:9092 --create --topic i9chat-user-jeffyboy-topic
       - name: Wait for Kafka to be ready
         run: |
           for i in {1..30}; do
