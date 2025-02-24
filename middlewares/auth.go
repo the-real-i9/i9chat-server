@@ -19,8 +19,7 @@ func Auth(c *fiber.Ctx) error {
 
 	sessionToken, ok := sess.Get("authJwt").(string)
 	if !ok {
-		log.Println("auth.go: Auth: sess.Get: authJwt is missing")
-		return fiber.ErrInternalServerError
+		return fiber.NewError(fiber.StatusUnauthorized, "authentication required")
 
 	}
 
