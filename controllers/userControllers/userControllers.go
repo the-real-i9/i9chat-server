@@ -26,7 +26,7 @@ var OpenWSStream = websocket.New(func(c *websocket.Conn) {
 
 	go userService.GoOnline(ctx, clientUser.Username)
 
-	r := messageBrokerService.ConsumeTopic(fmt.Sprintf("user-%s-topic", clientUser.Username))
+	r := messageBrokerService.ConsumeTopic(fmt.Sprintf("user-%s-alerts", clientUser.Username))
 
 	go serverToClientStream(c, r)
 

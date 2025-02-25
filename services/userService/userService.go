@@ -20,7 +20,7 @@ func GoOnline(ctx context.Context, clientUsername string) {
 
 	// go func(dmPartners []any) {
 	for _, dmp := range dmPartners {
-		messageBrokerService.Send(fmt.Sprintf("user-%s-topic", dmp), messageBrokerService.Message{
+		messageBrokerService.Send(fmt.Sprintf("user-%s-alerts", dmp), messageBrokerService.Message{
 			Event: "user online",
 			Data: map[string]any{
 				"user": clientUsername,
@@ -41,7 +41,7 @@ func GoOffline(ctx context.Context, clientUsername string) {
 
 	// go func(dmPartners []any) {
 	for _, dmp := range dmPartners {
-		messageBrokerService.Send(fmt.Sprintf("user-%s-topic", dmp), messageBrokerService.Message{
+		messageBrokerService.Send(fmt.Sprintf("user-%s-alerts", dmp), messageBrokerService.Message{
 			Event: "user offline",
 			Data: map[string]any{
 				"user":      clientUsername,

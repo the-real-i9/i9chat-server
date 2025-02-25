@@ -29,7 +29,7 @@ func SendMessage(ctx context.Context, clientUsername, partnerUsername string, ms
 		return nil, err
 	}
 
-	go messageBrokerService.Send(fmt.Sprintf("user-%s-topic", partnerUsername), messageBrokerService.Message{
+	go messageBrokerService.Send(fmt.Sprintf("user-%s-alerts", partnerUsername), messageBrokerService.Message{
 		Event: "new dm chat message",
 		Data:  newMessage.PartnerData,
 	})
@@ -47,7 +47,7 @@ func AckMessageDelivered(ctx context.Context, clientUsername, partnerUsername, m
 		return err
 	}
 
-	go messageBrokerService.Send(fmt.Sprintf("user-%s-topic", partnerUsername), messageBrokerService.Message{
+	go messageBrokerService.Send(fmt.Sprintf("user-%s-alerts", partnerUsername), messageBrokerService.Message{
 		Event: "dm chat message delivered",
 		Data: map[string]any{
 			"partner_username": clientUsername,
@@ -61,7 +61,7 @@ func AckMessageRead(ctx context.Context, clientUsername, partnerUsername, msgId 
 	if err := dmChat.AckMessageRead(ctx, clientUsername, partnerUsername, msgId, readAt); err != nil {
 		return err
 	}
-	go messageBrokerService.Send(fmt.Sprintf("user-%s-topic", partnerUsername), messageBrokerService.Message{
+	go messageBrokerService.Send(fmt.Sprintf("user-%s-alerts", partnerUsername), messageBrokerService.Message{
 		Event: "dm chat message read",
 		Data: map[string]any{
 			"partner_username": clientUsername,

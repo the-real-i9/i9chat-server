@@ -171,7 +171,7 @@ func RemoveUserFromGroup(ctx context.Context, groupId, clientUsername, targetUse
 	}
 
 	go func() {
-		messageBrokerService.Send(fmt.Sprintf("user-%s-topic", targetUser), messageBrokerService.Message{
+		messageBrokerService.Send(fmt.Sprintf("user-%s-alerts", targetUser), messageBrokerService.Message{
 			Event: "removed from group",
 			Data: map[string]any{
 				"group_id": groupId,
