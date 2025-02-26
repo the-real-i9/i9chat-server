@@ -52,7 +52,7 @@ jobs:
           GO_ENV: test
 
       - name: Run Test
-        run: sleep 5; cd ./tests && go test ./... -v -race
+        run: sleep 2; cd ./tests && go test ./... -v -race
         env:
           NEO4J_URL: "neo4j://localhost"
           NEO4J_USER: neo4j
