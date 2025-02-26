@@ -10,17 +10,16 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
-func Auth(c *fiber.Ctx) error {
-	sess, err := appGlobals.UserSessionStore.Get(c)
+func UserAuth(c *fiber.Ctx) error {
+	sess, err := appGlobals.SessionStore.Get(c)
 	if err != nil {
-		log.Println("auth.go: Auth: UserSignupSession.Get:", err)
+		log.Println("auth.go: UserAuth: SessionStore.Get:", err)
 		return fiber.ErrInternalServerError
 	}
 
-	sessionToken, ok := sess.Get("authJwt").(string)
+	sessionToken, ok := sess.Get("user").(map[string]any)["authJwt"].(string)
 	if !ok {
-		return fiber.NewError(fiber.StatusUnauthorized, "authentication required")
-
+		return c.Status(fiber.StatusUnauthorized).SendString("authentication required")
 	}
 
 	clientUser, err := securityServices.JwtVerify[appTypes.ClientUser](sessionToken, os.Getenv("AUTH_JWT_SECRET"))

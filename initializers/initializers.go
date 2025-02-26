@@ -5,7 +5,6 @@ import (
 	"i9chat/appGlobals"
 	"log"
 	"os"
-	"time"
 
 	"cloud.google.com/go/storage"
 	"github.com/gofiber/fiber/v2/middleware/session"
@@ -116,20 +115,12 @@ func initSessionStore() {
 		})
 	}
 
-	appGlobals.SignupSessionStore = session.New(session.Config{
-		Storage:        getStorage("ongoing_signup"),
-		CookiePath:     "/api/auth/signup",
+	appGlobals.SessionStore = session.New(session.Config{
+		Storage:        getStorage("session_store"),
 		CookieDomain:   os.Getenv("SERVER_HOST"),
 		CookieHTTPOnly: true,
 	})
 
-	appGlobals.UserSessionStore = session.New(session.Config{
-		Storage:        getStorage("user_session"),
-		CookiePath:     "/api/app",
-		CookieDomain:   os.Getenv("SERVER_HOST"),
-		CookieHTTPOnly: true,
-		Expiration:     (10 * 24) * time.Hour,
-	})
 }
 
 func InitApp() error {

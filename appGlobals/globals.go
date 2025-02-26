@@ -11,8 +11,6 @@ var GCSClient *storage.Client
 
 var Neo4jDriver neo4j.DriverWithContext
 
-var SignupSessionStore *session.Store
-
-var UserSessionStore *session.Store
+var SessionStore *session.Store
 
 var KafkaWriter *kafka.Writer

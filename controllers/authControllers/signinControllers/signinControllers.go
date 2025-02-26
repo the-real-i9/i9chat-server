@@ -5,6 +5,7 @@ import (
 	"i9chat/appGlobals"
 	"i9chat/services/auth/signinService"
 	"log"
+	"time"
 
 	"github.com/gofiber/fiber/v2"
 )
@@ -29,16 +30,18 @@ func Signin(c *fiber.Ctx) error {
 		return app_err
 	}
 
-	userSess, err := appGlobals.UserSessionStore.Get(c)
+	sess, err := appGlobals.SessionStore.Get(c)
 	if err != nil {
-		log.Println("signinControllers.go: Signin: UserSessionStore.Get:", err)
+		log.Println("signinControllers.go: Signin: SessionStore.Get:", err)
 		return fiber.ErrInternalServerError
 	}
 
-	userSess.Set("authJwt", authJwt)
+	sess.Set("user", map[string]any{"authJwt": authJwt})
+	sess.SetExpiry(10 * (24 * time.Hour))
+	appGlobals.SessionStore.CookiePath = "/api/app"
 
-	if err := userSess.Save(); err != nil {
-		log.Println("signinControllers.go: Signin: userSess.Save:", err)
+	if err := sess.Save(); err != nil {
+		log.Println("signinControllers.go: Signin: sess.Save:", err)
 		return fiber.ErrInternalServerError
 	}
 

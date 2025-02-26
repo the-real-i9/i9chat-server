@@ -30,7 +30,7 @@ func main() {
 
 	app.Route("/api/auth", authRoutes.Init)
 
-	app.Use("/api/app", middlewares.Auth)
+	app.Use("/api/app", middlewares.UserAuth)
 
 	app.Route("/api/app/user", userRoutes.Init)
 

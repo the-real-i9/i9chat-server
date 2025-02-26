@@ -27,12 +27,6 @@ jobs:
       - name: Fetch Repository
         uses: actions/checkout@v4
 
-      # - name: Start kafka broker
-      #   uses: spicyparrot/kafka-kraft-action@v1.1.0
-      #   with:
-      #     kafka-version: "3.7.0"
-      #     kafka-topics: ${{ secrets.KAFKA_TOPICS }}
-
       - name: Install Go
         uses: actions/setup-go@v5
         with:

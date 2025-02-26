@@ -3,21 +3,9 @@ package appTypes
 import (
 	"regexp"
 	"slices"
-	"time"
 
 	validation "github.com/go-ozzo/ozzo-validation/v4"
 )
-
-type SignupSessionData struct {
-	Email                   string    `json:"email"`
-	VerificationCode        int       `json:"verificationCode"`
-	VerificationCodeExpires time.Time `json:"verificationCodeExpires"`
-}
-
-type SignupSession struct {
-	Step string            `json:"step"`
-	Data SignupSessionData `json:"data"`
-}
 
 type ClientUser struct {
 	Username string
