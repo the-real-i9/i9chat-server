@@ -19,8 +19,7 @@ func TestUserAuth(t *testing.T) {
 
 	t.Run("User-A Scenario", func(t *testing.T) {
 
-		signupSessionCookie := ""
-		userSessionCookie := ""
+		sessionCookie := ""
 
 		t.Run("requests a new account", func(t *testing.T) {
 			reqBody, err := reqBody(map[string]any{"email": "suberu@gmail.com"})
@@ -34,7 +33,7 @@ func TestUserAuth(t *testing.T) {
 			require.NoError(t, err)
 			require.NotEmpty(t, bd)
 
-			signupSessionCookie = res.Header.Get("Set-Cookie")
+			sessionCookie = res.Header.Get("Set-Cookie")
 		})
 
 		t.Run("sends an incorrect email verf code", func(t *testing.T) {
@@ -46,7 +45,7 @@ func TestUserAuth(t *testing.T) {
 
 			req, err := http.NewRequest("POST", signupPath+"/verify_email", reqBody)
 			require.NoError(t, err)
-			req.Header.Set("Cookie", signupSessionCookie)
+			req.Header.Set("Cookie", sessionCookie)
 			req.Header.Add("Content-Type", "application/json")
 
 			res, err := http.DefaultClient.Do(req)
@@ -64,7 +63,7 @@ func TestUserAuth(t *testing.T) {
 
 			req, err := http.NewRequest("POST", signupPath+"/verify_email", reqBody)
 			require.NoError(t, err)
-			req.Header.Set("Cookie", signupSessionCookie)
+			req.Header.Set("Cookie", sessionCookie)
 			req.Header.Add("Content-Type", "application/json")
 
 			res, err := http.DefaultClient.Do(req)
@@ -74,6 +73,8 @@ func TestUserAuth(t *testing.T) {
 			bd, err := resBody(res.Body)
 			require.NoError(t, err)
 			require.NotEmpty(t, bd)
+
+			sessionCookie = res.Header.Get("Set-Cookie")
 		})
 
 		t.Run("submits her remaining credentials", func(t *testing.T) {
@@ -91,7 +92,7 @@ func TestUserAuth(t *testing.T) {
 			req, err := http.NewRequest("POST", signupPath+"/register_user", reqBody)
 			require.NoError(t, err)
 			req.Header.Add("Content-Type", "application/json")
-			req.Header.Set("Cookie", signupSessionCookie)
+			req.Header.Set("Cookie", sessionCookie)
 
 			res, err := http.DefaultClient.Do(req)
 			require.NoError(t, err)
@@ -101,13 +102,13 @@ func TestUserAuth(t *testing.T) {
 			require.NoError(t, err)
 			require.NotEmpty(t, bd)
 
-			userSessionCookie = res.Header.Get("Set-Cookie")
+			sessionCookie = res.Header.Get("Set-Cookie")
 		})
 
 		t.Run("user signs out", func(t *testing.T) {
 			req, err := http.NewRequest("GET", signoutPath, nil)
 			require.NoError(t, err)
-			req.Header.Set("Cookie", userSessionCookie)
+			req.Header.Set("Cookie", sessionCookie)
 
 			res, err := http.DefaultClient.Do(req)
 			require.NoError(t, err)
@@ -158,6 +159,4 @@ func TestUserAuth(t *testing.T) {
 			require.Equal(t, http.StatusBadRequest, res.StatusCode)
 		})
 	})
-
-	// cleanUpDB()
 }

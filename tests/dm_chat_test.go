@@ -55,7 +55,7 @@ func Test(t *testing.T) {
 				require.NoError(t, err)
 				require.NotEmpty(t, bd)
 
-				accounts[user]["signup_session_cookie"] = res.Header.Get("Set-Cookie")
+				accounts[user]["session_cookie"] = res.Header.Get("Set-Cookie")
 			})
 
 			t.Run("step two: verify email", func(t *testing.T) {
@@ -67,7 +67,7 @@ func Test(t *testing.T) {
 
 				req, err := http.NewRequest("POST", signupPath+"/verify_email", reqBody)
 				require.NoError(t, err)
-				req.Header.Set("Cookie", accounts[user]["signup_session_cookie"].(string))
+				req.Header.Set("Cookie", accounts[user]["session_cookie"].(string))
 				req.Header.Add("Content-Type", "application/json")
 
 				res, err := http.DefaultClient.Do(req)
@@ -78,6 +78,8 @@ func Test(t *testing.T) {
 				bd, err := resBody(res.Body)
 				require.NoError(t, err)
 				require.NotEmpty(t, bd)
+
+				accounts[user]["session_cookie"] = res.Header.Get("Set-Cookie")
 			})
 
 			t.Run("step three: register user", func(t *testing.T) {
@@ -92,7 +94,7 @@ func Test(t *testing.T) {
 				req, err := http.NewRequest("POST", signupPath+"/register_user", reqBody)
 				require.NoError(t, err)
 				req.Header.Add("Content-Type", "application/json")
-				req.Header.Set("Cookie", accounts[user]["signup_session_cookie"].(string))
+				req.Header.Set("Cookie", accounts[user]["session_cookie"].(string))
 
 				res, err := http.DefaultClient.Do(req)
 				require.NoError(t, err)
@@ -103,9 +105,7 @@ func Test(t *testing.T) {
 				require.NoError(t, err)
 				require.NotEmpty(t, bd)
 
-				accounts[user]["user_session_cookie"] = res.Header.Get("Set-Cookie")
-
-				delete(accounts[user], "signup_session_cookie")
+				accounts[user]["session_cookie"] = res.Header.Get("Set-Cookie")
 			})
 		}
 	})
@@ -122,7 +122,7 @@ func Test(t *testing.T) {
 
 	t.Run("bring user1 online", func(t *testing.T) {
 		header := http.Header{}
-		header.Set("Cookie", accounts["user1"]["user_session_cookie"].(string))
+		header.Set("Cookie", accounts["user1"]["session_cookie"].(string))
 		user1wsConn, user1res, user1err = websocket.DefaultDialer.Dial(userWSPath, header)
 
 		require.NoError(t, user1err)
@@ -131,7 +131,7 @@ func Test(t *testing.T) {
 
 	t.Run("bring user2 online", func(t *testing.T) {
 		header := http.Header{}
-		header.Set("Cookie", accounts["user2"]["user_session_cookie"].(string))
+		header.Set("Cookie", accounts["user2"]["session_cookie"].(string))
 		user2wsConn, user2res, user2err = websocket.DefaultDialer.Dial(userWSPath, header)
 
 		require.NoError(t, user2err)
@@ -141,7 +141,7 @@ func Test(t *testing.T) {
 	/* t.Run("confirm user1 is online", func(t *testing.T) {
 		req, err := http.NewRequest("GET", userPath+"/my_profile", nil)
 		require.NoError(t, err)
-		req.Header.Set("Cookie", accounts["user1"]["user_session_cookie"].(string))
+		req.Header.Set("Cookie", accounts["user1"]["session_cookie"].(string))
 
 		res, err := http.DefaultClient.Do(req)
 		require.NoError(t, err)
@@ -164,7 +164,7 @@ func Test(t *testing.T) {
 	t.Run("confirm user2 is online", func(t *testing.T) {
 		req, err := http.NewRequest("GET", userPath+"/my_profile", nil)
 		require.NoError(t, err)
-		req.Header.Set("Cookie", accounts["user2"]["user_session_cookie"].(string))
+		req.Header.Set("Cookie", accounts["user2"]["session_cookie"].(string))
 
 		res, err := http.DefaultClient.Do(req)
 		require.NoError(t, err)
@@ -257,6 +257,4 @@ func Test(t *testing.T) {
 
 	require.NoError(t, user1wsConn.CloseHandler()(websocket.CloseNormalClosure, "user1 done"))
 	require.NoError(t, user2wsConn.CloseHandler()(websocket.CloseNormalClosure, "user2 done"))
-
-	// cleanUpDB()
 }

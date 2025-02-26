@@ -65,7 +65,7 @@ func TestUserOps(t *testing.T) {
 				require.NoError(t, err)
 				require.NotEmpty(t, bd)
 
-				accounts[user]["signup_session_cookie"] = res.Header.Get("Set-Cookie")
+				accounts[user]["session_cookie"] = res.Header.Get("Set-Cookie")
 			})
 
 			t.Run("step two: verify email", func(t *testing.T) {
@@ -77,7 +77,7 @@ func TestUserOps(t *testing.T) {
 
 				req, err := http.NewRequest("POST", signupPath+"/verify_email", reqBody)
 				require.NoError(t, err)
-				req.Header.Set("Cookie", accounts[user]["signup_session_cookie"].(string))
+				req.Header.Set("Cookie", accounts[user]["session_cookie"].(string))
 				req.Header.Add("Content-Type", "application/json")
 
 				res, err := http.DefaultClient.Do(req)
@@ -87,6 +87,8 @@ func TestUserOps(t *testing.T) {
 				bd, err := resBody(res.Body)
 				require.NoError(t, err)
 				require.NotEmpty(t, bd)
+
+				accounts[user]["session_cookie"] = res.Header.Get("Set-Cookie")
 			})
 
 			t.Run("step three: register user", func(t *testing.T) {
@@ -101,7 +103,7 @@ func TestUserOps(t *testing.T) {
 				req, err := http.NewRequest("POST", signupPath+"/register_user", reqBody)
 				require.NoError(t, err)
 				req.Header.Add("Content-Type", "application/json")
-				req.Header.Set("Cookie", accounts[user]["signup_session_cookie"].(string))
+				req.Header.Set("Cookie", accounts[user]["session_cookie"].(string))
 
 				res, err := http.DefaultClient.Do(req)
 				require.NoError(t, err)
@@ -111,9 +113,7 @@ func TestUserOps(t *testing.T) {
 				require.NoError(t, err)
 				require.NotEmpty(t, bd)
 
-				accounts[user]["user_session_cookie"] = res.Header.Get("Set-Cookie")
-
-				delete(accounts[user], "signup_session_cookie")
+				accounts[user]["session_cookie"] = res.Header.Get("Set-Cookie")
 			})
 		}
 	})
@@ -128,7 +128,7 @@ func TestUserOps(t *testing.T) {
 
 		req, err := http.NewRequest("POST", userPath+"/change_phone_number", reqBody)
 		require.NoError(t, err)
-		req.Header.Set("Cookie", accounts["user1"]["user_session_cookie"].(string))
+		req.Header.Set("Cookie", accounts["user1"]["session_cookie"].(string))
 		req.Header.Add("Content-Type", "application/json")
 
 		res, err := http.DefaultClient.Do(req)
@@ -143,7 +143,7 @@ func TestUserOps(t *testing.T) {
 	t.Run("confirm user1's updated profile", func(t *testing.T) {
 		req, err := http.NewRequest("GET", userPath+"/my_profile", nil)
 		require.NoError(t, err)
-		req.Header.Set("Cookie", accounts["user1"]["user_session_cookie"].(string))
+		req.Header.Set("Cookie", accounts["user1"]["session_cookie"].(string))
 
 		res, err := http.DefaultClient.Do(req)
 		require.NoError(t, err)
@@ -169,7 +169,7 @@ func TestUserOps(t *testing.T) {
 
 		req, err := http.NewRequest("POST", userPath+"/update_geolocation", reqBody)
 		require.NoError(t, err)
-		req.Header.Set("Cookie", accounts["user2"]["user_session_cookie"].(string))
+		req.Header.Set("Cookie", accounts["user2"]["session_cookie"].(string))
 		req.Header.Add("Content-Type", "application/json")
 
 		res, err := http.DefaultClient.Do(req)
@@ -186,7 +186,7 @@ func TestUserOps(t *testing.T) {
 
 		req, err := http.NewRequest("GET", userPath+"/find_user?emailUsernamePhone="+username, nil)
 		require.NoError(t, err)
-		req.Header.Set("Cookie", accounts["user2"]["user_session_cookie"].(string))
+		req.Header.Set("Cookie", accounts["user2"]["session_cookie"].(string))
 
 		res, err := http.DefaultClient.Do(req)
 		require.NoError(t, err)
@@ -211,7 +211,7 @@ func TestUserOps(t *testing.T) {
 
 		req, err := http.NewRequest("GET", fmt.Sprintf("%s%s?x=%f&y=%f&radius=%f", userPath, "/find_nearby_users", x, y, radius), nil)
 		require.NoError(t, err)
-		req.Header.Set("Cookie", accounts["user1"]["user_session_cookie"].(string))
+		req.Header.Set("Cookie", accounts["user1"]["session_cookie"].(string))
 
 		res, err := http.DefaultClient.Do(req)
 		require.NoError(t, err)
@@ -228,6 +228,4 @@ func TestUserOps(t *testing.T) {
 
 		require.NotEmpty(t, data)
 	})
-
-	// cleanUpDB()
 }

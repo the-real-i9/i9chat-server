@@ -28,17 +28,12 @@ func TestMain(m *testing.M) {
 
 	defer dbDriver.Close(ctx)
 
+	// cleaup db
 	neo4j.ExecuteQuery(ctx, dbDriver, `MATCH (n) DETACH DELETE n`, nil, neo4j.EagerResultTransformer)
-
-	cleanUpDB()
 
 	c := m.Run()
 
 	os.Exit(c)
-}
-
-func cleanUpDB() {
-
 }
 
 func reqBody(data map[string]any) (io.Reader, error) {
