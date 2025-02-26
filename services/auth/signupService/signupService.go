@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"i9chat/appTypes"
+	"i9chat/helpers"
 	user "i9chat/models/userModel"
 	"i9chat/services/mailService"
 	"i9chat/services/securityServices"
@@ -42,24 +43,28 @@ func RequestNewAccount(ctx context.Context, email string) (any, map[string]any, 
 }
 
 func VerifyEmail(ctx context.Context, sessionData map[string]any, inputVerfCode int) (any, map[string]any, error) {
-	email := sessionData["email"].(string)
-	vCode := sessionData["vCode"].(int)
-	vCodeExpires := sessionData["vCodeExpires"].(time.Time)
+	var sd struct {
+		Email        string
+		VCode        int
+		VCodeExpires time.Time
+	}
 
-	if vCode != inputVerfCode {
+	helpers.MapToStruct(sessionData, &sd)
+
+	if sd.VCode != inputVerfCode {
 		return "", nil, fiber.NewError(fiber.StatusBadRequest, "email verification error: incorrect verification code")
 	}
 
-	if vCodeExpires.Before(time.Now()) {
+	if sd.VCodeExpires.Before(time.Now()) {
 		return "", nil, fiber.NewError(fiber.StatusBadRequest, "email verification error: verification code expired")
 	}
 
-	go mailService.SendMail(email, "Email Verification Success", fmt.Sprintf("Your email %s has been verified!", email))
+	go mailService.SendMail(sd.Email, "Email Verification Success", fmt.Sprintf("Your email %s has been verified!", sd.Email))
 
-	newSessionData := map[string]any{"email": email}
+	newSessionData := map[string]any{"email": sd.Email}
 
 	respData := map[string]any{
-		"msg": fmt.Sprintf("Your email '%s' has been verified!", email),
+		"msg": fmt.Sprintf("Your email '%s' has been verified!", sd.Email),
 	}
 
 	return respData, newSessionData, nil
@@ -89,7 +94,7 @@ func RegisterUser(ctx context.Context, sessionData map[string]any, username, pas
 
 	authJwt, err := securityServices.JwtSign(appTypes.ClientUser{
 		Username: username,
-	}, os.Getenv("AUTH_JWT_SECRET"), time.Now().UTC().Add(10*24*time.Hour)) // 1 year
+	}, os.Getenv("AUTH_JWT_SECRET"), time.Now().UTC().Add(10*24*time.Hour)) // 10 days
 
 	if err != nil {
 		return nil, "", err

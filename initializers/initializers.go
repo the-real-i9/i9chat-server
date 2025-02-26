@@ -37,6 +37,12 @@ func initNeo4jDriver() error {
 
 	sess := driver.NewSession(ctx, neo4j.SessionConfig{})
 
+	defer func() {
+		if err := sess.Close(ctx); err != nil {
+			log.Println("initializers.go: initNeo4jDriver: sess.Close:", err)
+		}
+	}()
+
 	_, err2 := sess.ExecuteWrite(ctx, func(tx neo4j.ManagedTransaction) (any, error) {
 		var err error
 
@@ -87,10 +93,6 @@ func initNeo4jDriver() error {
 		return err2
 	}
 
-	if err := sess.Close(ctx); err != nil {
-		return err
-	}
-
 	appGlobals.Neo4jDriver = driver
 
 	return nil
@@ -98,8 +100,7 @@ func initNeo4jDriver() error {
 
 func initKafkaWriter() error {
 	w := &kafka.Writer{
-		Addr:                   kafka.TCP(os.Getenv("KAFKA_ADDRESS")),
-		AllowAutoTopicCreation: true,
+		Addr: kafka.TCP(os.Getenv("KAFKA_BROKER_ADDRESS")),
 	}
 
 	appGlobals.KafkaWriter = w
@@ -148,7 +149,7 @@ func InitApp() error {
 
 func CleanUp() {
 	if err := appGlobals.KafkaWriter.Close(); err != nil {
-		log.Println("failed to close writer:", err)
+		log.Println("failed to close kafka writer:", err)
 	}
 
 	if err := appGlobals.Neo4jDriver.Close(context.TODO()); err != nil {

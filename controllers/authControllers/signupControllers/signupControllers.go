@@ -72,7 +72,7 @@ func VerifyEmail(c *fiber.Ctx) error {
 		return val_err
 	}
 
-	respData, updatedSession, app_err := signupService.VerifyEmail(ctx, sessionData, body.Code)
+	respData, newSessionData, app_err := signupService.VerifyEmail(ctx, sessionData, body.Code)
 	if app_err != nil {
 		return app_err
 	}
@@ -83,13 +83,13 @@ func VerifyEmail(c *fiber.Ctx) error {
 		return fiber.ErrInternalServerError
 	}
 
-	usd, err := json.Marshal(updatedSession)
+	nsd, err := json.Marshal(newSessionData)
 	if err != nil {
 		log.Println("signupControllers.go: VerifyEmail: json.Marshal:", err)
 		return fiber.ErrInternalServerError
 	}
 
-	sess.Set("signup", usd)
+	sess.Set("signup", nsd)
 	sess.SetExpiry(time.Hour)
 	appGlobals.SessionStore.CookiePath = "/api/auth/signup/register_user"
 
@@ -130,8 +130,14 @@ func RegisterUser(c *fiber.Ctx) error {
 		return fiber.ErrInternalServerError
 	}
 
+	usd, err := json.Marshal(map[string]any{"authJwt": authJwt})
+	if err != nil {
+		log.Println("signupControllers.go: RegisterUser: json.Marshal:", err)
+		return fiber.ErrInternalServerError
+	}
+
 	sess.Delete("signup")
-	sess.Set("user", map[string]any{"authJwt": authJwt})
+	sess.Set("user", usd)
 	sess.SetExpiry(10 * (24 * time.Hour))
 	appGlobals.SessionStore.CookiePath = "/api/app"
 
