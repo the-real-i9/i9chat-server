@@ -14,7 +14,7 @@ import (
 const userWSPath = WSHOST_URL + "/api/app/user/go_online"
 
 func Test(t *testing.T) {
-	// t.Parallel()
+	t.Parallel()
 
 	accounts := map[string]map[string]any{
 		"user1": {

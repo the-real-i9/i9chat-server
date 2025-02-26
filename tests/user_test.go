@@ -15,7 +15,7 @@ import (
 const userPath = HOST_URL + "/api/app/user"
 
 func TestUserOps(t *testing.T) {
-	// t.Parallel()
+	t.Parallel()
 
 	accounts := map[string]map[string]any{
 		"user1": {

@@ -15,7 +15,7 @@ const signinPath = HOST_URL + "/api/auth/signin"
 const signoutPath = userPath + "/signout"
 
 func TestUserAuth(t *testing.T) {
-	// t.Parallel()
+	t.Parallel()
 
 	t.Run("User-A Scenario", func(t *testing.T) {
 
