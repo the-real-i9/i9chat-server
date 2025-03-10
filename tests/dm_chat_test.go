@@ -138,64 +138,18 @@ func Test(t *testing.T) {
 		require.Equal(t, http.StatusSwitchingProtocols, user2res.StatusCode)
 	})
 
-	/* t.Run("confirm user1 is online", func(t *testing.T) {
-		req, err := http.NewRequest("GET", userPath+"/my_profile", nil)
-		require.NoError(t, err)
-		req.Header.Set("Cookie", accounts["user1"]["session_cookie"].(string))
+	var (
+		ndcmEvent  = "new dm chat message"
+		adcmdEvent = "ack dm chat message delivered"
+		adcmrEvent = "ack dm chat message read"
+	)
 
-		res, err := http.DefaultClient.Do(req)
-		require.NoError(t, err)
-
-		require.Equal(t, http.StatusOK, res.StatusCode)
-
-		bd, err := resBody(res.Body)
-		require.NoError(t, err)
-		require.NotEmpty(t, bd)
-
-		var data map[string]any
-
-		require.NoError(t, json.Unmarshal(bd, &data))
-
-		maps.Copy(accounts["user1"], data)
-
-		require.Equal(t, accounts["user1"]["presence"], "online")
-	})
-
-	t.Run("confirm user2 is online", func(t *testing.T) {
-		req, err := http.NewRequest("GET", userPath+"/my_profile", nil)
-		require.NoError(t, err)
-		req.Header.Set("Cookie", accounts["user2"]["session_cookie"].(string))
-
-		res, err := http.DefaultClient.Do(req)
-		require.NoError(t, err)
-
-		require.Equal(t, http.StatusOK, res.StatusCode)
-
-		bd, err := resBody(res.Body)
-		require.NoError(t, err)
-		require.NotEmpty(t, bd)
-
-		var data map[string]any
-
-		require.NoError(t, json.Unmarshal(bd, &data))
-
-		maps.Copy(accounts["user2"], data)
-
-		require.Equal(t, accounts["user2"]["presence"], "online")
-	}) */
+	var (
+		user1Username = accounts["user1"]["username"].(string)
+		user2Username = accounts["user2"]["username"].(string)
+	)
 
 	t.Run("user1 messages user2, who then acks 'delivered'", func(t *testing.T) {
-		var (
-			ndcmEvent  = "new dm chat message"
-			adcmdEvent = "ack dm chat message delivered"
-			// adcmrEvent = "ack dm chat message read"
-		)
-
-		var (
-			user1Username = accounts["user1"]["username"].(string)
-			user2Username = accounts["user2"]["username"].(string)
-		)
-
 		var (
 			err error
 		)
@@ -245,7 +199,8 @@ func Test(t *testing.T) {
 		})
 		require.NoError(t, err)
 
-		// user1 receives the 'delivered' acknowledgement
+		// user1 receives the 'delivered' acknowledgement,
+		// by which it marks the message as delivered
 		var user1DelvReceipt map[string]any
 
 		require.NoError(t, user1wsConn.ReadJSON(&user1DelvReceipt))
@@ -253,6 +208,27 @@ func Test(t *testing.T) {
 		require.Contains(t, user1DelvReceipt, "event")
 		require.Equal(t, user1DelvReceipt["event"], "dm chat message delivered")
 		require.Equal(t, user1DelvReceipt["data"], map[string]any{"partner_username": user2Username, "msg_id": recvdMsgId})
+
+		// user2 acknowledges message as 'read'
+		err = user2wsConn.WriteJSON(map[string]any{
+			"event": adcmrEvent,
+			"data": map[string]any{
+				"partnerUsername": user1Username,
+				"msgId":           recvdMsgId,
+				"at":              time.Now().UTC(),
+			},
+		})
+		require.NoError(t, err)
+
+		// user1 receives the 'read' acknowledgement,
+		// by which it marks the message as read
+		var user1ReadReceipt map[string]any
+
+		require.NoError(t, user1wsConn.ReadJSON(&user1ReadReceipt))
+
+		require.Contains(t, user1ReadReceipt, "event")
+		require.Equal(t, user1ReadReceipt["event"], "dm chat message read")
+		require.Equal(t, user1ReadReceipt["data"], map[string]any{"partner_username": user2Username, "msg_id": recvdMsgId})
 	})
 
 	require.NoError(t, user1wsConn.CloseHandler()(websocket.CloseNormalClosure, "user1 done"))
