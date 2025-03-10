@@ -3,7 +3,6 @@ package signinControllers
 import (
 	"context"
 	"encoding/json"
-	"i9chat/appGlobals"
 	"i9chat/services/auth/signinService"
 	"log"
 	"time"
@@ -31,26 +30,20 @@ func Signin(c *fiber.Ctx) error {
 		return app_err
 	}
 
-	sess, err := appGlobals.SessionStore.Get(c)
-	if err != nil {
-		log.Println("signinControllers.go: Signin: SessionStore.Get:", err)
-		return fiber.ErrInternalServerError
-	}
-
 	usd, err := json.Marshal(map[string]any{"authJwt": authJwt})
 	if err != nil {
 		log.Println("signinControllers.go: Signin: json.Marshal:", err)
 		return fiber.ErrInternalServerError
 	}
 
-	sess.Set("user", usd)
-	sess.SetExpiry(10 * (24 * time.Hour))
-	appGlobals.SessionStore.CookiePath = "/api/app"
-
-	if err := sess.Save(); err != nil {
-		log.Println("signinControllers.go: Signin: sess.Save:", err)
-		return fiber.ErrInternalServerError
-	}
+	c.Cookie(&fiber.Cookie{
+		Name:     "user",
+		Value:    string(usd),
+		Path:     "/api/app",
+		MaxAge:   int(10 * 24 * time.Hour / time.Second),
+		HTTPOnly: true,
+		Secure:   false,
+	})
 
 	return c.JSON(respData)
 }

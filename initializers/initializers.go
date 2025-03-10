@@ -7,8 +7,6 @@ import (
 	"os"
 
 	"cloud.google.com/go/storage"
-	"github.com/gofiber/fiber/v2/middleware/session"
-	neo4jstore "github.com/gofiber/storage/neo4j"
 	"github.com/joho/godotenv"
 	"github.com/neo4j/neo4j-go-driver/v5/neo4j"
 	"github.com/segmentio/kafka-go"
@@ -108,22 +106,6 @@ func initKafkaWriter() error {
 	return nil
 }
 
-func initSessionStore() {
-	getStorage := func(nodeName string) *neo4jstore.Storage {
-		return neo4jstore.New(neo4jstore.Config{
-			DB:   appGlobals.Neo4jDriver,
-			Node: nodeName,
-		})
-	}
-
-	appGlobals.SessionStore = session.New(session.Config{
-		Storage:        getStorage("session_store"),
-		CookieDomain:   os.Getenv("SERVER_HOST"),
-		CookieHTTPOnly: true,
-	})
-
-}
-
 func InitApp() error {
 
 	if os.Getenv("GO_ENV") == "" {
@@ -135,8 +117,6 @@ func InitApp() error {
 	if err := initNeo4jDriver(); err != nil {
 		return err
 	}
-
-	initSessionStore()
 
 	if err := initGCSClient(); err != nil {
 		return err

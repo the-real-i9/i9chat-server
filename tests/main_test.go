@@ -16,8 +16,6 @@ import (
 const HOST_URL string = "http://localhost:8000"
 const WSHOST_URL string = "ws://localhost:8000"
 
-// var dbDriver neo4j.DriverWithContext
-
 func TestMain(m *testing.M) {
 	dbDriver, err := neo4j.NewDriverWithContext(os.Getenv("NEO4J_URL"), neo4j.BasicAuth(os.Getenv("NEO4J_USER"), os.Getenv("NEO4J_PASSWORD"), ""))
 	if err != nil {

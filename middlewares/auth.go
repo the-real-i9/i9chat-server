@@ -2,7 +2,6 @@ package middlewares
 
 import (
 	"encoding/json"
-	"i9chat/appGlobals"
 	"i9chat/appTypes"
 	"i9chat/services/securityServices"
 	"log"
@@ -12,20 +11,15 @@ import (
 )
 
 func UserAuth(c *fiber.Ctx) error {
-	sess, err := appGlobals.SessionStore.Get(c)
-	if err != nil {
-		log.Println("auth.go: UserAuth: SessionStore.Get:", err)
-		return fiber.ErrInternalServerError
-	}
+	usStr := c.Cookies("user")
 
-	usbt, ok := sess.Get("user").([]byte)
-	if !ok {
+	if usStr == "" {
 		return c.Status(fiber.StatusUnauthorized).SendString("authentication required")
 	}
 
 	var userSessionData map[string]string
 
-	if err := json.Unmarshal(usbt, &userSessionData); err != nil {
+	if err := json.Unmarshal([]byte(usStr), &userSessionData); err != nil {
 		log.Println("auth.go: UserAuth: json.Unmarshal:", err)
 		return fiber.ErrInternalServerError
 	}

@@ -13,7 +13,7 @@ import (
 
 const userWSPath = WSHOST_URL + "/api/app/user/go_online"
 
-func Test(t *testing.T) {
+func TestDMChat(t *testing.T) {
 	t.Parallel()
 
 	accounts := map[string]map[string]any{

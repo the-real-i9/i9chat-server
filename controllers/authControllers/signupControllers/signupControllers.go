@@ -3,7 +3,6 @@ package signupControllers
 import (
 	"context"
 	"encoding/json"
-	"i9chat/appGlobals"
 	"i9chat/services/auth/signupService"
 	"log"
 	"time"
@@ -31,26 +30,20 @@ func RequestNewAccount(c *fiber.Ctx) error {
 		return app_err
 	}
 
-	sess, err := appGlobals.SessionStore.Get(c)
-	if err != nil {
-		log.Println("signupControllers.go: RequestNewAccount: SessionStore.Get:", err)
-		return fiber.ErrInternalServerError
-	}
-
 	sd, err := json.Marshal(sessionData)
 	if err != nil {
 		log.Println("signupControllers.go: RequestNewAccount: json.Marshal:", err)
 		return fiber.ErrInternalServerError
 	}
 
-	sess.Set("signup", sd)
-	sess.SetExpiry(time.Hour)
-	appGlobals.SessionStore.CookiePath = "/api/auth/signup/verify_email"
-
-	if err := sess.Save(); err != nil {
-		log.Println("signupControllers.go: RequestNewAccount: sess.Save:", err)
-		return fiber.ErrInternalServerError
-	}
+	c.Cookie(&fiber.Cookie{
+		Name:     "signup",
+		Value:    string(sd),
+		Path:     "/api/auth/signup/verify_email",
+		MaxAge:   int(time.Hour / time.Second),
+		HTTPOnly: true,
+		Secure:   false,
+	})
 
 	return c.JSON(respData)
 }
@@ -77,26 +70,20 @@ func VerifyEmail(c *fiber.Ctx) error {
 		return app_err
 	}
 
-	sess, err := appGlobals.SessionStore.Get(c)
-	if err != nil {
-		log.Println("signupControllers.go: VerifyEmail: SessionStore.Get:", err)
-		return fiber.ErrInternalServerError
-	}
-
 	nsd, err := json.Marshal(newSessionData)
 	if err != nil {
 		log.Println("signupControllers.go: VerifyEmail: json.Marshal:", err)
 		return fiber.ErrInternalServerError
 	}
 
-	sess.Set("signup", nsd)
-	sess.SetExpiry(time.Hour)
-	appGlobals.SessionStore.CookiePath = "/api/auth/signup/register_user"
-
-	if err := sess.Save(); err != nil {
-		log.Println("signupControllers.go: VerifyEmail: sess.Save:", err)
-		return fiber.ErrInternalServerError
-	}
+	c.Cookie(&fiber.Cookie{
+		Name:     "signup",
+		Value:    string(nsd),
+		Path:     "/api/auth/signup/register_user",
+		MaxAge:   int(time.Hour / time.Second),
+		HTTPOnly: true,
+		Secure:   false,
+	})
 
 	return c.JSON(respData)
 }
@@ -124,27 +111,20 @@ func RegisterUser(c *fiber.Ctx) error {
 		return app_err
 	}
 
-	sess, err := appGlobals.SessionStore.Get(c)
-	if err != nil {
-		log.Println("signupControllers.go: RegisterUser: SessionStore.Get:", err)
-		return fiber.ErrInternalServerError
-	}
-
 	usd, err := json.Marshal(map[string]any{"authJwt": authJwt})
 	if err != nil {
 		log.Println("signupControllers.go: RegisterUser: json.Marshal:", err)
 		return fiber.ErrInternalServerError
 	}
 
-	sess.Delete("signup")
-	sess.Set("user", usd)
-	sess.SetExpiry(10 * (24 * time.Hour))
-	appGlobals.SessionStore.CookiePath = "/api/app"
-
-	if err := sess.Save(); err != nil {
-		log.Println("signupControllers.go: RegisterUser: sess.Save:", err)
-		return fiber.ErrInternalServerError
-	}
+	c.Cookie(&fiber.Cookie{
+		Name:     "user",
+		Value:    string(usd),
+		Path:     "/api/app",
+		MaxAge:   int(10 * 24 * time.Hour / time.Second),
+		HTTPOnly: true,
+		Secure:   false,
+	})
 
 	return c.JSON(respData)
 }

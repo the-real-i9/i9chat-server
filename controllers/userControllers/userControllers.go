@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"i9chat/appGlobals"
 	"i9chat/appTypes"
 	"i9chat/helpers"
 	"i9chat/services/messageBrokerService"
@@ -318,16 +317,7 @@ func GetMyProfile(c *fiber.Ctx) error {
 }
 
 func SignOut(c *fiber.Ctx) error {
-	sess, err := appGlobals.SessionStore.Get(c)
-	if err != nil {
-		log.Println("userControllers.go: Logout: SessionStore.Get:", err)
-		return fiber.ErrInternalServerError
-	}
-
-	if err := sess.Destroy(); err != nil {
-		log.Println("userControllers.go: Logout: sess.Destroy:", err)
-		return fiber.ErrInternalServerError
-	}
+	c.ClearCookie("user")
 
 	return c.SendString("You've been logged out!")
 }

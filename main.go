@@ -11,6 +11,7 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
+	"github.com/gofiber/fiber/v2/middleware/encryptcookie"
 	"github.com/gofiber/fiber/v2/middleware/helmet"
 )
 
@@ -27,6 +28,12 @@ func main() {
 
 	app.Use(helmet.New())
 	app.Use(cors.New())
+
+	cookey := encryptcookie.GenerateKey()
+
+	app.Use(encryptcookie.New(encryptcookie.Config{
+		Key: cookey,
+	}))
 
 	app.Route("/api/auth", authRoutes.Init)
 
