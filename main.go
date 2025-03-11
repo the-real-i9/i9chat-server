@@ -29,10 +29,8 @@ func main() {
 	app.Use(helmet.New())
 	app.Use(cors.New())
 
-	cookey := encryptcookie.GenerateKey()
-
 	app.Use(encryptcookie.New(encryptcookie.Config{
-		Key: cookey,
+		Key: os.Getenv("COOKIE_SECRET"),
 	}))
 
 	app.Route("/api/auth", authRoutes.Init)
