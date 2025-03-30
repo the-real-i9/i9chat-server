@@ -3,6 +3,7 @@ package signupControllers
 import (
 	"context"
 	"encoding/json"
+	"i9chat/helpers"
 	"i9chat/services/auth/signupService"
 	"log"
 	"time"
@@ -36,14 +37,7 @@ func RequestNewAccount(c *fiber.Ctx) error {
 		return fiber.ErrInternalServerError
 	}
 
-	c.Cookie(&fiber.Cookie{
-		Name:     "signup",
-		Value:    string(sd),
-		Path:     "/api/auth/signup/verify_email",
-		MaxAge:   int(time.Hour / time.Second),
-		HTTPOnly: true,
-		Secure:   false,
-	})
+	c.Cookie(helpers.Cookie("signup", string(sd), "/api/auth/signup/verify_email", int(time.Hour/time.Second)))
 
 	return c.JSON(respData)
 }
@@ -76,14 +70,7 @@ func VerifyEmail(c *fiber.Ctx) error {
 		return fiber.ErrInternalServerError
 	}
 
-	c.Cookie(&fiber.Cookie{
-		Name:     "signup",
-		Value:    string(nsd),
-		Path:     "/api/auth/signup/register_user",
-		MaxAge:   int(time.Hour / time.Second),
-		HTTPOnly: true,
-		Secure:   false,
-	})
+	c.Cookie(helpers.Cookie("signup", string(nsd), "/api/auth/signup/register_user", int(time.Hour/time.Second)))
 
 	return c.JSON(respData)
 }
@@ -117,14 +104,7 @@ func RegisterUser(c *fiber.Ctx) error {
 		return fiber.ErrInternalServerError
 	}
 
-	c.Cookie(&fiber.Cookie{
-		Name:     "user",
-		Value:    string(usd),
-		Path:     "/api/app",
-		MaxAge:   int(10 * 24 * time.Hour / time.Second),
-		HTTPOnly: true,
-		Secure:   false,
-	})
+	c.Cookie(helpers.Cookie("user", string(usd), "/api/app", int(10*24*time.Hour/time.Second)))
 
 	return c.JSON(respData)
 }

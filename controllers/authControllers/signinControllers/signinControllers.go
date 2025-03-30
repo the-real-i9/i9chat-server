@@ -3,6 +3,7 @@ package signinControllers
 import (
 	"context"
 	"encoding/json"
+	"i9chat/helpers"
 	"i9chat/services/auth/signinService"
 	"log"
 	"time"
@@ -36,14 +37,7 @@ func Signin(c *fiber.Ctx) error {
 		return fiber.ErrInternalServerError
 	}
 
-	c.Cookie(&fiber.Cookie{
-		Name:     "user",
-		Value:    string(usd),
-		Path:     "/api/app",
-		MaxAge:   int(10 * 24 * time.Hour / time.Second),
-		HTTPOnly: true,
-		Secure:   false,
-	})
+	c.Cookie(helpers.Cookie("user", string(usd), "/api/app", int(10*24*time.Hour/time.Second)))
 
 	return c.JSON(respData)
 }
