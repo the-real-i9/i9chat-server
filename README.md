@@ -6,7 +6,7 @@ Build your Chat Application
 
 ## Intro
 
-i9chat-server is a REST API server for a Chat Application, built in Go. It supports major chat application features that can be used to implement a mordern chat application.
+i9chat is a REST API server for a Chat Application, built in Go. It supports major chat application features that can be used to implement a mordern chat application.
 
 ### Who is this project for?
 
@@ -23,14 +23,14 @@ If you need a feature this API server does not currently support, feel free to s
 ## Technologies
 
 <div style="display: flex;">
-<img style="margin-right: 10px" alt="go" width="50" src="./z_at/tech-icons/go-original-wordmark.svg" />
-<img style="margin-right: 10px" alt="go" width="50" src="./z_at/tech-icons/gofiber.svg" />
-<img style="margin-right: 10px" alt="go" width="50" src="./z_at/tech-icons/websocket.svg" />
-<img style="margin-right: 10px" alt="neo4j" width="70" src="./z_at/tech-icons/neo4j-original.svg" />
-<img style="margin-right: 10px" alt="nodejs" width="50" src="./z_at/tech-icons/apachekafka-original.svg" />
-<img style="margin-right: 10px" alt="go" width="50" src="./z_at/tech-icons/jwt.svg" />
-<img style="margin-right: 10px" alt="nodejs" width="50" src="./z_at/tech-icons/googlecloud-original.svg" />
-<img style="margin-right: 10px" alt="postgresql" width="50" src="./z_at/tech-icons/postgresql-original.svg" /> ❌ (old)
+<img style="margin-right: 10px" alt="go" width="50" src="./.attachments/tech-icons/go-original-wordmark.svg" />
+<img style="margin-right: 10px" alt="go" width="50" src="./.attachments/tech-icons/gofiber.svg" />
+<img style="margin-right: 10px" alt="go" width="50" src="./.attachments/tech-icons/websocket.svg" />
+<img style="margin-right: 10px" alt="neo4j" width="70" src="./.attachments/tech-icons/neo4j-original.svg" />
+<img style="margin-right: 10px" alt="nodejs" width="50" src="./.attachments/tech-icons/apachekafka-original.svg" />
+<img style="margin-right: 10px" alt="go" width="50" src="./.attachments/tech-icons/jwt.svg" />
+<img style="margin-right: 10px" alt="nodejs" width="50" src="./.attachments/tech-icons/googlecloud-original.svg" />
+<img style="margin-right: 10px" alt="postgresql" width="50" src="./.attachments/tech-icons/postgresql-original.svg" /> ❌ (old)
 </div>
 
 ### More

@@ -1,11 +1,11 @@
 package main
 
 import (
-	"i9chat/initializers"
-	"i9chat/middlewares"
-	"i9chat/routes/authRoutes"
-	"i9chat/routes/chatRoutes/groupChatRoutes"
-	"i9chat/routes/userRoutes"
+	"i9chat/src/initializers"
+	"i9chat/src/middlewares"
+	"i9chat/src/routes/authRoutes"
+	"i9chat/src/routes/chatRoutes/groupChatRoutes"
+	"i9chat/src/routes/userRoutes"
 	"log"
 	"os"
 
