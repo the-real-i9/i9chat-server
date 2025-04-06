@@ -24,7 +24,7 @@ func AnyToStruct(val any, yourStruct any) {
 	}
 }
 
-func WSErrResp(err error, onEvent string) map[string]any {
+func WSErrReply(err error, onEvent string) map[string]any {
 
 	errCode := fiber.StatusInternalServerError
 
@@ -42,6 +42,17 @@ func WSErrResp(err error, onEvent string) map[string]any {
 	}
 
 	return errResp
+}
+
+func WSReply(data any, onEvent string) map[string]any {
+
+	reply := map[string]any{
+		"event":   "server reply",
+		"onEvent": onEvent,
+		"data":    data,
+	}
+
+	return reply
 }
 
 func Cookie(name, value, path string, maxAge int) *fiber.Cookie {
