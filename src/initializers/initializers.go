@@ -98,7 +98,8 @@ func initNeo4jDriver() error {
 
 func initKafkaWriter() error {
 	w := &kafka.Writer{
-		Addr: kafka.TCP(os.Getenv("KAFKA_BROKER_ADDRESS")),
+		Addr:                   kafka.TCP(os.Getenv("KAFKA_BROKER_ADDRESS")),
+		AllowAutoTopicCreation: true,
 	}
 
 	appGlobals.KafkaWriter = w
