@@ -3,7 +3,6 @@ package tests
 import (
 	"net/http"
 	"os"
-	"strconv"
 	"testing"
 	"time"
 
@@ -59,10 +58,7 @@ func TestDMChat(t *testing.T) {
 			})
 
 			t.Run("step two: verify email", func(t *testing.T) {
-				verfCode, err := strconv.Atoi(os.Getenv("DUMMY_VERF_TOKEN"))
-				require.NoError(t, err)
-
-				reqBody, err := reqBody(map[string]any{"code": verfCode})
+				reqBody, err := reqBody(map[string]any{"code": os.Getenv("DUMMY_VERF_TOKEN")})
 				require.NoError(t, err)
 
 				req, err := http.NewRequest("POST", signupPath+"/verify_email", reqBody)
