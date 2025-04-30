@@ -4,7 +4,6 @@ package tests
 import (
 	"net/http"
 	"os"
-	"strconv"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -37,10 +36,7 @@ func TestUserAuth(t *testing.T) {
 		})
 
 		t.Run("sends an incorrect email verf code", func(t *testing.T) {
-			verfCode, err := strconv.Atoi(os.Getenv("DUMMY_VERF_TOKEN"))
-			require.NoError(t, err)
-
-			reqBody, err := reqBody(map[string]any{"code": verfCode + 1})
+			reqBody, err := reqBody(map[string]any{"code": "000111"})
 			require.NoError(t, err)
 
 			req, err := http.NewRequest("POST", signupPath+"/verify_email", reqBody)
@@ -55,10 +51,7 @@ func TestUserAuth(t *testing.T) {
 		})
 
 		t.Run("sends the correct email verf code", func(t *testing.T) {
-			verfCode, err := strconv.Atoi(os.Getenv("DUMMY_VERF_TOKEN"))
-			require.NoError(t, err)
-
-			reqBody, err := reqBody(map[string]any{"code": verfCode})
+			reqBody, err := reqBody(map[string]any{"code": os.Getenv("DUMMY_VERF_TOKEN")})
 			require.NoError(t, err)
 
 			req, err := http.NewRequest("POST", signupPath+"/verify_email", reqBody)

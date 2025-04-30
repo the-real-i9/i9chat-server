@@ -1,7 +1,6 @@
 package signupControllers
 
 import (
-	"fmt"
 	"i9chat/src/appTypes"
 	"i9chat/src/helpers"
 	"regexp"
@@ -26,16 +25,12 @@ func (b requestNewAccountBody) Validate() error {
 }
 
 type verifyEmailBody struct {
-	Code int `json:"code"`
+	Code string `json:"code"`
 }
 
 func (b verifyEmailBody) Validate() error {
-	mb := struct {
-		Code string `json:"code"`
-	}{Code: fmt.Sprint(b.Code)}
-
-	err := validation.ValidateStruct(&mb,
-		validation.Field(&mb.Code,
+	err := validation.ValidateStruct(&b,
+		validation.Field(&b.Code,
 			validation.Required,
 			validation.Length(6, 6).Error("invalid code value"),
 		),

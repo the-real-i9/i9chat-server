@@ -27,7 +27,7 @@ func RequestNewAccount(ctx context.Context, email string) (any, map[string]any, 
 
 	verfCode, expires := securityServices.GenerateVerifCodeExp()
 
-	go mailService.SendMail(email, "Email Verification", fmt.Sprintf("Your email verification code is: <b>%d</b>", verfCode))
+	go mailService.SendMail(email, "Email Verification", fmt.Sprintf("Your email verification code is: <b>%s</b>", verfCode))
 
 	sessionData := map[string]any{
 		"email":        email,
@@ -42,10 +42,10 @@ func RequestNewAccount(ctx context.Context, email string) (any, map[string]any, 
 	return respData, sessionData, nil
 }
 
-func VerifyEmail(ctx context.Context, sessionData map[string]any, inputVerfCode int) (any, map[string]any, error) {
+func VerifyEmail(ctx context.Context, sessionData map[string]any, inputVerfCode string) (any, map[string]any, error) {
 	var sd struct {
 		Email        string
-		VCode        int
+		VCode        string
 		VCodeExpires time.Time
 	}
 

@@ -17,7 +17,11 @@ func Upload(ctx context.Context, filePath string, data []byte) (string, error) {
 	defer cancel()
 
 	bucketName := os.Getenv("GCS_BUCKET")
-	fileUrl := fmt.Sprintf("https://storage.googleapis.com/%s/%s", bucketName, filePath)
+	mediaUrl := fmt.Sprintf("https://storage.googleapis.com/%s/%s", bucketName, filePath)
+
+	if os.Getenv("GO_ENV") == "test" {
+		return mediaUrl, nil
+	}
 
 	stWriter := appGlobals.GCSClient.Bucket(bucketName).Object(filePath).NewWriter(mediaUploadCtx)
 
@@ -26,13 +30,12 @@ func Upload(ctx context.Context, filePath string, data []byte) (string, error) {
 	err := stWriter.Close()
 	if err != nil {
 		if errors.Is(err, context.DeadlineExceeded) {
-			log.Println("cloudStorageService.go: UploadFile:", "media upload timed out")
-		} else {
-			log.Println("cloudStorageService.go: UploadFile:", err)
+			return "", fiber.NewError(fiber.StatusRequestTimeout, "media upload timed out")
 		}
 
+		log.Println("cloudStorageService.go: UploadFile:", err)
 		return "", fiber.ErrInternalServerError
 	}
 
-	return fileUrl, nil
+	return mediaUrl, nil
 }
