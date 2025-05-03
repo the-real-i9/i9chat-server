@@ -9,7 +9,6 @@ import (
 	"cloud.google.com/go/storage"
 	"github.com/joho/godotenv"
 	"github.com/neo4j/neo4j-go-driver/v5/neo4j"
-	"github.com/segmentio/kafka-go"
 	"google.golang.org/api/option"
 )
 
@@ -96,17 +95,6 @@ func initNeo4jDriver() error {
 	return nil
 }
 
-func initKafkaWriter() error {
-	w := &kafka.Writer{
-		Addr:                   kafka.TCP(os.Getenv("KAFKA_BROKER_ADDRESS")),
-		AllowAutoTopicCreation: true,
-	}
-
-	appGlobals.KafkaWriter = w
-
-	return nil
-}
-
 func InitApp() error {
 
 	if os.Getenv("GO_ENV") == "" {
@@ -123,16 +111,10 @@ func InitApp() error {
 		return err
 	}
 
-	initKafkaWriter()
-
 	return nil
 }
 
 func CleanUp() {
-	if err := appGlobals.KafkaWriter.Close(); err != nil {
-		log.Println("failed to close kafka writer:", err)
-	}
-
 	if err := appGlobals.Neo4jDriver.Close(context.TODO()); err != nil {
 		log.Println("error closing neo4j driver", err)
 	}

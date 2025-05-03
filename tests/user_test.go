@@ -1,13 +1,13 @@
 package tests
 
 import (
-	"encoding/json"
 	"fmt"
-	"maps"
 	"net/http"
 	"os"
 	"testing"
 
+	"github.com/maxatome/go-testdeep/td"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -16,212 +16,279 @@ const userPath = HOST_URL + "/api/app/user"
 func TestUserOps(t *testing.T) {
 	t.Parallel()
 
-	accounts := map[string]map[string]any{
-		"user1": {
-			"email":    "mikeross@gmail.com",
-			"username": "mikeross",
-			"password": "recheal_zane",
-			"phone":    "08183443588",
-			"geolocation": map[string]any{
-				"x": 5.0,
-				"y": 2.0,
-			},
-		},
-		"user2": {
-			"email":    "harveyspecter@gmail.com",
-			"username": "harvey",
-			"password": "scottie_",
-			"phone":    "08183443589",
-			"geolocation": map[string]any{
-				"x": 4.0,
-				"y": 3.0,
-			},
-		},
-		"user3": {
-			"email":    "jessicapearson@gmail.com",
-			"username": "jessica",
-			"password": "jeff_malone",
-			"phone":    "08183443590",
-			"geolocation": map[string]any{
-				"x": 3.0,
-				"y": 4.0,
-			},
+	user1 := UserT{
+		Email:    "mikeross@gmail.com",
+		Username: "mikeross",
+		Password: "recheal_zane",
+		Phone:    "08183443588",
+		Geolocation: UserGeolocation{
+			X: 5.0,
+			Y: 2.0,
 		},
 	}
 
-	t.Run("create 3 accounts", func(t *testing.T) {
+	user2 := UserT{
+		Email:    "harveyspecter@gmail.com",
+		Username: "harvey",
+		Password: "scottie_",
+		Phone:    "08183443589",
+		Geolocation: UserGeolocation{
+			X: 4.0,
+			Y: 3.0,
+		},
+	}
 
-		for user, info := range accounts {
-			t.Run("step one: request new account", func(t *testing.T) {
-				reqBody, err := reqBody(map[string]any{"email": info["email"]})
+	user3 := UserT{
+		Email:    "jessicapearson@gmail.com",
+		Username: "jessica",
+		Password: "jeff_malone",
+		Phone:    "08183443590",
+		Geolocation: UserGeolocation{
+			X: 3.0,
+			Y: 4.0,
+		},
+	}
+
+	{
+		t.Log("Setup: create new accounts for users")
+
+		for _, user := range []*UserT{&user1, &user2, &user3} {
+			user := user
+
+			{
+				reqBody, err := makeReqBody(map[string]any{"email": user.Email})
 				require.NoError(t, err)
 
 				res, err := http.Post(signupPath+"/request_new_account", "application/json", reqBody)
 				require.NoError(t, err)
 
-				require.Equal(t, http.StatusOK, res.StatusCode)
-				bd, err := resBody(res.Body)
+				if !assert.Equal(t, http.StatusOK, res.StatusCode) {
+					rb, err := errResBody(res.Body)
+					require.NoError(t, err)
+					t.Log("unexpected error:", rb)
+					return
+				}
+
+				rb, err := succResBody[map[string]any](res.Body)
 				require.NoError(t, err)
-				require.NotEmpty(t, bd)
 
-				accounts[user]["session_cookie"] = res.Header.Get("Set-Cookie")
-			})
+				td.Cmp(td.Require(t), rb, td.SuperMapOf(map[string]any{
+					"msg": "A 6-digit verification code has been sent to " + user.Email,
+				}, nil))
 
-			t.Run("step two: verify email", func(t *testing.T) {
-				reqBody, err := reqBody(map[string]any{"code": os.Getenv("DUMMY_VERF_TOKEN")})
+				user.SessionCookie = res.Header.Get("Set-Cookie")
+			}
+
+			{
+				reqBody, err := makeReqBody(map[string]any{"code": os.Getenv("DUMMY_VERF_TOKEN")})
 				require.NoError(t, err)
 
 				req, err := http.NewRequest("POST", signupPath+"/verify_email", reqBody)
 				require.NoError(t, err)
-				req.Header.Set("Cookie", accounts[user]["session_cookie"].(string))
+				req.Header.Set("Cookie", user.SessionCookie)
 				req.Header.Add("Content-Type", "application/json")
 
 				res, err := http.DefaultClient.Do(req)
 				require.NoError(t, err)
 
-				require.Equal(t, http.StatusOK, res.StatusCode)
-				bd, err := resBody(res.Body)
+				if !assert.Equal(t, http.StatusOK, res.StatusCode) {
+					rb, err := errResBody(res.Body)
+					require.NoError(t, err)
+					t.Log("unexpected error:", rb)
+					return
+				}
+
+				rb, err := succResBody[map[string]any](res.Body)
 				require.NoError(t, err)
-				require.NotEmpty(t, bd)
 
-				accounts[user]["session_cookie"] = res.Header.Get("Set-Cookie")
-			})
+				td.Cmp(td.Require(t), rb, td.SuperMapOf(map[string]any{
+					"msg": fmt.Sprintf("Your email '%s' has been verified!", user.Email),
+				}, nil))
 
-			t.Run("step three: register user", func(t *testing.T) {
-				reqBody, err := reqBody(map[string]any{
-					"username":    info["username"],
-					"password":    info["password"],
-					"phone":       info["phone"],
-					"geolocation": info["geolocation"],
+				user.SessionCookie = res.Header.Get("Set-Cookie")
+			}
+
+			{
+				reqBody, err := makeReqBody(map[string]any{
+					"username": user.Username,
+					"password": user.Password,
+					"phone":    user.Phone,
+					"geolocation": map[string]any{
+						"x": user.Geolocation.X,
+						"y": user.Geolocation.Y,
+					},
 				})
 				require.NoError(t, err)
 
 				req, err := http.NewRequest("POST", signupPath+"/register_user", reqBody)
 				require.NoError(t, err)
 				req.Header.Add("Content-Type", "application/json")
-				req.Header.Set("Cookie", accounts[user]["session_cookie"].(string))
+				req.Header.Set("Cookie", user.SessionCookie)
 
 				res, err := http.DefaultClient.Do(req)
 				require.NoError(t, err)
 
-				require.Equal(t, http.StatusOK, res.StatusCode)
-				bd, err := resBody(res.Body)
+				if !assert.Equal(t, http.StatusOK, res.StatusCode) {
+					rb, err := errResBody(res.Body)
+					require.NoError(t, err)
+					t.Log("unexpected error:", rb)
+					return
+				}
+
+				rb, err := succResBody[map[string]any](res.Body)
 				require.NoError(t, err)
-				require.NotEmpty(t, bd)
 
-				accounts[user]["session_cookie"] = res.Header.Get("Set-Cookie")
-			})
+				td.Cmp(td.Require(t), rb, td.SuperMapOf(map[string]any{
+					"msg":  "Signup success!",
+					"user": td.Ignore(),
+				}, nil))
+
+				user.SessionCookie = res.Header.Get("Set-Cookie")
+			}
 		}
-	})
+	}
 
-	t.Run("bring users online", func(t *testing.T) {
+	{
+		t.Log("Action: user1 changes her phone number")
 
-	})
+		user1.Phone = "07083249523"
 
-	t.Run("change user1's phone number", func(t *testing.T) {
-		reqBody, err := reqBody(map[string]any{"newPhoneNumber": "07083249523"})
+		reqBody, err := makeReqBody(map[string]any{"newPhoneNumber": user1.Phone})
 		require.NoError(t, err)
 
 		req, err := http.NewRequest("POST", userPath+"/change_phone_number", reqBody)
 		require.NoError(t, err)
-		req.Header.Set("Cookie", accounts["user1"]["session_cookie"].(string))
+		req.Header.Set("Cookie", user1.SessionCookie)
 		req.Header.Add("Content-Type", "application/json")
 
 		res, err := http.DefaultClient.Do(req)
 		require.NoError(t, err)
 
-		require.Equal(t, http.StatusOK, res.StatusCode)
-		bd, err := resBody(res.Body)
-		require.NoError(t, err)
-		require.NotEmpty(t, bd)
-	})
+		if !assert.Equal(t, http.StatusOK, res.StatusCode) {
+			rb, err := errResBody(res.Body)
+			require.NoError(t, err)
+			t.Log("unexpected error:", rb)
+			return
+		}
 
-	t.Run("confirm user1's updated profile", func(t *testing.T) {
+		rb, err := succResBody[bool](res.Body)
+		require.NoError(t, err)
+		require.True(t, rb)
+	}
+
+	{
+		t.Log("Action: user1 confirms her updated profile | phone number changed")
+
 		req, err := http.NewRequest("GET", userPath+"/my_profile", nil)
 		require.NoError(t, err)
-		req.Header.Set("Cookie", accounts["user1"]["session_cookie"].(string))
+		req.Header.Set("Cookie", user1.SessionCookie)
 
 		res, err := http.DefaultClient.Do(req)
 		require.NoError(t, err)
 
-		require.Equal(t, http.StatusOK, res.StatusCode)
+		if !assert.Equal(t, http.StatusOK, res.StatusCode) {
+			rb, err := errResBody(res.Body)
+			require.NoError(t, err)
+			t.Log("unexpected error:", rb)
+			return
+		}
 
-		bd, err := resBody(res.Body)
+		rb, err := succResBody[map[string]any](res.Body)
 		require.NoError(t, err)
-		require.NotEmpty(t, bd)
 
-		var data map[string]any
+		td.Cmp(td.Require(t), rb, td.SuperMapOf(map[string]any{
+			"username": user1.Username,
+			"phone":    user1.Phone,
+		}, nil))
+	}
 
-		require.NoError(t, json.Unmarshal(bd, &data))
+	{
+		t.Log("Action: user2 changes her geolocation")
 
-		maps.Copy(accounts["user1"], data)
+		user2.Geolocation.X = 3.0
+		user2.Geolocation.Y = 3.0
 
-		require.Equal(t, accounts["user1"]["phone"], "07083249523")
-	})
-
-	t.Run("change user2's geolocation", func(t *testing.T) {
-		reqBody, err := reqBody(map[string]any{"newGeolocation": map[string]any{"x": 3.0, "y": 3.0}})
+		reqBody, err := makeReqBody(map[string]any{"newGeolocation": map[string]any{"x": user2.Geolocation.X, "y": user2.Geolocation.Y}})
 		require.NoError(t, err)
 
 		req, err := http.NewRequest("POST", userPath+"/update_geolocation", reqBody)
 		require.NoError(t, err)
-		req.Header.Set("Cookie", accounts["user2"]["session_cookie"].(string))
+		req.Header.Set("Cookie", user2.SessionCookie)
 		req.Header.Add("Content-Type", "application/json")
 
 		res, err := http.DefaultClient.Do(req)
 		require.NoError(t, err)
 
-		require.Equal(t, http.StatusOK, res.StatusCode)
-		bd, err := resBody(res.Body)
-		require.NoError(t, err)
-		require.NotEmpty(t, bd)
-	})
+		if !assert.Equal(t, http.StatusOK, res.StatusCode) {
+			rb, err := errResBody(res.Body)
+			require.NoError(t, err)
+			t.Log("unexpected error:", rb)
+			return
+		}
 
-	t.Run("confirm user2's updated profile", func(t *testing.T) {
-		username := accounts["user2"]["username"].(string)
-
-		req, err := http.NewRequest("GET", userPath+"/find_user?emailUsernamePhone="+username, nil)
+		rb, err := succResBody[bool](res.Body)
 		require.NoError(t, err)
-		req.Header.Set("Cookie", accounts["user2"]["session_cookie"].(string))
+		require.True(t, rb)
+	}
+
+	{
+		t.Log("Action: user2 confirms her updated profile | geolocation changed")
+
+		req, err := http.NewRequest("GET", userPath+"/find_user?emailUsernamePhone="+user2.Username, nil)
+		require.NoError(t, err)
+		req.Header.Set("Cookie", user2.SessionCookie)
 
 		res, err := http.DefaultClient.Do(req)
 		require.NoError(t, err)
 
-		require.Equal(t, http.StatusOK, res.StatusCode)
+		if !assert.Equal(t, http.StatusOK, res.StatusCode) {
+			rb, err := errResBody(res.Body)
+			require.NoError(t, err)
+			t.Log("unexpected error:", rb)
+			return
+		}
 
-		bd, err := resBody(res.Body)
+		rb, err := succResBody[map[string]any](res.Body)
 		require.NoError(t, err)
-		require.NotEmpty(t, bd)
 
-		var data map[string]any
+		td.Cmp(td.Require(t), rb, td.SuperMapOf(map[string]any{
+			"username": user2.Username,
+			"geolocation": td.SuperMapOf(map[string]any{
+				"x": user2.Geolocation.X,
+				"y": user2.Geolocation.Y,
+			}, nil),
+		}, nil))
+	}
 
-		require.NoError(t, json.Unmarshal(bd, &data))
+	{
+		t.Log("Action: user1 finds users nearby")
 
-		maps.Copy(accounts["user2"], data)
-
-		require.Equal(t, accounts["user2"]["geolocation"], map[string]any{"x": 3.0, "y": 3.0})
-	})
-
-	t.Run("find nearby users", func(t *testing.T) {
 		x, y, radius := 2.0, 2.0, 10.0
 
 		req, err := http.NewRequest("GET", fmt.Sprintf("%s%s?x=%f&y=%f&radius=%f", userPath, "/find_nearby_users", x, y, radius), nil)
 		require.NoError(t, err)
-		req.Header.Set("Cookie", accounts["user1"]["session_cookie"].(string))
+		req.Header.Set("Cookie", user1.SessionCookie)
 
 		res, err := http.DefaultClient.Do(req)
 		require.NoError(t, err)
 
-		require.Equal(t, http.StatusOK, res.StatusCode)
+		if !assert.Equal(t, http.StatusOK, res.StatusCode) {
+			rb, err := errResBody(res.Body)
+			require.NoError(t, err)
+			t.Log("unexpected error:", rb)
+			return
+		}
 
-		bd, err := resBody(res.Body)
+		rb, err := succResBody[[]map[string]any](res.Body)
 		require.NoError(t, err)
-		require.NotEmpty(t, bd)
 
-		var data []any
-
-		require.NoError(t, json.Unmarshal(bd, &data))
-
-		require.NotEmpty(t, data)
-	})
+		td.Cmp(td.Require(t), rb, td.Contains(td.Any(
+			td.SuperMapOf(map[string]any{
+				"username": user2.Username,
+			}, nil),
+			td.SuperMapOf(map[string]any{
+				"username": user3.Username,
+			}, nil),
+		)))
+	}
 }

@@ -13,11 +13,6 @@ jobs:
           - '7687:7687'
         env:
           NEO4J_AUTH: "neo4j/pa@sw$*d"
-
-      kafka-kraft:
-        image: 'confluentinc/confluent-local:latest'
-        ports:
-          - 9092:9092
       
     strategy:
       matrix:
@@ -41,7 +36,6 @@ jobs:
           NEO4J_URL: "neo4j://localhost"
           NEO4J_USER: neo4j
           NEO4J_PASSWORD: "pa@sw$*d"
-          KAFKA_BROKER_ADDRESS: "localhost:9092"
           AUTH_JWT_SECRET: ${{ secrets.AUTH_JWT_SECRET }}
           COOKIE_SECRET: ${{ secrets.COOKIE_SECRET }}
           MAILING_EMAIL: ${{ secrets.MAILING_EMAIL }}

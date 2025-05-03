@@ -8,7 +8,7 @@ import (
 	groupChat "i9chat/src/models/chatModel/groupChatModel"
 	"i9chat/src/services/appServices"
 	"i9chat/src/services/cloudStorageService"
-	"i9chat/src/services/messageBrokerService"
+	"i9chat/src/services/eventStreamService"
 	"time"
 )
 
@@ -171,7 +171,7 @@ func RemoveUserFromGroup(ctx context.Context, groupId, clientUsername, targetUse
 	}
 
 	go func() {
-		messageBrokerService.Send(fmt.Sprintf("user-%s-alerts", targetUser), messageBrokerService.Message{
+		eventStreamService.Send(fmt.Sprintf("user-%s-alerts", targetUser), appTypes.ServerWSMsg{
 			Event: "removed from group",
 			Data: map[string]any{
 				"group_id": groupId,

@@ -6,7 +6,7 @@ import (
 	"i9chat/src/appTypes"
 	user "i9chat/src/models/userModel"
 	"i9chat/src/services/cloudStorageService"
-	"i9chat/src/services/messageBrokerService"
+	"i9chat/src/services/eventStreamService"
 	"time"
 
 	"github.com/gabriel-vasile/mimetype"
@@ -20,7 +20,7 @@ func GoOnline(ctx context.Context, clientUsername string) {
 
 	// go func(dmPartners []any) {
 	for _, dmp := range dmPartners {
-		messageBrokerService.Send(fmt.Sprintf("user-%s-alerts", dmp), messageBrokerService.Message{
+		eventStreamService.Send(fmt.Sprintf("user-%s-alerts", dmp), appTypes.ServerWSMsg{
 			Event: "user online",
 			Data: map[string]any{
 				"user": clientUsername,
@@ -41,7 +41,7 @@ func GoOffline(ctx context.Context, clientUsername string) {
 
 	// go func(dmPartners []any) {
 	for _, dmp := range dmPartners {
-		messageBrokerService.Send(fmt.Sprintf("user-%s-alerts", dmp), messageBrokerService.Message{
+		eventStreamService.Send(fmt.Sprintf("user-%s-alerts", dmp), appTypes.ServerWSMsg{
 			Event: "user offline",
 			Data: map[string]any{
 				"user":      clientUsername,
@@ -68,11 +68,7 @@ func ChangeProfilePicture(ctx context.Context, clientUsername string, pictureDat
 		return nil, err2
 	}
 
-	respData := map[string]any{
-		"msg": "Operation Successful",
-	}
-
-	return respData, nil
+	return true, nil
 }
 
 func ChangePhone(ctx context.Context, clientUsername string, newPhone string) (any, error) {
@@ -81,11 +77,7 @@ func ChangePhone(ctx context.Context, clientUsername string, newPhone string) (a
 		return nil, err
 	}
 
-	respData := map[string]any{
-		"msg": "Operation Successful",
-	}
-
-	return respData, nil
+	return true, nil
 }
 
 func UpdateMyLocation(ctx context.Context, clientUsername string, newGeolocation appTypes.UserGeolocation) (any, error) {
@@ -94,11 +86,7 @@ func UpdateMyLocation(ctx context.Context, clientUsername string, newGeolocation
 		return nil, err
 	}
 
-	respData := map[string]any{
-		"msg": "Operation Successful",
-	}
-
-	return respData, err
+	return true, err
 }
 
 func FindUser(ctx context.Context, emailUsernamePhone string) (map[string]any, error) {

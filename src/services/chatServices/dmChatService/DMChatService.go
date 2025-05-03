@@ -3,11 +3,10 @@ package dmChatService
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"i9chat/src/appTypes"
 	dmChat "i9chat/src/models/chatModel/dmChatModel"
 	"i9chat/src/services/appServices"
-	"i9chat/src/services/messageBrokerService"
+	"i9chat/src/services/eventStreamService"
 	"time"
 )
 
@@ -29,7 +28,7 @@ func SendMessage(ctx context.Context, clientUsername, partnerUsername string, ms
 		return nil, err
 	}
 
-	go messageBrokerService.Send(fmt.Sprintf("user-%s-alerts", partnerUsername), messageBrokerService.Message{
+	go eventStreamService.Send(partnerUsername, appTypes.ServerWSMsg{
 		Event: "new dm chat message",
 		Data:  newMessage.PartnerData,
 	})
@@ -47,7 +46,7 @@ func AckMessageDelivered(ctx context.Context, clientUsername, partnerUsername, m
 		return err
 	}
 
-	go messageBrokerService.Send(fmt.Sprintf("user-%s-alerts", partnerUsername), messageBrokerService.Message{
+	go eventStreamService.Send(partnerUsername, appTypes.ServerWSMsg{
 		Event: "dm chat message delivered",
 		Data: map[string]any{
 			"partner_username": clientUsername,
@@ -61,7 +60,7 @@ func AckMessageRead(ctx context.Context, clientUsername, partnerUsername, msgId 
 	if err := dmChat.AckMessageRead(ctx, clientUsername, partnerUsername, msgId, readAt); err != nil {
 		return err
 	}
-	go messageBrokerService.Send(fmt.Sprintf("user-%s-alerts", partnerUsername), messageBrokerService.Message{
+	go eventStreamService.Send(partnerUsername, appTypes.ServerWSMsg{
 		Event: "dm chat message read",
 		Data: map[string]any{
 			"partner_username": clientUsername,

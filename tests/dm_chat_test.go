@@ -1,12 +1,15 @@
 package tests
 
 import (
+	"fmt"
 	"net/http"
 	"os"
 	"testing"
 	"time"
 
 	"github.com/fasthttp/websocket"
+	"github.com/maxatome/go-testdeep/td"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -15,146 +18,195 @@ const userWSPath = WSHOST_URL + "/api/app/user/go_online"
 func TestDMChat(t *testing.T) {
 	t.Parallel()
 
-	accounts := map[string]map[string]any{
-		"user1": {
-			"email":    "louislitt@gmail.com",
-			"username": "louislitt",
-			"password": "who's norma",
-			"phone":    "08145423518",
-			"geolocation": map[string]any{
-				"x": 5.0,
-				"y": 3.0,
-			},
-		},
-		"user2": {
-			"email":    "jeffmalone@gmail.com",
-			"username": "jeffyboy",
-			"password": "jessica_",
-			"phone":    "08113425589",
-			"geolocation": map[string]any{
-				"x": 4.0,
-				"y": 3.0,
-			},
+	user1 := UserT{
+		Email:    "louislitt@gmail.com",
+		Username: "louislitt",
+		Password: "who's norma",
+		Phone:    "08145423518",
+		Geolocation: UserGeolocation{
+			X: 5.0,
+			Y: 3.0,
 		},
 	}
 
-	t.Run("signup 2 users", func(t *testing.T) {
+	user2 := UserT{
+		Email:    "jeffmalone@gmail.com",
+		Username: "jeffyboy",
+		Password: "jessica_",
+		Phone:    "08113425589",
+		Geolocation: UserGeolocation{
+			X: 4.0,
+			Y: 3.0,
+		},
+	}
 
-		for user, info := range accounts {
-			t.Run("step one: request new account", func(t *testing.T) {
-				reqBody, err := reqBody(map[string]any{"email": info["email"]})
+	{
+		t.Log("Setup: create new accounts for users")
+
+		for _, user := range []*UserT{&user1, &user2} {
+			user := user
+
+			{
+				reqBody, err := makeReqBody(map[string]any{"email": user.Email})
 				require.NoError(t, err)
 
 				res, err := http.Post(signupPath+"/request_new_account", "application/json", reqBody)
 				require.NoError(t, err)
 
-				require.Equal(t, http.StatusOK, res.StatusCode)
+				if !assert.Equal(t, http.StatusOK, res.StatusCode) {
+					rb, err := errResBody(res.Body)
+					require.NoError(t, err)
+					t.Log("unexpected error:", rb)
+					return
+				}
 
-				bd, err := resBody(res.Body)
+				rb, err := succResBody[map[string]any](res.Body)
 				require.NoError(t, err)
-				require.NotEmpty(t, bd)
 
-				accounts[user]["session_cookie"] = res.Header.Get("Set-Cookie")
-			})
+				td.Cmp(td.Require(t), rb, td.SuperMapOf(map[string]any{
+					"msg": "A 6-digit verification code has been sent to " + user.Email,
+				}, nil))
 
-			t.Run("step two: verify email", func(t *testing.T) {
-				reqBody, err := reqBody(map[string]any{"code": os.Getenv("DUMMY_VERF_TOKEN")})
+				user.SessionCookie = res.Header.Get("Set-Cookie")
+			}
+
+			{
+				reqBody, err := makeReqBody(map[string]any{"code": os.Getenv("DUMMY_VERF_TOKEN")})
 				require.NoError(t, err)
 
 				req, err := http.NewRequest("POST", signupPath+"/verify_email", reqBody)
 				require.NoError(t, err)
-				req.Header.Set("Cookie", accounts[user]["session_cookie"].(string))
+				req.Header.Set("Cookie", user.SessionCookie)
 				req.Header.Add("Content-Type", "application/json")
 
 				res, err := http.DefaultClient.Do(req)
 				require.NoError(t, err)
 
-				require.Equal(t, http.StatusOK, res.StatusCode)
+				if !assert.Equal(t, http.StatusOK, res.StatusCode) {
+					rb, err := errResBody(res.Body)
+					require.NoError(t, err)
+					t.Log("unexpected error:", rb)
+					return
+				}
 
-				bd, err := resBody(res.Body)
+				rb, err := succResBody[map[string]any](res.Body)
 				require.NoError(t, err)
-				require.NotEmpty(t, bd)
 
-				accounts[user]["session_cookie"] = res.Header.Get("Set-Cookie")
-			})
+				td.Cmp(td.Require(t), rb, td.SuperMapOf(map[string]any{
+					"msg": fmt.Sprintf("Your email '%s' has been verified!", user.Email),
+				}, nil))
 
-			t.Run("step three: register user", func(t *testing.T) {
-				reqBody, err := reqBody(map[string]any{
-					"username":    info["username"],
-					"password":    info["password"],
-					"phone":       info["phone"],
-					"geolocation": info["geolocation"],
+				user.SessionCookie = res.Header.Get("Set-Cookie")
+			}
+
+			{
+				reqBody, err := makeReqBody(map[string]any{
+					"username": user.Username,
+					"password": user.Password,
+					"phone":    user.Phone,
+					"geolocation": map[string]any{
+						"x": user.Geolocation.X,
+						"y": user.Geolocation.Y,
+					},
 				})
 				require.NoError(t, err)
 
 				req, err := http.NewRequest("POST", signupPath+"/register_user", reqBody)
 				require.NoError(t, err)
 				req.Header.Add("Content-Type", "application/json")
-				req.Header.Set("Cookie", accounts[user]["session_cookie"].(string))
+				req.Header.Set("Cookie", user.SessionCookie)
 
 				res, err := http.DefaultClient.Do(req)
 				require.NoError(t, err)
 
-				require.Equal(t, http.StatusOK, res.StatusCode)
+				if !assert.Equal(t, http.StatusOK, res.StatusCode) {
+					rb, err := errResBody(res.Body)
+					require.NoError(t, err)
+					t.Log("unexpected error:", rb)
+					return
+				}
 
-				bd, err := resBody(res.Body)
+				rb, err := succResBody[map[string]any](res.Body)
 				require.NoError(t, err)
-				require.NotEmpty(t, bd)
 
-				accounts[user]["session_cookie"] = res.Header.Get("Set-Cookie")
-			})
+				td.Cmp(td.Require(t), rb, td.SuperMapOf(map[string]any{
+					"msg":  "Signup success!",
+					"user": td.Ignore(),
+				}, nil))
+
+				user.SessionCookie = res.Header.Get("Set-Cookie")
+			}
 		}
-	})
+	}
 
-	var (
-		user1wsConn *websocket.Conn
-		user1res    *http.Response
-		user1err    error
+	{
+		t.Log("Setup: Init user sockets")
 
-		user2wsConn *websocket.Conn
-		user2res    *http.Response
-		user2err    error
-	)
+		for _, user := range []*UserT{&user1, &user2} {
+			user := user
 
-	t.Run("bring user1 online", func(t *testing.T) {
-		header := http.Header{}
-		header.Set("Cookie", accounts["user1"]["session_cookie"].(string))
-		user1wsConn, user1res, user1err = websocket.DefaultDialer.Dial(userWSPath, header)
+			header := http.Header{}
+			header.Set("Cookie", user.SessionCookie)
+			wsConn, res, err := websocket.DefaultDialer.Dial(userWSPath, header)
+			require.NoError(t, err)
 
-		require.NoError(t, user1err)
-		require.Equal(t, http.StatusSwitchingProtocols, user1res.StatusCode)
-	})
+			if !assert.Equal(t, http.StatusSwitchingProtocols, res.StatusCode) {
+				rb, err := errResBody(res.Body)
+				require.NoError(t, err)
+				t.Log("unexpected error:", rb)
+				return
+			}
 
-	t.Run("bring user2 online", func(t *testing.T) {
-		header := http.Header{}
-		header.Set("Cookie", accounts["user2"]["session_cookie"].(string))
-		user2wsConn, user2res, user2err = websocket.DefaultDialer.Dial(userWSPath, header)
+			require.NotNil(t, wsConn)
 
-		require.NoError(t, user2err)
-		require.Equal(t, http.StatusSwitchingProtocols, user2res.StatusCode)
-	})
+			defer wsConn.CloseHandler()(websocket.CloseNormalClosure, user.Username+": GoodBye!")
 
-	var (
-		ndcmEvent  = "new dm chat message"
-		adcmdEvent = "ack dm chat message delivered"
-		adcmrEvent = "ack dm chat message read"
-	)
+			user.WSConn = wsConn
+			user.ServerWSMsg = make(chan map[string]any)
 
-	var (
-		user1Username = accounts["user1"]["username"].(string)
-		user2Username = accounts["user2"]["username"].(string)
-	)
+			go func() {
+				userCommChan := user.ServerWSMsg
 
-	t.Run("user1 messages user2, who then acks 'delivered'", func(t *testing.T) {
+				for {
+					userCommChan := userCommChan
+					userWSConn := user.WSConn
+
+					var wsMsg map[string]any
+
+					if err := userWSConn.ReadJSON(&wsMsg); err != nil {
+						break
+					}
+
+					if wsMsg == nil {
+						continue
+					}
+
+					userCommChan <- wsMsg
+				}
+
+				close(userCommChan)
+			}()
+		}
+	}
+
+	{
+		const (
+			ndcmEvent  string = "new dm chat message"
+			adcmdEvent string = "ack dm chat message delivered"
+			adcmrEvent string = "ack dm chat message read"
+		)
+
+		t.Log("Action: user1 messages user2, who then acks 'delivered', and later acks 'read'")
+
 		var (
 			err error
 		)
 
 		// user1 sends message to user2
-		err = user1wsConn.WriteJSON(map[string]any{
+		err = user1.WSConn.WriteJSON(map[string]any{
 			"event": ndcmEvent,
 			"data": map[string]any{
-				"partnerUsername": user2Username,
+				"partnerUsername": user2.Username,
 				"msg": map[string]any{
 					"type": "text",
 					"props": map[string]any{
@@ -166,30 +218,40 @@ func TestDMChat(t *testing.T) {
 		})
 		require.NoError(t, err)
 
-		// user1's server reply to event send
-		var user1Reply map[string]any
+		// user1's server reply (response) to event sent
+		user1ServerReply := <-user1.ServerWSMsg
 
-		require.NoError(t, user1wsConn.ReadJSON(&user1Reply))
-		require.Contains(t, user1Reply, "event")
-		require.Equal(t, user1Reply["event"], "server reply")
+		td.Cmp(td.Require(t), user1ServerReply, td.SuperMapOf(map[string]any{
+			"event":   "server reply",
+			"toEvent": "new dm chat message",
+			"data": td.Map(map[string]any{
+				"new_msg_id": td.Ignore(),
+			}, nil),
+		}, nil))
 
 		// user2 receives a new message
-		var user2NewMsgReceipt map[string]any
+		user2NewMsgReceived := <-user2.ServerWSMsg
 
-		require.NoError(t, user2wsConn.ReadJSON(&user2NewMsgReceipt))
-		require.Contains(t, user2NewMsgReceipt, "event")
-		require.Equal(t, user2NewMsgReceipt["event"], "new dm chat message")
-		require.Contains(t, user2NewMsgReceipt["data"], "id")
-		require.Contains(t, user2NewMsgReceipt["data"], "content")
+		td.Cmp(td.Require(t), user2NewMsgReceived, td.SuperMapOf(map[string]any{
+			"event": "new dm chat message",
+			"data": td.SuperMapOf(map[string]any{
+				"id":              td.Ignore(),
+				"content":         td.Ignore(),
+				"delivery_status": "sent",
+				"sender": td.SuperMapOf(map[string]any{
+					"username": user1.Username,
+				}, nil),
+			}, nil),
+		}, nil))
 
-		recvdMsgId := user2NewMsgReceipt["data"].(map[string]any)["id"].(string)
+		user2RecvdMsgId := user2NewMsgReceived["data"].(map[string]any)["id"].(string)
 
 		// user2 acknowledges message as 'delivered'
-		err = user2wsConn.WriteJSON(map[string]any{
+		err = user2.WSConn.WriteJSON(map[string]any{
 			"event": adcmdEvent,
 			"data": map[string]any{
-				"partnerUsername": user1Username,
-				"msgId":           recvdMsgId,
+				"partnerUsername": user1.Username,
+				"msgId":           user2RecvdMsgId,
 				"at":              time.Now().UTC(),
 			},
 		})
@@ -197,20 +259,22 @@ func TestDMChat(t *testing.T) {
 
 		// user1 receives the 'delivered' acknowledgement,
 		// by which it marks the message as delivered
-		var user1DelvReceipt map[string]any
+		user1DelvAckReceipt := <-user1.ServerWSMsg
 
-		require.NoError(t, user1wsConn.ReadJSON(&user1DelvReceipt))
-
-		require.Contains(t, user1DelvReceipt, "event")
-		require.Equal(t, user1DelvReceipt["event"], "dm chat message delivered")
-		require.Equal(t, user1DelvReceipt["data"], map[string]any{"partner_username": user2Username, "msg_id": recvdMsgId})
+		td.Cmp(td.Require(t), user1DelvAckReceipt, td.SuperMapOf(map[string]any{
+			"event": "dm chat message delivered",
+			"data": td.Map(map[string]any{
+				"partner_username": user2.Username,
+				"msg_id":           user2RecvdMsgId,
+			}, nil),
+		}, nil))
 
 		// user2 acknowledges message as 'read'
-		err = user2wsConn.WriteJSON(map[string]any{
+		err = user2.WSConn.WriteJSON(map[string]any{
 			"event": adcmrEvent,
 			"data": map[string]any{
-				"partnerUsername": user1Username,
-				"msgId":           recvdMsgId,
+				"partnerUsername": user1.Username,
+				"msgId":           user2RecvdMsgId,
 				"at":              time.Now().UTC(),
 			},
 		})
@@ -218,15 +282,14 @@ func TestDMChat(t *testing.T) {
 
 		// user1 receives the 'read' acknowledgement,
 		// by which it marks the message as read
-		var user1ReadReceipt map[string]any
+		user1ReadAckReceipt := <-user1.ServerWSMsg
 
-		require.NoError(t, user1wsConn.ReadJSON(&user1ReadReceipt))
-
-		require.Contains(t, user1ReadReceipt, "event")
-		require.Equal(t, user1ReadReceipt["event"], "dm chat message read")
-		require.Equal(t, user1ReadReceipt["data"], map[string]any{"partner_username": user2Username, "msg_id": recvdMsgId})
-	})
-
-	require.NoError(t, user1wsConn.CloseHandler()(websocket.CloseNormalClosure, "user1 done"))
-	require.NoError(t, user2wsConn.CloseHandler()(websocket.CloseNormalClosure, "user2 done"))
+		td.Cmp(td.Require(t), user1ReadAckReceipt, td.SuperMapOf(map[string]any{
+			"event": "dm chat message read",
+			"data": td.Map(map[string]any{
+				"partner_username": user2.Username,
+				"msg_id":           user2RecvdMsgId,
+			}, nil),
+		}, nil))
+	}
 }

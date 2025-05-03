@@ -29,12 +29,14 @@ func SendMessage(ctx context.Context, clientUsername, partnerUsername string, ms
 			partnerChat.last_activity_type = "message",
 			clientChat.updated_at = $created_at, 
 			partnerChat.updated_at = $created_at
+
 		WITH clientUser, clientChat, partnerUser, partnerChat
 		CREATE (message:DMMessage{ id: randomUUID(), content: $message_content, delivery_status: "sent", created_at: $created_at }),
 			(clientUser)-[:SENDS_MESSAGE]->(message)-[:IN_DM_CHAT]->(clientChat),
 			(partnerUser)-[:RECEIVES_MESSAGE]->(message)-[:IN_DM_CHAT]->(partnerChat)
 		SET clientChat.last_message_id = message.id,
 			partnerChat.last_message_id = message.id
+			
 		WITH message, toString(message.created_at) AS created_at, clientUser { .username, .profile_pic_url, .connection_status } AS sender
 		RETURN { new_msg_id: message.id } AS client_resp,
 			message { .*, created_at, sender } AS partner_resp

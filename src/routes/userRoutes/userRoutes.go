@@ -16,7 +16,7 @@ func Init(router fiber.Router) {
 		return fiber.ErrUpgradeRequired
 	})
 
-	router.Get("/go_online", UC.OpenWSStream)
+	router.Get("/go_online", UC.WSStream)
 
 	router.Get("/my_profile", UC.GetMyProfile)
 

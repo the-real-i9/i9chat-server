@@ -11,6 +11,11 @@ type ClientUser struct {
 	Username string
 }
 
+type ServerWSMsg struct {
+	Event string `json:"event"`
+	Data  any    `json:"data"`
+}
+
 type UserGeolocation struct {
 	X float64 `json:"x"`
 	Y float64 `json:"y"`

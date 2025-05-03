@@ -2,10 +2,13 @@
 package tests
 
 import (
+	"fmt"
 	"net/http"
 	"os"
 	"testing"
 
+	"github.com/maxatome/go-testdeep/td"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -16,140 +19,236 @@ const signoutPath = userPath + "/signout"
 func TestUserAuth(t *testing.T) {
 	t.Parallel()
 
-	t.Run("User-A Scenario", func(t *testing.T) {
+	user1 := UserT{
+		Email:    "suberu@gmail.com",
+		Username: "suberu",
+		Password: "sketeppy",
+		Phone:    "08283443588",
+		Geolocation: UserGeolocation{
+			X: 5.0,
+			Y: 2.0,
+		},
+	}
 
-		sessionCookie := ""
+	{
+		t.Log("Action: user1 requests a new account")
 
-		t.Run("requests a new account", func(t *testing.T) {
-			reqBody, err := reqBody(map[string]any{"email": "suberu@gmail.com"})
+		reqBody, err := makeReqBody(map[string]any{"email": user1.Email})
+		require.NoError(t, err)
+
+		res, err := http.Post(signupPath+"/request_new_account", "application/json", reqBody)
+		require.NoError(t, err)
+
+		if !assert.Equal(t, http.StatusOK, res.StatusCode) {
+			rb, err := errResBody(res.Body)
 			require.NoError(t, err)
+			t.Log("unexpected error:", rb)
+			return
+		}
 
-			res, err := http.Post(signupPath+"/request_new_account", "application/json", reqBody)
+		rb, err := succResBody[map[string]any](res.Body)
+		require.NoError(t, err)
+
+		td.Cmp(td.Require(t), rb, td.SuperMapOf(map[string]any{
+			"msg": "A 6-digit verification code has been sent to " + user1.Email,
+		}, nil))
+
+		user1.SessionCookie = res.Header.Get("Set-Cookie")
+	}
+
+	{
+		t.Log("Action: user1 sends an incorrect email verf code")
+
+		reqBody, err := makeReqBody(map[string]any{"code": "000111"})
+		require.NoError(t, err)
+
+		req, err := http.NewRequest("POST", signupPath+"/verify_email", reqBody)
+		require.NoError(t, err)
+		req.Header.Set("Cookie", user1.SessionCookie)
+		req.Header.Add("Content-Type", "application/json")
+
+		res, err := http.DefaultClient.Do(req)
+		require.NoError(t, err)
+
+		if !assert.Equal(t, http.StatusBadRequest, res.StatusCode) {
+			rb, err := errResBody(res.Body)
 			require.NoError(t, err)
+			t.Log("unexpected error:", rb)
+			return
+		}
 
-			require.Equal(t, http.StatusOK, res.StatusCode)
-			bd, err := resBody(res.Body)
+		rb, err := errResBody(res.Body)
+		require.NoError(t, err)
+
+		require.Equal(t, "Incorrect verification code! Check or Re-submit your email.", rb)
+	}
+
+	{
+		t.Log("Action: user1 sends the correct email verf code")
+
+		reqBody, err := makeReqBody(map[string]any{"code": os.Getenv("DUMMY_VERF_TOKEN")})
+		require.NoError(t, err)
+
+		req, err := http.NewRequest("POST", signupPath+"/verify_email", reqBody)
+		require.NoError(t, err)
+		req.Header.Set("Cookie", user1.SessionCookie)
+		req.Header.Add("Content-Type", "application/json")
+
+		res, err := http.DefaultClient.Do(req)
+		require.NoError(t, err)
+
+		if !assert.Equal(t, http.StatusOK, res.StatusCode) {
+			rb, err := errResBody(res.Body)
 			require.NoError(t, err)
-			require.NotEmpty(t, bd)
+			t.Log("unexpected error:", rb)
+			return
+		}
 
-			sessionCookie = res.Header.Get("Set-Cookie")
+		rb, err := succResBody[map[string]any](res.Body)
+		require.NoError(t, err)
+
+		td.Cmp(td.Require(t), rb, td.SuperMapOf(map[string]any{
+			"msg": fmt.Sprintf("Your email '%s' has been verified!", user1.Email),
+		}, nil))
+
+		user1.SessionCookie = res.Header.Get("Set-Cookie")
+	}
+
+	{
+		t.Log("Action: user1 submits her remaining credentials")
+
+		reqBody, err := makeReqBody(map[string]any{
+			"username": user1.Username,
+			"password": user1.Password,
+			"phone":    user1.Phone,
+			"geolocation": map[string]any{
+				"x": user1.Geolocation.X,
+				"y": user1.Geolocation.Y,
+			},
 		})
+		require.NoError(t, err)
 
-		t.Run("sends an incorrect email verf code", func(t *testing.T) {
-			reqBody, err := reqBody(map[string]any{"code": "000111"})
+		req, err := http.NewRequest("POST", signupPath+"/register_user", reqBody)
+		require.NoError(t, err)
+		req.Header.Add("Content-Type", "application/json")
+		req.Header.Set("Cookie", user1.SessionCookie)
+
+		res, err := http.DefaultClient.Do(req)
+		require.NoError(t, err)
+
+		if !assert.Equal(t, http.StatusOK, res.StatusCode) {
+			rb, err := errResBody(res.Body)
 			require.NoError(t, err)
+			t.Log("unexpected error:", rb)
+			return
+		}
 
-			req, err := http.NewRequest("POST", signupPath+"/verify_email", reqBody)
+		rb, err := succResBody[map[string]any](res.Body)
+		require.NoError(t, err)
+
+		td.Cmp(td.Require(t), rb, td.SuperMapOf(map[string]any{
+			"msg":  "Signup success!",
+			"user": td.Ignore(),
+		}, nil))
+
+		user1.SessionCookie = res.Header.Get("Set-Cookie")
+	}
+
+	{
+		t.Log("Action: user1 signs out")
+
+		req, err := http.NewRequest("GET", signoutPath, nil)
+		require.NoError(t, err)
+		req.Header.Set("Cookie", user1.SessionCookie)
+
+		res, err := http.DefaultClient.Do(req)
+		require.NoError(t, err)
+
+		if !assert.Equal(t, http.StatusOK, res.StatusCode) {
+			rb, err := errResBody(res.Body)
 			require.NoError(t, err)
-			req.Header.Set("Cookie", sessionCookie)
-			req.Header.Add("Content-Type", "application/json")
+			t.Log("unexpected error:", rb)
+			return
+		}
 
-			res, err := http.DefaultClient.Do(req)
-			require.NoError(t, err)
+		rb, err := succResBody[string](res.Body)
+		require.NoError(t, err)
 
-			require.Equal(t, http.StatusBadRequest, res.StatusCode)
+		require.Equal(t, "You've been logged out!", rb)
+	}
+
+	{
+		t.Log("Action: user1 signs in with incorrect credentials")
+
+		reqBody, err := makeReqBody(map[string]any{
+			"emailOrUsername": user1.Email,
+			"password":        "millini_x",
 		})
+		require.NoError(t, err)
 
-		t.Run("sends the correct email verf code", func(t *testing.T) {
-			reqBody, err := reqBody(map[string]any{"code": os.Getenv("DUMMY_VERF_TOKEN")})
+		res, err := http.Post(signinPath, "application/json", reqBody)
+		require.NoError(t, err)
+
+		if !assert.Equal(t, http.StatusNotFound, res.StatusCode) {
+			rb, err := errResBody(res.Body)
 			require.NoError(t, err)
+			t.Log("unexpected error:", rb)
+			return
+		}
 
-			req, err := http.NewRequest("POST", signupPath+"/verify_email", reqBody)
-			require.NoError(t, err)
-			req.Header.Set("Cookie", sessionCookie)
-			req.Header.Add("Content-Type", "application/json")
+		rb, err := errResBody(res.Body)
+		require.NoError(t, err)
 
-			res, err := http.DefaultClient.Do(req)
-			require.NoError(t, err)
+		require.Equal(t, "Incorrect email/username or password", rb)
+	}
 
-			require.Equal(t, http.StatusOK, res.StatusCode)
-			bd, err := resBody(res.Body)
-			require.NoError(t, err)
-			require.NotEmpty(t, bd)
+	{
+		t.Log("Action: user1 signs in with correct credentials")
 
-			sessionCookie = res.Header.Get("Set-Cookie")
+		reqBody, err := makeReqBody(map[string]any{
+			"emailOrUsername": user1.Username,
+			"password":        user1.Password,
 		})
+		require.NoError(t, err)
 
-		t.Run("submits her remaining credentials", func(t *testing.T) {
-			reqBody, err := reqBody(map[string]any{
-				"username": "suberu",
-				"password": "sketeppy",
-				"phone":    "08283443588",
-				"geolocation": map[string]any{
-					"x": 5.0,
-					"y": 2.0,
-				},
-			})
+		res, err := http.Post(signinPath, "application/json", reqBody)
+		require.NoError(t, err)
+
+		if !assert.Equal(t, http.StatusOK, res.StatusCode) {
+			rb, err := errResBody(res.Body)
 			require.NoError(t, err)
+			t.Log("unexpected error:", rb)
+			return
+		}
 
-			req, err := http.NewRequest("POST", signupPath+"/register_user", reqBody)
+		rb, err := succResBody[map[string]any](res.Body)
+		require.NoError(t, err)
+
+		td.Cmp(td.Require(t), rb, td.SuperMapOf(map[string]any{
+			"msg":  "Signin success!",
+			"user": td.Ignore(),
+		}, nil))
+	}
+
+	{
+		t.Log("Action: userX requests an account with an already existing email")
+
+		reqBody, err := makeReqBody(map[string]any{"email": user1.Email})
+		require.NoError(t, err)
+
+		res, err := http.Post(signupPath+"/request_new_account", "application/json", reqBody)
+		require.NoError(t, err)
+
+		if !assert.Equal(t, http.StatusBadRequest, res.StatusCode) {
+			rb, err := errResBody(res.Body)
 			require.NoError(t, err)
-			req.Header.Add("Content-Type", "application/json")
-			req.Header.Set("Cookie", sessionCookie)
+			t.Log("unexpected error:", rb)
+			return
+		}
 
-			res, err := http.DefaultClient.Do(req)
-			require.NoError(t, err)
+		rb, err := errResBody(res.Body)
+		require.NoError(t, err)
 
-			require.Equal(t, http.StatusOK, res.StatusCode)
-			bd, err := resBody(res.Body)
-			require.NoError(t, err)
-			require.NotEmpty(t, bd)
-
-			sessionCookie = res.Header.Get("Set-Cookie")
-		})
-
-		t.Run("user signs out", func(t *testing.T) {
-			req, err := http.NewRequest("GET", signoutPath, nil)
-			require.NoError(t, err)
-			req.Header.Set("Cookie", sessionCookie)
-
-			res, err := http.DefaultClient.Do(req)
-			require.NoError(t, err)
-
-			require.Equal(t, http.StatusOK, res.StatusCode)
-			bd, err := resBody(res.Body)
-			require.NoError(t, err)
-			require.NotEmpty(t, bd)
-		})
-
-		t.Run("signs in with incorrect credentials", func(t *testing.T) {
-			reqBody, err := reqBody(map[string]any{
-				"emailOrUsername": "suberu@gmail.com",
-				"password":        "millini",
-			})
-			require.NoError(t, err)
-
-			res, err := http.Post(signinPath, "application/json", reqBody)
-			require.NoError(t, err)
-			require.Equal(t, http.StatusNotFound, res.StatusCode)
-		})
-
-		t.Run("signs in with correct credentials", func(t *testing.T) {
-			reqBody, err := reqBody(map[string]any{
-				"emailOrUsername": "suberu",
-				"password":        "sketeppy",
-			})
-			require.NoError(t, err)
-
-			res, err := http.Post(signinPath, "application/json", reqBody)
-			require.NoError(t, err)
-
-			require.Equal(t, http.StatusOK, res.StatusCode)
-			bd, err := resBody(res.Body)
-			require.NoError(t, err)
-			require.NotEmpty(t, bd)
-
-		})
-	})
-
-	t.Run("User-B Scenario", func(t *testing.T) {
-		t.Run("requests an account with an already existing email", func(t *testing.T) {
-			reqBody, err := reqBody(map[string]any{"email": "suberu@gmail.com"})
-			require.NoError(t, err)
-
-			res, err := http.Post(signupPath+"/request_new_account", "application/json", reqBody)
-			require.NoError(t, err)
-			require.Equal(t, http.StatusBadRequest, res.StatusCode)
-		})
-	})
+		require.Equal(t, fmt.Sprintf("An account with %s already exists", user1.Email), rb)
+	}
 }

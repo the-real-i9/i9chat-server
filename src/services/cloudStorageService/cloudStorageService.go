@@ -19,7 +19,7 @@ func Upload(ctx context.Context, filePath string, data []byte) (string, error) {
 	bucketName := os.Getenv("GCS_BUCKET")
 	mediaUrl := fmt.Sprintf("https://storage.googleapis.com/%s/%s", bucketName, filePath)
 
-	if os.Getenv("GO_ENV") == "test" {
+	if os.Getenv("GO_ENV") == "test" || os.Getenv("GO_ENV") == "" {
 		return mediaUrl, nil
 	}
 

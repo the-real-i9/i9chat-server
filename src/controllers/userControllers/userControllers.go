@@ -2,22 +2,18 @@ package userControllers
 
 import (
 	"context"
-	"encoding/json"
-	"errors"
 	"fmt"
 	"i9chat/src/appTypes"
 	"i9chat/src/helpers"
-	"i9chat/src/services/messageBrokerService"
+	"i9chat/src/services/eventStreamService"
 	"i9chat/src/services/userService"
-	"io"
 	"log"
 
 	"github.com/gofiber/contrib/websocket"
 	"github.com/gofiber/fiber/v2"
-	"github.com/segmentio/kafka-go"
 )
 
-var OpenWSStream = websocket.New(func(c *websocket.Conn) {
+var WSStream = websocket.New(func(c *websocket.Conn) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -25,9 +21,7 @@ var OpenWSStream = websocket.New(func(c *websocket.Conn) {
 
 	go userService.GoOnline(ctx, clientUser.Username)
 
-	r := messageBrokerService.ConsumeTopic(fmt.Sprintf("user-%s-alerts", clientUser.Username))
-
-	go serverToClientStream(c, r)
+	eventStreamService.Subscribe(clientUser.Username, c)
 
 	// clientToServerStream
 	var w_err error
@@ -134,34 +128,10 @@ var OpenWSStream = websocket.New(func(c *websocket.Conn) {
 		}
 	}
 
-	go func() {
-		userService.GoOffline(context.Background(), clientUser.Username)
+	go userService.GoOffline(context.Background(), clientUser.Username)
 
-		if err := r.Close(); err != nil {
-			log.Println("failed to close reader:", err)
-		}
-	}()
+	eventStreamService.Unsubscribe(clientUser.Username)
 })
-
-func serverToClientStream(c *websocket.Conn, r *kafka.Reader) {
-
-	ctx := context.Background()
-
-	for {
-		m, err := r.ReadMessage(ctx)
-		if err != nil {
-			if !errors.Is(err, io.EOF) {
-				log.Println("userControllers.go: serverToClientStream: r.ReadMessage:", err)
-			}
-			break
-		}
-
-		var msg any
-		json.Unmarshal(m.Value, &msg)
-
-		c.WriteJSON(msg)
-	}
-}
 
 func ChangeProfilePicture(c *fiber.Ctx) error {
 	ctx, cancel := context.WithCancel(context.Background())
@@ -319,5 +289,5 @@ func GetMyProfile(c *fiber.Ctx) error {
 func SignOut(c *fiber.Ctx) error {
 	c.ClearCookie("user")
 
-	return c.SendString("You've been logged out!")
+	return c.JSON("You've been logged out!")
 }

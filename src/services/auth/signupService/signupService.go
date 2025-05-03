@@ -22,7 +22,7 @@ func RequestNewAccount(ctx context.Context, email string) (any, map[string]any, 
 	}
 
 	if userExists {
-		return nil, nil, fiber.NewError(fiber.StatusBadRequest, "signup error: an account with", email, "already exists")
+		return nil, nil, fiber.NewError(fiber.StatusBadRequest, fmt.Sprintf("An account with %s already exists", email))
 	}
 
 	verfCode, expires := securityServices.GenerateVerifCodeExp()
@@ -52,11 +52,11 @@ func VerifyEmail(ctx context.Context, sessionData map[string]any, inputVerfCode 
 	helpers.MapToStruct(sessionData, &sd)
 
 	if sd.VCode != inputVerfCode {
-		return "", nil, fiber.NewError(fiber.StatusBadRequest, "email verification error: incorrect verification code")
+		return "", nil, fiber.NewError(fiber.StatusBadRequest, "Incorrect verification code! Check or Re-submit your email.")
 	}
 
 	if sd.VCodeExpires.Before(time.Now()) {
-		return "", nil, fiber.NewError(fiber.StatusBadRequest, "email verification error: verification code expired")
+		return "", nil, fiber.NewError(fiber.StatusBadRequest, "Verification code expired! Re-submit your email.")
 	}
 
 	go mailService.SendMail(sd.Email, "Email Verification Success", fmt.Sprintf("Your email %s has been verified!", sd.Email))
@@ -79,7 +79,7 @@ func RegisterUser(ctx context.Context, sessionData map[string]any, username, pas
 	}
 
 	if userExists {
-		return nil, "", fiber.NewError(fiber.StatusBadRequest, "signup error: username", username, "is unavailable")
+		return nil, "", fiber.NewError(fiber.StatusBadRequest, "Username:", username, ", is unavailable")
 	}
 
 	hashedPassword, err := securityServices.HashPassword(password)
