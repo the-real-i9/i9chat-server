@@ -8,21 +8,6 @@ import (
 	"github.com/go-ozzo/ozzo-validation/v4/is"
 )
 
-type getChatHistoryQuery struct {
-	Limit  int       `json:"limit"`
-	Offset time.Time `json:"offset"`
-}
-
-func (b getChatHistoryQuery) Validate() error {
-
-	err := validation.ValidateStruct(&b,
-		validation.Field(&b.Limit, validation.Required, validation.Min(1).Error("invalid value")),
-		validation.Field(&b.Offset, validation.Required, validation.Min(time.Now()).Error("invalid future time")),
-	)
-
-	return helpers.ValidationError(err, "dmChat_validation.go", "getChatHistoryQuery")
-}
-
 type newGroupChatBody struct {
 	Name        string    `json:"name"`
 	Description string    `json:"description"`

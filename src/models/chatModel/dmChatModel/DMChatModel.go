@@ -67,7 +67,7 @@ func ReactToMessage(ctx context.Context, clientDMChatId string, msgId, clientUse
 	return nil
 }
 
-func GetChatHistory(ctx context.Context, clientUsername, partnerUsername string, limit int, offset time.Time) ([]any, error) {
+func ChatHistory(ctx context.Context, clientUsername, partnerUsername string, limit int, offset time.Time) ([]any, error) {
 	res, err := db.Query(
 		ctx,
 		`
@@ -75,6 +75,7 @@ func GetChatHistory(ctx context.Context, clientUsername, partnerUsername string,
 		OPTIONAL MATCH (clientChat)<-[:IN_DM_CHAT]-(message:DMMessage WHERE message.created_at >= $offset),
 			(message)<-[:SENDS_MESSAGE]-(senderUser),
 			(message)<-[rxn:REACTS_TO_MESSAGE]-(reactorUser)
+			
 		WITH message, toString(message.created_at) AS created_at, senderUser { .username, .profile_pic_url } AS sender, collect({ user: reactorUser { .username, .profile_pic_url }, reaction: rxn.reaction }) AS reactions
 		ORDER BY message.created_at DESC
 		LIMIT $limit
@@ -88,7 +89,7 @@ func GetChatHistory(ctx context.Context, clientUsername, partnerUsername string,
 		},
 	)
 	if err != nil {
-		log.Println("DMChatModel.go: GetChatHistory", err)
+		log.Println("DMChatModel.go: ChatHistory", err)
 		return nil, fiber.ErrInternalServerError
 	}
 

@@ -28,16 +28,16 @@ func NewGroupChat(ctx context.Context, clientUsername, name, description string,
 	return newGroupChat.ClientData, nil
 }
 
-func GetChatHistory(ctx context.Context, clientUsername, groupId string, limit int, offset time.Time) (any, error) {
-	return groupChat.GetChatHistory(ctx, clientUsername, groupId, limit, offset)
+func GetChatHistory(ctx context.Context, clientUsername, groupId string, limit int, offset int64) (any, error) {
+	return groupChat.ChatHistory(ctx, clientUsername, groupId, limit, time.UnixMilli(offset))
 }
 
 func GetGroupInfo(ctx context.Context, groupId string) (map[string]any, error) {
-	return groupChat.GetGroupInfo(ctx, groupId)
+	return groupChat.GroupInfo(ctx, groupId)
 }
 
 func GetGroupMemInfo(ctx context.Context, clientUsername, groupId string) (map[string]any, error) {
-	return groupChat.GetGroupMemInfo(ctx, clientUsername, groupId)
+	return groupChat.GroupMemInfo(ctx, clientUsername, groupId)
 }
 
 func SendMessage(ctx context.Context, groupId, clientUsername string, msgContent *appTypes.MsgContent, createdAt time.Time) (map[string]any, error) {
@@ -56,13 +56,7 @@ func SendMessage(ctx context.Context, groupId, clientUsername string, msgContent
 
 	go broadcastNewMessage(newMessage.MemberUsernames, newMessage.MemberData, groupId)
 
-	clientResp := map[string]any{
-		"event":   "ws reply",
-		"toEvent": "new group chat message",
-		"data":    newMessage.ClientData,
-	}
-
-	return clientResp, nil
+	return newMessage.ClientData, nil
 }
 
 func AckMessageDelivered(ctx context.Context, clientUsername, groupId, msgId string, deliveredAt time.Time) error {
@@ -157,9 +151,11 @@ func AddUsersToGroup(ctx context.Context, groupId, clientUsername string, newUse
 	}
 
 	// a user with already existing group chat must check
-	go broadcastNewGroup(newUsers, newUserData)
+	go func() {
+		broadcastNewGroup(newUsers, newUserData)
 
-	go broadcastActivity(newActivity.MemberUsernames, newActivity.MemberData, groupId)
+		broadcastActivity(newActivity.MemberUsernames, newActivity.MemberData, groupId)
+	}()
 
 	return newActivity.ClientData, nil
 }
@@ -171,7 +167,7 @@ func RemoveUserFromGroup(ctx context.Context, groupId, clientUsername, targetUse
 	}
 
 	go func() {
-		eventStreamService.Send(fmt.Sprintf("user-%s-alerts", targetUser), appTypes.ServerWSMsg{
+		eventStreamService.Send(targetUser, appTypes.ServerWSMsg{
 			Event: "removed from group",
 			Data: map[string]any{
 				"group_id": groupId,
@@ -179,9 +175,9 @@ func RemoveUserFromGroup(ctx context.Context, groupId, clientUsername, targetUse
 		})
 
 		broadcastActivity([]string{targetUser}, targetUserData, groupId)
-	}()
 
-	go broadcastActivity(newActivity.MemberUsernames, newActivity.MemberData, groupId)
+		broadcastActivity(newActivity.MemberUsernames, newActivity.MemberData, groupId)
+	}()
 
 	return newActivity.ClientData, nil
 }
@@ -214,9 +210,11 @@ func MakeUserGroupAdmin(ctx context.Context, groupId, clientUsername, targetUser
 		return nil, err
 	}
 
-	go broadcastActivity([]string{targetUser}, newAdminData, groupId)
+	go func() {
+		broadcastActivity([]string{targetUser}, newAdminData, groupId)
 
-	go broadcastActivity(newActivity.MemberUsernames, newActivity.MemberData, groupId)
+		broadcastActivity(newActivity.MemberUsernames, newActivity.MemberData, groupId)
+	}()
 
 	return newActivity.ClientData, nil
 }
@@ -227,9 +225,11 @@ func RemoveUserFromGroupAdmins(ctx context.Context, groupId, clientUsername, tar
 		return nil, err
 	}
 
-	go broadcastActivity([]string{targetUser}, oldAdminData, groupId)
+	go func() {
+		broadcastActivity([]string{targetUser}, oldAdminData, groupId)
 
-	go broadcastActivity(newActivity.MemberUsernames, newActivity.MemberData, groupId)
+		broadcastActivity(newActivity.MemberUsernames, newActivity.MemberData, groupId)
+	}()
 
 	return newActivity.ClientData, nil
 }

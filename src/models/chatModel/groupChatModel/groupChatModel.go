@@ -1254,7 +1254,7 @@ type HistoryItem struct {
 	Info string `json:"info,omitempty"`
 }
 
-func GetChatHistory(ctx context.Context, clientUsername, groupId string, limit int, offset time.Time) ([]HistoryItem, error) {
+func ChatHistory(ctx context.Context, clientUsername, groupId string, limit int, offset time.Time) ([]HistoryItem, error) {
 	var chatHistory []HistoryItem
 
 	res, err := db.Query(
@@ -1286,7 +1286,7 @@ func GetChatHistory(ctx context.Context, clientUsername, groupId string, limit i
 		},
 	)
 	if err != nil {
-		log.Println("DMChatModel.go: GetChatHistory", err)
+		log.Println("groupChatModel.go: GetChatHistory", err)
 		return chatHistory, fiber.ErrInternalServerError
 	}
 
@@ -1301,7 +1301,7 @@ func GetChatHistory(ctx context.Context, clientUsername, groupId string, limit i
 	return chatHistory, nil
 }
 
-func GetGroupInfo(ctx context.Context, groupId string) (map[string]any, error) {
+func GroupInfo(ctx context.Context, groupId string) (map[string]any, error) {
 	res, err := db.Query(
 		ctx,
 		`
@@ -1317,7 +1317,7 @@ func GetGroupInfo(ctx context.Context, groupId string) (map[string]any, error) {
 		},
 	)
 	if err != nil {
-		log.Println("DMChatModel.go: GetGroupInfo", err)
+		log.Println("groupChatModel.go: GetGroupInfo", err)
 		return nil, fiber.ErrInternalServerError
 	}
 
@@ -1330,20 +1330,28 @@ func GetGroupInfo(ctx context.Context, groupId string) (map[string]any, error) {
 	return gi, nil
 }
 
-func GetGroupMemInfo(ctx context.Context, clientUsername, groupId string) (map[string]any, error) {
+func GroupMemInfo(ctx context.Context, clientUsername, groupId string) (map[string]any, error) {
 	res, err := db.Query(
 		ctx,
 		`
-		MATCH (group:Group{ id: $group_id }),
-		OPTIONAL MATCH (group)<-[mr:IS_MEMBER_OF]-(isMember:User{ id: $client_username }),
-			(group)-[:REMOVED_USER]->(userRemoved:User{ id: $client_username }),
-			(group)<-[:LEFT_GROUP]-(userLeft:User{ id: $client_username })
+		MATCH (group:Group{ id: $group_id }), (clientUser:User { username: $client_username })
+		OPTIONAL MATCH (group)<-[member:IS_MEMBER_OF]-(clientUser),
+			(group)-[userRemoved:REMOVED_USER]->(clientUser),
+			(group)<-[userLeft:LEFT_GROUP]-(clientUser)
 
-		WITH CASE isMember WHEN IS NULL false ELSE true END AS member,
-			CASE isMember WHEN IS NULL null ELSE mr.role END AS role,
-			CASE userRemoved WHEN IS NULL false ELSE true END AS removed,
-			CASE userLeft WHEN IS NULL false ELSE true END AS left
-		RETURN { member, role, removed, left } AS group_mem_info
+		WITH CASE member WHEN IS NULL false ELSE true END AS is_member,
+			CASE member WHEN IS NULL null ELSE mr.role END AS user_role,
+			CASE 
+				WHEN member IS NULL null 
+				WHEN userRemoved IS NULL false 
+				ELSE true 
+			END AS user_removed,
+			CASE 
+				WHEN member IS NULL null
+				WHEN userLeft IS NULL false 
+				ELSE true 
+			END AS user_left
+		RETURN { is_member, user_role, user_removed, user_left } AS group_mem_info
 		`,
 		map[string]any{
 			"client_username": clientUsername,
@@ -1351,7 +1359,7 @@ func GetGroupMemInfo(ctx context.Context, clientUsername, groupId string) (map[s
 		},
 	)
 	if err != nil {
-		log.Println("DMChatModel.go: GetGroupMemInfo", err)
+		log.Println("groupChatModel.go: GetGroupMemInfo", err)
 		return nil, fiber.ErrInternalServerError
 	}
 

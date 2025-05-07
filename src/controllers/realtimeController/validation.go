@@ -1,4 +1,4 @@
-package userControllers
+package realtimeController
 
 import (
 	"i9chat/src/appTypes"
@@ -20,7 +20,7 @@ func (b clientEventBody) Validate() error {
 		validation.Field(&b.Data, validation.Required),
 	)
 
-	return helpers.ValidationError(err, "userControllers_validation.go", "clientEventBody")
+	return helpers.ValidationError(err, "realtimeController_validation.go", "clientEventBody")
 }
 
 type newDMChatMsg struct {
@@ -39,7 +39,7 @@ func (vb newDMChatMsg) Validate() error {
 		),
 	)
 
-	return helpers.ValidationError(err, "userControllers_validation.go", "newDMChatMsg")
+	return helpers.ValidationError(err, "realtimeController_validation.go", "newDMChatMsg")
 }
 
 type dmChatMsgAck struct {
@@ -55,7 +55,7 @@ func (d dmChatMsgAck) Validate() error {
 		validation.Field(&d.At, validation.Required, validation.Max(time.Now()).Error("invalid future time")),
 	)
 
-	return helpers.ValidationError(err, "userControllers_validation.go", "dmChatMsgAck")
+	return helpers.ValidationError(err, "realtimeController_validation.go", "dmChatMsgAck")
 }
 
 type newGroupChatMsg struct {
@@ -71,7 +71,7 @@ func (vb newGroupChatMsg) Validate() error {
 		validation.Field(&vb.CreatedAt, validation.Required, validation.Max(time.Now()).Error("invalid future time")),
 	)
 
-	return helpers.ValidationError(err, "userControllers_validation.go", "newGroupChatMsg")
+	return helpers.ValidationError(err, "realtimeController_validation.go", "newGroupChatMsg")
 }
 
 type groupChatMsgAck struct {
@@ -87,7 +87,7 @@ func (d groupChatMsgAck) Validate() error {
 		validation.Field(&d.At, validation.Required, validation.Max(time.Now()).Error("invalid future time")),
 	)
 
-	return helpers.ValidationError(err, "userControllers_validation.go", "groupChatMsgAck")
+	return helpers.ValidationError(err, "realtimeController_validation.go", "groupChatMsgAck")
 }
 
 type groupInfo struct {
@@ -99,7 +99,7 @@ func (d groupInfo) Validate() error {
 		validation.Field(&d.GroupId, validation.Required, is.UUID),
 	)
 
-	return helpers.ValidationError(err, "userControllers_validation.go", "groupInfo")
+	return helpers.ValidationError(err, "realtimeController_validation.go", "groupInfo")
 }
 
 type groupMemInfo struct {
@@ -111,13 +111,13 @@ func (d groupMemInfo) Validate() error {
 		validation.Field(&d.GroupId, validation.Required, is.UUID),
 	)
 
-	return helpers.ValidationError(err, "userControllers_validation.go", "groupMemInfo")
+	return helpers.ValidationError(err, "realtimeController_validation.go", "groupMemInfo")
 }
 
 type dmChatHistory struct {
-	PartnerUsername string    `json:"partnerUsername"`
-	Limit           int       `json:"limit"`
-	Offset          time.Time `json:"offset"`
+	PartnerUsername string `json:"partnerUsername"`
+	Limit           int    `json:"limit"`
+	Offset          int64  `json:"offset"`
 }
 
 func (b dmChatHistory) Validate() error {
@@ -125,16 +125,16 @@ func (b dmChatHistory) Validate() error {
 	err := validation.ValidateStruct(&b,
 		validation.Field(&b.PartnerUsername, validation.Required),
 		validation.Field(&b.Limit, validation.Min(1).Error("invalid value")),
-		validation.Field(&b.Offset, validation.Min(time.Now()).Error("invalid future time")),
+		validation.Field(&b.Offset, validation.Min(time.Now().UTC().UnixMilli()).Error("invalid future time")),
 	)
 
 	return helpers.ValidationError(err, "dmChat_validation.go", "dmChatHistory")
 }
 
 type groupChatHistory struct {
-	GroupId string    `json:"groupId"`
-	Limit   int       `json:"limit"`
-	Offset  time.Time `json:"offset"`
+	GroupId string `json:"groupId"`
+	Limit   int    `json:"limit"`
+	Offset  int64  `json:"offset"`
 }
 
 func (b groupChatHistory) Validate() error {
@@ -142,7 +142,7 @@ func (b groupChatHistory) Validate() error {
 	err := validation.ValidateStruct(&b,
 		validation.Field(&b.GroupId, validation.Required, is.UUID),
 		validation.Field(&b.Limit, validation.Min(1).Error("invalid value")),
-		validation.Field(&b.Offset, validation.Min(time.Now()).Error("invalid future time")),
+		validation.Field(&b.Offset, validation.Min(time.Now().UTC().UnixMilli()).Error("invalid future time")),
 	)
 
 	return helpers.ValidationError(err, "dmChat_validation.go", "groupChatHistory")

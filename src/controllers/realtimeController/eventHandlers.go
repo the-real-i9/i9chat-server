@@ -1,4 +1,4 @@
-package userControllers
+package realtimeController
 
 import (
 	"context"

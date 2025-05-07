@@ -10,8 +10,8 @@ import (
 	"time"
 )
 
-func GetChatHistory(ctx context.Context, clientUsername, partnerUsername string, limit int, offset time.Time) ([]any, error) {
-	return dmChat.GetChatHistory(ctx, clientUsername, partnerUsername, limit, offset)
+func GetChatHistory(ctx context.Context, clientUsername, partnerUsername string, limit int, offset int64) ([]any, error) {
+	return dmChat.ChatHistory(ctx, clientUsername, partnerUsername, limit, time.UnixMilli(offset))
 }
 
 func SendMessage(ctx context.Context, clientUsername, partnerUsername string, msgContent *appTypes.MsgContent, createdAt time.Time) (map[string]any, error) {
@@ -33,12 +33,7 @@ func SendMessage(ctx context.Context, clientUsername, partnerUsername string, ms
 		Data:  newMessage.PartnerData,
 	})
 
-	clientResp := map[string]any{
-		"event":   "server reply",
-		"toEvent": "new dm chat message",
-		"data":    newMessage.ClientData,
-	}
-	return clientResp, nil
+	return newMessage.ClientData, nil
 }
 
 func AckMessageDelivered(ctx context.Context, clientUsername, partnerUsername, msgId string, deliveredAt time.Time) error {

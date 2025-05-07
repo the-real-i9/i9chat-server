@@ -3,20 +3,10 @@ package userRoutes
 import (
 	UC "i9chat/src/controllers/userControllers"
 
-	"github.com/gofiber/contrib/websocket"
 	"github.com/gofiber/fiber/v2"
 )
 
-func Init(router fiber.Router) {
-	router.Use("/go_online", func(c *fiber.Ctx) error {
-		if websocket.IsWebSocketUpgrade(c) {
-			return c.Next()
-		}
-
-		return fiber.ErrUpgradeRequired
-	})
-
-	router.Get("/go_online", UC.WSStream)
+func Route(router fiber.Router) {
 
 	router.Get("/my_profile", UC.GetMyProfile)
 

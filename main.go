@@ -2,10 +2,8 @@ package main
 
 import (
 	"i9chat/src/initializers"
-	"i9chat/src/middlewares"
+	"i9chat/src/routes/appRoutes"
 	"i9chat/src/routes/authRoutes"
-	"i9chat/src/routes/chatRoutes/groupChatRoutes"
-	"i9chat/src/routes/userRoutes"
 	"log"
 	"os"
 
@@ -33,13 +31,9 @@ func main() {
 		Key: os.Getenv("COOKIE_SECRET"),
 	}))
 
-	app.Route("/api/auth", authRoutes.Init)
+	app.Route("/api/auth", authRoutes.Route)
 
-	app.Use("/api/app", middlewares.UserAuth)
-
-	app.Route("/api/app/user", userRoutes.Init)
-
-	app.Route("/api/app/group_chat", groupChatRoutes.Init)
+	app.Route("/api/app", appRoutes.Route)
 
 	var PORT string
 

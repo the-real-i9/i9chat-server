@@ -35,23 +35,6 @@ func (b changePhoneBody) Validate() error {
 
 }
 
-type findNearbyUsersQuery struct {
-	X      float64 `json:"x"`
-	Y      float64 `json:"y"`
-	Radius float64 `json:"radius"`
-}
-
-func (b findNearbyUsersQuery) Validate() error {
-	err := validation.ValidateStruct(&b,
-		validation.Field(&b.X, validation.Required),
-		validation.Field(&b.Y, validation.Required),
-		validation.Field(&b.Radius, validation.Required),
-	)
-
-	return helpers.ValidationError(err, "userControllers_validation.go", "findNearbyUsersQuery")
-
-}
-
 type updateMyGeolocationBody struct {
 	NewGeolocation appTypes.UserGeolocation `json:"newGeolocation"`
 }
@@ -62,18 +45,5 @@ func (b updateMyGeolocationBody) Validate() error {
 	)
 
 	return helpers.ValidationError(err, "userControllers_validation.go", "updateMyGeolocationBody")
-
-}
-
-type searchUserQuery struct {
-	EmailUsernamePhone string `json:"emailUsernamePhone"`
-}
-
-func (b searchUserQuery) Validate() error {
-	err := validation.ValidateStruct(&b,
-		validation.Field(&b.EmailUsernamePhone, validation.Required),
-	)
-
-	return helpers.ValidationError(err, "userControllers_validation.go", "searchUserQuery")
 
 }
