@@ -24,7 +24,7 @@ func AnyToStruct(val any, yourStruct any) {
 	}
 }
 
-func WSErrReply(err error, onEvent string) map[string]any {
+func WSErrReply(err error, toEvent string) map[string]any {
 
 	errCode := fiber.StatusInternalServerError
 
@@ -34,7 +34,7 @@ func WSErrReply(err error, onEvent string) map[string]any {
 
 	errResp := map[string]any{
 		"event":   "server error",
-		"onEvent": onEvent,
+		"toEvent": toEvent,
 		"data": map[string]any{
 			"statusCode": errCode,
 			"errorMsg":   err.Error(),
@@ -44,11 +44,11 @@ func WSErrReply(err error, onEvent string) map[string]any {
 	return errResp
 }
 
-func WSReply(data any, onEvent string) map[string]any {
+func WSReply(data any, toEvent string) map[string]any {
 
 	reply := map[string]any{
 		"event":   "server reply",
-		"onEvent": onEvent,
+		"toEvent": toEvent,
 		"data":    data,
 	}
 

@@ -18,7 +18,7 @@ var WSStream = websocket.New(func(c *websocket.Conn) {
 
 	clientUser := c.Locals("user").(appTypes.ClientUser)
 
-	go userService.GoOnline(ctx, clientUser.Username)
+	go userService.GoOnline(context.Background(), clientUser.Username)
 
 	eventStreamService.Subscribe(clientUser.Username, c)
 

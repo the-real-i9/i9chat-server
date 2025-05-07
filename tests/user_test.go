@@ -234,7 +234,7 @@ func TestUserOps(t *testing.T) {
 	{
 		t.Log("Action: user2 confirms her updated profile | geolocation changed")
 
-		req, err := http.NewRequest("GET", userPath+"/find_user?emailUsernamePhone="+user2.Username, nil)
+		req, err := http.NewRequest("GET", userPath+"/find_user?eup="+user2.Username, nil)
 		require.NoError(t, err)
 		req.Header.Set("Cookie", user2.SessionCookie)
 

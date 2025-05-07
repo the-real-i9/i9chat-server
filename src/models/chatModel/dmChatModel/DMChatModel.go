@@ -16,7 +16,7 @@ type NewMessage struct {
 	PartnerData map[string]any `json:"partner_resp"`
 }
 
-func SendMessage(ctx context.Context, clientUsername, partnerUsername string, msgContent []byte, createdAt time.Time) (NewMessage, error) {
+func SendMessage(ctx context.Context, clientUsername, partnerUsername, msgContent string, createdAt time.Time) (NewMessage, error) {
 	var newMsg NewMessage
 
 	res, err := db.Query(
@@ -54,7 +54,7 @@ func SendMessage(ctx context.Context, clientUsername, partnerUsername string, ms
 	}
 
 	if len(res.Records) == 0 {
-		return newMsg, fiber.NewError(fiber.StatusBadRequest, "logical error! check that: you're specifying a valid 'partnerUsername'")
+		return newMsg, nil
 	}
 
 	helpers.MapToStruct(res.Records[0].AsMap(), &newMsg)
@@ -62,7 +62,7 @@ func SendMessage(ctx context.Context, clientUsername, partnerUsername string, ms
 	return newMsg, nil
 }
 
-func ReactToMessage(ctx context.Context, clientDMChatId string, msgId, clientUserId int, reaction rune) error {
+func ReactToMessage(ctx context.Context, clientUsername, msgId string, reaction rune) error {
 
 	return nil
 }
@@ -72,12 +72,13 @@ func ChatHistory(ctx context.Context, clientUsername, partnerUsername string, li
 		ctx,
 		`
 		MATCH (clientChat:DMChat{ owner_username: $client_username, partner_username: $partner_username })
-		OPTIONAL MATCH (clientChat)<-[:IN_DM_CHAT]-(message:DMMessage WHERE message.created_at >= $offset),
-			(message)<-[:SENDS_MESSAGE]-(senderUser),
-			(message)<-[rxn:REACTS_TO_MESSAGE]-(reactorUser)
+		
+		OPTIONAL MATCH (clientChat)<-[:IN_DM_CHAT]-(message:DMMessage WHERE message.created_at < $offset)
+		OPTIONAL MATCH (message)<-[:SENDS_MESSAGE]-(senderUser)
+		OPTIONAL MATCH (message)<-[rxn:REACTS_TO_MESSAGE]-(reactorUser)
 			
 		WITH message, toString(message.created_at) AS created_at, senderUser { .username, .profile_pic_url } AS sender, collect({ user: reactorUser { .username, .profile_pic_url }, reaction: rxn.reaction }) AS reactions
-		ORDER BY message.created_at DESC
+		ORDER BY message.created_at
 		LIMIT $limit
 		RETURN collect(message { .*, created_at, sender, reactions }) AS chat_history
 		`,
@@ -94,7 +95,7 @@ func ChatHistory(ctx context.Context, clientUsername, partnerUsername string, li
 	}
 
 	if len(res.Records) == 0 {
-		return nil, fiber.NewError(fiber.StatusBadRequest, "logical error! check that: you're specifying a valid 'partnerUsername'")
+		return nil, nil
 	}
 
 	messages, _, _ := neo4j.GetRecordValue[[]any](res.Records[0], "chat_history")
@@ -103,14 +104,13 @@ func ChatHistory(ctx context.Context, clientUsername, partnerUsername string, li
 }
 
 func AckMessageDelivered(ctx context.Context, clientUsername, partnerUsername, msgId string, deliveredAt time.Time) error {
-	res, err := db.Query(
+	_, err := db.Query(
 		ctx,
 		`
 		MATCH (clientChat:DMChat{ owner_username: $client_username, partner_username: $partner_username }),
       (clientChat)<-[:IN_DM_CHAT]-(message:DMMessage{ id: $message_id, delivery_status: "sent" })<-[:RECEIVES_MESSAGE]-()
     SET message.delivery_status = "delivered", message.delivered_at = $delivered_at, clientChat.unread_messages_count = coalesce(clientChat.unread_messages_count, 0) + 1
 
-		RETURN true AS workdone
 		`,
 		map[string]any{
 			"client_username":  clientUsername,
@@ -124,23 +124,19 @@ func AckMessageDelivered(ctx context.Context, clientUsername, partnerUsername, m
 		return fiber.ErrInternalServerError
 	}
 
-	if len(res.Records) == 0 {
-		return fiber.NewError(fiber.StatusBadRequest, "logical error! check that: you're specifying a valid 'partnerUsername' and 'msgId'")
-	}
-
 	return nil
 }
 
 func AckMessageRead(ctx context.Context, clientUsername, partnerUsername, msgId string, readAt time.Time) error {
-	res, err := db.Query(
+	_, err := db.Query(
 		ctx,
 		`
 		MATCH (clientChat:DMChat{ owner_username: $client_username, partner_username: $partner_username }),
       (clientChat)<-[:IN_DM_CHAT]-(message:DMMessage{ id: $message_id } WHERE message.delivery_status IN ["sent", "delivered"])<-[:RECEIVES_MESSAGE]-()
+
     WITH clientChat, message, CASE coalesce(clientChat.unread_messages_count, 0) WHEN <> 0 THEN clientChat.unread_messages_count - 1 ELSE 0 END AS unread_messages_count
     SET message.delivery_status = "read", message.read_at = $read_at, clientChat.unread_messages_count = unread_messages_count
 
-		RETURN true AS workdone
 		`,
 		map[string]any{
 			"client_username":  clientUsername,
@@ -152,10 +148,6 @@ func AckMessageRead(ctx context.Context, clientUsername, partnerUsername, msgId 
 	if err != nil {
 		log.Println("DMChatModel.go: AckMessageRead", err)
 		return fiber.ErrInternalServerError
-	}
-
-	if len(res.Records) == 0 {
-		return fiber.NewError(fiber.StatusBadRequest, "logical error! check that: you're specifying a valid 'partnerUsername' and 'msgId'")
 	}
 
 	return nil

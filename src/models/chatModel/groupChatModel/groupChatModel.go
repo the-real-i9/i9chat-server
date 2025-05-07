@@ -59,7 +59,7 @@ func New(ctx context.Context, clientUsername, name, description, pictureUrl stri
 	}
 
 	if len(res.Records) == 0 {
-		return newGroupChat, fiber.NewError(fiber.StatusBadRequest, "logical error! check that: you're specifying valid usernames in 'initUsers'")
+		return newGroupChat, nil
 	}
 
 	helpers.MapToStruct(res.Records[0].AsMap(), &newGroupChat)
@@ -117,7 +117,7 @@ func ChangeName(ctx context.Context, groupId, clientUsername, newName string) (N
 		}
 
 		if res.Record() == nil {
-			return nil, fiber.NewError(fiber.StatusBadRequest, "logical error! check that: you're specifying a valid 'groupId' | you're a member and an admin of this group")
+			return nil, nil
 		}
 
 		maps.Copy(res.Record().AsMap(), resMap)
@@ -211,7 +211,7 @@ func ChangeDescription(ctx context.Context, groupId, clientUsername, newDescript
 		}
 
 		if res.Record() == nil {
-			return nil, fiber.NewError(fiber.StatusBadRequest, "logical error! check that: you're specifying a valid 'groupId' | you're a member and an admin of this group")
+			return nil, nil
 		}
 
 		maps.Copy(res.Record().AsMap(), resMap)
@@ -303,7 +303,7 @@ func ChangePicture(ctx context.Context, groupId, clientUsername, newPictureUrl s
 		}
 
 		if res.Record() == nil {
-			return nil, fiber.NewError(fiber.StatusBadRequest, "logical error! check that: you're specifying a valid 'groupId' | you're a member and an admin of this group")
+			return nil, nil
 		}
 
 		maps.Copy(res.Record().AsMap(), resMap)
@@ -377,8 +377,9 @@ func AddUsers(ctx context.Context, groupId, clientUsername string, newUsers []st
 			CREATE (clientUser)-[:RECEIVES_ACTIVITY]->(cligact:GroupActivity{ info: "You added " + $new_users_str, created_at: $at })-[:IN_GROUP_CHAT]->(clientChat)
 
 			WITH group, newUser, cligact
-			OPTIONAL MATCH (group)<-[:IS_MEMBER_OF]-(memberUser:User WHERE memberUser.username <> $client_username),
-				(group)-[rur:REMOVED_USER]->(newUser) 
+			OPTIONAL MATCH (group)<-[:IS_MEMBER_OF]-(memberUser:User WHERE memberUser.username <> $client_username)
+			OPTIONAL MATCH(group)-[rur:REMOVED_USER]->(newUser) 
+
 			DELETE rur
 
 			WITH group, newUser, cligact, collect(memberUser.username) AS member_usernames
@@ -407,7 +408,7 @@ func AddUsers(ctx context.Context, groupId, clientUsername string, newUsers []st
 		}
 
 		if res.Record() == nil {
-			return nil, fiber.NewError(fiber.StatusBadRequest, "logical error! check that: you're specifying a correct 'groupId' | valid usernames are in 'newUsers' | a 'newUser' isn't already a member | a 'newUser' hasn't already left this group | you're a member and an admin of this group")
+			return nil, nil
 		}
 
 		maps.Copy(res.Record().AsMap(), resMap)
@@ -512,7 +513,7 @@ func RemoveUser(ctx context.Context, groupId, clientUsername, targetUser string)
 		}
 
 		if res.Record() == nil {
-			return nil, fiber.NewError(fiber.StatusBadRequest, "logical error! check that: you're specifying a correct 'groupId' | the username of 'user' is valid | 'user' is a member of this group | you're a member and an admin of this group")
+			return nil, nil
 		}
 
 		maps.Copy(res.Record().AsMap(), resMap)
@@ -583,8 +584,9 @@ func Join(ctx context.Context, groupId, clientUsername string) (NewActivity, err
 			WHERE NOT EXISTS { (clientUser)-[:IS_MEMBER_OF]->(group) }
 				AND NOT EXISTS { (group)-[:REMOVED_USER]->(clientUser) }
 
-			OPTIONAL MATCH (group)<-[:IS_MEMBER_OF]-(memberUser:User),
-				(clientUser)-[lgr:LEFT_GROUP]->(group) 
+			OPTIONAL MATCH (group)<-[:IS_MEMBER_OF]-(memberUser:User)
+			OPTIONAL MATCH (clientUser)-[lgr:LEFT_GROUP]->(group)
+
 			DELETE lgr
 
 			WITH group, clientUser, collect(memberUser.username) AS member_usernames
@@ -610,7 +612,7 @@ func Join(ctx context.Context, groupId, clientUsername string) (NewActivity, err
 		}
 
 		if res.Record() == nil {
-			return nil, fiber.NewError(fiber.StatusBadRequest, "logical error! check that: you're specifying a correct 'groupId' | you're not already a member of this group | you've not been previously removed from this group")
+			return nil, nil
 		}
 
 		maps.Copy(res.Record().AsMap(), resMap)
@@ -703,7 +705,7 @@ func Leave(ctx context.Context, groupId, clientUsername string) (NewActivity, er
 		}
 
 		if res.Record() == nil {
-			return nil, fiber.NewError(fiber.StatusBadRequest, "logical error! check that: you're specifying a correct 'groupId' | you're a member of this group")
+			return nil, nil
 		}
 
 		maps.Copy(res.Record().AsMap(), resMap)
@@ -802,7 +804,7 @@ func MakeUserAdmin(ctx context.Context, groupId, clientUsername, targetUser stri
 		}
 
 		if res.Record() == nil {
-			return nil, fiber.NewError(fiber.StatusBadRequest, "logical error! check that: you're specifying a correct 'groupId' | 'user' is a member, and not already an admin of this group | you're a member and an admin this group")
+			return nil, nil
 		}
 
 		maps.Copy(res.Record().AsMap(), resMap)
@@ -903,7 +905,7 @@ func RemoveUserFromAdmins(ctx context.Context, groupId, clientUsername, targetUs
 		}
 
 		if res.Record() == nil {
-			return nil, fiber.NewError(fiber.StatusBadRequest, "logical error! check that: you're specifying a correct 'groupId' | 'user' is a member, and an admin of this group | you're a member and an admin this group")
+			return nil, nil
 		}
 
 		maps.Copy(res.Record().AsMap(), resMap)
@@ -961,7 +963,7 @@ type NewMessage struct {
 	MemberUsernames []string       `json:"members_usernames"`
 }
 
-func SendMessage(ctx context.Context, groupId, clientUsername string, msgContent []byte, createdAt time.Time) (NewMessage, error) {
+func SendMessage(ctx context.Context, groupId, clientUsername, msgContent string, createdAt time.Time) (NewMessage, error) {
 	var newMessage NewMessage
 
 	res, err := db.MultiQuery(ctx, func(tx neo4j.ManagedTransaction) (any, error) {
@@ -1005,7 +1007,7 @@ func SendMessage(ctx context.Context, groupId, clientUsername string, msgContent
 		}
 
 		if res.Record() == nil {
-			return nil, fiber.NewError(fiber.StatusBadRequest, "logical error! check that: you're specifying a valid 'groupId' | you have a chat with this group (not necessarily a member)")
+			return nil, nil
 		}
 
 		maps.Copy(res.Record().AsMap(), resMap)
@@ -1087,8 +1089,8 @@ func AckMessageDelivered(ctx context.Context, clientUsername, groupId, msgId str
 			CREATE (message)-[:DELIVERED_TO { at: $delivered_at }]->(clientUser)
 
 			WITH group, message
-			OPTIONAL MATCH (message)-[:DELIVERED_TO]->(delUser),
-				(group)<-[:IS_MEMBER_OF]-(memberUser WHERE memberUser.username <> $client_username)
+			OPTIONAL MATCH (message)-[:DELIVERED_TO]->(delUser)
+			OPTIONAL MATCH (group)<-[:IS_MEMBER_OF]-(memberUser WHERE memberUser.username <> $client_username)
 
 			RETURN collect(delUser.username) AS delv_to_usernames,
 				collect(memberUser.username) AS member_usernames
@@ -1105,7 +1107,7 @@ func AckMessageDelivered(ctx context.Context, clientUsername, groupId, msgId str
 		}
 
 		if res.Record() == nil {
-			return nil, fiber.NewError(fiber.StatusBadRequest, "logical error! check that: you're specifying a valid 'groupId', and a valid 'msgId' received in the group chat | the message ('msgId') has not previously been acknowledged as 'delivered' or 'read'")
+			return nil, nil
 		}
 
 		maps.Copy(res.Record().AsMap(), resMap)
@@ -1173,8 +1175,8 @@ func AckMessageRead(ctx context.Context, clientUsername, groupId, msgId string, 
 			CREATE (message)-[:READ_BY { at: $read_at } ]->(clientUser)
 
 			WITH group, message
-			OPTIONAL MATCH (message)-[:READ_BY]->(readUser),
-				(group)<-[:IS_MEMBER_OF]-(memberUser WHERE memberUser.username <> $client_username)
+			OPTIONAL MATCH (message)-[:READ_BY]->(readUser)
+			OPTIONAL MATCH (group)<-[:IS_MEMBER_OF]-(memberUser WHERE memberUser.username <> $client_username)
 
 			RETURN collect(readUser.username) AS read_by_usernames,
 				collect(memberUser.username) AS member_usernames
@@ -1191,7 +1193,7 @@ func AckMessageRead(ctx context.Context, clientUsername, groupId, msgId string, 
 		}
 
 		if res.Record() == nil {
-			return nil, fiber.NewError(fiber.StatusBadRequest, "logical error! check that: you're specifying a valid 'groupId', and a valid 'msgId' received in the group chat | the message ('msgId') has not previously been acknowledged as 'read'")
+			return nil, nil
 		}
 
 		maps.Copy(res.Record().AsMap(), resMap)
@@ -1262,18 +1264,18 @@ func ChatHistory(ctx context.Context, clientUsername, groupId string, limit int,
 		`
 		MATCH (clientChat:GroupChat{ owner_username: $client_username, group_id: $group_id })
 		CALL (clientChat) {
-			OPTIONAL MATCH (clientChat)<-[:IN_GROUP_CHAT]-(message:GroupMessage),
-				(message)<-[:SENDS_MESSAGE]-(senderUser),
-				(message)<-[rxn:REACTS_TO_MESSAGE]-(reactorUser)
-			WHERE message.created_at >= $offset
+			OPTIONAL MATCH (clientChat)<-[:IN_GROUP_CHAT]-(message:GroupMessage WHERE message.created_at < $offset)
+			OPTIONAL MATCH (message)<-[:SENDS_MESSAGE]-(senderUser)
+			OPTIONAL MATCH (message)<-[rxn:REACTS_TO_MESSAGE]-(reactorUser)
+			
 			WITH message, toString(message.created_at) AS created_at, senderUser { .username, .profile_pic_url } AS sender, collect({ user: reactorUser { .username, .profile_pic_url }, reaction: rxn.reaction }) AS reactions
 			RETURN message { .*, created_at, sender, reactions, hist_item_type: "message" } AS hist_item, message.created_at AS created_at
 		UNION
 			MATCH (clientChat)<-[:IN_GROUP_CHAT]-(gactiv:GroupActivity)
-			WHERE gactiv.created_at >= $offset
+			WHERE gactiv.created_at < $offset
 			RETURN { info: gactiv.info, hist_item_type: "activity" } AS hist_item, gactiv.created_at AS created_at
 		}
-		WITH hist_item, created_at ORDER BY created_at DESC
+		WITH hist_item, created_at ORDER BY created_at
 		LIMIT $limit
 
 		RETURN collect(hist_item) AS chat_history
@@ -1291,7 +1293,7 @@ func ChatHistory(ctx context.Context, clientUsername, groupId string, limit int,
 	}
 
 	if len(res.Records) == 0 {
-		return chatHistory, fiber.NewError(fiber.StatusBadRequest, "logical error! check that: you're specifying a correct 'groupId'")
+		return chatHistory, nil
 	}
 
 	ch, _, _ := neo4j.GetRecordValue[[]any](res.Records[0], "chat_history")
@@ -1306,8 +1308,8 @@ func GroupInfo(ctx context.Context, groupId string) (map[string]any, error) {
 		ctx,
 		`
 		MATCH (group:Group{ id: $group_id }),
-		OPTIONAL MATCH (group)<-[:IS_MEMBER_OF]-(memberUser),
-			(group)<-[:IS_MEMBER_OF]-(memberUserOnline:User{ presence: "online" })
+		OPTIONAL MATCH (group)<-[:IS_MEMBER_OF]-(memberUser)
+		OPTIONAL MATCH (group)<-[:IS_MEMBER_OF]-(memberUserOnline:User{ presence: "online" })
 
 		WITH count(memberUser) AS members_count, count(memberUserOnline) AS online_members
 		RETURN group { .name, .description, .picture_url, members_count, online_members } AS group_info
@@ -1322,7 +1324,7 @@ func GroupInfo(ctx context.Context, groupId string) (map[string]any, error) {
 	}
 
 	if len(res.Records) == 0 {
-		return nil, fiber.NewError(fiber.StatusBadRequest, "logical error! check that: you're specifying a correct 'groupId'")
+		return nil, nil
 	}
 
 	gi, _, _ := neo4j.GetRecordValue[map[string]any](res.Records[0], "group_info")
@@ -1335,9 +1337,9 @@ func GroupMemInfo(ctx context.Context, clientUsername, groupId string) (map[stri
 		ctx,
 		`
 		MATCH (group:Group{ id: $group_id }), (clientUser:User { username: $client_username })
-		OPTIONAL MATCH (group)<-[member:IS_MEMBER_OF]-(clientUser),
-			(group)-[userRemoved:REMOVED_USER]->(clientUser),
-			(group)<-[userLeft:LEFT_GROUP]-(clientUser)
+		OPTIONAL MATCH (group)<-[member:IS_MEMBER_OF]-(clientUser)
+		OPTIONAL MATCH (group)-[userRemoved:REMOVED_USER]->(clientUser)
+		OPTIONAL MATCH (group)<-[userLeft:LEFT_GROUP]-(clientUser)
 
 		WITH CASE member WHEN IS NULL false ELSE true END AS is_member,
 			CASE member WHEN IS NULL null ELSE mr.role END AS user_role,
@@ -1364,7 +1366,7 @@ func GroupMemInfo(ctx context.Context, clientUsername, groupId string) (map[stri
 	}
 
 	if len(res.Records) == 0 {
-		return nil, fiber.NewError(fiber.StatusBadRequest, "logical error! check that: you're specifying a correct 'groupId'")
+		return nil, nil
 	}
 
 	gmi, _, _ := neo4j.GetRecordValue[map[string]any](res.Records[0], "group_mem_info")

@@ -9,11 +9,11 @@ import (
 )
 
 type newGroupChatBody struct {
-	Name        string    `json:"name"`
-	Description string    `json:"description"`
-	PictureData []byte    `json:"pictureData"`
-	InitUsers   []string  `json:"initUsers"`
-	CreatedAt   time.Time `json:"createdAt"`
+	Name        string   `json:"name"`
+	Description string   `json:"description"`
+	PictureData []byte   `json:"pictureData"`
+	InitUsers   []string `json:"initUsers"`
+	CreatedAt   int64    `json:"createdAt"`
 }
 
 func (b newGroupChatBody) Validate() error {

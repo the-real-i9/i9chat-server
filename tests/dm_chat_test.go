@@ -13,7 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-const userWSPath = WSHOST_URL + "/api/app/user/go_online"
+const userWSPath = WSHOST_URL + "/api/app/ws"
 
 func TestDMChat(t *testing.T) {
 	t.Parallel()
@@ -202,7 +202,7 @@ func TestDMChat(t *testing.T) {
 						"textContent": "Hi. How're you doing?",
 					},
 				},
-				"createdAt": time.Now().UTC(),
+				"at": time.Now().UTC().UnixMilli(),
 			},
 		})
 		require.NoError(t, err)
@@ -230,7 +230,7 @@ func TestDMChat(t *testing.T) {
 			"event": "new dm chat message",
 			"data": td.SuperMapOf(map[string]any{
 				"id":              td.Ignore(),
-				"content":         td.Ignore(),
+				"content":         td.All(td.Contains(`"type":"text"`), td.Contains(`"textContent":"Hi. How're you doing?"`)),
 				"delivery_status": "sent",
 				"sender": td.SuperMapOf(map[string]any{
 					"username": user1.Username,
@@ -245,10 +245,18 @@ func TestDMChat(t *testing.T) {
 			"data": map[string]any{
 				"partnerUsername": user1.Username,
 				"msgId":           user2RecvdMsgId,
-				"at":              time.Now().UTC(),
+				"at":              time.Now().UTC().UnixMilli(),
 			},
 		})
 		require.NoError(t, err)
+
+		user2ServerReply := <-user2.ServerWSMsg
+
+		td.Cmp(td.Require(t), user2ServerReply, td.SuperMapOf(map[string]any{
+			"event":   "server reply",
+			"toEvent": "ack dm chat message delivered",
+			"data":    true,
+		}, nil))
 	}
 
 	{
@@ -273,10 +281,18 @@ func TestDMChat(t *testing.T) {
 			"data": map[string]any{
 				"partnerUsername": user1.Username,
 				"msgId":           user2RecvdMsgId,
-				"at":              time.Now().UTC(),
+				"at":              time.Now().UTC().UnixMilli(),
 			},
 		})
 		require.NoError(t, err)
+
+		user2ServerReply := <-user2.ServerWSMsg
+
+		td.Cmp(td.Require(t), user2ServerReply, td.SuperMapOf(map[string]any{
+			"event":   "server reply",
+			"toEvent": "ack dm chat message read",
+			"data":    true,
+		}, nil))
 	}
 
 	{
@@ -290,6 +306,166 @@ func TestDMChat(t *testing.T) {
 				"partner_username": user2.Username,
 				"msg_id":           user2RecvdMsgId,
 			}, nil),
+		}, nil))
+	}
+
+	{
+		t.Log("Action: user2 sends message to user1")
+
+		image, err := os.ReadFile("./test_files/profile_pic.png")
+		require.NoError(t, err)
+
+		err = user2.WSConn.WriteJSON(map[string]any{
+			"event": "new dm chat message",
+			"data": map[string]any{
+				"partnerUsername": user1.Username,
+				"msg": map[string]any{
+					"type": "image",
+					"props": map[string]any{
+						"data":    image,
+						"caption": "I'm guuud!",
+					},
+				},
+				"at": time.Now().UTC().UnixMilli(),
+			},
+		})
+		require.NoError(t, err)
+
+		// user2's server reply (response) to event sent
+		user2ServerReply := <-user2.ServerWSMsg
+
+		td.Cmp(td.Require(t), user2ServerReply, td.SuperMapOf(map[string]any{
+			"event":   "server reply",
+			"toEvent": "new dm chat message",
+			"data": td.Map(map[string]any{
+				"new_msg_id": td.Ignore(),
+			}, nil),
+		}, nil))
+	}
+
+	user1RecvdMsgId := ""
+
+	{
+		t.Log("Action: user1 receives the message | acknowledges 'delivered'")
+
+		user1NewMsgReceived := <-user1.ServerWSMsg
+
+		td.Cmp(td.Require(t), user1NewMsgReceived, td.SuperMapOf(map[string]any{
+			"event": "new dm chat message",
+			"data": td.SuperMapOf(map[string]any{
+				"id":              td.Ignore(),
+				"content":         td.All(td.Contains(`"type":"image"`), td.Contains(`"caption":"I'm guuud!"`)),
+				"delivery_status": "sent",
+				"sender": td.SuperMapOf(map[string]any{
+					"username": user2.Username,
+				}, nil),
+			}, nil),
+		}, nil))
+
+		user1RecvdMsgId = user1NewMsgReceived["data"].(map[string]any)["id"].(string)
+
+		err := user1.WSConn.WriteJSON(map[string]any{
+			"event": "ack dm chat message delivered",
+			"data": map[string]any{
+				"partnerUsername": user2.Username,
+				"msgId":           user1RecvdMsgId,
+				"at":              time.Now().UTC().UnixMilli(),
+			},
+		})
+		require.NoError(t, err)
+
+		user1ServerReply := <-user1.ServerWSMsg
+
+		td.Cmp(td.Require(t), user1ServerReply, td.SuperMapOf(map[string]any{
+			"event":   "server reply",
+			"toEvent": "ack dm chat message delivered",
+			"data":    true,
+		}, nil))
+	}
+
+	{
+		t.Log("user2 receives the 'delivered' acknowledgement | marks message as 'delivered'")
+
+		user2DelvAckReceipt := <-user2.ServerWSMsg
+
+		td.Cmp(td.Require(t), user2DelvAckReceipt, td.SuperMapOf(map[string]any{
+			"event": "dm chat message delivered",
+			"data": td.Map(map[string]any{
+				"partner_username": user1.Username,
+				"msg_id":           user1RecvdMsgId,
+			}, nil),
+		}, nil))
+	}
+
+	{
+		t.Log("Action: user1 then acknowledges 'read'")
+
+		err := user1.WSConn.WriteJSON(map[string]any{
+			"event": "ack dm chat message read",
+			"data": map[string]any{
+				"partnerUsername": user2.Username,
+				"msgId":           user1RecvdMsgId,
+				"at":              time.Now().UTC().UnixMilli(),
+			},
+		})
+		require.NoError(t, err)
+
+		user1ServerReply := <-user1.ServerWSMsg
+
+		td.Cmp(td.Require(t), user1ServerReply, td.SuperMapOf(map[string]any{
+			"event":   "server reply",
+			"toEvent": "ack dm chat message read",
+			"data":    true,
+		}, nil))
+	}
+
+	{
+		t.Log("user2 receives the 'read' acknowledgement | marks message as 'read'")
+
+		user2ReadAckReceipt := <-user2.ServerWSMsg
+
+		td.Cmp(td.Require(t), user2ReadAckReceipt, td.SuperMapOf(map[string]any{
+			"event": "dm chat message read",
+			"data": td.Map(map[string]any{
+				"partner_username": user1.Username,
+				"msg_id":           user1RecvdMsgId,
+			}, nil),
+		}, nil))
+	}
+
+	{
+		t.Log("user1 opens chat history")
+
+		err := user1.WSConn.WriteJSON(map[string]any{
+			"event": "get dm chat history",
+			"data": map[string]any{
+				"partnerUsername": user2.Username,
+			},
+		})
+		require.NoError(t, err)
+
+		// user1's server reply (response) to event sent
+		user1ServerReply := <-user1.ServerWSMsg
+
+		td.Cmp(td.Require(t), user1ServerReply, td.SuperMapOf(map[string]any{
+			"event":   "server reply",
+			"toEvent": "get dm chat history",
+			"data": td.All(
+				td.Contains(td.SuperMapOf(map[string]any{
+					"id":      td.Ignore(),
+					"content": td.All(td.Contains(`"type":"text"`), td.Contains(`"textContent":"Hi. How're you doing?"`)),
+					"sender": td.SuperMapOf(map[string]any{
+						"username": user1.Username,
+					}, nil),
+				}, nil)),
+				td.Contains(td.SuperMapOf(map[string]any{
+					"id":      td.Ignore(),
+					"content": td.All(td.Contains(`"type":"image"`), td.Contains(`"caption":"I'm guuud!"`)),
+					"sender": td.SuperMapOf(map[string]any{
+						"username": user2.Username,
+					}, nil),
+				}, nil)),
+			),
 		}, nil))
 	}
 }

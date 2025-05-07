@@ -7,23 +7,30 @@ import (
 	dmChat "i9chat/src/models/chatModel/dmChatModel"
 	"i9chat/src/services/appServices"
 	"i9chat/src/services/eventStreamService"
+	"log"
 	"time"
+
+	"github.com/gofiber/fiber/v2"
 )
 
 func GetChatHistory(ctx context.Context, clientUsername, partnerUsername string, limit int, offset int64) ([]any, error) {
-	return dmChat.ChatHistory(ctx, clientUsername, partnerUsername, limit, time.UnixMilli(offset))
+	return dmChat.ChatHistory(ctx, clientUsername, partnerUsername, limit, time.UnixMilli(offset).UTC())
 }
 
-func SendMessage(ctx context.Context, clientUsername, partnerUsername string, msgContent *appTypes.MsgContent, createdAt time.Time) (map[string]any, error) {
+func SendMessage(ctx context.Context, clientUsername, partnerUsername string, msgContent *appTypes.MsgContent, at int64) (map[string]any, error) {
 
 	err := appServices.UploadMessageMedia(ctx, clientUsername, msgContent)
 	if err != nil {
 		return nil, err
 	}
 
-	msgContentJson, _ := json.Marshal(*msgContent)
+	msgContentJson, err := json.Marshal(*msgContent)
+	if err != nil {
+		log.Println("DMChatService.go: SendMessage: json.Marshal:", err)
+		return nil, fiber.ErrInternalServerError
+	}
 
-	newMessage, err := dmChat.SendMessage(ctx, clientUsername, partnerUsername, msgContentJson, createdAt)
+	newMessage, err := dmChat.SendMessage(ctx, clientUsername, partnerUsername, string(msgContentJson), time.UnixMilli(at).UTC())
 	if err != nil {
 		return nil, err
 	}
@@ -36,8 +43,8 @@ func SendMessage(ctx context.Context, clientUsername, partnerUsername string, ms
 	return newMessage.ClientData, nil
 }
 
-func AckMessageDelivered(ctx context.Context, clientUsername, partnerUsername, msgId string, deliveredAt time.Time) error {
-	if err := dmChat.AckMessageDelivered(ctx, clientUsername, partnerUsername, msgId, deliveredAt); err != nil {
+func AckMessageDelivered(ctx context.Context, clientUsername, partnerUsername, msgId string, deliveredAt int64) error {
+	if err := dmChat.AckMessageDelivered(ctx, clientUsername, partnerUsername, msgId, time.UnixMilli(deliveredAt).UTC()); err != nil {
 		return err
 	}
 
@@ -51,8 +58,8 @@ func AckMessageDelivered(ctx context.Context, clientUsername, partnerUsername, m
 	return nil
 }
 
-func AckMessageRead(ctx context.Context, clientUsername, partnerUsername, msgId string, readAt time.Time) error {
-	if err := dmChat.AckMessageRead(ctx, clientUsername, partnerUsername, msgId, readAt); err != nil {
+func AckMessageRead(ctx context.Context, clientUsername, partnerUsername, msgId string, readAt int64) error {
+	if err := dmChat.AckMessageRead(ctx, clientUsername, partnerUsername, msgId, time.UnixMilli(readAt).UTC()); err != nil {
 		return err
 	}
 	go eventStreamService.Send(partnerUsername, appTypes.ServerWSMsg{

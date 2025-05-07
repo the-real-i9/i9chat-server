@@ -9,16 +9,19 @@ import (
 	"i9chat/src/services/appServices"
 	"i9chat/src/services/cloudStorageService"
 	"i9chat/src/services/eventStreamService"
+	"log"
 	"time"
+
+	"github.com/gofiber/fiber/v2"
 )
 
-func NewGroupChat(ctx context.Context, clientUsername, name, description string, pictureData []byte, initUsers []string, createdAt time.Time) (map[string]any, error) {
+func NewGroupChat(ctx context.Context, clientUsername, name, description string, pictureData []byte, initUsers []string, createdAt int64) (map[string]any, error) {
 	picUrl, err := uploadGroupPicture(ctx, pictureData)
 	if err != nil {
 		return nil, err
 	}
 
-	newGroupChat, err := groupChat.New(ctx, clientUsername, name, description, picUrl, initUsers, createdAt)
+	newGroupChat, err := groupChat.New(ctx, clientUsername, name, description, picUrl, initUsers, time.UnixMilli(createdAt).UTC())
 	if err != nil {
 		return nil, err
 	}
@@ -29,7 +32,7 @@ func NewGroupChat(ctx context.Context, clientUsername, name, description string,
 }
 
 func GetChatHistory(ctx context.Context, clientUsername, groupId string, limit int, offset int64) (any, error) {
-	return groupChat.ChatHistory(ctx, clientUsername, groupId, limit, time.UnixMilli(offset))
+	return groupChat.ChatHistory(ctx, clientUsername, groupId, limit, time.UnixMilli(offset).UTC())
 }
 
 func GetGroupInfo(ctx context.Context, groupId string) (map[string]any, error) {
@@ -40,16 +43,20 @@ func GetGroupMemInfo(ctx context.Context, clientUsername, groupId string) (map[s
 	return groupChat.GroupMemInfo(ctx, clientUsername, groupId)
 }
 
-func SendMessage(ctx context.Context, groupId, clientUsername string, msgContent *appTypes.MsgContent, createdAt time.Time) (map[string]any, error) {
+func SendMessage(ctx context.Context, groupId, clientUsername string, msgContent *appTypes.MsgContent, at int64) (map[string]any, error) {
 
 	err := appServices.UploadMessageMedia(ctx, clientUsername, msgContent)
 	if err != nil {
 		return nil, err
 	}
 
-	msgContentJson, _ := json.Marshal(*msgContent)
+	msgContentJson, err := json.Marshal(*msgContent)
+	if err != nil {
+		log.Println("groupChatService.go: SendMessage: json.Marshal:", err)
+		return nil, fiber.ErrInternalServerError
+	}
 
-	newMessage, err := groupChat.SendMessage(ctx, groupId, clientUsername, msgContentJson, createdAt)
+	newMessage, err := groupChat.SendMessage(ctx, groupId, clientUsername, string(msgContentJson), time.UnixMilli(at).UTC())
 	if err != nil {
 		return nil, err
 	}
@@ -59,8 +66,8 @@ func SendMessage(ctx context.Context, groupId, clientUsername string, msgContent
 	return newMessage.ClientData, nil
 }
 
-func AckMessageDelivered(ctx context.Context, clientUsername, groupId, msgId string, deliveredAt time.Time) error {
-	msgAck, err := groupChat.AckMessageDelivered(ctx, clientUsername, groupId, msgId, deliveredAt)
+func AckMessageDelivered(ctx context.Context, clientUsername, groupId, msgId string, deliveredAt int64) error {
+	msgAck, err := groupChat.AckMessageDelivered(ctx, clientUsername, groupId, msgId, time.UnixMilli(deliveredAt).UTC())
 	if err != nil {
 		return err
 	}
@@ -75,8 +82,8 @@ func AckMessageDelivered(ctx context.Context, clientUsername, groupId, msgId str
 	return nil
 }
 
-func AckMessageRead(ctx context.Context, clientUsername, groupId, msgId string, readAt time.Time) error {
-	msgAck, err := groupChat.AckMessageRead(ctx, clientUsername, groupId, msgId, readAt)
+func AckMessageRead(ctx context.Context, clientUsername, groupId, msgId string, readAt int64) error {
+	msgAck, err := groupChat.AckMessageRead(ctx, clientUsername, groupId, msgId, time.UnixMilli(readAt).UTC())
 	if err != nil {
 		return err
 	}

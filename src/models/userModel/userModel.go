@@ -68,7 +68,9 @@ func New(ctx context.Context, email, username, phone, password string, geolocati
 func SigninFind(ctx context.Context, uniqueIdent string) (map[string]any, error) {
 	res, err := db.Query(ctx,
 		`
-	OPTIONAL MATCH (u:User) WHERE u.username = $uniqueIdent OR u.email = $uniqueIdent OR  u.phone = $uniqueIdent
+	MATCH (u:User)
+	WHERE u.username = $uniqueIdent OR u.email = $uniqueIdent OR  u.phone = $uniqueIdent
+
 	WITH u, { x: toFloat(u.geolocation.x), y: toFloat(u.geolocation.y) } AS geolocation, toString(u.last_seen) AS last_seen
 	RETURN u { .username, .phone, .email, .profile_pic_url, .presence, last_seen, .password, geolocation } AS found_user
 	`,
@@ -81,6 +83,10 @@ func SigninFind(ctx context.Context, uniqueIdent string) (map[string]any, error)
 		return nil, fiber.ErrInternalServerError
 	}
 
+	if len(res.Records) == 0 {
+		return nil, nil
+	}
+
 	found_user, _, _ := neo4j.GetRecordValue[map[string]any](res.Records[0], "found_user")
 
 	return found_user, nil
@@ -89,8 +95,9 @@ func SigninFind(ctx context.Context, uniqueIdent string) (map[string]any, error)
 func FindNearby(ctx context.Context, clientUsername string, x, y, radius float64) ([]any, error) {
 	res, err := db.Query(ctx,
 		`
-		OPTIONAL MATCH (u:User)
+		MATCH (u:User)
 		WHERE u.username <> $client_username AND point.distance(point({ x: $live_long, y: $live_lat }), u.geolocation) <= $radius
+
 		WITH u, { x: toFloat(u.geolocation.x), y: toFloat(u.geolocation.y) } AS geolocation, toString(u.last_seen) AS last_seen
 		RETURN collect(u { .username, .phone, .email, .profile_pic_url, .presence, last_seen, geolocation }) AS nearby_users
 	`,
@@ -106,6 +113,10 @@ func FindNearby(ctx context.Context, clientUsername string, x, y, radius float64
 		return nil, fiber.ErrInternalServerError
 	}
 
+	if len(res.Records) == 0 {
+		return nil, nil
+	}
+
 	nearbyUsers, _, _ := neo4j.GetRecordValue[[]any](res.Records[0], "nearby_users")
 
 	return nearbyUsers, nil
@@ -114,8 +125,9 @@ func FindNearby(ctx context.Context, clientUsername string, x, y, radius float64
 func FindOne(ctx context.Context, emailUsernamePhone string) (map[string]any, error) {
 	res, err := db.Query(ctx,
 		`
-		OPTIONAL MATCH (u:User)
+		MATCH (u:User)
 		WHERE u.username = $eup OR u.email = $eup OR u.phone = $eup
+
 		WITH u, { x: toFloat(u.geolocation.x), y: toFloat(u.geolocation.y) } AS geolocation, toString(u.last_seen) AS last_seen
 		RETURN u { .username, .email, .phone, .profile_pic_url, .presence, last_seen, geolocation } AS found_user
 		`,
@@ -126,6 +138,10 @@ func FindOne(ctx context.Context, emailUsernamePhone string) (map[string]any, er
 	if err != nil {
 		log.Println("userModel.go: FindOne:", err)
 		return nil, fiber.ErrInternalServerError
+	}
+
+	if len(res.Records) == 0 {
+		return nil, nil
 	}
 
 	foundUser, _, _ := neo4j.GetRecordValue[map[string]any](res.Records[0], "found_user")
@@ -165,9 +181,10 @@ func GetMyChats(ctx context.Context, clientUsername string) ([]ChatItem, error) 
 			RETURN clientChat { partner, .unread_messages_count, updated_at, last_activity, chat_item_type: "dm" } AS chat_item, clientChat.updated_at AS updated_at
 		UNION
 			MATCH (clientChat:GroupChat{ owner_username: $client_username })-[:WITH_GROUP]->(group)
-			OPTIONAL MATCH (clientChat)<-[:IN_GROUP_CHAT]-(lmsg:GroupMessage WHERE lmsg.id = clientChat.last_message_id),
-				(clientChat)<-[:IN_GROUP_CHAT]-(:GroupMessage)<-[lrxn:REACTS_TO_MESSAGE WHERE lrxn.at = clientChat.last_reaction_at]-(reactor),
-				(clientChat)<-[:IN_GROUP_CHAT]-(lgact:GroupActivity WHERE lgact.created_at = clientChat.last_group_activity_at)
+			OPTIONAL MATCH (clientChat)<-[:IN_GROUP_CHAT]-(lmsg:GroupMessage WHERE lmsg.id = clientChat.last_message_id)
+			OPTIONAL MATCH (clientChat)<-[:IN_GROUP_CHAT]-(:GroupMessage)<-[lrxn:REACTS_TO_MESSAGE WHERE lrxn.at = clientChat.last_reaction_at]-(reactor)
+			OPTIONAL MATCH (clientChat)<-[:IN_GROUP_CHAT]-(lgact:GroupActivity WHERE lgact.created_at = clientChat.last_group_activity_at)
+
 			WITH clientChat, toString(clientChat.updated_at) AS updated_at, group { .name, .picture_url } AS group_info,
 				CASE clientChat.last_activity_type
 					WHEN "message" THEN lmsg { type: "message", .content, .delivery_status }
@@ -279,6 +296,7 @@ func ChangePresence(ctx context.Context, clientUsername, presence string, lastSe
 
 		WITH user
 		OPTIONAL MATCH (user)-[:HAS_DM_CHAT]->()-[:WITH_USER]->(partnerUser)
+		
 		RETURN collect(partnerUser.username) AS partner_usernames
 		`, lastSeenVal),
 		map[string]any{

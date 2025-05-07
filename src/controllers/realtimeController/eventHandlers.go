@@ -5,6 +5,7 @@ import (
 	"i9chat/src/helpers"
 	"i9chat/src/services/chatServices/dmChatService"
 	"i9chat/src/services/chatServices/groupChatService"
+	"time"
 )
 
 func newDMChatMsgHndl(ctx context.Context, clientUsername string, eventData map[string]any) (map[string]any, error) {
@@ -16,7 +17,7 @@ func newDMChatMsgHndl(ctx context.Context, clientUsername string, eventData map[
 		return nil, val_err
 	}
 
-	return dmChatService.SendMessage(ctx, clientUsername, evd.PartnerUsername, evd.Msg, evd.CreatedAt)
+	return dmChatService.SendMessage(ctx, clientUsername, evd.PartnerUsername, evd.Msg, evd.At)
 }
 
 func ackDMChatMsgDeliveredHndl(ctx context.Context, clientUsername string, eventData map[string]any) error {
@@ -52,7 +53,7 @@ func newGroupChatMsgHndl(ctx context.Context, clientUsername string, eventData m
 		return nil, val_err
 	}
 
-	return groupChatService.SendMessage(ctx, clientUsername, evd.GroupId, evd.Msg, evd.CreatedAt)
+	return groupChatService.SendMessage(ctx, clientUsername, evd.GroupId, evd.Msg, evd.At)
 }
 
 func ackGroupChatMsgDeliveredHndl(ctx context.Context, clientUsername string, eventData map[string]any) error {
@@ -112,6 +113,14 @@ func getDMChatHistoryHndl(ctx context.Context, clientUsername string, eventData 
 		return nil, val_err
 	}
 
+	if evd.Offset == 0 {
+		evd.Offset = time.Now().UTC().UnixMilli()
+	}
+
+	if evd.Limit == 0 {
+		evd.Limit = 50
+	}
+
 	return dmChatService.GetChatHistory(ctx, clientUsername, evd.PartnerUsername, evd.Limit, evd.Offset)
 }
 
@@ -122,6 +131,14 @@ func getGroupChatHistoryHndl(ctx context.Context, clientUsername string, eventDa
 
 	if val_err := evd.Validate(); val_err != nil {
 		return nil, val_err
+	}
+
+	if evd.Offset == 0 {
+		evd.Offset = time.Now().UTC().UnixMilli()
+	}
+
+	if evd.Limit == 0 {
+		evd.Limit = 50
 	}
 
 	return groupChatService.GetChatHistory(ctx, clientUsername, evd.GroupId, evd.Limit, evd.Offset)
