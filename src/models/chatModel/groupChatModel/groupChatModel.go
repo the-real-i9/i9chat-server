@@ -41,7 +41,7 @@ func New(ctx context.Context, clientUsername, name, description, pictureUrl stri
 
 		WITH group
 		RETURN group { .id, .name, .description, .picture_url, last_activity: { type: "group activity", info: "You added " + $init_users_str } } AS client_resp,
-			group { .id, .name, .picture_url, last_activity: { type: "group activity", info: "You were added" } } AS init_member_resp
+			group { .id, .name, .description, .picture_url, last_activity: { type: "group activity", info: "You were added" } } AS init_member_resp
 		`,
 		map[string]any{
 			"client_username": clientUsername,
@@ -62,7 +62,7 @@ func New(ctx context.Context, clientUsername, name, description, pictureUrl stri
 		return newGroupChat, nil
 	}
 
-	helpers.MapToStruct(res.Records[0].AsMap(), &newGroupChat)
+	helpers.ToStruct(res.Records[0].AsMap(), &newGroupChat)
 
 	return newGroupChat, nil
 }
@@ -116,7 +116,7 @@ func ChangeName(ctx context.Context, groupId, clientUsername, newName string) (N
 			return nil, err
 		}
 
-		if res.Record() == nil {
+		if !res.Next(ctx) {
 			return nil, nil
 		}
 
@@ -163,7 +163,7 @@ func ChangeName(ctx context.Context, groupId, clientUsername, newName string) (N
 		return newActivity, fiber.ErrInternalServerError
 	}
 
-	helpers.AnyToStruct(res, &newActivity)
+	helpers.ToStruct(res, &newActivity)
 
 	return newActivity, nil
 }
@@ -210,7 +210,7 @@ func ChangeDescription(ctx context.Context, groupId, clientUsername, newDescript
 			return nil, err
 		}
 
-		if res.Record() == nil {
+		if !res.Next(ctx) {
 			return nil, nil
 		}
 
@@ -257,7 +257,7 @@ func ChangeDescription(ctx context.Context, groupId, clientUsername, newDescript
 		return newActivity, fiber.ErrInternalServerError
 	}
 
-	helpers.AnyToStruct(res, &newActivity)
+	helpers.ToStruct(res, &newActivity)
 
 	return newActivity, nil
 }
@@ -302,7 +302,7 @@ func ChangePicture(ctx context.Context, groupId, clientUsername, newPictureUrl s
 			return nil, err
 		}
 
-		if res.Record() == nil {
+		if !res.Next(ctx) {
 			return nil, nil
 		}
 
@@ -347,7 +347,7 @@ func ChangePicture(ctx context.Context, groupId, clientUsername, newPictureUrl s
 		return newActivity, fiber.ErrInternalServerError
 	}
 
-	helpers.AnyToStruct(res, &newActivity)
+	helpers.ToStruct(res, &newActivity)
 
 	return newActivity, nil
 }
@@ -392,7 +392,7 @@ func AddUsers(ctx context.Context, groupId, clientUsername string, newUsers []st
 			CREATE (newUser)-[:RECEIVES_ACTIVITY]->(:GroupActivity{ info: "You were added", created_at: $at })-[:IN_GROUP_CHAT]->(newUserChat)
 
 			RETURN cligact.info AS client_resp, 
-				group { .id, .name, .picture_url, last_activity: { type: "group activity", info: "You were added" } } AS new_user_resp,
+				group { .id, .name, .description, .picture_url, last_activity: { type: "group activity", info: "You were added" } } AS new_user_resp,
 				member_usernames
 			`,
 			map[string]any{
@@ -407,7 +407,7 @@ func AddUsers(ctx context.Context, groupId, clientUsername string, newUsers []st
 			return nil, err
 		}
 
-		if res.Record() == nil {
+		if !res.Next(ctx) {
 			return nil, nil
 		}
 
@@ -455,7 +455,7 @@ func AddUsers(ctx context.Context, groupId, clientUsername string, newUsers []st
 
 	resMap := res.(map[string]any)
 
-	helpers.AnyToStruct(res, &newActivity)
+	helpers.ToStruct(res, &newActivity)
 
 	return newActivity, resMap["new_user_resp"], nil
 }
@@ -512,7 +512,7 @@ func RemoveUser(ctx context.Context, groupId, clientUsername, targetUser string)
 			return nil, err
 		}
 
-		if res.Record() == nil {
+		if !res.Next(ctx) {
 			return nil, nil
 		}
 
@@ -560,7 +560,7 @@ func RemoveUser(ctx context.Context, groupId, clientUsername, targetUser string)
 
 	resMap := res.(map[string]any)
 
-	helpers.AnyToStruct(res, &newActivity)
+	helpers.ToStruct(res, &newActivity)
 
 	return newActivity, resMap["target_user_resp"], nil
 }
@@ -598,7 +598,7 @@ func Join(ctx context.Context, groupId, clientUsername string) (NewActivity, err
 				clientChat.last_group_activity_at = $at
 			CREATE (clientUser)-[:RECEIVES_ACTIVITY]->(:GroupActivity{ info: "You joined", created_at: $at })-[:IN_GROUP_CHAT]->(clientChat)
 
-			RETURN group { .id, .name, .picture_url, last_activity: { type: "group activity", info: "You joined" } } AS client_resp,
+			RETURN group { .id, .name, .description, .picture_url, last_activity: { type: "group activity", info: "You joined" } } AS client_resp,
 				member_usernames
 			`,
 			map[string]any{
@@ -611,13 +611,13 @@ func Join(ctx context.Context, groupId, clientUsername string) (NewActivity, err
 			return nil, err
 		}
 
-		if res.Record() == nil {
+		if !res.Next(ctx) {
 			return nil, nil
 		}
 
 		maps.Copy(res.Record().AsMap(), resMap)
 
-		memberUsernames := resMap["member_usernames"].([]string)
+		memberUsernames := resMap["member_usernames"].([]any)
 
 		if len(memberUsernames) > 0 {
 			res, err = tx.Run(
@@ -656,7 +656,7 @@ func Join(ctx context.Context, groupId, clientUsername string) (NewActivity, err
 		return newActivity, fiber.ErrInternalServerError
 	}
 
-	helpers.AnyToStruct(res, &newActivity)
+	helpers.ToStruct(res, &newActivity)
 
 	return newActivity, nil
 }
@@ -704,7 +704,7 @@ func Leave(ctx context.Context, groupId, clientUsername string) (NewActivity, er
 			return nil, err
 		}
 
-		if res.Record() == nil {
+		if !res.Next(ctx) {
 			return nil, nil
 		}
 
@@ -749,7 +749,7 @@ func Leave(ctx context.Context, groupId, clientUsername string) (NewActivity, er
 		return newActivity, fiber.ErrInternalServerError
 	}
 
-	helpers.AnyToStruct(res, &newActivity)
+	helpers.ToStruct(res, &newActivity)
 
 	return newActivity, nil
 }
@@ -803,7 +803,7 @@ func MakeUserAdmin(ctx context.Context, groupId, clientUsername, targetUser stri
 			return nil, err
 		}
 
-		if res.Record() == nil {
+		if !res.Next(ctx) {
 			return nil, nil
 		}
 
@@ -851,7 +851,7 @@ func MakeUserAdmin(ctx context.Context, groupId, clientUsername, targetUser stri
 
 	resMap := res.(map[string]any)
 
-	helpers.AnyToStruct(res, &newActivity)
+	helpers.ToStruct(res, &newActivity)
 
 	return newActivity, resMap["target_user_resp"], nil
 }
@@ -904,7 +904,7 @@ func RemoveUserFromAdmins(ctx context.Context, groupId, clientUsername, targetUs
 			return nil, err
 		}
 
-		if res.Record() == nil {
+		if !res.Next(ctx) {
 			return nil, nil
 		}
 
@@ -952,7 +952,7 @@ func RemoveUserFromAdmins(ctx context.Context, groupId, clientUsername, targetUs
 
 	resMap := res.(map[string]any)
 
-	helpers.AnyToStruct(res, &newActivity)
+	helpers.ToStruct(res, &newActivity)
 
 	return newActivity, resMap["target_user_resp"], nil
 }
@@ -1006,7 +1006,7 @@ func SendMessage(ctx context.Context, groupId, clientUsername, msgContent string
 			return nil, err
 		}
 
-		if res.Record() == nil {
+		if !res.Next(ctx) {
 			return nil, nil
 		}
 
@@ -1057,7 +1057,7 @@ func SendMessage(ctx context.Context, groupId, clientUsername, msgContent string
 		return newMessage, fiber.ErrInternalServerError
 	}
 
-	helpers.AnyToStruct(res, &newMessage)
+	helpers.ToStruct(res, &newMessage)
 
 	return newMessage, nil
 }
@@ -1106,7 +1106,7 @@ func AckMessageDelivered(ctx context.Context, clientUsername, groupId, msgId str
 			return nil, err
 		}
 
-		if res.Record() == nil {
+		if !res.Next(ctx) {
 			return nil, nil
 		}
 
@@ -1147,7 +1147,7 @@ func AckMessageDelivered(ctx context.Context, clientUsername, groupId, msgId str
 		return msgAck, fiber.ErrInternalServerError
 	}
 
-	helpers.AnyToStruct(res, &msgAck)
+	helpers.ToStruct(res, &msgAck)
 
 	return msgAck, nil
 }
@@ -1192,7 +1192,7 @@ func AckMessageRead(ctx context.Context, clientUsername, groupId, msgId string, 
 			return nil, err
 		}
 
-		if res.Record() == nil {
+		if !res.Next(ctx) {
 			return nil, nil
 		}
 
@@ -1233,7 +1233,7 @@ func AckMessageRead(ctx context.Context, clientUsername, groupId, msgId string, 
 		return msgAck, fiber.ErrInternalServerError
 	}
 
-	helpers.AnyToStruct(res, &msgAck)
+	helpers.ToStruct(res, &msgAck)
 
 	return msgAck, nil
 }
@@ -1298,7 +1298,7 @@ func ChatHistory(ctx context.Context, clientUsername, groupId string, limit int,
 
 	ch, _, _ := neo4j.GetRecordValue[[]any](res.Records[0], "chat_history")
 
-	helpers.AnyToStruct(ch, &chatHistory)
+	helpers.ToStruct(ch, &chatHistory)
 
 	return chatHistory, nil
 }

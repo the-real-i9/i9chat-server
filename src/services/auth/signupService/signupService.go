@@ -49,7 +49,7 @@ func VerifyEmail(ctx context.Context, sessionData map[string]any, inputVerfCode 
 		VCodeExpires time.Time
 	}
 
-	helpers.MapToStruct(sessionData, &sd)
+	helpers.ToStruct(sessionData, &sd)
 
 	if sd.VCode != inputVerfCode {
 		return "", nil, fiber.NewError(fiber.StatusBadRequest, "Incorrect verification code! Check or Re-submit your email.")

@@ -4,23 +4,27 @@ import (
 	"encoding/json"
 	"log"
 	"os"
+	"reflect"
 
 	"github.com/gofiber/fiber/v2"
 )
 
-func MapToStruct(val map[string]any, yourStruct any) {
-	bt, _ := json.Marshal(val)
-
-	if err := json.Unmarshal(bt, yourStruct); err != nil {
-		log.Println("helpers.go: MapToStruct:", err)
+func ToStruct(val any, dest any) {
+	if reflect.TypeOf(dest).Elem().Kind() != reflect.Struct {
+		panic("expected 'dest' to be a struct")
 	}
-}
 
-func AnyToStruct(val any, yourStruct any) {
-	bt, _ := json.Marshal(val)
+	if !reflect.TypeOf(val).ConvertibleTo(reflect.TypeOf(dest).Elem()) {
+		panic("'val' not convertible to 'dest'")
+	}
 
-	if err := json.Unmarshal(bt, yourStruct); err != nil {
-		log.Println("helpers.go: AnyToStruct:", err)
+	bt, err := json.Marshal(val)
+	if err != nil {
+		log.Println("helpers.go: ToStruct: json.Marshal:", err)
+	}
+
+	if err := json.Unmarshal(bt, dest); err != nil {
+		log.Println("helpers.go: ToStruct: json.Unmarshal:", err)
 	}
 }
 

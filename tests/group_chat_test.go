@@ -222,16 +222,23 @@ func TestGroupChat(t *testing.T) {
 		}
 	}
 
-	{
-		t.Log("Action: user1 creates group chat with user2 | user2 is notified")
+	groupChatPic, err := os.ReadFile("./test_files/group_pic.png")
+	require.NoError(t, err)
 
-		groupPic, err := os.ReadFile("./test_files/group_pic.png")
-		require.NoError(t, err)
+	newGroup := struct {
+		Id          string
+		Name        string
+		Description string
+		Picture     []byte
+	}{Name: "World Changers! 💪💪💪", Description: "We're world changers! Join the train!", Picture: groupChatPic}
+
+	{
+		t.Log("Action: user1 creates group chat with user2 | user2 receives the new group")
 
 		reqBody, err := makeReqBody(map[string]any{
-			"name":        "World Changers! 💪💪💪",
-			"description": "We're world changers! Join the train!",
-			"pictureData": groupPic,
+			"name":        newGroup.Name,
+			"description": newGroup.Description,
+			"pictureData": newGroup.Picture,
 			"initUsers":   []string{user2.Username},
 			"createdAt":   time.Now().UTC().UnixMilli(),
 		})
@@ -257,11 +264,79 @@ func TestGroupChat(t *testing.T) {
 
 		td.Cmp(td.Require(t), rb, td.SuperMapOf(map[string]any{
 			"id":          td.Ignore(),
-			"name":        "World Changers! 💪💪💪",
-			"description": "We're world changers! Join the train!",
+			"name":        newGroup.Name,
+			"description": newGroup.Description,
 			"last_activity": td.Map(map[string]any{
 				"type": "group activity",
 				"info": "You added " + user2.Username,
+			}, nil),
+		}, nil))
+
+		newGroup.Id = rb["id"].(string)
+
+		user2RecvNewGroup := <-user2.ServerWSMsg
+
+		td.Cmp(td.Require(t), user2RecvNewGroup, td.Map(map[string]any{
+			"event": "new group chat",
+			"data": td.SuperMapOf(map[string]any{
+				"id":   newGroup.Id,
+				"name": newGroup.Name,
+				"last_activity": td.Map(map[string]any{
+					"type": "group activity",
+					"info": "You were added",
+				}, nil),
+			}, nil),
+		}, nil))
+	}
+
+	{
+		t.Log("Action: user3 joins group | user1 & user2 are notified")
+
+		req, err := http.NewRequest("POST", groupChatPath+"/"+newGroup.Id+"/execute_action/join", nil)
+		require.NoError(t, err)
+		req.Header.Add("Content-Type", "application/json")
+		req.Header.Set("Cookie", user3.SessionCookie)
+
+		res, err := http.DefaultClient.Do(req)
+		require.NoError(t, err)
+
+		if !assert.Equal(t, http.StatusCreated, res.StatusCode) {
+			rb, err := errResBody(res.Body)
+			require.NoError(t, err)
+			t.Log("unexpected error:", rb)
+			return
+		}
+
+		rb, err := succResBody[map[string]any](res.Body)
+		require.NoError(t, err)
+
+		td.Cmp(td.Require(t), rb, td.SuperMapOf(map[string]any{
+			"id":          newGroup.Id,
+			"name":        newGroup.Name,
+			"description": newGroup.Description,
+			"last_activity": td.Map(map[string]any{
+				"type": "group activity",
+				"info": "You joined",
+			}, nil),
+		}, nil))
+
+		user1GCJoinNotif := <-user1.ServerWSMsg
+
+		td.Cmp(td.Require(t), user1GCJoinNotif, td.Map(map[string]any{
+			"event": "new group chat activity",
+			"data": td.Map(map[string]any{
+				"info":     user3.Username + " joined",
+				"group_id": newGroup.Id,
+			}, nil),
+		}, nil))
+
+		user2GCJoinNotif := <-user2.ServerWSMsg
+
+		td.Cmp(td.Require(t), user2GCJoinNotif, td.Map(map[string]any{
+			"event": "new group chat activity",
+			"data": td.Map(map[string]any{
+				"info":     user3.Username + " joined",
+				"group_id": newGroup.Id,
 			}, nil),
 		}, nil))
 	}

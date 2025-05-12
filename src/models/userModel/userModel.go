@@ -213,7 +213,7 @@ func GetMyChats(ctx context.Context, clientUsername string) ([]ChatItem, error) 
 
 	mc, _, _ := neo4j.GetRecordValue[[]any](res.Records[0], "my_chats")
 
-	helpers.AnyToStruct(mc, &myChats)
+	helpers.ToStruct(mc, &myChats)
 
 	return myChats, nil
 }

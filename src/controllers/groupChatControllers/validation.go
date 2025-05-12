@@ -5,7 +5,6 @@ import (
 	"time"
 
 	validation "github.com/go-ozzo/ozzo-validation/v4"
-	"github.com/go-ozzo/ozzo-validation/v4/is"
 )
 
 type newGroupChatBody struct {
@@ -29,26 +28,6 @@ func (b newGroupChatBody) Validate() error {
 	)
 
 	return helpers.ValidationError(err, "groupChat_validation.go", "newGroupChatBody")
-
-}
-
-type action string
-
-type executeActionParams struct {
-	GroupId string `json:"groupId"`
-	Action  action `json:"action"`
-}
-
-func (b executeActionParams) Validate() error {
-	err := validation.ValidateStruct(&b,
-		validation.Field(&b.Action,
-			validation.Required,
-			validation.In("change name", "change description", "change picture", "add users", "remove user", "join", "leave", "make user admin", "remove user from admins").Error("invalid group action"),
-		),
-		validation.Field(&b.GroupId, validation.Required, is.UUID),
-	)
-
-	return helpers.ValidationError(err, "groupChat_validation.go", "executeActionParams")
 
 }
 

@@ -11,7 +11,7 @@ import (
 func newDMChatMsgHndl(ctx context.Context, clientUsername string, eventData map[string]any) (map[string]any, error) {
 	var evd newDMChatMsg
 
-	helpers.MapToStruct(eventData, &evd)
+	helpers.ToStruct(eventData, &evd)
 
 	if val_err := evd.Validate(); val_err != nil {
 		return nil, val_err
@@ -23,7 +23,7 @@ func newDMChatMsgHndl(ctx context.Context, clientUsername string, eventData map[
 func ackDMChatMsgDeliveredHndl(ctx context.Context, clientUsername string, eventData map[string]any) error {
 	var evd dmChatMsgAck
 
-	helpers.MapToStruct(eventData, &evd)
+	helpers.ToStruct(eventData, &evd)
 
 	if val_err := evd.Validate(); val_err != nil {
 		return val_err
@@ -35,7 +35,7 @@ func ackDMChatMsgDeliveredHndl(ctx context.Context, clientUsername string, event
 func ackDMChatMsgReadHndl(ctx context.Context, clientUsername string, eventData map[string]any) error {
 	var evd dmChatMsgAck
 
-	helpers.MapToStruct(eventData, &evd)
+	helpers.ToStruct(eventData, &evd)
 
 	if val_err := evd.Validate(); val_err != nil {
 		return val_err
@@ -47,7 +47,7 @@ func ackDMChatMsgReadHndl(ctx context.Context, clientUsername string, eventData 
 func newGroupChatMsgHndl(ctx context.Context, clientUsername string, eventData map[string]any) (map[string]any, error) {
 	var evd newGroupChatMsg
 
-	helpers.MapToStruct(eventData, &evd)
+	helpers.ToStruct(eventData, &evd)
 
 	if val_err := evd.Validate(); val_err != nil {
 		return nil, val_err
@@ -59,7 +59,7 @@ func newGroupChatMsgHndl(ctx context.Context, clientUsername string, eventData m
 func ackGroupChatMsgDeliveredHndl(ctx context.Context, clientUsername string, eventData map[string]any) error {
 	var evd groupChatMsgAck
 
-	helpers.MapToStruct(eventData, &evd)
+	helpers.ToStruct(eventData, &evd)
 
 	if val_err := evd.Validate(); val_err != nil {
 		return val_err
@@ -71,7 +71,7 @@ func ackGroupChatMsgDeliveredHndl(ctx context.Context, clientUsername string, ev
 func ackGroupChatMsgReadHndl(ctx context.Context, clientUsername string, eventData map[string]any) error {
 	var evd groupChatMsgAck
 
-	helpers.MapToStruct(eventData, &evd)
+	helpers.ToStruct(eventData, &evd)
 
 	if val_err := evd.Validate(); val_err != nil {
 		return val_err
@@ -83,7 +83,7 @@ func ackGroupChatMsgReadHndl(ctx context.Context, clientUsername string, eventDa
 func getGroupInfoHndl(ctx context.Context, eventData map[string]any) (map[string]any, error) {
 	var evd groupInfo
 
-	helpers.MapToStruct(eventData, &evd)
+	helpers.ToStruct(eventData, &evd)
 
 	if val_err := evd.Validate(); val_err != nil {
 		return nil, val_err
@@ -95,7 +95,7 @@ func getGroupInfoHndl(ctx context.Context, eventData map[string]any) (map[string
 func getGroupMemInfoHndl(ctx context.Context, clientUsername string, eventData map[string]any) (map[string]any, error) {
 	var evd groupMemInfo
 
-	helpers.MapToStruct(eventData, &evd)
+	helpers.ToStruct(eventData, &evd)
 
 	if val_err := evd.Validate(); val_err != nil {
 		return nil, val_err
@@ -107,7 +107,7 @@ func getGroupMemInfoHndl(ctx context.Context, clientUsername string, eventData m
 func getDMChatHistoryHndl(ctx context.Context, clientUsername string, eventData map[string]any) ([]any, error) {
 	var evd dmChatHistory
 
-	helpers.MapToStruct(eventData, &evd)
+	helpers.ToStruct(eventData, &evd)
 
 	if val_err := evd.Validate(); val_err != nil {
 		return nil, val_err
@@ -127,7 +127,7 @@ func getDMChatHistoryHndl(ctx context.Context, clientUsername string, eventData 
 func getGroupChatHistoryHndl(ctx context.Context, clientUsername string, eventData map[string]any) (any, error) {
 	var evd groupChatHistory
 
-	helpers.MapToStruct(eventData, &evd)
+	helpers.ToStruct(eventData, &evd)
 
 	if val_err := evd.Validate(); val_err != nil {
 		return nil, val_err

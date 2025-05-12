@@ -1,7 +1,6 @@
 package groupChatService
 
 import (
-	"fmt"
 	"i9chat/src/appTypes"
 	"i9chat/src/services/eventStreamService"
 )
@@ -9,7 +8,7 @@ import (
 func broadcastNewGroup(targetUsers []string, data any) {
 	for _, tu := range targetUsers {
 
-		eventStreamService.Send(fmt.Sprintf("user-%s-alerts", tu), appTypes.ServerWSMsg{
+		eventStreamService.Send(tu, appTypes.ServerWSMsg{
 			Event: "new group chat",
 			Data:  data,
 		})

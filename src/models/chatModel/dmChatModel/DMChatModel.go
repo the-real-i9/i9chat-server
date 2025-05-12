@@ -57,7 +57,7 @@ func SendMessage(ctx context.Context, clientUsername, partnerUsername, msgConten
 		return newMsg, nil
 	}
 
-	helpers.MapToStruct(res.Records[0].AsMap(), &newMsg)
+	helpers.ToStruct(res.Records[0].AsMap(), &newMsg)
 
 	return newMsg, nil
 }
