@@ -13,8 +13,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-const userWSPath = WSHOST_URL + "/api/app/ws"
-
 func TestDMChat(t *testing.T) {
 	t.Parallel()
 
@@ -147,7 +145,7 @@ func TestDMChat(t *testing.T) {
 
 			header := http.Header{}
 			header.Set("Cookie", user.SessionCookie)
-			wsConn, res, err := websocket.DefaultDialer.Dial(userWSPath, header)
+			wsConn, res, err := websocket.DefaultDialer.Dial(wsPath, header)
 			require.NoError(t, err)
 
 			if !assert.Equal(t, http.StatusSwitchingProtocols, res.StatusCode) {

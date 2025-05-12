@@ -10,8 +10,10 @@ import (
 	"i9chat/src/services/cloudStorageService"
 	"i9chat/src/services/eventStreamService"
 	"log"
+	"strings"
 	"time"
 
+	"github.com/gabriel-vasile/mimetype"
 	"github.com/gofiber/fiber/v2"
 )
 
@@ -137,10 +139,14 @@ func ChangeGroupPicture(ctx context.Context, groupId, clientUsername string, new
 }
 
 func uploadGroupPicture(ctx context.Context, pictureData []byte) (string, error) {
-	if len(pictureData) < 1 {
-		return "", fmt.Errorf("upload error: no picture data")
+	mediaMIME := mimetype.Detect(pictureData)
+	mediaType, mediaExt := mediaMIME.String(), mediaMIME.Extension()
+
+	if !strings.HasPrefix(mediaType, "image") {
+		return "", fiber.NewError(fiber.StatusBadRequest, fmt.Sprintf("invalid picture type %s. expected image/*", mediaType))
 	}
-	picPath := fmt.Sprintf("group_chat_pictures/group_chat_pic_%d.jpg", time.Now().UnixNano())
+
+	picPath := fmt.Sprintf("group_chat_pictures/group_chat_pic_%d%s", time.Now().UnixNano(), mediaExt)
 
 	picUrl, err := cloudStorageService.Upload(ctx, picPath, pictureData)
 

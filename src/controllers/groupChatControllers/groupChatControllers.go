@@ -38,7 +38,7 @@ func CreateNewGroupChat(c *fiber.Ctx) error {
 		return app_err
 	}
 
-	return c.JSON(respData)
+	return c.Status(fiber.StatusCreated).JSON(respData)
 }
 
 func ExecuteAction(c *fiber.Ctx) error {

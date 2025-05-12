@@ -16,6 +16,7 @@ import (
 
 const HOST_URL string = "http://localhost:8000"
 const WSHOST_URL string = "ws://localhost:8000"
+const wsPath = WSHOST_URL + "/api/app/ws"
 
 type UserGeolocation struct {
 	X float64
