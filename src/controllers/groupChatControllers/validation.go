@@ -24,7 +24,7 @@ func (b newGroupChatBody) Validate() error {
 			validation.Length(1024, 2*1024*1024).Error("group picture size out of range. min: 1KiB. max: 2MiB"),
 		),
 		validation.Field(&b.InitUsers, validation.Required, validation.Length(1, 0).Error("at least 1 other user is required to start a group")),
-		validation.Field(&b.CreatedAt, validation.Required, validation.Min(time.Now().UTC().UnixMilli()).Error("invalid future time")),
+		validation.Field(&b.CreatedAt, validation.Required, validation.Max(time.Now().UTC().UnixMilli()).Error("invalid future time")),
 	)
 
 	return helpers.ValidationError(err, "groupChat_validation.go", "newGroupChatBody")

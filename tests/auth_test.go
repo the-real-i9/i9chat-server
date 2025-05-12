@@ -12,10 +12,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-const signupPath = HOST_URL + "/api/auth/signup"
-const signinPath = HOST_URL + "/api/auth/signin"
-const signoutPath = userPath + "/signout"
-
 func TestUserAuth(t *testing.T) {
 	t.Parallel()
 

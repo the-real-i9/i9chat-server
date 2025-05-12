@@ -20,13 +20,6 @@ type UserGeolocation struct {
 	Y float64 `json:"y"`
 }
 
-func (ug UserGeolocation) Validate() error {
-	return validation.ValidateStruct(&ug,
-		validation.Field(&ug.X, validation.Required),
-		validation.Field(&ug.Y, validation.Required),
-	)
-}
-
 type MsgProps struct {
 	TextContent *string `json:"textContent,omitempty"`
 	Data        []byte  `json:"data,omitempty"`

@@ -18,6 +18,12 @@ const HOST_URL string = "http://localhost:8000"
 const WSHOST_URL string = "ws://localhost:8000"
 const wsPath = WSHOST_URL + "/api/app/ws"
 
+const signupPath = HOST_URL + "/api/auth/signup"
+const signinPath = HOST_URL + "/api/auth/signin"
+
+const userPath = HOST_URL + "/api/app/user"
+const signoutPath = userPath + "/signout"
+
 type UserGeolocation struct {
 	X float64
 	Y float64

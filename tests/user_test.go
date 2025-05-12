@@ -11,8 +11,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-const userPath = HOST_URL + "/api/app/user"
-
 func TestUserOps(t *testing.T) {
 	t.Parallel()
 

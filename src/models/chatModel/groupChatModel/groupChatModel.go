@@ -29,7 +29,7 @@ func New(ctx context.Context, clientUsername, name, description, pictureUrl stri
 
 		WITH group, initUser, clientUser
 		CREATE (clientUser)-[:IS_MEMBER_OF { role: "admin" }]->(group),
-			(clientUser)-[:HAS_CHAT]->(clientChat:GroupChat{ owner_username: $client_username, group_id: $group.id, last_activity_type: "group activity", last_group_activity_at: $created_at, updated_at: $created_at })-[:WITH_GROUP]->(group),
+			(clientUser)-[:HAS_CHAT]->(clientChat:GroupChat{ owner_username: $client_username, group_id: group.id, last_activity_type: "group activity", last_group_activity_at: $created_at, updated_at: $created_at })-[:WITH_GROUP]->(group),
 			(clientUser)-[:RECEIVES_ACTIVITY]->(:GroupActivity{ info: "You created " + $name, created_at: $created_at })-[:IN_GROUP_CHAT]->(clientChat),
 			(clientUser)-[:RECEIVES_ACTIVITY]->(:GroupActivity{ info: "You added " + $init_users_str, created_at: $created_at })-[:IN_GROUP_CHAT]->(clientChat)
 
@@ -70,7 +70,7 @@ func New(ctx context.Context, clientUsername, name, description, pictureUrl stri
 type NewActivity struct {
 	ClientData      any      `json:"client_resp"`
 	MemberData      any      `json:"member_resp"`
-	MemberUsernames []string `json:"members_usernames"`
+	MemberUsernames []string `json:"member_usernames"`
 }
 
 func ChangeName(ctx context.Context, groupId, clientUsername, newName string) (NewActivity, error) {
@@ -120,7 +120,7 @@ func ChangeName(ctx context.Context, groupId, clientUsername, newName string) (N
 			return nil, nil
 		}
 
-		maps.Copy(res.Record().AsMap(), resMap)
+		maps.Copy(resMap, res.Record().AsMap())
 
 		memberUsernames := resMap["member_usernames"].([]string)
 
@@ -128,7 +128,7 @@ func ChangeName(ctx context.Context, groupId, clientUsername, newName string) (N
 			res, err = tx.Run(
 				ctx,
 				`
-				MATCH (group:Group{ id: $group_id })<-[:IS_MEMBER_OF]-(memberUser:User IN $member_usernames),
+				MATCH (group:Group{ id: $group_id })<-[:IS_MEMBER_OF]-(memberUser:User WHERE memberUser.username IN $member_usernames),
 					(memberChat:GroupChat{ owner_username: memberUser.username, group_id: $group_id })
 				SET memberChat.last_activity_type = "group activity",
 					memberChat.last_group_activity_at = $at
@@ -149,7 +149,7 @@ func ChangeName(ctx context.Context, groupId, clientUsername, newName string) (N
 				return nil, err
 			}
 
-			maps.Copy(res.Record().AsMap(), resMap)
+			maps.Copy(resMap, res.Record().AsMap())
 		}
 
 		return resMap, nil
@@ -214,7 +214,7 @@ func ChangeDescription(ctx context.Context, groupId, clientUsername, newDescript
 			return nil, nil
 		}
 
-		maps.Copy(res.Record().AsMap(), resMap)
+		maps.Copy(resMap, res.Record().AsMap())
 
 		memberUsernames := resMap["member_usernames"].([]string)
 
@@ -222,7 +222,7 @@ func ChangeDescription(ctx context.Context, groupId, clientUsername, newDescript
 			res, err = tx.Run(
 				ctx,
 				`
-				MATCH (group:Group{ id: $group_id })<-[:IS_MEMBER_OF]-(memberUser:User IN $member_usernames),
+				MATCH (group:Group{ id: $group_id })<-[:IS_MEMBER_OF]-(memberUser:User WHERE memberUser.username IN $member_usernames),
 					(memberChat:GroupChat{ owner_username: memberUser.username, group_id: $group_id })
 				SET memberChat.last_activity_type = "group activity",
 					memberChat.last_group_activity_at = $at
@@ -243,7 +243,7 @@ func ChangeDescription(ctx context.Context, groupId, clientUsername, newDescript
 				return nil, err
 			}
 
-			maps.Copy(res.Record().AsMap(), resMap)
+			maps.Copy(resMap, res.Record().AsMap())
 		}
 
 		return resMap, nil
@@ -306,7 +306,7 @@ func ChangePicture(ctx context.Context, groupId, clientUsername, newPictureUrl s
 			return nil, nil
 		}
 
-		maps.Copy(res.Record().AsMap(), resMap)
+		maps.Copy(resMap, res.Record().AsMap())
 
 		memberUsernames := resMap["member_usernames"].([]string)
 
@@ -314,7 +314,7 @@ func ChangePicture(ctx context.Context, groupId, clientUsername, newPictureUrl s
 			res, err = tx.Run(
 				ctx,
 				`
-				MATCH (group:Group{ id: $group_id })<-[:IS_MEMBER_OF]-(memberUser:User IN $member_usernames),
+				MATCH (group:Group{ id: $group_id })<-[:IS_MEMBER_OF]-(memberUser:User WHERE memberUser.username IN $member_usernames),
 					(memberChat:GroupChat{ owner_username: memberUser.username, group_id: $group_id })
 				SET memberChat.last_activity_type = "group activity",
 					memberChat.last_group_activity_at = $at
@@ -333,7 +333,7 @@ func ChangePicture(ctx context.Context, groupId, clientUsername, newPictureUrl s
 				return nil, err
 			}
 
-			maps.Copy(res.Record().AsMap(), resMap)
+			maps.Copy(resMap, res.Record().AsMap())
 		}
 
 		return resMap, nil
@@ -411,7 +411,7 @@ func AddUsers(ctx context.Context, groupId, clientUsername string, newUsers []st
 			return nil, nil
 		}
 
-		maps.Copy(res.Record().AsMap(), resMap)
+		maps.Copy(resMap, res.Record().AsMap())
 
 		memberUsernames := resMap["member_usernames"].([]string)
 
@@ -419,7 +419,7 @@ func AddUsers(ctx context.Context, groupId, clientUsername string, newUsers []st
 			res, err = tx.Run(
 				ctx,
 				`
-				MATCH (group:Group{ id: $group_id })<-[:IS_MEMBER_OF]-(memberUser:User IN $member_usernames),
+				MATCH (group:Group{ id: $group_id })<-[:IS_MEMBER_OF]-(memberUser:User WHERE memberUser.username IN $member_usernames),
 					(memberChat:GroupChat{ owner_username: memberUser.username, group_id: $group_id })
 				SET memberChat.last_activity_type = "group activity",
 					memberChat.last_group_activity_at = $at
@@ -439,7 +439,7 @@ func AddUsers(ctx context.Context, groupId, clientUsername string, newUsers []st
 				return nil, err
 			}
 
-			maps.Copy(res.Record().AsMap(), resMap)
+			maps.Copy(resMap, res.Record().AsMap())
 		}
 
 		return resMap, nil
@@ -516,7 +516,7 @@ func RemoveUser(ctx context.Context, groupId, clientUsername, targetUser string)
 			return nil, nil
 		}
 
-		maps.Copy(res.Record().AsMap(), resMap)
+		maps.Copy(resMap, res.Record().AsMap())
 
 		memberUsernames := resMap["member_usernames"].([]string)
 
@@ -524,7 +524,7 @@ func RemoveUser(ctx context.Context, groupId, clientUsername, targetUser string)
 			res, err = tx.Run(
 				ctx,
 				`
-				MATCH (group:Group{ id: $group_id })<-[:IS_MEMBER_OF]-(memberUser:User IN $member_usernames),
+				MATCH (group:Group{ id: $group_id })<-[:IS_MEMBER_OF]-(memberUser:User WHERE memberUser.username IN $member_usernames),
 					(memberChat:GroupChat{ owner_username: memberUser.username, group_id: $group_id })
 				SET memberChat.last_activity_type = "group activity",
 					memberChat.last_group_activity_at = $at
@@ -544,7 +544,7 @@ func RemoveUser(ctx context.Context, groupId, clientUsername, targetUser string)
 				return nil, err
 			}
 
-			maps.Copy(res.Record().AsMap(), resMap)
+			maps.Copy(resMap, res.Record().AsMap())
 		}
 
 		return resMap, nil
@@ -572,26 +572,24 @@ func Join(ctx context.Context, groupId, clientUsername string) (NewActivity, err
 		resMap := make(map[string]any, 3)
 
 		var (
-			res neo4j.ResultWithContext
-			err error
-			at  = time.Now().UTC()
+			at = time.Now().UTC()
 		)
 
-		res, err = tx.Run(
+		res, err := tx.Run(
 			ctx,
 			`
 			MATCH (clientUser:User{ username: $client_username }), (group:Group{ id: $group_id })
 			WHERE NOT EXISTS { (clientUser)-[:IS_MEMBER_OF]->(group) }
 				AND NOT EXISTS { (group)-[:REMOVED_USER]->(clientUser) }
 
-			OPTIONAL MATCH (group)<-[:IS_MEMBER_OF]-(memberUser:User)
+			MATCH (group)<-[:IS_MEMBER_OF]-(memberUser:User)
 			OPTIONAL MATCH (clientUser)-[lgr:LEFT_GROUP]->(group)
 
 			DELETE lgr
 
 			WITH group, clientUser, collect(memberUser.username) AS member_usernames
 			CREATE (clientUser)-[:IS_MEMBER_OF { role: "member" }]->(group)
-			MERGE (clientUser)-[:HAS_CHAT]->(clientChat:GroupChat{ owner_username: clientUser.username, group_id: $group.id })-[:WITH_GROUP]->(group)
+			MERGE (clientUser)-[:HAS_CHAT]->(clientChat:GroupChat{ owner_username: clientUser.username, group_id: group.id })-[:WITH_GROUP]->(group)
 			ON CREATE 
 				SET clientChat.updated_at = $at
 			SET clientChat.last_activity_type = "group activity",
@@ -615,15 +613,15 @@ func Join(ctx context.Context, groupId, clientUsername string) (NewActivity, err
 			return nil, nil
 		}
 
-		maps.Copy(res.Record().AsMap(), resMap)
+		maps.Copy(resMap, res.Record().AsMap())
 
 		memberUsernames := resMap["member_usernames"].([]any)
 
 		if len(memberUsernames) > 0 {
-			res, err = tx.Run(
+			res, err := tx.Run(
 				ctx,
 				`
-				MATCH (group:Group{ id: $group_id })<-[:IS_MEMBER_OF]-(memberUser:User IN $member_usernames),
+				MATCH (group:Group{ id: $group_id })<-[:IS_MEMBER_OF]-(memberUser:User WHERE memberUser.username IN $member_usernames),
 					(memberChat:GroupChat{ owner_username: memberUser.username, group_id: $group_id })
 				SET memberChat.last_activity_type = "group activity",
 					memberChat.last_group_activity_at = $at
@@ -642,7 +640,12 @@ func Join(ctx context.Context, groupId, clientUsername string) (NewActivity, err
 				return nil, err
 			}
 
-			maps.Copy(res.Record().AsMap(), resMap)
+			if !res.Next(ctx) {
+				log.Println("no member info")
+				return nil, nil
+			}
+
+			maps.Copy(resMap, res.Record().AsMap())
 		}
 
 		return resMap, nil
@@ -708,7 +711,7 @@ func Leave(ctx context.Context, groupId, clientUsername string) (NewActivity, er
 			return nil, nil
 		}
 
-		maps.Copy(res.Record().AsMap(), resMap)
+		maps.Copy(resMap, res.Record().AsMap())
 
 		memberUsernames := resMap["member_usernames"].([]string)
 
@@ -716,7 +719,7 @@ func Leave(ctx context.Context, groupId, clientUsername string) (NewActivity, er
 			res, err = tx.Run(
 				ctx,
 				`
-				MATCH (group:Group{ id: $group_id })<-[:IS_MEMBER_OF]-(memberUser:User IN $member_usernames),
+				MATCH (group:Group{ id: $group_id })<-[:IS_MEMBER_OF]-(memberUser:User WHERE memberUser.username IN $member_usernames),
 					(memberChat:GroupChat{ owner_username: memberUser.username, group_id: $group_id })
 				SET memberChat.last_activity_type = "group activity",
 					memberChat.last_group_activity_at = $at
@@ -735,7 +738,7 @@ func Leave(ctx context.Context, groupId, clientUsername string) (NewActivity, er
 				return nil, err
 			}
 
-			maps.Copy(res.Record().AsMap(), resMap)
+			maps.Copy(resMap, res.Record().AsMap())
 		}
 
 		return resMap, nil
@@ -807,7 +810,7 @@ func MakeUserAdmin(ctx context.Context, groupId, clientUsername, targetUser stri
 			return nil, nil
 		}
 
-		maps.Copy(res.Record().AsMap(), resMap)
+		maps.Copy(resMap, res.Record().AsMap())
 
 		memberUsernames := resMap["member_usernames"].([]string)
 
@@ -815,7 +818,7 @@ func MakeUserAdmin(ctx context.Context, groupId, clientUsername, targetUser stri
 			res, err = tx.Run(
 				ctx,
 				`
-				MATCH (group:Group{ id: $group_id })<-[:IS_MEMBER_OF]-(memberUser:User IN $member_usernames),
+				MATCH (group:Group{ id: $group_id })<-[:IS_MEMBER_OF]-(memberUser:User WHERE memberUser.username IN $member_usernames),
 					(memberChat:GroupChat{ owner_username: memberUser.username, group_id: $group_id })
 				SET memberChat.last_activity_type = "group activity",
 					memberChat.last_group_activity_at = $at
@@ -835,7 +838,7 @@ func MakeUserAdmin(ctx context.Context, groupId, clientUsername, targetUser stri
 				return nil, err
 			}
 
-			maps.Copy(res.Record().AsMap(), resMap)
+			maps.Copy(resMap, res.Record().AsMap())
 		}
 
 		return resMap, nil
@@ -908,7 +911,7 @@ func RemoveUserFromAdmins(ctx context.Context, groupId, clientUsername, targetUs
 			return nil, nil
 		}
 
-		maps.Copy(res.Record().AsMap(), resMap)
+		maps.Copy(resMap, res.Record().AsMap())
 
 		memberUsernames := resMap["member_usernames"].([]string)
 
@@ -916,7 +919,7 @@ func RemoveUserFromAdmins(ctx context.Context, groupId, clientUsername, targetUs
 			res, err = tx.Run(
 				ctx,
 				`
-				MATCH (group:Group{ id: $group_id })<-[:IS_MEMBER_OF]-(memberUser:User IN $member_usernames),
+				MATCH (group:Group{ id: $group_id })<-[:IS_MEMBER_OF]-(memberUser:User WHERE memberUser.username IN $member_usernames),
 					(memberChat:GroupChat{ owner_username: memberUser.username, group_id: $group_id })
 				SET memberChat.last_activity_type = "group activity",
 					memberChat.last_group_activity_at = $at
@@ -936,7 +939,7 @@ func RemoveUserFromAdmins(ctx context.Context, groupId, clientUsername, targetUs
 				return nil, err
 			}
 
-			maps.Copy(res.Record().AsMap(), resMap)
+			maps.Copy(resMap, res.Record().AsMap())
 		}
 
 		return resMap, nil
@@ -960,7 +963,7 @@ func RemoveUserFromAdmins(ctx context.Context, groupId, clientUsername, targetUs
 type NewMessage struct {
 	ClientData      map[string]any `json:"client_resp"`
 	MemberData      map[string]any `json:"member_resp"`
-	MemberUsernames []string       `json:"members_usernames"`
+	MemberUsernames []string       `json:"member_usernames"`
 }
 
 func SendMessage(ctx context.Context, groupId, clientUsername, msgContent string, createdAt time.Time) (NewMessage, error) {
@@ -1010,7 +1013,7 @@ func SendMessage(ctx context.Context, groupId, clientUsername, msgContent string
 			return nil, nil
 		}
 
-		maps.Copy(res.Record().AsMap(), resMap)
+		maps.Copy(resMap, res.Record().AsMap())
 
 		memberUsernames := resMap["member_usernames"].([]string)
 
@@ -1020,7 +1023,7 @@ func SendMessage(ctx context.Context, groupId, clientUsername, msgContent string
 				`
 				MATCH (message:GroupMessage{ id: $new_msg_id })<-[:SENDS_MESSAGE]-(clientUser)
 
-				MATCH (group:Group{ id: $group_id })<-[:IS_MEMBER_OF]-(memberUser:User IN $member_usernames),
+				MATCH (group:Group{ id: $group_id })<-[:IS_MEMBER_OF]-(memberUser:User WHERE memberUser.username IN $member_usernames),
 					(memberChat:GroupChat{ owner_username: memberUser.username, group_id: $group_id })
 				SET memberChat.last_activity_type = "message", 
 					memberChat.updated_at = $created_at,
@@ -1043,7 +1046,7 @@ func SendMessage(ctx context.Context, groupId, clientUsername, msgContent string
 				return nil, err
 			}
 
-			maps.Copy(res.Record().AsMap(), resMap)
+			maps.Copy(resMap, res.Record().AsMap())
 		}
 
 		return resMap, nil
@@ -1110,7 +1113,7 @@ func AckMessageDelivered(ctx context.Context, clientUsername, groupId, msgId str
 			return nil, nil
 		}
 
-		maps.Copy(res.Record().AsMap(), resMap)
+		maps.Copy(resMap, res.Record().AsMap())
 
 		// checking if the message has delivered to all members
 		memberUsernames := resMap["member_usernames"].([]string)
@@ -1196,7 +1199,7 @@ func AckMessageRead(ctx context.Context, clientUsername, groupId, msgId string, 
 			return nil, nil
 		}
 
-		maps.Copy(res.Record().AsMap(), resMap)
+		maps.Copy(resMap, res.Record().AsMap())
 
 		// checking if the message has delivered to all members
 		memberUsernames := resMap["member_usernames"].([]string)

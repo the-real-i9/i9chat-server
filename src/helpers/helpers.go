@@ -14,10 +14,6 @@ func ToStruct(val any, dest any) {
 		panic("expected 'dest' to be a struct")
 	}
 
-	if !reflect.TypeOf(val).ConvertibleTo(reflect.TypeOf(dest).Elem()) {
-		panic("'val' not convertible to 'dest'")
-	}
-
 	bt, err := json.Marshal(val)
 	if err != nil {
 		log.Println("helpers.go: ToStruct: json.Marshal:", err)

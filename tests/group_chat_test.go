@@ -292,7 +292,10 @@ func TestGroupChat(t *testing.T) {
 	{
 		t.Log("Action: user3 joins group | user1 & user2 are notified")
 
-		req, err := http.NewRequest("POST", groupChatPath+"/"+newGroup.Id+"/execute_action/join", nil)
+		reqBody, err := makeReqBody(map[string]any{})
+		require.NoError(t, err)
+
+		req, err := http.NewRequest("POST", groupChatPath+"/"+newGroup.Id+"/execute_action/join", reqBody)
 		require.NoError(t, err)
 		req.Header.Add("Content-Type", "application/json")
 		req.Header.Set("Cookie", user3.SessionCookie)
@@ -300,7 +303,7 @@ func TestGroupChat(t *testing.T) {
 		res, err := http.DefaultClient.Do(req)
 		require.NoError(t, err)
 
-		if !assert.Equal(t, http.StatusCreated, res.StatusCode) {
+		if !assert.Equal(t, http.StatusOK, res.StatusCode) {
 			rb, err := errResBody(res.Body)
 			require.NoError(t, err)
 			t.Log("unexpected error:", rb)
