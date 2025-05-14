@@ -1259,7 +1259,7 @@ func GroupInfo(ctx context.Context, groupId string) (map[string]any, error) {
 		OPTIONAL MATCH (group)<-[:IS_MEMBER_OF]-(memberUser)
 		OPTIONAL MATCH (group)<-[:IS_MEMBER_OF]-(memberUserOnline:User{ presence: "online" })
 
-		WITH count(DISTINCT memberUser) AS members_count, count(DISTINCT memberUserOnline) AS members_online_count
+		WITH group, count(DISTINCT memberUser) AS members_count, count(DISTINCT memberUserOnline) AS members_online_count
 		RETURN group { .name, .description, .picture_url, members_count, members_online_count } AS group_info
 		`,
 		map[string]any{

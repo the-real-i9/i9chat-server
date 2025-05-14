@@ -42,6 +42,20 @@ func CreateNewGroupChat(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusCreated).JSON(respData)
 }
 
+func GetGroupMembershipInfo(c *fiber.Ctx) error {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	clientUser := c.Locals("user").(appTypes.ClientUser)
+
+	respData, app_err := groupChatService.GetGroupMemInfo(ctx, clientUser.Username, c.Params("group_id"))
+	if app_err != nil {
+		return app_err
+	}
+
+	return c.JSON(respData)
+}
+
 func ExecuteAction(c *fiber.Ctx) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()

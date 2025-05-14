@@ -123,17 +123,9 @@ var WSStream = websocket.New(func(c *websocket.Conn) {
 			}
 
 			c.WriteJSON(helpers.WSReply(respData, body.Event))
-		case "get user group membership info":
 
-			respData, err := getGroupMemInfoHndl(ctx, clientUser.Username, body.Data)
-			if err != nil {
-				w_err = c.WriteJSON(helpers.WSErrReply(err, body.Event))
-				continue
-			}
-
-			c.WriteJSON(helpers.WSReply(respData, body.Event))
 		default:
-			w_err = c.WriteJSON(helpers.WSErrReply(fmt.Errorf("invalid event"), body.Event))
+			w_err = c.WriteJSON(helpers.WSErrReply(fmt.Errorf("invalid event: %s", body.Event), body.Event))
 			continue
 		}
 	}

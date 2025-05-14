@@ -760,6 +760,11 @@ func TestGroupChat(t *testing.T) {
 	}
 
 	{
+		t.Log("Action: user1 requests his group membership info")
+
+	}
+
+	{
 		t.Log("Action: user2 removes user1 from group | user1 & other members are notified")
 
 		reqBody, err := makeReqBody(map[string]any{
@@ -881,6 +886,32 @@ func TestGroupChat(t *testing.T) {
 			"data": td.Map(map[string]any{
 				"info":     user3.Username + " left",
 				"group_id": newGroup.Id,
+			}, nil),
+		}, nil))
+	}
+
+	{
+		t.Log("user2 requests group info")
+
+		err := user2.WSConn.WriteJSON(map[string]any{
+			"event": "get group info",
+			"data": map[string]any{
+				"groupId": newGroup.Id,
+			},
+		})
+		require.NoError(t, err)
+
+		// user2's server reply (response) to event sent
+		user2ServerReply := <-user2.ServerWSMsg
+
+		td.Cmp(td.Require(t), user2ServerReply, td.SuperMapOf(map[string]any{
+			"event":   "server reply",
+			"toEvent": "get group info",
+			"data": td.SuperMapOf(map[string]any{
+				"name":                 newGroup.Name,
+				"description":          newGroup.Description,
+				"members_count":        td.Lax(3),
+				"members_online_count": td.Lax(3),
 			}, nil),
 		}, nil))
 	}

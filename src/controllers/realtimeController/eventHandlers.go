@@ -92,18 +92,6 @@ func getGroupInfoHndl(ctx context.Context, eventData map[string]any) (map[string
 	return groupChatService.GetGroupInfo(ctx, evd.GroupId)
 }
 
-func getGroupMemInfoHndl(ctx context.Context, clientUsername string, eventData map[string]any) (map[string]any, error) {
-	var evd groupMemInfo
-
-	helpers.ToStruct(eventData, &evd)
-
-	if val_err := evd.Validate(); val_err != nil {
-		return nil, val_err
-	}
-
-	return groupChatService.GetGroupMemInfo(ctx, clientUsername, evd.GroupId)
-}
-
 func getDMChatHistoryHndl(ctx context.Context, clientUsername string, eventData map[string]any) ([]any, error) {
 	var evd dmChatHistory
 
