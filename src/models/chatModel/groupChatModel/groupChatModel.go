@@ -98,7 +98,7 @@ func ChangeName(ctx context.Context, groupId, clientUsername, newName string) (N
 
 			WITH group, cligact, old_name
 
-			OPTIONAL MATCH (group)<-[:IS_MEMBER_OF]-(memberUser:User WHERE memberUser.username <> $client_username)
+			OPTIONAL MATCH (group)<-[:IS_MEMBER_OF]-(memberUser WHERE memberUser.username <> $client_username)
 
 			RETURN cligact.info AS client_resp, collect(memberUser.username) AS member_usernames, old_name
 			`,
@@ -125,7 +125,7 @@ func ChangeName(ctx context.Context, groupId, clientUsername, newName string) (N
 			res, err := tx.Run(
 				ctx,
 				`
-				MATCH (group:Group{ id: $group_id })<-[:IS_MEMBER_OF]-(memberUser:User WHERE memberUser.username IN $member_usernames),
+				MATCH (group:Group{ id: $group_id })<-[:IS_MEMBER_OF]-(memberUser WHERE memberUser.username IN $member_usernames),
 					(memberChat:GroupChat{ owner_username: memberUser.username, group_id: $group_id })
 				SET memberChat.last_activity_type = "group activity",
 					memberChat.last_group_activity_at = $at
@@ -188,7 +188,7 @@ func ChangeDescription(ctx context.Context, groupId, clientUsername, newDescript
 
 			WITH group, cligact, old_description
 
-			OPTIONAL MATCH (group)<-[:IS_MEMBER_OF]-(memberUser:User WHERE memberUser.username <> $client_username)
+			OPTIONAL MATCH (group)<-[:IS_MEMBER_OF]-(memberUser WHERE memberUser.username <> $client_username)
 
 			RETURN cligact.info AS client_resp, collect(memberUser.username) AS member_usernames, old_description
 			`,
@@ -215,7 +215,7 @@ func ChangeDescription(ctx context.Context, groupId, clientUsername, newDescript
 			res, err := tx.Run(
 				ctx,
 				`
-				MATCH (group:Group{ id: $group_id })<-[:IS_MEMBER_OF]-(memberUser:User WHERE memberUser.username IN $member_usernames),
+				MATCH (group:Group{ id: $group_id })<-[:IS_MEMBER_OF]-(memberUser WHERE memberUser.username IN $member_usernames),
 					(memberChat:GroupChat{ owner_username: memberUser.username, group_id: $group_id })
 				SET memberChat.last_activity_type = "group activity",
 					memberChat.last_group_activity_at = $at
@@ -276,7 +276,7 @@ func ChangePicture(ctx context.Context, groupId, clientUsername, newPictureUrl s
 
 			WITH group, cligact
 
-			OPTIONAL MATCH (group)<-[:IS_MEMBER_OF]-(memberUser:User WHERE memberUser.username <> $client_username)
+			OPTIONAL MATCH (group)<-[:IS_MEMBER_OF]-(memberUser WHERE memberUser.username <> $client_username)
 
 			RETURN cligact.info AS client_resp, collect(memberUser.username) AS member_usernames
 			`,
@@ -303,7 +303,7 @@ func ChangePicture(ctx context.Context, groupId, clientUsername, newPictureUrl s
 			res, err := tx.Run(
 				ctx,
 				`
-				MATCH (group:Group{ id: $group_id })<-[:IS_MEMBER_OF]-(memberUser:User WHERE memberUser.username IN $member_usernames),
+				MATCH (group:Group{ id: $group_id })<-[:IS_MEMBER_OF]-(memberUser WHERE memberUser.username IN $member_usernames),
 					(memberChat:GroupChat{ owner_username: memberUser.username, group_id: $group_id })
 				SET memberChat.last_activity_type = "group activity",
 					memberChat.last_group_activity_at = $at
@@ -362,7 +362,7 @@ func AddUsers(ctx context.Context, groupId, clientUsername string, newUsers []st
 			CREATE (clientUser)-[:RECEIVES_ACTIVITY]->(cligact:GroupActivity{ info: "You added " + $new_users_str, created_at: $at })-[:IN_GROUP_CHAT]->(clientChat)
 
 			WITH group, newUser, cligact
-			OPTIONAL MATCH (group)<-[:IS_MEMBER_OF]-(memberUser:User WHERE memberUser.username <> $client_username)
+			OPTIONAL MATCH (group)<-[:IS_MEMBER_OF]-(memberUser WHERE memberUser.username <> $client_username)
 			OPTIONAL MATCH(group)-[rur:REMOVED_USER]->(newUser) 
 
 			DELETE rur
@@ -404,7 +404,7 @@ func AddUsers(ctx context.Context, groupId, clientUsername string, newUsers []st
 			res, err := tx.Run(
 				ctx,
 				`
-				MATCH (group:Group{ id: $group_id })<-[:IS_MEMBER_OF]-(memberUser:User WHERE memberUser.username IN $member_usernames),
+				MATCH (group:Group{ id: $group_id })<-[:IS_MEMBER_OF]-(memberUser WHERE memberUser.username IN $member_usernames),
 					(memberChat:GroupChat{ owner_username: memberUser.username, group_id: $group_id })
 				SET memberChat.last_activity_type = "group activity",
 					memberChat.last_group_activity_at = $at
@@ -476,7 +476,7 @@ func RemoveUser(ctx context.Context, groupId, clientUsername, targetUser string)
 
 			WITH group, cligact, tugact
 
-			OPTIONAL MATCH (group)<-[:IS_MEMBER_OF]-(memberUser:User WHERE memberUser.username <> $client_username)
+			OPTIONAL MATCH (group)<-[:IS_MEMBER_OF]-(memberUser WHERE memberUser.username <> $client_username)
 
 			RETURN cligact.info AS client_resp, 
 				tugact.info AS target_user_resp,
@@ -505,7 +505,7 @@ func RemoveUser(ctx context.Context, groupId, clientUsername, targetUser string)
 			res, err := tx.Run(
 				ctx,
 				`
-				MATCH (group:Group{ id: $group_id })<-[:IS_MEMBER_OF]-(memberUser:User WHERE memberUser.username IN $member_usernames),
+				MATCH (group:Group{ id: $group_id })<-[:IS_MEMBER_OF]-(memberUser WHERE memberUser.username IN $member_usernames),
 					(memberChat:GroupChat{ owner_username: memberUser.username, group_id: $group_id })
 				SET memberChat.last_activity_type = "group activity",
 					memberChat.last_group_activity_at = $at
@@ -561,7 +561,7 @@ func Join(ctx context.Context, groupId, clientUsername string) (NewActivity, err
 			WHERE NOT EXISTS { (clientUser)-[:IS_MEMBER_OF]->(group) }
 				AND NOT EXISTS { (group)-[:REMOVED_USER]->(clientUser) }
 
-			OPTIONAL MATCH (group)<-[:IS_MEMBER_OF]-(memberUser:User)
+			OPTIONAL MATCH (group)<-[:IS_MEMBER_OF]-(memberUser)
 			OPTIONAL MATCH (clientUser)-[lgr:LEFT_GROUP]->(group)
 
 			DELETE lgr
@@ -600,7 +600,7 @@ func Join(ctx context.Context, groupId, clientUsername string) (NewActivity, err
 			res, err := tx.Run(
 				ctx,
 				`
-				MATCH (group:Group{ id: $group_id })<-[:IS_MEMBER_OF]-(memberUser:User WHERE memberUser.username IN $member_usernames),
+				MATCH (group:Group{ id: $group_id })<-[:IS_MEMBER_OF]-(memberUser WHERE memberUser.username IN $member_usernames),
 					(memberChat:GroupChat{ owner_username: memberUser.username, group_id: $group_id })
 				SET memberChat.last_activity_type = "group activity",
 					memberChat.last_group_activity_at = $at
@@ -689,7 +689,7 @@ func Leave(ctx context.Context, groupId, clientUsername string) (NewActivity, er
 			res, err := tx.Run(
 				ctx,
 				`
-				MATCH (group:Group{ id: $group_id })<-[:IS_MEMBER_OF]-(memberUser:User WHERE memberUser.username IN $member_usernames),
+				MATCH (group:Group{ id: $group_id })<-[:IS_MEMBER_OF]-(memberUser WHERE memberUser.username IN $member_usernames),
 					(memberChat:GroupChat{ owner_username: memberUser.username, group_id: $group_id })
 				SET memberChat.last_activity_type = "group activity",
 					memberChat.last_group_activity_at = $at
@@ -755,7 +755,7 @@ func MakeUserAdmin(ctx context.Context, groupId, clientUsername, targetUser stri
 			CREATE (targetUser)-[:RECEIVES_ACTIVITY]->(tugact:GroupActivity{ info: $client_username + " made you group admin", created_at: $at })-[:IN_GROUP_CHAT]->(targetUserChat)
 
 			WITH group, cligact, tugact
-			OPTIONAL MATCH (group)<-[:IS_MEMBER_OF]-(memberUser:User WHERE NOT memberUser.username IN [$client_username, $target_user])
+			OPTIONAL MATCH (group)<-[:IS_MEMBER_OF]-(memberUser WHERE NOT memberUser.username IN [$client_username, $target_user])
 
 			RETURN cligact.info AS client_resp, 
 				tugact.info AS target_user_resp,
@@ -784,7 +784,7 @@ func MakeUserAdmin(ctx context.Context, groupId, clientUsername, targetUser stri
 			res, err := tx.Run(
 				ctx,
 				`
-				MATCH (group:Group{ id: $group_id })<-[:IS_MEMBER_OF]-(memberUser:User WHERE memberUser.username IN $member_usernames),
+				MATCH (group:Group{ id: $group_id })<-[:IS_MEMBER_OF]-(memberUser WHERE memberUser.username IN $member_usernames),
 					(memberChat:GroupChat{ owner_username: memberUser.username, group_id: $group_id })
 				SET memberChat.last_activity_type = "group activity",
 					memberChat.last_group_activity_at = $at
@@ -852,7 +852,7 @@ func RemoveUserFromAdmins(ctx context.Context, groupId, clientUsername, targetUs
 			CREATE (targetUser)-[:RECEIVES_ACTIVITY]->(tugact:GroupActivity{ info: $client_username + " removed you from group admins", created_at: $at })-[:IN_GROUP_CHAT]->(targetUserChat)
 
 			WITH group, cligact, tugact
-			OPTIONAL MATCH (group)<-[:IS_MEMBER_OF]-(memberUser:User WHERE NOT memberUser.username IN [$client_username, $target_user])
+			OPTIONAL MATCH (group)<-[:IS_MEMBER_OF]-(memberUser WHERE NOT memberUser.username IN [$client_username, $target_user])
 
 			RETURN cligact.info AS client_resp, 
 				tugact.info AS target_user_resp,
@@ -881,7 +881,7 @@ func RemoveUserFromAdmins(ctx context.Context, groupId, clientUsername, targetUs
 			res, err = tx.Run(
 				ctx,
 				`
-				MATCH (group:Group{ id: $group_id })<-[:IS_MEMBER_OF]-(memberUser:User WHERE memberUser.username IN $member_usernames),
+				MATCH (group:Group{ id: $group_id })<-[:IS_MEMBER_OF]-(memberUser WHERE memberUser.username IN $member_usernames),
 					(memberChat:GroupChat{ owner_username: memberUser.username, group_id: $group_id })
 				SET memberChat.last_activity_type = "group activity",
 					memberChat.last_group_activity_at = $at
@@ -928,32 +928,30 @@ type NewMessage struct {
 	MemberUsernames []string       `json:"member_usernames"`
 }
 
-func SendMessage(ctx context.Context, groupId, clientUsername, msgContent string, createdAt time.Time) (NewMessage, error) {
+func SendMessage(ctx context.Context, clientUsername, groupId, msgContent string, at time.Time) (NewMessage, error) {
 	var newMessage NewMessage
 
 	res, err := db.MultiQuery(ctx, func(tx neo4j.ManagedTransaction) (any, error) {
 		resMap := make(map[string]any, 4)
 
-		at := time.Now().UTC()
-
 		res, err := tx.Run(
 			ctx,
 			`
-			MATCH (group)<-[:WITH_GROUP]-(clientChat:GroupChat{ owner_username: $client_username, group_id: $group_id })<-[:HAS_CHAT]-(clientUser),
-				(clientUser)-[:IS_MEMBER_OF]->(group)
+			MATCH (group)<-[:WITH_GROUP]-(clientChat:GroupChat{ owner_username: $client_username, group_id: $group_id })<-[:HAS_CHAT]-(clientUser)
+			WHERE EXISTS { (clientUser)-[:IS_MEMBER_OF]->(group) }
 
-			CREATE (message:GroupMessage{ id: randomUUID(), content: $message_content, delivery_status: "sent", created_at: $created_at })
+			CREATE (message:GroupMessage{ id: randomUUID(), content: $message_content, delivery_status: "sent", created_at: $at })
 
 			WITH group, clientChat, clientUser, message
 
 			SET clientChat.last_activity_type = "message", 
-				clientChat.updated_at = $created_at,
+				clientChat.updated_at = $at,
 				clientChat.last_message_id = message.id
 			CREATE (clientUser)-[:SENDS_MESSAGE]->(message)-[:IN_GROUP_CHAT]->(clientChat)
 			
 			WITH group, message.id AS msgId
 
-			OPTIONAL MATCH (group)<-[:IS_MEMBER_OF]-(memberUser:User WHERE memberUser.username <> $client_username)
+			OPTIONAL MATCH (group)<-[:IS_MEMBER_OF]-(memberUser WHERE memberUser.username <> $client_username)
 
 			RETURN { new_msg_id: msgId } AS client_resp,
 				collect(memberUser.username) AS member_usernames, msgId AS new_msg_id
@@ -961,6 +959,7 @@ func SendMessage(ctx context.Context, groupId, clientUsername, msgContent string
 			map[string]any{
 				"client_username": clientUsername,
 				"group_id":        groupId,
+				"message_content": msgContent,
 				"at":              at,
 			},
 		)
@@ -982,14 +981,14 @@ func SendMessage(ctx context.Context, groupId, clientUsername, msgContent string
 				`
 				MATCH (message:GroupMessage{ id: $new_msg_id })<-[:SENDS_MESSAGE]-(clientUser)
 
-				MATCH (group:Group{ id: $group_id })<-[:IS_MEMBER_OF]-(memberUser:User WHERE memberUser.username IN $member_usernames),
+				MATCH (group:Group{ id: $group_id })<-[:IS_MEMBER_OF]-(memberUser WHERE memberUser.username IN $member_usernames),
 					(memberChat:GroupChat{ owner_username: memberUser.username, group_id: $group_id })
 				SET memberChat.last_activity_type = "message", 
-					memberChat.updated_at = $created_at,
+					memberChat.updated_at = $at,
 					memberChat.last_message_id = message.id
 				CREATE (memberUser)-[:RECEIVES_MESSAGE]->(message)-[:IN_GROUP_CHAT]->(memberChat)
 
-				WITH message, toString(message.created_at), clientUser { .username, .profile_pic_url } AS sender
+				WITH message, toString(message.created_at) AS created_at, clientUser { .username, .profile_pic_url } AS sender
 
 				RETURN message { .*, created_at, sender } AS member_resp
 				`,
@@ -1041,17 +1040,18 @@ func AckMessageDelivered(ctx context.Context, clientUsername, groupId, msgId str
 			ctx,
 			`
 			MATCH (group)<-[:WITH_GROUP]-(clientChat:GroupChat{ owner_username: $client_username, group_id: $group_id })<-[:HAS_CHAT]-(clientUser),
-				(clientChat)<-[:IN_GROUP_CHAT]-(message:GroupMessage{ id: $message_id, delivery_status: "sent" })<-[:RECEIVES_MESSAGE]-()
+				(clientChat)<-[:IN_GROUP_CHAT]-(message:GroupMessage{ id: $message_id, delivery_status: "sent" })<-[:RECEIVES_MESSAGE]-(clientUser),
+				(msgOwner)-[:SENDS_MESSAGE]->(message)
 
 			SET clientChat.unread_messages_count = coalesce(clientChat.unread_messages_count, 0) + 1
 			CREATE (message)-[:DELIVERED_TO { at: $delivered_at }]->(clientUser)
 
-			WITH group, message
+			WITH group, message, msgOwner
 			OPTIONAL MATCH (message)-[:DELIVERED_TO]->(delUser)
-			OPTIONAL MATCH (group)<-[:IS_MEMBER_OF]-(memberUser WHERE memberUser.username <> $client_username)
+			OPTIONAL MATCH (group)<-[:IS_MEMBER_OF]-(memberUser WHERE memberUser.username <> msgOwner.username)
 
-			RETURN collect(delUser.username) AS delv_to_usernames,
-				collect(memberUser.username) AS member_usernames
+			RETURN collect(DISTINCT delUser.username) AS delv_to_usernames,
+				collect(DISTINCT memberUser.username) AS member_usernames
 			`,
 			map[string]any{
 				"client_username": clientUsername,
@@ -1117,25 +1117,26 @@ func AckMessageRead(ctx context.Context, clientUsername, groupId, msgId string, 
 		res, err := tx.Run(
 			ctx,
 			`
-			MATCH (clientChat:GroupChat{ owner_username: $client_username, group_id: $group_id })<-[:HAS_CHAT]-(clientUser),
-				(clientChat)<-[:IN_GROUP_CHAT]-(message:GroupMessage{ id: $message_id } WHERE message.delivery_status <> "read")<-[:RECEIVES_MESSAGE]-()
+			MATCH (group)<-[:WITH_GROUP]-(clientChat:GroupChat{ owner_username: $client_username, group_id: $group_id })<-[:HAS_CHAT]-(clientUser),
+				(clientChat)<-[:IN_GROUP_CHAT]-(message:GroupMessage{ id: $message_id } WHERE message.delivery_status <> "read")<-[:RECEIVES_MESSAGE]-(clientUser),
+				(msgOwner)-[:SENDS_MESSAGE]->(message)
 
-			WITH clientChat, message, CASE coalesce(clientChat.unread_messages_count, 0) WHEN <> 0 THEN clientChat.unread_messages_count - 1 ELSE 0 END AS unread_messages_count
+			WITH group, clientUser, clientChat, message, msgOwner, CASE coalesce(clientChat.unread_messages_count, 0) WHEN <> 0 THEN clientChat.unread_messages_count - 1 ELSE 0 END AS unread_messages_count
 			SET clientChat.unread_messages_count = unread_messages_count
 			CREATE (message)-[:READ_BY { at: $read_at } ]->(clientUser)
 
-			WITH group, message
+			WITH group, message, msgOwner
 			OPTIONAL MATCH (message)-[:READ_BY]->(readUser)
-			OPTIONAL MATCH (group)<-[:IS_MEMBER_OF]-(memberUser WHERE memberUser.username <> $client_username)
+			OPTIONAL MATCH (group)<-[:IS_MEMBER_OF]-(memberUser WHERE memberUser.username <> msgOwner.username)
 
-			RETURN collect(readUser.username) AS read_by_usernames,
-				collect(memberUser.username) AS member_usernames
+			RETURN collect(DISTINCT readUser.username) AS read_by_usernames,
+				collect(DISTINCT memberUser.username) AS member_usernames
 			`,
 			map[string]any{
 				"client_username": clientUsername,
 				"group_id":        groupId,
 				"message_id":      msgId,
-				"delivered_at":    at,
+				"read_at":         at,
 			},
 		)
 		if err != nil {
@@ -1162,8 +1163,6 @@ func AckMessageRead(ctx context.Context, clientUsername, groupId, msgId string, 
 				`
 				MATCH (message:GroupMessage{ id: $msg_id })
 				SET message.delivery_status = "read"
-
-				RETURN true
 				`,
 				map[string]any{
 					"msg_id": msgId,
@@ -1193,7 +1192,7 @@ func ReactToMessage(ctx context.Context, groupChatId, msgId, clientUsername stri
 type HistoryItem struct {
 	HistoryItemType string `json:"hist_item_type"`
 
-	// for message
+	// for group message
 	Id             string         `json:"id,omitempty"`
 	Content        string         `json:"content,omitempty"`
 	DeliveryStatus string         `json:"delivery_status,omitempty"`
@@ -1221,7 +1220,7 @@ func ChatHistory(ctx context.Context, clientUsername, groupId string, limit int,
 		UNION
 			MATCH (clientChat)<-[:IN_GROUP_CHAT]-(gactiv:GroupActivity)
 			WHERE gactiv.created_at < $offset
-			RETURN { info: gactiv.info, hist_item_type: "activity" } AS hist_item, gactiv.created_at AS created_at
+			RETURN { info: gactiv.info, hist_item_type: "group activity" } AS hist_item, gactiv.created_at AS created_at
 		}
 		WITH hist_item, created_at ORDER BY created_at
 		LIMIT $limit

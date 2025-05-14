@@ -44,7 +44,7 @@ func GetGroupMemInfo(ctx context.Context, clientUsername, groupId string) (map[s
 	return groupChat.GroupMemInfo(ctx, clientUsername, groupId)
 }
 
-func SendMessage(ctx context.Context, groupId, clientUsername string, msgContent *appTypes.MsgContent, at int64) (map[string]any, error) {
+func SendMessage(ctx context.Context, clientUsername, groupId string, msgContent *appTypes.MsgContent, at int64) (map[string]any, error) {
 
 	err := appServices.UploadMessageMedia(ctx, clientUsername, msgContent)
 	if err != nil {
@@ -57,7 +57,7 @@ func SendMessage(ctx context.Context, groupId, clientUsername string, msgContent
 		return nil, fiber.ErrInternalServerError
 	}
 
-	newMessage, err := groupChat.SendMessage(ctx, groupId, clientUsername, string(msgContentJson), time.UnixMilli(at).UTC())
+	newMessage, err := groupChat.SendMessage(ctx, clientUsername, groupId, string(msgContentJson), time.UnixMilli(at).UTC())
 	if err != nil {
 		return nil, err
 	}

@@ -23,13 +23,13 @@ func (b clientEventBody) Validate() error {
 	return helpers.ValidationError(err, "realtimeController_validation.go", "clientEventBody")
 }
 
-type newDMChatMsg struct {
+type sendDMChatMsg struct {
 	PartnerUsername string               `json:"partnerUsername"`
 	Msg             *appTypes.MsgContent `json:"msg"`
 	At              int64                `json:"at"`
 }
 
-func (vb newDMChatMsg) Validate() error {
+func (vb sendDMChatMsg) Validate() error {
 	err := validation.ValidateStruct(&vb,
 		validation.Field(&vb.PartnerUsername, validation.Required),
 		validation.Field(&vb.Msg, validation.Required),
@@ -39,7 +39,7 @@ func (vb newDMChatMsg) Validate() error {
 		),
 	)
 
-	return helpers.ValidationError(err, "realtimeController_validation.go", "newDMChatMsg")
+	return helpers.ValidationError(err, "realtimeController_validation.go", "sendDMChatMsg")
 }
 
 type dmChatMsgAck struct {
@@ -58,20 +58,20 @@ func (d dmChatMsgAck) Validate() error {
 	return helpers.ValidationError(err, "realtimeController_validation.go", "dmChatMsgAck")
 }
 
-type newGroupChatMsg struct {
+type sendGroupChatMsg struct {
 	GroupId string               `json:"groupId"`
 	Msg     *appTypes.MsgContent `json:"msg"`
 	At      int64                `json:"at"`
 }
 
-func (vb newGroupChatMsg) Validate() error {
+func (vb sendGroupChatMsg) Validate() error {
 	err := validation.ValidateStruct(&vb,
 		validation.Field(&vb.Msg, validation.Required),
 		validation.Field(&vb.GroupId, validation.Required, is.UUID),
 		validation.Field(&vb.At, validation.Required, validation.Max(time.Now().UTC().UnixMilli()).Error("invalid future time")),
 	)
 
-	return helpers.ValidationError(err, "realtimeController_validation.go", "newGroupChatMsg")
+	return helpers.ValidationError(err, "realtimeController_validation.go", "sendGroupChatMsg")
 }
 
 type groupChatMsgAck struct {

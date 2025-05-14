@@ -473,10 +473,11 @@ func TestGroupChat(t *testing.T) {
 		}, nil))
 	}
 
+	oldGroupName := newGroup.Name
+
 	{
 		t.Log("Action: user1 changes group name | other members are notified")
 
-		oldGroupName := newGroup.Name
 		newGroup.Name = "Programmer's Hub"
 
 		reqBody, err := makeReqBody(map[string]any{
@@ -545,10 +546,11 @@ func TestGroupChat(t *testing.T) {
 		}, nil))
 	}
 
+	oldGroupDescription := newGroup.Description
+
 	{
 		t.Log("Action: user1 changes group description | other members are notified")
 
-		oldGroupDescription := newGroup.Description
 		newGroup.Description = "We're all programmers here!"
 
 		reqBody, err := makeReqBody(map[string]any{
@@ -880,6 +882,278 @@ func TestGroupChat(t *testing.T) {
 				"info":     user3.Username + " left",
 				"group_id": newGroup.Id,
 			}, nil),
+		}, nil))
+	}
+
+	user4NewMsgId := ""
+
+	{
+		t.Log("Action: user4 sends message to group | other members receives the message")
+
+		err := user4.WSConn.WriteJSON(map[string]any{
+			"event": "send group chat message",
+			"data": map[string]any{
+				"groupId": newGroup.Id,
+				"msg": map[string]any{
+					"type": "text",
+					"props": map[string]any{
+						"textContent": "Hi. How're you doing?",
+					},
+				},
+				"at": time.Now().UTC().UnixMilli(),
+			},
+		})
+		require.NoError(t, err)
+
+		// user4's server reply (response) to event sent
+		user4ServerReply := <-user4.ServerWSMsg
+
+		td.Cmp(td.Require(t), user4ServerReply, td.SuperMapOf(map[string]any{
+			"event":   "server reply",
+			"toEvent": "send group chat message",
+			"data": td.Map(map[string]any{
+				"new_msg_id": td.Ignore(),
+			}, nil),
+		}, nil))
+
+		user4NewMsgId = user4ServerReply["data"].(map[string]any)["new_msg_id"].(string)
+	}
+
+	{
+		t.Log("Action: user2 & user 5 receives the new message in group")
+
+		user2NewMsgReceived := <-user2.ServerWSMsg
+
+		td.Cmp(td.Require(t), user2NewMsgReceived, td.Map(map[string]any{
+			"event": "new group chat message",
+			"data": td.Map(map[string]any{
+				"message": td.SuperMapOf(map[string]any{
+					"id":              user4NewMsgId,
+					"content":         td.All(td.Contains(`"type":"text"`), td.Contains(`"textContent":"Hi. How're you doing?"`)),
+					"delivery_status": "sent",
+					"sender": td.SuperMapOf(map[string]any{
+						"username": user4.Username,
+					}, nil),
+				}, nil),
+				"group_id": newGroup.Id,
+			}, nil),
+		}, nil))
+
+		user5NewMsgReceived := <-user5.ServerWSMsg
+
+		td.Cmp(td.Require(t), user5NewMsgReceived, td.Map(map[string]any{
+			"event": "new group chat message",
+			"data": td.Map(map[string]any{
+				"message": td.SuperMapOf(map[string]any{
+					"id":              user4NewMsgId,
+					"content":         td.All(td.Contains(`"type":"text"`), td.Contains(`"textContent":"Hi. How're you doing?"`)),
+					"delivery_status": "sent",
+					"sender": td.SuperMapOf(map[string]any{
+						"username": user4.Username,
+					}, nil),
+				}, nil),
+				"group_id": newGroup.Id,
+			}, nil),
+		}, nil))
+	}
+
+	{
+		t.Log("Action: user2 & user5 acknowledges 'delivered'")
+
+		{
+			// user2 acknowledges 'delivered'
+			err := user2.WSConn.WriteJSON(map[string]any{
+				"event": "ack group chat message delivered",
+				"data": map[string]any{
+					"groupId": newGroup.Id,
+					"msgId":   user4NewMsgId,
+					"at":      time.Now().UTC().UnixMilli(),
+				},
+			})
+			require.NoError(t, err)
+
+			user2ServerReply := <-user2.ServerWSMsg
+
+			td.Cmp(td.Require(t), user2ServerReply, td.SuperMapOf(map[string]any{
+				"event":   "server reply",
+				"toEvent": "ack group chat message delivered",
+				"data":    true,
+			}, nil))
+
+		}
+
+		{
+			// user5 acknowledges 'delivered'
+			err := user5.WSConn.WriteJSON(map[string]any{
+				"event": "ack group chat message delivered",
+				"data": map[string]any{
+					"groupId": newGroup.Id,
+					"msgId":   user4NewMsgId,
+					"at":      time.Now().UTC().UnixMilli(),
+				},
+			})
+			require.NoError(t, err)
+
+			user5ServerReply := <-user5.ServerWSMsg
+
+			td.Cmp(td.Require(t), user5ServerReply, td.SuperMapOf(map[string]any{
+				"event":   "server reply",
+				"toEvent": "ack group chat message delivered",
+				"data":    true,
+			}, nil))
+		}
+	}
+
+	{
+		t.Log("Action: message is now 'delivered' to all other members | each receives the 'delivered' acknowledgement | each marks message as 'delivered'")
+
+		user2DelvAckReceipt := <-user2.ServerWSMsg
+
+		td.Cmp(td.Require(t), user2DelvAckReceipt, td.SuperMapOf(map[string]any{
+			"event": "group chat message delivered",
+			"data": td.Map(map[string]any{
+				"group_id": newGroup.Id,
+				"msg_id":   user4NewMsgId,
+			}, nil),
+		}, nil))
+
+		user5DelvAckReceipt := <-user5.ServerWSMsg
+
+		td.Cmp(td.Require(t), user5DelvAckReceipt, td.SuperMapOf(map[string]any{
+			"event": "group chat message delivered",
+			"data": td.Map(map[string]any{
+				"group_id": newGroup.Id,
+				"msg_id":   user4NewMsgId,
+			}, nil),
+		}, nil))
+	}
+
+	{
+		t.Log("Action: user2 & user5 then acknowledges 'read'")
+
+		{
+			// user2 acknowledges 'read'
+			err := user2.WSConn.WriteJSON(map[string]any{
+				"event": "ack group chat message read",
+				"data": map[string]any{
+					"groupId": newGroup.Id,
+					"msgId":   user4NewMsgId,
+					"at":      time.Now().UTC().UnixMilli(),
+				},
+			})
+			require.NoError(t, err)
+
+			user2ServerReply := <-user2.ServerWSMsg
+
+			td.Cmp(td.Require(t), user2ServerReply, td.SuperMapOf(map[string]any{
+				"event":   "server reply",
+				"toEvent": "ack group chat message read",
+				"data":    true,
+			}, nil))
+		}
+
+		{
+			// user5 acknowledges 'read'
+			err := user5.WSConn.WriteJSON(map[string]any{
+				"event": "ack group chat message read",
+				"data": map[string]any{
+					"groupId": newGroup.Id,
+					"msgId":   user4NewMsgId,
+					"at":      time.Now().UTC().UnixMilli(),
+				},
+			})
+			require.NoError(t, err)
+
+			user5ServerReply := <-user5.ServerWSMsg
+
+			td.Cmp(td.Require(t), user5ServerReply, td.SuperMapOf(map[string]any{
+				"event":   "server reply",
+				"toEvent": "ack group chat message read",
+				"data":    true,
+			}, nil))
+		}
+	}
+
+	{
+		t.Log("Action: message is now 'read' by all other members | each receives the 'read' acknowledgement | each marks message as 'read'")
+
+		user2ReadAckReceipt := <-user2.ServerWSMsg
+
+		td.Cmp(td.Require(t), user2ReadAckReceipt, td.SuperMapOf(map[string]any{
+			"event": "group chat message read",
+			"data": td.Map(map[string]any{
+				"group_id": newGroup.Id,
+				"msg_id":   user4NewMsgId,
+			}, nil),
+		}, nil))
+
+		user5ReadAckReceipt := <-user5.ServerWSMsg
+
+		td.Cmp(td.Require(t), user5ReadAckReceipt, td.SuperMapOf(map[string]any{
+			"event": "group chat message read",
+			"data": td.Map(map[string]any{
+				"group_id": newGroup.Id,
+				"msg_id":   user4NewMsgId,
+			}, nil),
+		}, nil))
+	}
+
+	{
+		t.Log("Action: user5 opens group chat history")
+
+		err := user5.WSConn.WriteJSON(map[string]any{
+			"event": "get group chat history",
+			"data": map[string]any{
+				"groupId": newGroup.Id,
+			},
+		})
+		require.NoError(t, err)
+
+		// user5's server reply (response) to event sent
+		user5ServerReply := <-user5.ServerWSMsg
+
+		td.Cmp(td.Require(t), user5ServerReply, td.SuperMapOf(map[string]any{
+			"event":   "server reply",
+			"toEvent": "get group chat history",
+			"data": td.All(
+				td.Contains(td.SuperMapOf(map[string]any{
+					"hist_item_type": "group activity",
+					"info":           "You were added",
+				}, nil)),
+				td.Contains(td.SuperMapOf(map[string]any{
+					"hist_item_type": "group activity",
+					"info":           fmt.Sprintf("%s changed group name from %s to %s", user1.Username, oldGroupName, newGroup.Name),
+				}, nil)),
+				td.Contains(td.SuperMapOf(map[string]any{
+					"hist_item_type": "group activity",
+					"info":           fmt.Sprintf("%s changed group description from %s to %s", user1.Username, oldGroupDescription, newGroup.Description),
+				}, nil)),
+				td.Contains(td.SuperMapOf(map[string]any{
+					"hist_item_type": "group activity",
+					"info":           fmt.Sprintf("%s changed group picture", user2.Username),
+				}, nil)),
+				td.Contains(td.SuperMapOf(map[string]any{
+					"hist_item_type": "group activity",
+					"info":           fmt.Sprintf("%s removed %s from group admins", user2.Username, user1.Username),
+				}, nil)),
+				td.Contains(td.SuperMapOf(map[string]any{
+					"hist_item_type": "group activity",
+					"info":           fmt.Sprintf("%s removed %s", user2.Username, user1.Username),
+				}, nil)),
+				td.Contains(td.SuperMapOf(map[string]any{
+					"hist_item_type": "group activity",
+					"info":           fmt.Sprintf("%s left", user3.Username),
+				}, nil)),
+				td.Contains(td.SuperMapOf(map[string]any{
+					"hist_item_type":  "message",
+					"id":              user4NewMsgId,
+					"content":         td.All(td.Contains(`"type":"text"`), td.Contains(`"textContent":"Hi. How're you doing?"`)),
+					"delivery_status": "read",
+					"sender": td.SuperMapOf(map[string]any{
+						"username": user4.Username,
+					}, nil),
+				}, nil)),
+			),
 		}, nil))
 	}
 }

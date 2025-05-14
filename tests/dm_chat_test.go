@@ -187,11 +187,13 @@ func TestDMChat(t *testing.T) {
 		}
 	}
 
+	user1NewMsgId := ""
+
 	{
 		t.Log("Action: user1 sends message to user2")
 
 		err := user1.WSConn.WriteJSON(map[string]any{
-			"event": "new dm chat message",
+			"event": "send dm chat message",
 			"data": map[string]any{
 				"partnerUsername": user2.Username,
 				"msg": map[string]any{
@@ -210,14 +212,14 @@ func TestDMChat(t *testing.T) {
 
 		td.Cmp(td.Require(t), user1ServerReply, td.SuperMapOf(map[string]any{
 			"event":   "server reply",
-			"toEvent": "new dm chat message",
+			"toEvent": "send dm chat message",
 			"data": td.Map(map[string]any{
 				"new_msg_id": td.Ignore(),
 			}, nil),
 		}, nil))
-	}
 
-	user2RecvdMsgId := ""
+		user1NewMsgId = user1ServerReply["data"].(map[string]any)["new_msg_id"].(string)
+	}
 
 	{
 		t.Log("Action: user2 receives the message | acknowledges 'delivered'")
@@ -227,7 +229,7 @@ func TestDMChat(t *testing.T) {
 		td.Cmp(td.Require(t), user2NewMsgReceived, td.SuperMapOf(map[string]any{
 			"event": "new dm chat message",
 			"data": td.SuperMapOf(map[string]any{
-				"id":              td.Ignore(),
+				"id":              user1NewMsgId,
 				"content":         td.All(td.Contains(`"type":"text"`), td.Contains(`"textContent":"Hi. How're you doing?"`)),
 				"delivery_status": "sent",
 				"sender": td.SuperMapOf(map[string]any{
@@ -236,13 +238,11 @@ func TestDMChat(t *testing.T) {
 			}, nil),
 		}, nil))
 
-		user2RecvdMsgId = user2NewMsgReceived["data"].(map[string]any)["id"].(string)
-
 		err := user2.WSConn.WriteJSON(map[string]any{
 			"event": "ack dm chat message delivered",
 			"data": map[string]any{
 				"partnerUsername": user1.Username,
-				"msgId":           user2RecvdMsgId,
+				"msgId":           user1NewMsgId,
 				"at":              time.Now().UTC().UnixMilli(),
 			},
 		})
@@ -258,7 +258,7 @@ func TestDMChat(t *testing.T) {
 	}
 
 	{
-		t.Log("user1 receives the 'delivered' acknowledgement | marks message as 'delivered'")
+		t.Log("Action: user1 receives the 'delivered' acknowledgement | marks message as 'delivered'")
 
 		user1DelvAckReceipt := <-user1.ServerWSMsg
 
@@ -266,7 +266,7 @@ func TestDMChat(t *testing.T) {
 			"event": "dm chat message delivered",
 			"data": td.Map(map[string]any{
 				"partner_username": user2.Username,
-				"msg_id":           user2RecvdMsgId,
+				"msg_id":           user1NewMsgId,
 			}, nil),
 		}, nil))
 	}
@@ -278,7 +278,7 @@ func TestDMChat(t *testing.T) {
 			"event": "ack dm chat message read",
 			"data": map[string]any{
 				"partnerUsername": user1.Username,
-				"msgId":           user2RecvdMsgId,
+				"msgId":           user1NewMsgId,
 				"at":              time.Now().UTC().UnixMilli(),
 			},
 		})
@@ -294,7 +294,7 @@ func TestDMChat(t *testing.T) {
 	}
 
 	{
-		t.Log("user1 receives the 'read' acknowledgement | marks message as 'read'")
+		t.Log("Action: user1 receives the 'read' acknowledgement | marks message as 'read'")
 
 		user1ReadAckReceipt := <-user1.ServerWSMsg
 
@@ -302,10 +302,12 @@ func TestDMChat(t *testing.T) {
 			"event": "dm chat message read",
 			"data": td.Map(map[string]any{
 				"partner_username": user2.Username,
-				"msg_id":           user2RecvdMsgId,
+				"msg_id":           user1NewMsgId,
 			}, nil),
 		}, nil))
 	}
+
+	user2NewMsgId := ""
 
 	{
 		t.Log("Action: user2 sends message to user1")
@@ -314,7 +316,7 @@ func TestDMChat(t *testing.T) {
 		require.NoError(t, err)
 
 		err = user2.WSConn.WriteJSON(map[string]any{
-			"event": "new dm chat message",
+			"event": "send dm chat message",
 			"data": map[string]any{
 				"partnerUsername": user1.Username,
 				"msg": map[string]any{
@@ -334,14 +336,14 @@ func TestDMChat(t *testing.T) {
 
 		td.Cmp(td.Require(t), user2ServerReply, td.SuperMapOf(map[string]any{
 			"event":   "server reply",
-			"toEvent": "new dm chat message",
+			"toEvent": "send dm chat message",
 			"data": td.Map(map[string]any{
 				"new_msg_id": td.Ignore(),
 			}, nil),
 		}, nil))
-	}
 
-	user1RecvdMsgId := ""
+		user2NewMsgId = user2ServerReply["data"].(map[string]any)["new_msg_id"].(string)
+	}
 
 	{
 		t.Log("Action: user1 receives the message | acknowledges 'delivered'")
@@ -351,7 +353,7 @@ func TestDMChat(t *testing.T) {
 		td.Cmp(td.Require(t), user1NewMsgReceived, td.SuperMapOf(map[string]any{
 			"event": "new dm chat message",
 			"data": td.SuperMapOf(map[string]any{
-				"id":              td.Ignore(),
+				"id":              user2NewMsgId,
 				"content":         td.All(td.Contains(`"type":"image"`), td.Contains(`"caption":"I'm guuud!"`)),
 				"delivery_status": "sent",
 				"sender": td.SuperMapOf(map[string]any{
@@ -360,13 +362,11 @@ func TestDMChat(t *testing.T) {
 			}, nil),
 		}, nil))
 
-		user1RecvdMsgId = user1NewMsgReceived["data"].(map[string]any)["id"].(string)
-
 		err := user1.WSConn.WriteJSON(map[string]any{
 			"event": "ack dm chat message delivered",
 			"data": map[string]any{
 				"partnerUsername": user2.Username,
-				"msgId":           user1RecvdMsgId,
+				"msgId":           user2NewMsgId,
 				"at":              time.Now().UTC().UnixMilli(),
 			},
 		})
@@ -382,7 +382,7 @@ func TestDMChat(t *testing.T) {
 	}
 
 	{
-		t.Log("user2 receives the 'delivered' acknowledgement | marks message as 'delivered'")
+		t.Log("Action: user2 receives the 'delivered' acknowledgement | marks message as 'delivered'")
 
 		user2DelvAckReceipt := <-user2.ServerWSMsg
 
@@ -390,7 +390,7 @@ func TestDMChat(t *testing.T) {
 			"event": "dm chat message delivered",
 			"data": td.Map(map[string]any{
 				"partner_username": user1.Username,
-				"msg_id":           user1RecvdMsgId,
+				"msg_id":           user2NewMsgId,
 			}, nil),
 		}, nil))
 	}
@@ -402,7 +402,7 @@ func TestDMChat(t *testing.T) {
 			"event": "ack dm chat message read",
 			"data": map[string]any{
 				"partnerUsername": user2.Username,
-				"msgId":           user1RecvdMsgId,
+				"msgId":           user2NewMsgId,
 				"at":              time.Now().UTC().UnixMilli(),
 			},
 		})
@@ -418,7 +418,7 @@ func TestDMChat(t *testing.T) {
 	}
 
 	{
-		t.Log("user2 receives the 'read' acknowledgement | marks message as 'read'")
+		t.Log("Action: user2 receives the 'read' acknowledgement | marks message as 'read'")
 
 		user2ReadAckReceipt := <-user2.ServerWSMsg
 
@@ -426,13 +426,13 @@ func TestDMChat(t *testing.T) {
 			"event": "dm chat message read",
 			"data": td.Map(map[string]any{
 				"partner_username": user1.Username,
-				"msg_id":           user1RecvdMsgId,
+				"msg_id":           user2NewMsgId,
 			}, nil),
 		}, nil))
 	}
 
 	{
-		t.Log("user1 opens chat history")
+		t.Log("Action: user1 opens his chat history with user2")
 
 		err := user1.WSConn.WriteJSON(map[string]any{
 			"event": "get dm chat history",
@@ -450,15 +450,17 @@ func TestDMChat(t *testing.T) {
 			"toEvent": "get dm chat history",
 			"data": td.All(
 				td.Contains(td.SuperMapOf(map[string]any{
-					"id":      td.Ignore(),
-					"content": td.All(td.Contains(`"type":"text"`), td.Contains(`"textContent":"Hi. How're you doing?"`)),
+					"id":              user1NewMsgId,
+					"content":         td.All(td.Contains(`"type":"text"`), td.Contains(`"textContent":"Hi. How're you doing?"`)),
+					"delivery_status": "read",
 					"sender": td.SuperMapOf(map[string]any{
 						"username": user1.Username,
 					}, nil),
 				}, nil)),
 				td.Contains(td.SuperMapOf(map[string]any{
-					"id":      td.Ignore(),
-					"content": td.All(td.Contains(`"type":"image"`), td.Contains(`"caption":"I'm guuud!"`)),
+					"id":              user2NewMsgId,
+					"content":         td.All(td.Contains(`"type":"image"`), td.Contains(`"caption":"I'm guuud!"`)),
+					"delivery_status": "read",
 					"sender": td.SuperMapOf(map[string]any{
 						"username": user2.Username,
 					}, nil),

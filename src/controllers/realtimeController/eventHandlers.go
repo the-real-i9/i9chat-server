@@ -8,8 +8,8 @@ import (
 	"time"
 )
 
-func newDMChatMsgHndl(ctx context.Context, clientUsername string, eventData map[string]any) (map[string]any, error) {
-	var evd newDMChatMsg
+func sendDMChatMsgHndl(ctx context.Context, clientUsername string, eventData map[string]any) (map[string]any, error) {
+	var evd sendDMChatMsg
 
 	helpers.ToStruct(eventData, &evd)
 
@@ -44,8 +44,8 @@ func ackDMChatMsgReadHndl(ctx context.Context, clientUsername string, eventData 
 	return dmChatService.AckMessageRead(ctx, clientUsername, evd.PartnerUsername, evd.MsgId, evd.At)
 }
 
-func newGroupChatMsgHndl(ctx context.Context, clientUsername string, eventData map[string]any) (map[string]any, error) {
-	var evd newGroupChatMsg
+func sendGroupChatMsgHndl(ctx context.Context, clientUsername string, eventData map[string]any) (map[string]any, error) {
+	var evd sendGroupChatMsg
 
 	helpers.ToStruct(eventData, &evd)
 

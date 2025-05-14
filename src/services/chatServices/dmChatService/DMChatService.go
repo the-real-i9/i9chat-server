@@ -55,6 +55,7 @@ func AckMessageDelivered(ctx context.Context, clientUsername, partnerUsername, m
 			"msg_id":           msgId,
 		},
 	})
+
 	return nil
 }
 

@@ -44,8 +44,8 @@ var WSStream = websocket.New(func(c *websocket.Conn) {
 		}
 
 		switch body.Event {
-		case "new dm chat message":
-			respData, err := newDMChatMsgHndl(ctx, clientUser.Username, body.Data)
+		case "send dm chat message":
+			respData, err := sendDMChatMsgHndl(ctx, clientUser.Username, body.Data)
 			if err != nil {
 				w_err = c.WriteJSON(helpers.WSErrReply(err, body.Event))
 				continue
@@ -78,9 +78,9 @@ var WSStream = websocket.New(func(c *websocket.Conn) {
 			}
 
 			c.WriteJSON(helpers.WSReply(respData, body.Event))
-		case "new group chat message":
+		case "send group chat message":
 
-			respData, err := newGroupChatMsgHndl(ctx, clientUser.Username, body.Data)
+			respData, err := sendGroupChatMsgHndl(ctx, clientUser.Username, body.Data)
 			if err != nil {
 				w_err = c.WriteJSON(helpers.WSErrReply(err, body.Event))
 				continue
