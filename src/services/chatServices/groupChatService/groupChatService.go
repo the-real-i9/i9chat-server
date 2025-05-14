@@ -67,10 +67,10 @@ func SendMessage(ctx context.Context, clientUsername, groupId string, msgContent
 	return newMessage.ClientData, nil
 }
 
-func AckMessageDelivered(ctx context.Context, clientUsername, groupId, msgId string, deliveredAt int64) error {
+func AckMessageDelivered(ctx context.Context, clientUsername, groupId, msgId string, deliveredAt int64) (any, error) {
 	msgAck, err := groupChat.AckMessageDelivered(ctx, clientUsername, groupId, msgId, time.UnixMilli(deliveredAt).UTC())
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	if msgAck.All {
@@ -80,13 +80,13 @@ func AckMessageDelivered(ctx context.Context, clientUsername, groupId, msgId str
 		})
 	}
 
-	return nil
+	return map[string]any{"delivered_to_all": msgAck.All}, nil
 }
 
-func AckMessageRead(ctx context.Context, clientUsername, groupId, msgId string, readAt int64) error {
+func AckMessageRead(ctx context.Context, clientUsername, groupId, msgId string, readAt int64) (any, error) {
 	msgAck, err := groupChat.AckMessageRead(ctx, clientUsername, groupId, msgId, time.UnixMilli(readAt).UTC())
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	if msgAck.All {
@@ -96,7 +96,7 @@ func AckMessageRead(ctx context.Context, clientUsername, groupId, msgId string, 
 		})
 	}
 
-	return nil
+	return map[string]any{"read_by_all": msgAck.All}, nil
 }
 
 func ChangeGroupName(ctx context.Context, groupId, clientUsername, newName string) (any, error) {

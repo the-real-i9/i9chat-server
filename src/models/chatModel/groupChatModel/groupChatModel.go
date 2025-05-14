@@ -1041,14 +1041,14 @@ func AckMessageDelivered(ctx context.Context, clientUsername, groupId, msgId str
 			`
 			MATCH (group)<-[:WITH_GROUP]-(clientChat:GroupChat{ owner_username: $client_username, group_id: $group_id })<-[:HAS_CHAT]-(clientUser),
 				(clientChat)<-[:IN_GROUP_CHAT]-(message:GroupMessage{ id: $message_id, delivery_status: "sent" })<-[:RECEIVES_MESSAGE]-(clientUser),
-				(msgOwner)-[:SENDS_MESSAGE]->(message)
+				(msgSender)-[:SENDS_MESSAGE]->(message)
 
 			SET clientChat.unread_messages_count = coalesce(clientChat.unread_messages_count, 0) + 1
 			CREATE (message)-[:DELIVERED_TO { at: $delivered_at }]->(clientUser)
 
-			WITH group, message, msgOwner
+			WITH group, message, msgSender
 			OPTIONAL MATCH (message)-[:DELIVERED_TO]->(delUser)
-			OPTIONAL MATCH (group)<-[:IS_MEMBER_OF]-(memberUser WHERE memberUser.username <> msgOwner.username)
+			OPTIONAL MATCH (group)<-[:IS_MEMBER_OF]-(memberUser WHERE NOT memberUser.username IN [msgSender.username, $client_username])
 
 			RETURN collect(DISTINCT delUser.username) AS delv_to_usernames,
 				collect(DISTINCT memberUser.username) AS member_usernames
@@ -1119,15 +1119,15 @@ func AckMessageRead(ctx context.Context, clientUsername, groupId, msgId string, 
 			`
 			MATCH (group)<-[:WITH_GROUP]-(clientChat:GroupChat{ owner_username: $client_username, group_id: $group_id })<-[:HAS_CHAT]-(clientUser),
 				(clientChat)<-[:IN_GROUP_CHAT]-(message:GroupMessage{ id: $message_id } WHERE message.delivery_status <> "read")<-[:RECEIVES_MESSAGE]-(clientUser),
-				(msgOwner)-[:SENDS_MESSAGE]->(message)
+				(msgSender)-[:SENDS_MESSAGE]->(message)
 
-			WITH group, clientUser, clientChat, message, msgOwner, CASE coalesce(clientChat.unread_messages_count, 0) WHEN <> 0 THEN clientChat.unread_messages_count - 1 ELSE 0 END AS unread_messages_count
+			WITH group, clientUser, clientChat, message, msgSender, CASE coalesce(clientChat.unread_messages_count, 0) WHEN <> 0 THEN clientChat.unread_messages_count - 1 ELSE 0 END AS unread_messages_count
 			SET clientChat.unread_messages_count = unread_messages_count
 			CREATE (message)-[:READ_BY { at: $read_at } ]->(clientUser)
 
-			WITH group, message, msgOwner
+			WITH group, message, msgSender
 			OPTIONAL MATCH (message)-[:READ_BY]->(readUser)
-			OPTIONAL MATCH (group)<-[:IS_MEMBER_OF]-(memberUser WHERE memberUser.username <> msgOwner.username)
+			OPTIONAL MATCH (group)<-[:IS_MEMBER_OF]-(memberUser WHERE NOT memberUser.username IN [msgSender.username, $client_username])
 
 			RETURN collect(DISTINCT readUser.username) AS read_by_usernames,
 				collect(DISTINCT memberUser.username) AS member_usernames
@@ -1254,19 +1254,20 @@ func GroupInfo(ctx context.Context, groupId string) (map[string]any, error) {
 	res, err := db.Query(
 		ctx,
 		`
-		MATCH (group:Group{ id: $group_id }),
+		MATCH (group:Group{ id: $group_id })
+
 		OPTIONAL MATCH (group)<-[:IS_MEMBER_OF]-(memberUser)
 		OPTIONAL MATCH (group)<-[:IS_MEMBER_OF]-(memberUserOnline:User{ presence: "online" })
 
-		WITH count(memberUser) AS members_count, count(memberUserOnline) AS online_members
-		RETURN group { .name, .description, .picture_url, members_count, online_members } AS group_info
+		WITH count(DISTINCT memberUser) AS members_count, count(DISTINCT memberUserOnline) AS members_online_count
+		RETURN group { .name, .description, .picture_url, members_count, members_online_count } AS group_info
 		`,
 		map[string]any{
 			"group_id": groupId,
 		},
 	)
 	if err != nil {
-		log.Println("groupChatModel.go: GetGroupInfo", err)
+		log.Println("groupChatModel.go: GroupInfo", err)
 		return nil, fiber.ErrInternalServerError
 	}
 
@@ -1284,6 +1285,7 @@ func GroupMemInfo(ctx context.Context, clientUsername, groupId string) (map[stri
 		ctx,
 		`
 		MATCH (group:Group{ id: $group_id }), (clientUser:User { username: $client_username })
+
 		OPTIONAL MATCH (group)<-[member:IS_MEMBER_OF]-(clientUser)
 		OPTIONAL MATCH (group)-[userRemoved:REMOVED_USER]->(clientUser)
 		OPTIONAL MATCH (group)<-[userLeft:LEFT_GROUP]-(clientUser)
@@ -1308,7 +1310,7 @@ func GroupMemInfo(ctx context.Context, clientUsername, groupId string) (map[stri
 		},
 	)
 	if err != nil {
-		log.Println("groupChatModel.go: GetGroupMemInfo", err)
+		log.Println("groupChatModel.go: GroupMemInfo", err)
 		return nil, fiber.ErrInternalServerError
 	}
 

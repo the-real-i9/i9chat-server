@@ -56,25 +56,25 @@ func sendGroupChatMsgHndl(ctx context.Context, clientUsername string, eventData 
 	return groupChatService.SendMessage(ctx, clientUsername, evd.GroupId, evd.Msg, evd.At)
 }
 
-func ackGroupChatMsgDeliveredHndl(ctx context.Context, clientUsername string, eventData map[string]any) error {
+func ackGroupChatMsgDeliveredHndl(ctx context.Context, clientUsername string, eventData map[string]any) (any, error) {
 	var evd groupChatMsgAck
 
 	helpers.ToStruct(eventData, &evd)
 
 	if val_err := evd.Validate(); val_err != nil {
-		return val_err
+		return nil, val_err
 	}
 
 	return groupChatService.AckMessageDelivered(ctx, clientUsername, evd.GroupId, evd.MsgId, evd.At)
 }
 
-func ackGroupChatMsgReadHndl(ctx context.Context, clientUsername string, eventData map[string]any) error {
+func ackGroupChatMsgReadHndl(ctx context.Context, clientUsername string, eventData map[string]any) (any, error) {
 	var evd groupChatMsgAck
 
 	helpers.ToStruct(eventData, &evd)
 
 	if val_err := evd.Validate(); val_err != nil {
-		return val_err
+		return nil, val_err
 	}
 
 	return groupChatService.AckMessageRead(ctx, clientUsername, evd.GroupId, evd.MsgId, evd.At)
