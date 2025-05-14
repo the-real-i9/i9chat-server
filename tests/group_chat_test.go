@@ -175,7 +175,7 @@ func TestGroupChat(t *testing.T) {
 	{
 		t.Log("Setup: Init user sockets")
 
-		for _, user := range []*UserT{&user1, &user2} {
+		for _, user := range []*UserT{&user1, &user2, &user3, &user4, &user5} {
 			user := user
 
 			header := http.Header{}
@@ -339,6 +339,55 @@ func TestGroupChat(t *testing.T) {
 			"event": "new group chat activity",
 			"data": td.Map(map[string]any{
 				"info":     user3.Username + " joined",
+				"group_id": newGroup.Id,
+			}, nil),
+		}, nil))
+	}
+
+	{
+		t.Log("Action: user1 makes user2 group admin | user2 & other members are notified")
+
+		reqBody, err := makeReqBody(map[string]any{
+			"user": user2.Username,
+		})
+		require.NoError(t, err)
+
+		req, err := http.NewRequest("POST", groupChatPath+"/"+newGroup.Id+"/execute_action/make user admin", reqBody)
+		require.NoError(t, err)
+		req.Header.Add("Content-Type", "application/json")
+		req.Header.Set("Cookie", user1.SessionCookie)
+
+		res, err := http.DefaultClient.Do(req)
+		require.NoError(t, err)
+
+		if !assert.Equal(t, http.StatusOK, res.StatusCode) {
+			rb, err := errResBody(res.Body)
+			require.NoError(t, err)
+			t.Log("unexpected error:", rb)
+			return
+		}
+
+		rb, err := succResBody[string](res.Body)
+		require.NoError(t, err)
+
+		require.Equal(t, fmt.Sprintf("You made %s group admin", user2.Username), rb)
+
+		user2GCNewAdminNotif := <-user2.ServerWSMsg
+
+		td.Cmp(td.Require(t), user2GCNewAdminNotif, td.Map(map[string]any{
+			"event": "new group chat activity",
+			"data": td.Map(map[string]any{
+				"info":     fmt.Sprintf("%s made you group admin", user1.Username),
+				"group_id": newGroup.Id,
+			}, nil),
+		}, nil))
+
+		user3GCNewAdminNotif := <-user3.ServerWSMsg
+
+		td.Cmp(td.Require(t), user3GCNewAdminNotif, td.Map(map[string]any{
+			"event": "new group chat activity",
+			"data": td.Map(map[string]any{
+				"info":     fmt.Sprintf("%s made %s group admin", user1.Username, user2.Username),
 				"group_id": newGroup.Id,
 			}, nil),
 		}, nil))

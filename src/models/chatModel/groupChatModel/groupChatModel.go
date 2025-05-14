@@ -491,7 +491,7 @@ func RemoveUser(ctx context.Context, groupId, clientUsername, targetUser string)
 			SET targetUserChat.last_activity_type = "group activity",
 				targetUserChat.last_group_activity_at = $at
 			CREATE (group)-[:REMOVED_USER]->(targetUser),
-				(targetUser)-[:RECEIVES_ACTIVITY]->(tugact:GroupActivity{ info: $client_username + " removed you", created_at: $at })-[:IN_GROUP_CHAT]-(targetUserChat)
+				(targetUser)-[:RECEIVES_ACTIVITY]->(tugact:GroupActivity{ info: $client_username + " removed you", created_at: $at })-[:IN_GROUP_CHAT]->(targetUserChat)
 
 			WITH group, cligact, tugact
 
@@ -641,7 +641,6 @@ func Join(ctx context.Context, groupId, clientUsername string) (NewActivity, err
 			}
 
 			if !res.Next(ctx) {
-				log.Println("no member info")
 				return nil, nil
 			}
 
@@ -688,7 +687,7 @@ func Leave(ctx context.Context, groupId, clientUsername string) (NewActivity, er
 			SET clientChat.last_activity_type = "group activity",
 				clientChat.last_group_activity_at = $at
 			CREATE (clientUser)-[:LEFT_GROUP]->(group),
-				(clientUser)-[:RECEIVES_ACTIVITY]->(cligact:GroupActivity{ info: "You left", created_at: $at })-[:IN_GROUP_CHAT]-(clientChat)
+				(clientUser)-[:RECEIVES_ACTIVITY]->(cligact:GroupActivity{ info: "You left", created_at: $at })-[:IN_GROUP_CHAT]->(clientChat)
 
 			WITH group, cligact
 
@@ -764,12 +763,10 @@ func MakeUserAdmin(ctx context.Context, groupId, clientUsername, targetUser stri
 		resMap := make(map[string]any, 4)
 
 		var (
-			res neo4j.ResultWithContext
-			err error
-			at  = time.Now().UTC()
+			at = time.Now().UTC()
 		)
 
-		res, err = tx.Run(
+		res, err := tx.Run(
 			ctx,
 			`
 			MATCH (group)<-[:WITH_GROUP]-(clientChat:GroupChat{ owner_username: $client_username, group_id: $group_id })<-[:HAS_CHAT]-(clientUser),
@@ -786,10 +783,10 @@ func MakeUserAdmin(ctx context.Context, groupId, clientUsername, targetUser stri
 
 			SET targetUserChat.last_activity_type = "group activity",
 				targetUserChat.last_group_activity_at = $at
-			CREATE (targetUser)-[:RECEIVES_ACTIVITY]->(tugact:GroupActivity{ info: $client_username + " made you group admin", created_at: $at })-[:IN_GROUP_CHAT]-(targetUserChat)
+			CREATE (targetUser)-[:RECEIVES_ACTIVITY]->(tugact:GroupActivity{ info: $client_username + " made you group admin", created_at: $at })-[:IN_GROUP_CHAT]->(targetUserChat)
 
 			WITH group, cligact, tugact
-			OPTIONAL MATCH (group)<-[:IS_MEMBER_OF]-(memberUser:User WHERE memberUser.username NOT IN [$client_username, $target_user])
+			OPTIONAL MATCH (group)<-[:IS_MEMBER_OF]-(memberUser:User WHERE NOT memberUser.username IN [$client_username, $target_user])
 
 			RETURN cligact.info AS client_resp, 
 				tugact.info AS target_user_resp,
@@ -812,10 +809,10 @@ func MakeUserAdmin(ctx context.Context, groupId, clientUsername, targetUser stri
 
 		maps.Copy(resMap, res.Record().AsMap())
 
-		memberUsernames := resMap["member_usernames"].([]string)
+		memberUsernames := resMap["member_usernames"].([]any)
 
 		if len(memberUsernames) > 0 {
-			res, err = tx.Run(
+			res, err := tx.Run(
 				ctx,
 				`
 				MATCH (group:Group{ id: $group_id })<-[:IS_MEMBER_OF]-(memberUser:User WHERE memberUser.username IN $member_usernames),
@@ -836,6 +833,10 @@ func MakeUserAdmin(ctx context.Context, groupId, clientUsername, targetUser stri
 			)
 			if err != nil {
 				return nil, err
+			}
+
+			if !res.Next(ctx) {
+				return nil, nil
 			}
 
 			maps.Copy(resMap, res.Record().AsMap())
@@ -887,10 +888,10 @@ func RemoveUserFromAdmins(ctx context.Context, groupId, clientUsername, targetUs
 			MATCH (targetUserChat:GroupChat{ owner_username: targetUser.username, group_id: $group_id })
 			SET targetUserChat.last_activity_type = "group activity",
 				targetUserChat.last_group_activity_at = $at
-			CREATE (targetUser)-[:RECEIVES_ACTIVITY]->(tugact:GroupActivity{ info: $client_username + " removed you from group admins", created_at: $at })-[:IN_GROUP_CHAT]-(targetUserChat)
+			CREATE (targetUser)-[:RECEIVES_ACTIVITY]->(tugact:GroupActivity{ info: $client_username + " removed you from group admins", created_at: $at })-[:IN_GROUP_CHAT]->(targetUserChat)
 
 			WITH group, cligact, tugact
-			OPTIONAL MATCH (group)<-[:IS_MEMBER_OF]-(memberUser:User WHERE memberUser.username NOT IN [$client_username, $target_user])
+			OPTIONAL MATCH (group)<-[:IS_MEMBER_OF]-(memberUser:User WHERE NOT memberUser.username IN [$client_username, $target_user])
 
 			RETURN cligact.info AS client_resp, 
 				tugact.info AS target_user_resp,

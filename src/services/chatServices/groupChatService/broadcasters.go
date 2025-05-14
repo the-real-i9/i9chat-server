@@ -29,8 +29,8 @@ func broadcastNewMessage(memberUsernames []string, data any, groupId string) {
 }
 
 func broadcastActivity(memberUsernames []string, data any, groupId string) {
-
 	for _, mu := range memberUsernames {
+
 		eventStreamService.Send(mu, appTypes.ServerWSMsg{
 			Event: "new group chat activity",
 			Data: map[string]any{

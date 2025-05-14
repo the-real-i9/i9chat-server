@@ -2,8 +2,10 @@ package groupChatControllers
 
 import (
 	"context"
+	"fmt"
 	"i9chat/src/appTypes"
 	"i9chat/src/services/chatServices/groupChatService"
+	"net/url"
 
 	"github.com/gofiber/fiber/v2"
 )
@@ -46,11 +48,9 @@ func ExecuteAction(c *fiber.Ctx) error {
 
 	clientUser := c.Locals("user").(appTypes.ClientUser)
 
-	type action string
-
 	type handler func(ctx context.Context, clientUsername, groupId string, data map[string]any) (any, error)
 
-	actionToHandlerMap := map[action]handler{
+	actionToHandlerMap := map[string]handler{
 		"join":                    joinGroup,
 		"make user admin":         makeUserGroupAdmin,
 		"add users":               addUsersToGroup,
@@ -69,9 +69,14 @@ func ExecuteAction(c *fiber.Ctx) error {
 		return ad_err
 	}
 
-	actionHandler, ok := actionToHandlerMap[action(c.Params("action"))]
+	action, err := url.PathUnescape(c.Params("action"))
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Sprintf("invalid action parameter: %v", err))
+	}
+
+	actionHandler, ok := actionToHandlerMap[action]
 	if !ok {
-		return fiber.NewError(fiber.StatusBadRequest, "invalid group action")
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Sprintf("invalid group action: %s", c.Params("action")))
 	}
 
 	respData, app_err := actionHandler(ctx, clientUser.Username, c.Params("group_id"), actionData)
