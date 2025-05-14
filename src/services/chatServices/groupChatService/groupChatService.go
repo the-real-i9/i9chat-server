@@ -163,7 +163,6 @@ func AddUsersToGroup(ctx context.Context, groupId, clientUsername string, newUse
 		return nil, err
 	}
 
-	// a user with already existing group chat must check
 	go func() {
 		broadcastNewGroup(newUsers, newUserData)
 

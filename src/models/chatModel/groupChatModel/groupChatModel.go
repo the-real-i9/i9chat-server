@@ -79,13 +79,9 @@ func ChangeName(ctx context.Context, groupId, clientUsername, newName string) (N
 	res, err := db.MultiQuery(ctx, func(tx neo4j.ManagedTransaction) (any, error) {
 		resMap := make(map[string]any, 4)
 
-		var (
-			res neo4j.ResultWithContext
-			err error
-			at  = time.Now().UTC()
-		)
+		at := time.Now().UTC()
 
-		res, err = tx.Run(
+		res, err := tx.Run(
 			ctx,
 			`
 			MATCH (group)<-[:WITH_GROUP]-(clientChat:GroupChat{ owner_username: $client_username, group_id: $group_id })<-[:HAS_CHAT]-(clientUser),
@@ -122,10 +118,10 @@ func ChangeName(ctx context.Context, groupId, clientUsername, newName string) (N
 
 		maps.Copy(resMap, res.Record().AsMap())
 
-		memberUsernames := resMap["member_usernames"].([]string)
+		memberUsernames := resMap["member_usernames"].([]any)
 
 		if len(memberUsernames) > 0 {
-			res, err = tx.Run(
+			res, err := tx.Run(
 				ctx,
 				`
 				MATCH (group:Group{ id: $group_id })<-[:IS_MEMBER_OF]-(memberUser:User WHERE memberUser.username IN $member_usernames),
@@ -149,16 +145,16 @@ func ChangeName(ctx context.Context, groupId, clientUsername, newName string) (N
 				return nil, err
 			}
 
+			if !res.Next(ctx) {
+				return nil, nil
+			}
+
 			maps.Copy(resMap, res.Record().AsMap())
 		}
 
 		return resMap, nil
 	})
 	if err != nil {
-		if fe, ok := err.(*fiber.Error); ok {
-			return newActivity, fe
-		}
-
 		log.Println("groupChatModel.go: ChangeName:", err)
 		return newActivity, fiber.ErrInternalServerError
 	}
@@ -174,13 +170,9 @@ func ChangeDescription(ctx context.Context, groupId, clientUsername, newDescript
 	res, err := db.MultiQuery(ctx, func(tx neo4j.ManagedTransaction) (any, error) {
 		resMap := make(map[string]any, 4)
 
-		var (
-			res neo4j.ResultWithContext
-			err error
-			at  = time.Now().UTC()
-		)
+		at := time.Now().UTC()
 
-		res, err = tx.Run(
+		res, err := tx.Run(
 			ctx,
 			`
 			MATCH (group)<-[:WITH_GROUP]-(clientChat:GroupChat{ owner_username: $client_username, group_id: $group_id })<-[:HAS_CHAT]-(clientUser),
@@ -216,10 +208,10 @@ func ChangeDescription(ctx context.Context, groupId, clientUsername, newDescript
 
 		maps.Copy(resMap, res.Record().AsMap())
 
-		memberUsernames := resMap["member_usernames"].([]string)
+		memberUsernames := resMap["member_usernames"].([]any)
 
 		if len(memberUsernames) > 0 {
-			res, err = tx.Run(
+			res, err := tx.Run(
 				ctx,
 				`
 				MATCH (group:Group{ id: $group_id })<-[:IS_MEMBER_OF]-(memberUser:User WHERE memberUser.username IN $member_usernames),
@@ -243,16 +235,16 @@ func ChangeDescription(ctx context.Context, groupId, clientUsername, newDescript
 				return nil, err
 			}
 
+			if !res.Next(ctx) {
+				return nil, nil
+			}
+
 			maps.Copy(resMap, res.Record().AsMap())
 		}
 
 		return resMap, nil
 	})
 	if err != nil {
-		if fe, ok := err.(*fiber.Error); ok {
-			return newActivity, fe
-		}
-
 		log.Println("groupChatModel.go: ChangeDescription:", err)
 		return newActivity, fiber.ErrInternalServerError
 	}
@@ -268,13 +260,9 @@ func ChangePicture(ctx context.Context, groupId, clientUsername, newPictureUrl s
 	res, err := db.MultiQuery(ctx, func(tx neo4j.ManagedTransaction) (any, error) {
 		resMap := make(map[string]any, 3)
 
-		var (
-			res neo4j.ResultWithContext
-			err error
-			at  = time.Now().UTC()
-		)
+		at := time.Now().UTC()
 
-		res, err = tx.Run(
+		res, err := tx.Run(
 			ctx,
 			`
 			MATCH (group)<-[:WITH_GROUP]-(clientChat:GroupChat{ owner_username: $client_username, group_id: $group_id })<-[:HAS_CHAT]-(clientUser),
@@ -308,10 +296,10 @@ func ChangePicture(ctx context.Context, groupId, clientUsername, newPictureUrl s
 
 		maps.Copy(resMap, res.Record().AsMap())
 
-		memberUsernames := resMap["member_usernames"].([]string)
+		memberUsernames := resMap["member_usernames"].([]any)
 
 		if len(memberUsernames) > 0 {
-			res, err = tx.Run(
+			res, err := tx.Run(
 				ctx,
 				`
 				MATCH (group:Group{ id: $group_id })<-[:IS_MEMBER_OF]-(memberUser:User WHERE memberUser.username IN $member_usernames),
@@ -333,16 +321,16 @@ func ChangePicture(ctx context.Context, groupId, clientUsername, newPictureUrl s
 				return nil, err
 			}
 
+			if !res.Next(ctx) {
+				return nil, nil
+			}
+
 			maps.Copy(resMap, res.Record().AsMap())
 		}
 
 		return resMap, nil
 	})
 	if err != nil {
-		if fe, ok := err.(*fiber.Error); ok {
-			return newActivity, fe
-		}
-
 		log.Println("groupChatModel.go: ChangePicture:", err)
 		return newActivity, fiber.ErrInternalServerError
 	}
@@ -358,19 +346,15 @@ func AddUsers(ctx context.Context, groupId, clientUsername string, newUsers []st
 	res, err := db.MultiQuery(ctx, func(tx neo4j.ManagedTransaction) (any, error) {
 		resMap := make(map[string]any, 4)
 
-		var (
-			res neo4j.ResultWithContext
-			err error
-			at  = time.Now().UTC()
-		)
+		at := time.Now().UTC()
 
-		res, err = tx.Run(
+		res, err := tx.Run(
 			ctx,
 			`
 			MATCH (group)<-[:WITH_GROUP]-(clientChat:GroupChat{ owner_username: $client_username, group_id: $group_id })<-[:HAS_CHAT]-(clientUser),
 				(clientUser)-[:IS_MEMBER_OF { role: "admin" }]->(group),
 				(newUser:User WHERE newUser.username IN $new_users AND NOT EXISTS { (newUser)-[:LEFT_GROUP]->(group) }
-					AND NOT EXISTS { (newUser)-[:IS_MEMBER_OF]->(group) }
+					AND NOT EXISTS { (newUser)-[:IS_MEMBER_OF]->(group) })
 
 			SET clientChat.last_activity_type = "group activity",
 				clientChat.last_group_activity_at = $at
@@ -413,10 +397,10 @@ func AddUsers(ctx context.Context, groupId, clientUsername string, newUsers []st
 
 		maps.Copy(resMap, res.Record().AsMap())
 
-		memberUsernames := resMap["member_usernames"].([]string)
+		memberUsernames := resMap["member_usernames"].([]any)
 
 		if len(memberUsernames) > 0 {
-			res, err = tx.Run(
+			res, err := tx.Run(
 				ctx,
 				`
 				MATCH (group:Group{ id: $group_id })<-[:IS_MEMBER_OF]-(memberUser:User WHERE memberUser.username IN $member_usernames),
@@ -439,16 +423,16 @@ func AddUsers(ctx context.Context, groupId, clientUsername string, newUsers []st
 				return nil, err
 			}
 
+			if !res.Next(ctx) {
+				return nil, nil
+			}
+
 			maps.Copy(resMap, res.Record().AsMap())
 		}
 
 		return resMap, nil
 	})
 	if err != nil {
-		if fe, ok := err.(*fiber.Error); ok {
-			return newActivity, nil, fe
-		}
-
 		log.Println("groupChatModel.go: AddUsers:", err)
 		return newActivity, nil, fiber.ErrInternalServerError
 	}
@@ -518,7 +502,7 @@ func RemoveUser(ctx context.Context, groupId, clientUsername, targetUser string)
 
 		maps.Copy(resMap, res.Record().AsMap())
 
-		memberUsernames := resMap["member_usernames"].([]string)
+		memberUsernames := resMap["member_usernames"].([]any)
 
 		if len(memberUsernames) > 0 {
 			res, err = tx.Run(
@@ -550,10 +534,6 @@ func RemoveUser(ctx context.Context, groupId, clientUsername, targetUser string)
 		return resMap, nil
 	})
 	if err != nil {
-		if fe, ok := err.(*fiber.Error); ok {
-			return newActivity, nil, fe
-		}
-
 		log.Println("groupChatModel.go: RemoveUser:", err)
 		return newActivity, nil, fiber.ErrInternalServerError
 	}
@@ -571,9 +551,7 @@ func Join(ctx context.Context, groupId, clientUsername string) (NewActivity, err
 	res, err := db.MultiQuery(ctx, func(tx neo4j.ManagedTransaction) (any, error) {
 		resMap := make(map[string]any, 3)
 
-		var (
-			at = time.Now().UTC()
-		)
+		at := time.Now().UTC()
 
 		res, err := tx.Run(
 			ctx,
@@ -582,7 +560,7 @@ func Join(ctx context.Context, groupId, clientUsername string) (NewActivity, err
 			WHERE NOT EXISTS { (clientUser)-[:IS_MEMBER_OF]->(group) }
 				AND NOT EXISTS { (group)-[:REMOVED_USER]->(clientUser) }
 
-			MATCH (group)<-[:IS_MEMBER_OF]-(memberUser:User)
+			OPTIONAL MATCH (group)<-[:IS_MEMBER_OF]-(memberUser:User)
 			OPTIONAL MATCH (clientUser)-[lgr:LEFT_GROUP]->(group)
 
 			DELETE lgr
@@ -650,10 +628,6 @@ func Join(ctx context.Context, groupId, clientUsername string) (NewActivity, err
 		return resMap, nil
 	})
 	if err != nil {
-		if fe, ok := err.(*fiber.Error); ok {
-			return newActivity, fe
-		}
-
 		log.Println("groupChatModel.go: Join:", err)
 		return newActivity, fiber.ErrInternalServerError
 	}
@@ -712,7 +686,7 @@ func Leave(ctx context.Context, groupId, clientUsername string) (NewActivity, er
 
 		maps.Copy(resMap, res.Record().AsMap())
 
-		memberUsernames := resMap["member_usernames"].([]string)
+		memberUsernames := resMap["member_usernames"].([]any)
 
 		if len(memberUsernames) > 0 {
 			res, err = tx.Run(
@@ -743,10 +717,6 @@ func Leave(ctx context.Context, groupId, clientUsername string) (NewActivity, er
 		return resMap, nil
 	})
 	if err != nil {
-		if fe, ok := err.(*fiber.Error); ok {
-			return newActivity, fe
-		}
-
 		log.Println("groupChatModel.go: Leave:", err)
 		return newActivity, fiber.ErrInternalServerError
 	}
@@ -762,9 +732,7 @@ func MakeUserAdmin(ctx context.Context, groupId, clientUsername, targetUser stri
 	res, err := db.MultiQuery(ctx, func(tx neo4j.ManagedTransaction) (any, error) {
 		resMap := make(map[string]any, 4)
 
-		var (
-			at = time.Now().UTC()
-		)
+		at := time.Now().UTC()
 
 		res, err := tx.Run(
 			ctx,
@@ -845,10 +813,6 @@ func MakeUserAdmin(ctx context.Context, groupId, clientUsername, targetUser stri
 		return resMap, nil
 	})
 	if err != nil {
-		if fe, ok := err.(*fiber.Error); ok {
-			return newActivity, nil, fe
-		}
-
 		log.Println("groupChatModel.go: MakeUserAdmin:", err)
 		return newActivity, nil, fiber.ErrInternalServerError
 	}
@@ -914,7 +878,7 @@ func RemoveUserFromAdmins(ctx context.Context, groupId, clientUsername, targetUs
 
 		maps.Copy(resMap, res.Record().AsMap())
 
-		memberUsernames := resMap["member_usernames"].([]string)
+		memberUsernames := resMap["member_usernames"].([]any)
 
 		if len(memberUsernames) > 0 {
 			res, err = tx.Run(
@@ -946,10 +910,6 @@ func RemoveUserFromAdmins(ctx context.Context, groupId, clientUsername, targetUs
 		return resMap, nil
 	})
 	if err != nil {
-		if fe, ok := err.(*fiber.Error); ok {
-			return newActivity, nil, fe
-		}
-
 		log.Println("groupChatModel.go: RemoveUserFromAdmins:", err)
 		return newActivity, nil, fiber.ErrInternalServerError
 	}
@@ -1016,7 +976,7 @@ func SendMessage(ctx context.Context, groupId, clientUsername, msgContent string
 
 		maps.Copy(resMap, res.Record().AsMap())
 
-		memberUsernames := resMap["member_usernames"].([]string)
+		memberUsernames := resMap["member_usernames"].([]any)
 
 		if len(memberUsernames) > 0 {
 			res, err = tx.Run(
@@ -1053,10 +1013,6 @@ func SendMessage(ctx context.Context, groupId, clientUsername, msgContent string
 		return resMap, nil
 	})
 	if err != nil {
-		if fe, ok := err.(*fiber.Error); ok {
-			return newMessage, fe
-		}
-
 		log.Println("groupChatModel.go: SendMessage:", err)
 		return newMessage, fiber.ErrInternalServerError
 	}
@@ -1117,8 +1073,8 @@ func AckMessageDelivered(ctx context.Context, clientUsername, groupId, msgId str
 		maps.Copy(resMap, res.Record().AsMap())
 
 		// checking if the message has delivered to all members
-		memberUsernames := resMap["member_usernames"].([]string)
-		delvtoUsernames := resMap["delv_to_usernames"].([]string)
+		memberUsernames := resMap["member_usernames"].([]any)
+		delvtoUsernames := resMap["delv_to_usernames"].([]any)
 
 		delvToAll := helpers.AllAinB(memberUsernames, delvtoUsernames)
 
@@ -1143,10 +1099,6 @@ func AckMessageDelivered(ctx context.Context, clientUsername, groupId, msgId str
 		return resMap, nil
 	})
 	if err != nil {
-		if fe, ok := err.(*fiber.Error); ok {
-			return msgAck, fe
-		}
-
 		log.Println("groupChatModel.go: AckMessageDelivered:", err)
 		return msgAck, fiber.ErrInternalServerError
 	}
@@ -1203,8 +1155,8 @@ func AckMessageRead(ctx context.Context, clientUsername, groupId, msgId string, 
 		maps.Copy(resMap, res.Record().AsMap())
 
 		// checking if the message has delivered to all members
-		memberUsernames := resMap["member_usernames"].([]string)
-		readbyUsernames := resMap["read_by_usernames"].([]string)
+		memberUsernames := resMap["member_usernames"].([]any)
+		readbyUsernames := resMap["read_by_usernames"].([]any)
 
 		readByAll := helpers.AllAinB(memberUsernames, readbyUsernames)
 
@@ -1229,10 +1181,6 @@ func AckMessageRead(ctx context.Context, clientUsername, groupId, msgId string, 
 		return resMap, nil
 	})
 	if err != nil {
-		if fe, ok := err.(*fiber.Error); ok {
-			return msgAck, fe
-		}
-
 		log.Println("groupChatModel.go: AckMessageRead:", err)
 		return msgAck, fiber.ErrInternalServerError
 	}
