@@ -687,4 +687,199 @@ func TestGroupChat(t *testing.T) {
 			}, nil),
 		}, nil))
 	}
+
+	{
+		t.Log("Action: user2 removes user1 from group admins | user1 & other members are notified")
+
+		reqBody, err := makeReqBody(map[string]any{
+			"user": user1.Username,
+		})
+		require.NoError(t, err)
+
+		req, err := http.NewRequest("POST", groupChatPath+"/"+newGroup.Id+"/execute_action/remove user from admins", reqBody)
+		require.NoError(t, err)
+		req.Header.Add("Content-Type", "application/json")
+		req.Header.Set("Cookie", user2.SessionCookie)
+
+		res, err := http.DefaultClient.Do(req)
+		require.NoError(t, err)
+
+		if !assert.Equal(t, http.StatusOK, res.StatusCode) {
+			rb, err := errResBody(res.Body)
+			require.NoError(t, err)
+			t.Log("unexpected error:", rb)
+			return
+		}
+
+		rb, err := succResBody[string](res.Body)
+		require.NoError(t, err)
+
+		require.Equal(t, fmt.Sprintf("You removed %s from group admins", user1.Username), rb)
+
+		user1GCAdminRemovalNotif := <-user1.ServerWSMsg
+
+		td.Cmp(td.Require(t), user1GCAdminRemovalNotif, td.Map(map[string]any{
+			"event": "new group chat activity",
+			"data": td.Map(map[string]any{
+				"info":     fmt.Sprintf("%s removed you from group admins", user2.Username),
+				"group_id": newGroup.Id,
+			}, nil),
+		}, nil))
+
+		user3GCAdminRemovalNotif := <-user3.ServerWSMsg
+
+		td.Cmp(td.Require(t), user3GCAdminRemovalNotif, td.Map(map[string]any{
+			"event": "new group chat activity",
+			"data": td.Map(map[string]any{
+				"info":     fmt.Sprintf("%s removed %s from group admins", user2.Username, user1.Username),
+				"group_id": newGroup.Id,
+			}, nil),
+		}, nil))
+
+		user4GCAdminRemovalNotif := <-user4.ServerWSMsg
+
+		td.Cmp(td.Require(t), user4GCAdminRemovalNotif, td.Map(map[string]any{
+			"event": "new group chat activity",
+			"data": td.Map(map[string]any{
+				"info":     fmt.Sprintf("%s removed %s from group admins", user2.Username, user1.Username),
+				"group_id": newGroup.Id,
+			}, nil),
+		}, nil))
+
+		user5GCAdminRemovalNotif := <-user5.ServerWSMsg
+
+		td.Cmp(td.Require(t), user5GCAdminRemovalNotif, td.Map(map[string]any{
+			"event": "new group chat activity",
+			"data": td.Map(map[string]any{
+				"info":     fmt.Sprintf("%s removed %s from group admins", user2.Username, user1.Username),
+				"group_id": newGroup.Id,
+			}, nil),
+		}, nil))
+	}
+
+	{
+		t.Log("Action: user2 removes user1 from group | user1 & other members are notified")
+
+		reqBody, err := makeReqBody(map[string]any{
+			"user": user1.Username,
+		})
+		require.NoError(t, err)
+
+		req, err := http.NewRequest("POST", groupChatPath+"/"+newGroup.Id+"/execute_action/remove user", reqBody)
+		require.NoError(t, err)
+		req.Header.Add("Content-Type", "application/json")
+		req.Header.Set("Cookie", user2.SessionCookie)
+
+		res, err := http.DefaultClient.Do(req)
+		require.NoError(t, err)
+
+		if !assert.Equal(t, http.StatusOK, res.StatusCode) {
+			rb, err := errResBody(res.Body)
+			require.NoError(t, err)
+			t.Log("unexpected error:", rb)
+			return
+		}
+
+		rb, err := succResBody[string](res.Body)
+		require.NoError(t, err)
+
+		require.Equal(t, fmt.Sprintf("You removed %s", user1.Username), rb)
+
+		user1GCAdminRemovalNotif := <-user1.ServerWSMsg
+
+		td.Cmp(td.Require(t), user1GCAdminRemovalNotif, td.Map(map[string]any{
+			"event": "new group chat activity",
+			"data": td.Map(map[string]any{
+				"info":     fmt.Sprintf("%s removed you", user2.Username),
+				"group_id": newGroup.Id,
+			}, nil),
+		}, nil))
+
+		user3GCAdminRemovalNotif := <-user3.ServerWSMsg
+
+		td.Cmp(td.Require(t), user3GCAdminRemovalNotif, td.Map(map[string]any{
+			"event": "new group chat activity",
+			"data": td.Map(map[string]any{
+				"info":     fmt.Sprintf("%s removed %s", user2.Username, user1.Username),
+				"group_id": newGroup.Id,
+			}, nil),
+		}, nil))
+
+		user4GCAdminRemovalNotif := <-user4.ServerWSMsg
+
+		td.Cmp(td.Require(t), user4GCAdminRemovalNotif, td.Map(map[string]any{
+			"event": "new group chat activity",
+			"data": td.Map(map[string]any{
+				"info":     fmt.Sprintf("%s removed %s", user2.Username, user1.Username),
+				"group_id": newGroup.Id,
+			}, nil),
+		}, nil))
+
+		user5GCAdminRemovalNotif := <-user5.ServerWSMsg
+
+		td.Cmp(td.Require(t), user5GCAdminRemovalNotif, td.Map(map[string]any{
+			"event": "new group chat activity",
+			"data": td.Map(map[string]any{
+				"info":     fmt.Sprintf("%s removed %s", user2.Username, user1.Username),
+				"group_id": newGroup.Id,
+			}, nil),
+		}, nil))
+	}
+
+	{
+		t.Log("Action: user3 leaves group | other members are notified")
+
+		reqBody, err := makeReqBody(map[string]any{})
+		require.NoError(t, err)
+
+		req, err := http.NewRequest("POST", groupChatPath+"/"+newGroup.Id+"/execute_action/leave", reqBody)
+		require.NoError(t, err)
+		req.Header.Add("Content-Type", "application/json")
+		req.Header.Set("Cookie", user3.SessionCookie)
+
+		res, err := http.DefaultClient.Do(req)
+		require.NoError(t, err)
+
+		if !assert.Equal(t, http.StatusOK, res.StatusCode) {
+			rb, err := errResBody(res.Body)
+			require.NoError(t, err)
+			t.Log("unexpected error:", rb)
+			return
+		}
+
+		rb, err := succResBody[string](res.Body)
+		require.NoError(t, err)
+
+		require.Equal(t, "You left", rb)
+
+		user2GCLeaveNotif := <-user2.ServerWSMsg
+
+		td.Cmp(td.Require(t), user2GCLeaveNotif, td.Map(map[string]any{
+			"event": "new group chat activity",
+			"data": td.Map(map[string]any{
+				"info":     user3.Username + " left",
+				"group_id": newGroup.Id,
+			}, nil),
+		}, nil))
+
+		user4GCLeaveNotif := <-user4.ServerWSMsg
+
+		td.Cmp(td.Require(t), user4GCLeaveNotif, td.Map(map[string]any{
+			"event": "new group chat activity",
+			"data": td.Map(map[string]any{
+				"info":     user3.Username + " left",
+				"group_id": newGroup.Id,
+			}, nil),
+		}, nil))
+
+		user5GCLeaveNotif := <-user5.ServerWSMsg
+
+		td.Cmp(td.Require(t), user5GCLeaveNotif, td.Map(map[string]any{
+			"event": "new group chat activity",
+			"data": td.Map(map[string]any{
+				"info":     user3.Username + " left",
+				"group_id": newGroup.Id,
+			}, nil),
+		}, nil))
+	}
 }

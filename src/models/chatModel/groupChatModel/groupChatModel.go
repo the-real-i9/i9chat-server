@@ -2,6 +2,7 @@ package groupChat
 
 import (
 	"context"
+	"fmt"
 	"i9chat/src/helpers"
 	"i9chat/src/models/db"
 	"log"
@@ -146,7 +147,7 @@ func ChangeName(ctx context.Context, groupId, clientUsername, newName string) (N
 			}
 
 			if !res.Next(ctx) {
-				return nil, nil
+				return nil, fmt.Errorf("crosscheck possible logical error")
 			}
 
 			maps.Copy(resMap, res.Record().AsMap())
@@ -236,7 +237,7 @@ func ChangeDescription(ctx context.Context, groupId, clientUsername, newDescript
 			}
 
 			if !res.Next(ctx) {
-				return nil, nil
+				return nil, fmt.Errorf("crosscheck possible logical error")
 			}
 
 			maps.Copy(resMap, res.Record().AsMap())
@@ -322,7 +323,7 @@ func ChangePicture(ctx context.Context, groupId, clientUsername, newPictureUrl s
 			}
 
 			if !res.Next(ctx) {
-				return nil, nil
+				return nil, fmt.Errorf("crosscheck possible logical error")
 			}
 
 			maps.Copy(resMap, res.Record().AsMap())
@@ -424,7 +425,7 @@ func AddUsers(ctx context.Context, groupId, clientUsername string, newUsers []st
 			}
 
 			if !res.Next(ctx) {
-				return nil, nil
+				return nil, fmt.Errorf("crosscheck possible logical error")
 			}
 
 			maps.Copy(resMap, res.Record().AsMap())
@@ -450,13 +451,9 @@ func RemoveUser(ctx context.Context, groupId, clientUsername, targetUser string)
 	res, err := db.MultiQuery(ctx, func(tx neo4j.ManagedTransaction) (any, error) {
 		resMap := make(map[string]any, 4)
 
-		var (
-			res neo4j.ResultWithContext
-			err error
-			at  = time.Now().UTC()
-		)
+		at := time.Now().UTC()
 
-		res, err = tx.Run(
+		res, err := tx.Run(
 			ctx,
 			`
 			MATCH (group)<-[:WITH_GROUP]-(clientChat:GroupChat{ owner_username: $client_username, group_id: $group_id })<-[:HAS_CHAT]-(clientUser),
@@ -505,7 +502,7 @@ func RemoveUser(ctx context.Context, groupId, clientUsername, targetUser string)
 		memberUsernames := resMap["member_usernames"].([]any)
 
 		if len(memberUsernames) > 0 {
-			res, err = tx.Run(
+			res, err := tx.Run(
 				ctx,
 				`
 				MATCH (group:Group{ id: $group_id })<-[:IS_MEMBER_OF]-(memberUser:User WHERE memberUser.username IN $member_usernames),
@@ -526,6 +523,10 @@ func RemoveUser(ctx context.Context, groupId, clientUsername, targetUser string)
 			)
 			if err != nil {
 				return nil, err
+			}
+
+			if !res.Next(ctx) {
+				return nil, fmt.Errorf("crosscheck possible logical error")
 			}
 
 			maps.Copy(resMap, res.Record().AsMap())
@@ -643,13 +644,9 @@ func Leave(ctx context.Context, groupId, clientUsername string) (NewActivity, er
 	res, err := db.MultiQuery(ctx, func(tx neo4j.ManagedTransaction) (any, error) {
 		resMap := make(map[string]any, 3)
 
-		var (
-			res neo4j.ResultWithContext
-			err error
-			at  = time.Now().UTC()
-		)
+		at := time.Now().UTC()
 
-		res, err = tx.Run(
+		res, err := tx.Run(
 			ctx,
 			`
 			MATCH (group:Group{ id: $group_id })<-[mem:IS_MEMBER_OF]-(clientUser:User{ username: $client_username }),
@@ -689,7 +686,7 @@ func Leave(ctx context.Context, groupId, clientUsername string) (NewActivity, er
 		memberUsernames := resMap["member_usernames"].([]any)
 
 		if len(memberUsernames) > 0 {
-			res, err = tx.Run(
+			res, err := tx.Run(
 				ctx,
 				`
 				MATCH (group:Group{ id: $group_id })<-[:IS_MEMBER_OF]-(memberUser:User WHERE memberUser.username IN $member_usernames),
@@ -709,6 +706,10 @@ func Leave(ctx context.Context, groupId, clientUsername string) (NewActivity, er
 			)
 			if err != nil {
 				return nil, err
+			}
+
+			if !res.Next(ctx) {
+				return nil, fmt.Errorf("crosscheck possible logical error")
 			}
 
 			maps.Copy(resMap, res.Record().AsMap())
@@ -830,13 +831,9 @@ func RemoveUserFromAdmins(ctx context.Context, groupId, clientUsername, targetUs
 	res, err := db.MultiQuery(ctx, func(tx neo4j.ManagedTransaction) (any, error) {
 		resMap := make(map[string]any, 4)
 
-		var (
-			res neo4j.ResultWithContext
-			err error
-			at  = time.Now().UTC()
-		)
+		at := time.Now().UTC()
 
-		res, err = tx.Run(
+		res, err := tx.Run(
 			ctx,
 			`
 			MATCH (group)<-[:WITH_GROUP]-(clientChat:GroupChat{ owner_username: $client_username, group_id: $group_id })<-[:HAS_CHAT]-(clientUser),
@@ -904,6 +901,10 @@ func RemoveUserFromAdmins(ctx context.Context, groupId, clientUsername, targetUs
 				return nil, err
 			}
 
+			if !res.Next(ctx) {
+				return nil, fmt.Errorf("crosscheck possible logical error")
+			}
+
 			maps.Copy(resMap, res.Record().AsMap())
 		}
 
@@ -933,16 +934,13 @@ func SendMessage(ctx context.Context, groupId, clientUsername, msgContent string
 	res, err := db.MultiQuery(ctx, func(tx neo4j.ManagedTransaction) (any, error) {
 		resMap := make(map[string]any, 4)
 
-		var (
-			res neo4j.ResultWithContext
-			err error
-			at  = time.Now().UTC()
-		)
+		at := time.Now().UTC()
 
-		res, err = tx.Run(
+		res, err := tx.Run(
 			ctx,
 			`
-			MATCH (group)<-[:WITH_GROUP]-(clientChat:GroupChat{ owner_username: $client_username, group_id: $group_id })<-[:HAS_CHAT]-(clientUser)
+			MATCH (group)<-[:WITH_GROUP]-(clientChat:GroupChat{ owner_username: $client_username, group_id: $group_id })<-[:HAS_CHAT]-(clientUser),
+				(clientUser)-[:IS_MEMBER_OF]->(group)
 
 			CREATE (message:GroupMessage{ id: randomUUID(), content: $message_content, delivery_status: "sent", created_at: $created_at })
 
@@ -979,7 +977,7 @@ func SendMessage(ctx context.Context, groupId, clientUsername, msgContent string
 		memberUsernames := resMap["member_usernames"].([]any)
 
 		if len(memberUsernames) > 0 {
-			res, err = tx.Run(
+			res, err := tx.Run(
 				ctx,
 				`
 				MATCH (message:GroupMessage{ id: $new_msg_id })<-[:SENDS_MESSAGE]-(clientUser)
@@ -1005,6 +1003,10 @@ func SendMessage(ctx context.Context, groupId, clientUsername, msgContent string
 			)
 			if err != nil {
 				return nil, err
+			}
+
+			if !res.Next(ctx) {
+				return nil, fmt.Errorf("crosscheck possible logical error")
 			}
 
 			maps.Copy(resMap, res.Record().AsMap())
@@ -1033,13 +1035,9 @@ func AckMessageDelivered(ctx context.Context, clientUsername, groupId, msgId str
 	res, err := db.MultiQuery(ctx, func(tx neo4j.ManagedTransaction) (any, error) {
 		resMap := make(map[string]any, 3)
 
-		var (
-			res neo4j.ResultWithContext
-			err error
-			at  = time.Now().UTC()
-		)
+		at := time.Now().UTC()
 
-		res, err = tx.Run(
+		res, err := tx.Run(
 			ctx,
 			`
 			MATCH (group)<-[:WITH_GROUP]-(clientChat:GroupChat{ owner_username: $client_username, group_id: $group_id })<-[:HAS_CHAT]-(clientUser),
@@ -1081,7 +1079,7 @@ func AckMessageDelivered(ctx context.Context, clientUsername, groupId, msgId str
 		resMap["all"] = delvToAll
 
 		if delvToAll {
-			_, err = tx.Run(
+			_, err := tx.Run(
 				ctx,
 				`
 				MATCH (message:GroupMessage{ id: $msg_id })
@@ -1114,13 +1112,9 @@ func AckMessageRead(ctx context.Context, clientUsername, groupId, msgId string, 
 	res, err := db.MultiQuery(ctx, func(tx neo4j.ManagedTransaction) (any, error) {
 		resMap := make(map[string]any, 3)
 
-		var (
-			res neo4j.ResultWithContext
-			err error
-			at  = time.Now().UTC()
-		)
+		at := time.Now().UTC()
 
-		res, err = tx.Run(
+		res, err := tx.Run(
 			ctx,
 			`
 			MATCH (clientChat:GroupChat{ owner_username: $client_username, group_id: $group_id })<-[:HAS_CHAT]-(clientUser),
@@ -1163,11 +1157,13 @@ func AckMessageRead(ctx context.Context, clientUsername, groupId, msgId string, 
 		resMap["all"] = readByAll
 
 		if readByAll {
-			_, err = tx.Run(
+			_, err := tx.Run(
 				ctx,
 				`
 				MATCH (message:GroupMessage{ id: $msg_id })
 				SET message.delivery_status = "read"
+
+				RETURN true
 				`,
 				map[string]any{
 					"msg_id": msgId,
