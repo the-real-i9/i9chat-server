@@ -27,7 +27,9 @@ func NewGroupChat(ctx context.Context, clientUsername, name, description string,
 		return nil, err
 	}
 
-	go broadcastNewGroup(initUsers, newGroupChat.InitMemberData)
+	if newGroupChat.InitMemberData != nil {
+		go broadcastNewGroup(initUsers, newGroupChat.InitMemberData)
+	}
 
 	return newGroupChat.ClientData, nil
 }
@@ -62,7 +64,9 @@ func SendMessage(ctx context.Context, clientUsername, groupId string, msgContent
 		return nil, err
 	}
 
-	go broadcastNewMessage(newMessage.MemberUsernames, newMessage.MemberData, groupId)
+	if newMessage.MemberData != nil {
+		go broadcastNewMessage(newMessage.MemberUsernames, newMessage.MemberData, groupId)
+	}
 
 	return newMessage.ClientData, nil
 }
@@ -105,7 +109,9 @@ func ChangeGroupName(ctx context.Context, groupId, clientUsername, newName strin
 		return nil, err
 	}
 
-	go broadcastActivity(newActivity.MemberUsernames, newActivity.MemberData, groupId)
+	if newActivity.MemberData != nil {
+		go broadcastActivity(newActivity.MemberUsernames, newActivity.MemberData, groupId)
+	}
 
 	return newActivity.ClientData, nil
 }
@@ -116,7 +122,9 @@ func ChangeGroupDescription(ctx context.Context, groupId, clientUsername, newDes
 		return nil, err
 	}
 
-	go broadcastActivity(newActivity.MemberUsernames, newActivity.MemberData, groupId)
+	if newActivity.MemberData != nil {
+		go broadcastActivity(newActivity.MemberUsernames, newActivity.MemberData, groupId)
+	}
 
 	return newActivity.ClientData, nil
 }
@@ -132,7 +140,9 @@ func ChangeGroupPicture(ctx context.Context, groupId, clientUsername string, new
 		return nil, err
 	}
 
-	go broadcastActivity(newActivity.MemberUsernames, newActivity.MemberData, groupId)
+	if newActivity.MemberData != nil {
+		go broadcastActivity(newActivity.MemberUsernames, newActivity.MemberData, groupId)
+	}
 
 	return newActivity.ClientData, nil
 }
@@ -162,11 +172,13 @@ func AddUsersToGroup(ctx context.Context, groupId, clientUsername string, newUse
 		return nil, err
 	}
 
-	go func() {
-		broadcastNewGroup(newUsers, newUserData)
+	if newActivity.MemberData != nil {
+		go func() {
+			broadcastNewGroup(newUsers, newUserData)
 
-		broadcastActivity(newActivity.MemberUsernames, newActivity.MemberData, groupId)
-	}()
+			broadcastActivity(newActivity.MemberUsernames, newActivity.MemberData, groupId)
+		}()
+	}
 
 	return newActivity.ClientData, nil
 }
@@ -177,11 +189,13 @@ func RemoveUserFromGroup(ctx context.Context, groupId, clientUsername, targetUse
 		return nil, err
 	}
 
-	go func() {
-		broadcastActivity([]string{targetUser}, targetUserData, groupId)
+	if newActivity.MemberData != nil {
+		go func() {
+			broadcastActivity([]string{targetUser}, targetUserData, groupId)
 
-		broadcastActivity(newActivity.MemberUsernames, newActivity.MemberData, groupId)
-	}()
+			broadcastActivity(newActivity.MemberUsernames, newActivity.MemberData, groupId)
+		}()
+	}
 
 	return newActivity.ClientData, nil
 }
@@ -192,7 +206,9 @@ func JoinGroup(ctx context.Context, groupId, clientUsername string) (any, error)
 		return nil, err
 	}
 
-	go broadcastActivity(newActivity.MemberUsernames, newActivity.MemberData, groupId)
+	if newActivity.MemberData != nil {
+		go broadcastActivity(newActivity.MemberUsernames, newActivity.MemberData, groupId)
+	}
 
 	return newActivity.ClientData, nil
 }
@@ -203,7 +219,9 @@ func LeaveGroup(ctx context.Context, groupId, clientUsername string) (any, error
 		return nil, err
 	}
 
-	go broadcastActivity(newActivity.MemberUsernames, newActivity.MemberData, groupId)
+	if newActivity.MemberData != nil {
+		go broadcastActivity(newActivity.MemberUsernames, newActivity.MemberData, groupId)
+	}
 
 	return newActivity.ClientData, nil
 }
@@ -214,11 +232,13 @@ func MakeUserGroupAdmin(ctx context.Context, groupId, clientUsername, targetUser
 		return nil, err
 	}
 
-	go func() {
-		broadcastActivity([]string{targetUser}, newAdminData, groupId)
+	if newActivity.MemberData != nil {
+		go func() {
+			broadcastActivity([]string{targetUser}, newAdminData, groupId)
 
-		broadcastActivity(newActivity.MemberUsernames, newActivity.MemberData, groupId)
-	}()
+			broadcastActivity(newActivity.MemberUsernames, newActivity.MemberData, groupId)
+		}()
+	}
 
 	return newActivity.ClientData, nil
 }
@@ -229,11 +249,13 @@ func RemoveUserFromGroupAdmins(ctx context.Context, groupId, clientUsername, tar
 		return nil, err
 	}
 
-	go func() {
-		broadcastActivity([]string{targetUser}, oldAdminData, groupId)
+	if newActivity.MemberData != nil {
+		go func() {
+			broadcastActivity([]string{targetUser}, oldAdminData, groupId)
 
-		broadcastActivity(newActivity.MemberUsernames, newActivity.MemberData, groupId)
-	}()
+			broadcastActivity(newActivity.MemberUsernames, newActivity.MemberData, groupId)
+		}()
+	}
 
 	return newActivity.ClientData, nil
 }

@@ -20,25 +20,25 @@ func sendDMChatMsgHndl(ctx context.Context, clientUsername string, eventData map
 	return dmChatService.SendMessage(ctx, clientUsername, evd.PartnerUsername, evd.Msg, evd.At)
 }
 
-func ackDMChatMsgDeliveredHndl(ctx context.Context, clientUsername string, eventData map[string]any) error {
+func ackDMChatMsgDeliveredHndl(ctx context.Context, clientUsername string, eventData map[string]any) (any, error) {
 	var evd dmChatMsgAck
 
 	helpers.ToStruct(eventData, &evd)
 
 	if val_err := evd.Validate(); val_err != nil {
-		return val_err
+		return nil, val_err
 	}
 
 	return dmChatService.AckMessageDelivered(ctx, clientUsername, evd.PartnerUsername, evd.MsgId, evd.At)
 }
 
-func ackDMChatMsgReadHndl(ctx context.Context, clientUsername string, eventData map[string]any) error {
+func ackDMChatMsgReadHndl(ctx context.Context, clientUsername string, eventData map[string]any) (any, error) {
 	var evd dmChatMsgAck
 
 	helpers.ToStruct(eventData, &evd)
 
 	if val_err := evd.Validate(); val_err != nil {
-		return val_err
+		return nil, val_err
 	}
 
 	return dmChatService.AckMessageRead(ctx, clientUsername, evd.PartnerUsername, evd.MsgId, evd.At)

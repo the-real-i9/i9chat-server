@@ -2,6 +2,7 @@ package helpers
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"os"
 	"reflect"
@@ -38,7 +39,7 @@ func WSErrReply(err error, toEvent string) map[string]any {
 		"toEvent": toEvent,
 		"data": map[string]any{
 			"statusCode": errCode,
-			"errorMsg":   err.Error(),
+			"errorMsg":   fmt.Sprint(err),
 		},
 	}
 

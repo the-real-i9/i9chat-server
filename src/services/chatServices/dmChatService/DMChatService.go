@@ -35,43 +35,52 @@ func SendMessage(ctx context.Context, clientUsername, partnerUsername string, ms
 		return nil, err
 	}
 
-	go eventStreamService.Send(partnerUsername, appTypes.ServerWSMsg{
-		Event: "new dm chat message",
-		Data:  newMessage.PartnerData,
-	})
+	if newMessage.PartnerData != nil {
+		go eventStreamService.Send(partnerUsername, appTypes.ServerWSMsg{
+			Event: "new dm chat message",
+			Data:  newMessage.PartnerData,
+		})
+	}
 
 	return newMessage.ClientData, nil
 }
 
-func AckMessageDelivered(ctx context.Context, clientUsername, partnerUsername, msgId string, deliveredAt int64) error {
-	if err := dmChat.AckMessageDelivered(ctx, clientUsername, partnerUsername, msgId, time.UnixMilli(deliveredAt).UTC()); err != nil {
-		return err
+func AckMessageDelivered(ctx context.Context, clientUsername, partnerUsername, msgId string, deliveredAt int64) (any, error) {
+	done, err := dmChat.AckMessageDelivered(ctx, clientUsername, partnerUsername, msgId, time.UnixMilli(deliveredAt).UTC())
+	if err != nil {
+		return nil, err
 	}
 
-	go eventStreamService.Send(partnerUsername, appTypes.ServerWSMsg{
-		Event: "dm chat message delivered",
-		Data: map[string]any{
-			"partner_username": clientUsername,
-			"msg_id":           msgId,
-		},
-	})
+	if done {
+		go eventStreamService.Send(partnerUsername, appTypes.ServerWSMsg{
+			Event: "dm chat message delivered",
+			Data: map[string]any{
+				"partner_username": clientUsername,
+				"msg_id":           msgId,
+			},
+		})
+	}
 
-	return nil
+	return done, nil
 }
 
-func AckMessageRead(ctx context.Context, clientUsername, partnerUsername, msgId string, readAt int64) error {
-	if err := dmChat.AckMessageRead(ctx, clientUsername, partnerUsername, msgId, time.UnixMilli(readAt).UTC()); err != nil {
-		return err
+func AckMessageRead(ctx context.Context, clientUsername, partnerUsername, msgId string, readAt int64) (any, error) {
+	done, err := dmChat.AckMessageRead(ctx, clientUsername, partnerUsername, msgId, time.UnixMilli(readAt).UTC())
+	if err != nil {
+		return nil, err
 	}
-	go eventStreamService.Send(partnerUsername, appTypes.ServerWSMsg{
-		Event: "dm chat message read",
-		Data: map[string]any{
-			"partner_username": clientUsername,
-			"msg_id":           msgId,
-		},
-	})
 
-	return nil
+	if done {
+		go eventStreamService.Send(partnerUsername, appTypes.ServerWSMsg{
+			Event: "dm chat message read",
+			Data: map[string]any{
+				"partner_username": clientUsername,
+				"msg_id":           msgId,
+			},
+		})
+	}
+
+	return done, nil
 }
 
 func React() {

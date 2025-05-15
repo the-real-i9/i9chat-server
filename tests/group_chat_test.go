@@ -1015,7 +1015,7 @@ func TestGroupChat(t *testing.T) {
 		// user2's server reply (response) to event sent
 		user2ServerReply := <-user2.ServerWSMsg
 
-		td.Cmp(td.Require(t), user2ServerReply, td.SuperMapOf(map[string]any{
+		td.Cmp(td.Require(t), user2ServerReply, td.Map(map[string]any{
 			"event":   "server reply",
 			"toEvent": "get group info",
 			"data": td.SuperMapOf(map[string]any{
@@ -1050,7 +1050,7 @@ func TestGroupChat(t *testing.T) {
 		// user4's server reply (response) to event sent
 		user4ServerReply := <-user4.ServerWSMsg
 
-		td.Cmp(td.Require(t), user4ServerReply, td.SuperMapOf(map[string]any{
+		td.Cmp(td.Require(t), user4ServerReply, td.Map(map[string]any{
 			"event":   "server reply",
 			"toEvent": "send group chat message",
 			"data": td.Map(map[string]any{
@@ -1115,7 +1115,7 @@ func TestGroupChat(t *testing.T) {
 
 		user2ServerReply := <-user2.ServerWSMsg
 
-		td.Cmp(td.Require(t), user2ServerReply, td.SuperMapOf(map[string]any{
+		td.Cmp(td.Require(t), user2ServerReply, td.Map(map[string]any{
 			"event":   "server reply",
 			"toEvent": "ack group chat message delivered",
 			"data": td.Map(map[string]any{
@@ -1136,7 +1136,7 @@ func TestGroupChat(t *testing.T) {
 
 		user5ServerReply := <-user5.ServerWSMsg
 
-		td.Cmp(td.Require(t), user5ServerReply, td.SuperMapOf(map[string]any{
+		td.Cmp(td.Require(t), user5ServerReply, td.Map(map[string]any{
 			"event":   "server reply",
 			"toEvent": "ack group chat message delivered",
 			"data": td.Map(map[string]any{
@@ -1156,7 +1156,7 @@ func TestGroupChat(t *testing.T) {
 
 		user2DelvAckReceipt := <-user2.ServerWSMsg
 
-		td.Cmp(td.Require(t), user2DelvAckReceipt, td.SuperMapOf(map[string]any{
+		td.Cmp(td.Require(t), user2DelvAckReceipt, td.Map(map[string]any{
 			"event": "group chat message delivered",
 			"data": td.Map(map[string]any{
 				"group_id": newGroup.Id,
@@ -1182,7 +1182,7 @@ func TestGroupChat(t *testing.T) {
 
 		user5ServerReply := <-user5.ServerWSMsg
 
-		td.Cmp(td.Require(t), user5ServerReply, td.SuperMapOf(map[string]any{
+		td.Cmp(td.Require(t), user5ServerReply, td.Map(map[string]any{
 			"event":   "server reply",
 			"toEvent": "ack group chat message read",
 			"data": td.Map(map[string]any{
@@ -1203,7 +1203,7 @@ func TestGroupChat(t *testing.T) {
 
 		user2ServerReply := <-user2.ServerWSMsg
 
-		td.Cmp(td.Require(t), user2ServerReply, td.SuperMapOf(map[string]any{
+		td.Cmp(td.Require(t), user2ServerReply, td.Map(map[string]any{
 			"event":   "server reply",
 			"toEvent": "ack group chat message read",
 			"data": td.Map(map[string]any{
@@ -1223,7 +1223,7 @@ func TestGroupChat(t *testing.T) {
 
 		user5ReadAckReceipt := <-user5.ServerWSMsg
 
-		td.Cmp(td.Require(t), user5ReadAckReceipt, td.SuperMapOf(map[string]any{
+		td.Cmp(td.Require(t), user5ReadAckReceipt, td.Map(map[string]any{
 			"event": "group chat message read",
 			"data": td.Map(map[string]any{
 				"group_id": newGroup.Id,
@@ -1246,7 +1246,7 @@ func TestGroupChat(t *testing.T) {
 		// user5's server reply (response) to event sent
 		user5ServerReply := <-user5.ServerWSMsg
 
-		td.Cmp(td.Require(t), user5ServerReply, td.SuperMapOf(map[string]any{
+		td.Cmp(td.Require(t), user5ServerReply, td.Map(map[string]any{
 			"event":   "server reply",
 			"toEvent": "get group chat history",
 			"data": td.All(

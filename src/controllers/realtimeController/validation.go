@@ -102,18 +102,6 @@ func (d groupInfo) Validate() error {
 	return helpers.ValidationError(err, "realtimeController_validation.go", "groupInfo")
 }
 
-type groupMemInfo struct {
-	GroupId string `json:"groupId"`
-}
-
-func (d groupMemInfo) Validate() error {
-	err := validation.ValidateStruct(&d,
-		validation.Field(&d.GroupId, validation.Required, is.UUID),
-	)
-
-	return helpers.ValidationError(err, "realtimeController_validation.go", "groupMemInfo")
-}
-
 type dmChatHistory struct {
 	PartnerUsername string `json:"partnerUsername"`
 	Limit           int    `json:"limit"`

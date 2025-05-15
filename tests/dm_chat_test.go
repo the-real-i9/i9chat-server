@@ -210,7 +210,7 @@ func TestDMChat(t *testing.T) {
 		// user1's server reply (response) to event sent
 		user1ServerReply := <-user1.ServerWSMsg
 
-		td.Cmp(td.Require(t), user1ServerReply, td.SuperMapOf(map[string]any{
+		td.Cmp(td.Require(t), user1ServerReply, td.Map(map[string]any{
 			"event":   "server reply",
 			"toEvent": "send dm chat message",
 			"data": td.Map(map[string]any{
@@ -226,7 +226,7 @@ func TestDMChat(t *testing.T) {
 
 		user2NewMsgReceived := <-user2.ServerWSMsg
 
-		td.Cmp(td.Require(t), user2NewMsgReceived, td.SuperMapOf(map[string]any{
+		td.Cmp(td.Require(t), user2NewMsgReceived, td.Map(map[string]any{
 			"event": "new dm chat message",
 			"data": td.SuperMapOf(map[string]any{
 				"id":              user1NewMsgId,
@@ -250,7 +250,7 @@ func TestDMChat(t *testing.T) {
 
 		user2ServerReply := <-user2.ServerWSMsg
 
-		td.Cmp(td.Require(t), user2ServerReply, td.SuperMapOf(map[string]any{
+		td.Cmp(td.Require(t), user2ServerReply, td.Map(map[string]any{
 			"event":   "server reply",
 			"toEvent": "ack dm chat message delivered",
 			"data":    true,
@@ -262,7 +262,7 @@ func TestDMChat(t *testing.T) {
 
 		user1DelvAckReceipt := <-user1.ServerWSMsg
 
-		td.Cmp(td.Require(t), user1DelvAckReceipt, td.SuperMapOf(map[string]any{
+		td.Cmp(td.Require(t), user1DelvAckReceipt, td.Map(map[string]any{
 			"event": "dm chat message delivered",
 			"data": td.Map(map[string]any{
 				"partner_username": user2.Username,
@@ -286,7 +286,7 @@ func TestDMChat(t *testing.T) {
 
 		user2ServerReply := <-user2.ServerWSMsg
 
-		td.Cmp(td.Require(t), user2ServerReply, td.SuperMapOf(map[string]any{
+		td.Cmp(td.Require(t), user2ServerReply, td.Map(map[string]any{
 			"event":   "server reply",
 			"toEvent": "ack dm chat message read",
 			"data":    true,
@@ -298,7 +298,7 @@ func TestDMChat(t *testing.T) {
 
 		user1ReadAckReceipt := <-user1.ServerWSMsg
 
-		td.Cmp(td.Require(t), user1ReadAckReceipt, td.SuperMapOf(map[string]any{
+		td.Cmp(td.Require(t), user1ReadAckReceipt, td.Map(map[string]any{
 			"event": "dm chat message read",
 			"data": td.Map(map[string]any{
 				"partner_username": user2.Username,
@@ -312,7 +312,7 @@ func TestDMChat(t *testing.T) {
 	{
 		t.Log("Action: user2 sends message to user1")
 
-		image, err := os.ReadFile("./test_files/profile_pic.png")
+		photo, err := os.ReadFile("./test_files/profile_pic.png")
 		require.NoError(t, err)
 
 		err = user2.WSConn.WriteJSON(map[string]any{
@@ -320,9 +320,9 @@ func TestDMChat(t *testing.T) {
 			"data": map[string]any{
 				"partnerUsername": user1.Username,
 				"msg": map[string]any{
-					"type": "image",
+					"type": "photo",
 					"props": map[string]any{
-						"data":    image,
+						"data":    photo,
 						"caption": "I'm guuud!",
 					},
 				},
@@ -334,7 +334,7 @@ func TestDMChat(t *testing.T) {
 		// user2's server reply (response) to event sent
 		user2ServerReply := <-user2.ServerWSMsg
 
-		td.Cmp(td.Require(t), user2ServerReply, td.SuperMapOf(map[string]any{
+		td.Cmp(td.Require(t), user2ServerReply, td.Map(map[string]any{
 			"event":   "server reply",
 			"toEvent": "send dm chat message",
 			"data": td.Map(map[string]any{
@@ -350,11 +350,11 @@ func TestDMChat(t *testing.T) {
 
 		user1NewMsgReceived := <-user1.ServerWSMsg
 
-		td.Cmp(td.Require(t), user1NewMsgReceived, td.SuperMapOf(map[string]any{
+		td.Cmp(td.Require(t), user1NewMsgReceived, td.Map(map[string]any{
 			"event": "new dm chat message",
 			"data": td.SuperMapOf(map[string]any{
 				"id":              user2NewMsgId,
-				"content":         td.All(td.Contains(`"type":"image"`), td.Contains(`"caption":"I'm guuud!"`)),
+				"content":         td.All(td.Contains(`"type":"photo"`), td.Contains(`"caption":"I'm guuud!"`)),
 				"delivery_status": "sent",
 				"sender": td.SuperMapOf(map[string]any{
 					"username": user2.Username,
@@ -374,7 +374,7 @@ func TestDMChat(t *testing.T) {
 
 		user1ServerReply := <-user1.ServerWSMsg
 
-		td.Cmp(td.Require(t), user1ServerReply, td.SuperMapOf(map[string]any{
+		td.Cmp(td.Require(t), user1ServerReply, td.Map(map[string]any{
 			"event":   "server reply",
 			"toEvent": "ack dm chat message delivered",
 			"data":    true,
@@ -386,7 +386,7 @@ func TestDMChat(t *testing.T) {
 
 		user2DelvAckReceipt := <-user2.ServerWSMsg
 
-		td.Cmp(td.Require(t), user2DelvAckReceipt, td.SuperMapOf(map[string]any{
+		td.Cmp(td.Require(t), user2DelvAckReceipt, td.Map(map[string]any{
 			"event": "dm chat message delivered",
 			"data": td.Map(map[string]any{
 				"partner_username": user1.Username,
@@ -410,7 +410,7 @@ func TestDMChat(t *testing.T) {
 
 		user1ServerReply := <-user1.ServerWSMsg
 
-		td.Cmp(td.Require(t), user1ServerReply, td.SuperMapOf(map[string]any{
+		td.Cmp(td.Require(t), user1ServerReply, td.Map(map[string]any{
 			"event":   "server reply",
 			"toEvent": "ack dm chat message read",
 			"data":    true,
@@ -422,7 +422,7 @@ func TestDMChat(t *testing.T) {
 
 		user2ReadAckReceipt := <-user2.ServerWSMsg
 
-		td.Cmp(td.Require(t), user2ReadAckReceipt, td.SuperMapOf(map[string]any{
+		td.Cmp(td.Require(t), user2ReadAckReceipt, td.Map(map[string]any{
 			"event": "dm chat message read",
 			"data": td.Map(map[string]any{
 				"partner_username": user1.Username,
@@ -445,7 +445,7 @@ func TestDMChat(t *testing.T) {
 		// user1's server reply (response) to event sent
 		user1ServerReply := <-user1.ServerWSMsg
 
-		td.Cmp(td.Require(t), user1ServerReply, td.SuperMapOf(map[string]any{
+		td.Cmp(td.Require(t), user1ServerReply, td.Map(map[string]any{
 			"event":   "server reply",
 			"toEvent": "get dm chat history",
 			"data": td.All(
@@ -459,7 +459,7 @@ func TestDMChat(t *testing.T) {
 				}, nil)),
 				td.Contains(td.SuperMapOf(map[string]any{
 					"id":              user2NewMsgId,
-					"content":         td.All(td.Contains(`"type":"image"`), td.Contains(`"caption":"I'm guuud!"`)),
+					"content":         td.All(td.Contains(`"type":"photo"`), td.Contains(`"caption":"I'm guuud!"`)),
 					"delivery_status": "read",
 					"sender": td.SuperMapOf(map[string]any{
 						"username": user2.Username,

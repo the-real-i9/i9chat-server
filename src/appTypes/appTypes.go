@@ -70,7 +70,7 @@ func (m MsgContent) Validate() error {
 	return validation.ValidateStruct(&m,
 		validation.Field(&m.Type,
 			validation.Required,
-			validation.In("text", "voice", "audio", "video", "image", "file").Error("invalid message type"),
+			validation.In("text", "voice", "audio", "video", "photo", "file").Error("invalid message type"),
 		),
 		validation.Field(&m.MsgProps, validation.Required),
 		validation.Field(&m.TextContent, validation.When(msgType != "text", validation.Nil.Error("invalid property for the specified type")).Else(validation.Required)),

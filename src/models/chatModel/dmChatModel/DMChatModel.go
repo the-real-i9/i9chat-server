@@ -103,14 +103,15 @@ func ChatHistory(ctx context.Context, clientUsername, partnerUsername string, li
 	return messages, nil
 }
 
-func AckMessageDelivered(ctx context.Context, clientUsername, partnerUsername, msgId string, deliveredAt time.Time) error {
-	_, err := db.Query(
+func AckMessageDelivered(ctx context.Context, clientUsername, partnerUsername, msgId string, deliveredAt time.Time) (bool, error) {
+	res, err := db.Query(
 		ctx,
 		`
 		MATCH (clientChat:DMChat{ owner_username: $client_username, partner_username: $partner_username }),
       (clientChat)<-[:IN_DM_CHAT]-(message:DMMessage{ id: $message_id, delivery_status: "sent" })<-[:RECEIVES_MESSAGE]-()
     SET message.delivery_status = "delivered", message.delivered_at = $delivered_at, clientChat.unread_messages_count = coalesce(clientChat.unread_messages_count, 0) + 1
 
+		RETURN true AS done
 		`,
 		map[string]any{
 			"client_username":  clientUsername,
@@ -121,14 +122,20 @@ func AckMessageDelivered(ctx context.Context, clientUsername, partnerUsername, m
 	)
 	if err != nil {
 		log.Println("DMChatModel.go: AckMessageDelivered", err)
-		return fiber.ErrInternalServerError
+		return false, fiber.ErrInternalServerError
 	}
 
-	return nil
+	if len(res.Records) == 0 {
+		return false, nil
+	}
+
+	done, _, _ := neo4j.GetRecordValue[bool](res.Records[0], "done")
+
+	return done, nil
 }
 
-func AckMessageRead(ctx context.Context, clientUsername, partnerUsername, msgId string, readAt time.Time) error {
-	_, err := db.Query(
+func AckMessageRead(ctx context.Context, clientUsername, partnerUsername, msgId string, readAt time.Time) (bool, error) {
+	res, err := db.Query(
 		ctx,
 		`
 		MATCH (clientChat:DMChat{ owner_username: $client_username, partner_username: $partner_username }),
@@ -137,6 +144,7 @@ func AckMessageRead(ctx context.Context, clientUsername, partnerUsername, msgId 
     WITH clientChat, message, CASE coalesce(clientChat.unread_messages_count, 0) WHEN <> 0 THEN clientChat.unread_messages_count - 1 ELSE 0 END AS unread_messages_count
     SET message.delivery_status = "read", message.read_at = $read_at, clientChat.unread_messages_count = unread_messages_count
 
+		RETURN true AS done
 		`,
 		map[string]any{
 			"client_username":  clientUsername,
@@ -147,8 +155,14 @@ func AckMessageRead(ctx context.Context, clientUsername, partnerUsername, msgId 
 	)
 	if err != nil {
 		log.Println("DMChatModel.go: AckMessageRead", err)
-		return fiber.ErrInternalServerError
+		return false, fiber.ErrInternalServerError
 	}
 
-	return nil
+	if len(res.Records) == 0 {
+		return false, nil
+	}
+
+	done, _, _ := neo4j.GetRecordValue[bool](res.Records[0], "done")
+
+	return done, nil
 }
