@@ -395,6 +395,35 @@ func TestGroupChat(t *testing.T) {
 	}
 
 	{
+		t.Log("Action: check user2 group membership info")
+
+		req, err := http.NewRequest("GET", groupChatPath+"/"+newGroup.Id+"/membership_info", nil)
+		require.NoError(t, err)
+		req.Header.Add("Content-Type", "application/json")
+		req.Header.Set("Cookie", user2.SessionCookie)
+
+		res, err := http.DefaultClient.Do(req)
+		require.NoError(t, err)
+
+		if !assert.Equal(t, http.StatusOK, res.StatusCode) {
+			rb, err := errResBody(res.Body)
+			require.NoError(t, err)
+			t.Log("unexpected error:", rb)
+			return
+		}
+
+		rb, err := succResBody[map[string]any](res.Body)
+		require.NoError(t, err)
+
+		td.Cmp(td.Require(t), rb, td.Map(map[string]any{
+			"is_member":    true,
+			"user_role":    "admin",
+			"user_removed": false,
+			"user_left":    false,
+		}, nil))
+	}
+
+	{
 		t.Log("Action: user2 adds user4 & user5 | user4, user5 and other members are notified")
 
 		reqBody, err := makeReqBody(map[string]any{
@@ -760,8 +789,32 @@ func TestGroupChat(t *testing.T) {
 	}
 
 	{
-		t.Log("Action: user1 requests his group membership info")
+		t.Log("Action: check user1 group membership info")
 
+		req, err := http.NewRequest("GET", groupChatPath+"/"+newGroup.Id+"/membership_info", nil)
+		require.NoError(t, err)
+		req.Header.Add("Content-Type", "application/json")
+		req.Header.Set("Cookie", user1.SessionCookie)
+
+		res, err := http.DefaultClient.Do(req)
+		require.NoError(t, err)
+
+		if !assert.Equal(t, http.StatusOK, res.StatusCode) {
+			rb, err := errResBody(res.Body)
+			require.NoError(t, err)
+			t.Log("unexpected error:", rb)
+			return
+		}
+
+		rb, err := succResBody[map[string]any](res.Body)
+		require.NoError(t, err)
+
+		td.Cmp(td.Require(t), rb, td.Map(map[string]any{
+			"is_member":    true,
+			"user_role":    "member",
+			"user_removed": false,
+			"user_left":    false,
+		}, nil))
 	}
 
 	{
@@ -834,6 +887,35 @@ func TestGroupChat(t *testing.T) {
 	}
 
 	{
+		t.Log("Action: check user1 group membership info")
+
+		req, err := http.NewRequest("GET", groupChatPath+"/"+newGroup.Id+"/membership_info", nil)
+		require.NoError(t, err)
+		req.Header.Add("Content-Type", "application/json")
+		req.Header.Set("Cookie", user1.SessionCookie)
+
+		res, err := http.DefaultClient.Do(req)
+		require.NoError(t, err)
+
+		if !assert.Equal(t, http.StatusOK, res.StatusCode) {
+			rb, err := errResBody(res.Body)
+			require.NoError(t, err)
+			t.Log("unexpected error:", rb)
+			return
+		}
+
+		rb, err := succResBody[map[string]any](res.Body)
+		require.NoError(t, err)
+
+		td.Cmp(td.Require(t), rb, td.Map(map[string]any{
+			"is_member":    false,
+			"user_role":    nil,
+			"user_removed": true,
+			"user_left":    false,
+		}, nil))
+	}
+
+	{
 		t.Log("Action: user3 leaves group | other members are notified")
 
 		reqBody, err := makeReqBody(map[string]any{})
@@ -887,6 +969,35 @@ func TestGroupChat(t *testing.T) {
 				"info":     user3.Username + " left",
 				"group_id": newGroup.Id,
 			}, nil),
+		}, nil))
+	}
+
+	{
+		t.Log("Action: check user3 group membership info")
+
+		req, err := http.NewRequest("GET", groupChatPath+"/"+newGroup.Id+"/membership_info", nil)
+		require.NoError(t, err)
+		req.Header.Add("Content-Type", "application/json")
+		req.Header.Set("Cookie", user3.SessionCookie)
+
+		res, err := http.DefaultClient.Do(req)
+		require.NoError(t, err)
+
+		if !assert.Equal(t, http.StatusOK, res.StatusCode) {
+			rb, err := errResBody(res.Body)
+			require.NoError(t, err)
+			t.Log("unexpected error:", rb)
+			return
+		}
+
+		rb, err := succResBody[map[string]any](res.Body)
+		require.NoError(t, err)
+
+		td.Cmp(td.Require(t), rb, td.Map(map[string]any{
+			"is_member":    false,
+			"user_role":    nil,
+			"user_removed": false,
+			"user_left":    true,
 		}, nil))
 	}
 

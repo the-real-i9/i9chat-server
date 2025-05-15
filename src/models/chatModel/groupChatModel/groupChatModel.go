@@ -1290,19 +1290,25 @@ func GroupMemInfo(ctx context.Context, clientUsername, groupId string) (map[stri
 		OPTIONAL MATCH (group)-[userRemoved:REMOVED_USER]->(clientUser)
 		OPTIONAL MATCH (group)<-[userLeft:LEFT_GROUP]-(clientUser)
 
-		WITH CASE member WHEN IS NULL false ELSE true END AS is_member,
-			CASE member WHEN IS NULL null ELSE mr.role END AS user_role,
-			CASE 
-				WHEN member IS NULL null 
-				WHEN userRemoved IS NULL false 
+		WITH group,
+			CASE member 
+				WHEN IS NULL THEN false 
+				ELSE true 
+			END AS is_member,
+			CASE member 
+				WHEN IS NULL THEN null 
+				ELSE member.role 
+			END AS user_role,
+			CASE userRemoved 
+				WHEN IS NULL THEN false 
 				ELSE true 
 			END AS user_removed,
-			CASE 
-				WHEN member IS NULL null
-				WHEN userLeft IS NULL false 
+			CASE userLeft 
+				WHEN IS NULL THEN false 
 				ELSE true 
 			END AS user_left
-		RETURN { is_member, user_role, user_removed, user_left } AS group_mem_info
+
+		RETURN group { is_member, user_role, user_removed, user_left } AS group_mem_info
 		`,
 		map[string]any{
 			"client_username": clientUsername,
