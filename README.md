@@ -57,4 +57,6 @@ The following is a summary of the features supported by this API. Visit the API 
 
 ## API Documentation
 
-[Click Here](./API%20doc.md)
+For all **REST request/response Communication**: [Click Here](./.apidoc/restapi.md)
+
+For all **WebSocket Real-time Communication**: [Click Here](./.apidoc/websocketsapi.md)
