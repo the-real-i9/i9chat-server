@@ -266,10 +266,10 @@ func TestGroupChat(t *testing.T) {
 			"id":          td.Ignore(),
 			"name":        newGroup.Name,
 			"description": newGroup.Description,
-			"last_activity": td.Map(map[string]any{
-				"type": "group activity",
-				"info": "You added " + user2.Username,
-			}, nil),
+			"history": td.Contains(td.SuperMapOf(map[string]any{
+				"chat_hist_entry_type": "group activity",
+				"info":                 "You added " + user2.Username,
+			}, nil)),
 		}, nil))
 
 		newGroup.Id = rb["id"].(string)
@@ -282,10 +282,10 @@ func TestGroupChat(t *testing.T) {
 				"id":          newGroup.Id,
 				"name":        newGroup.Name,
 				"description": newGroup.Description,
-				"last_activity": td.Map(map[string]any{
-					"type": "group activity",
-					"info": "You were added",
-				}, nil),
+				"history": td.Contains(td.SuperMapOf(map[string]any{
+					"chat_hist_entry_type": "group activity",
+					"info":                 "You were added",
+				}, nil)),
 			}, nil),
 		}, nil))
 	}
@@ -318,10 +318,10 @@ func TestGroupChat(t *testing.T) {
 			"id":          newGroup.Id,
 			"name":        newGroup.Name,
 			"description": newGroup.Description,
-			"last_activity": td.Map(map[string]any{
-				"type": "group activity",
-				"info": "You joined",
-			}, nil),
+			"history": td.Contains(td.SuperMapOf(map[string]any{
+				"chat_hist_entry_type": "group activity",
+				"info":                 "You joined",
+			}, nil)),
 		}, nil))
 
 		user1GCJoinNotif := <-user1.ServerWSMsg
@@ -459,10 +459,10 @@ func TestGroupChat(t *testing.T) {
 				"id":          newGroup.Id,
 				"name":        newGroup.Name,
 				"description": newGroup.Description,
-				"last_activity": td.Map(map[string]any{
-					"type": "group activity",
-					"info": "You were added",
-				}, nil),
+				"history": td.Contains(td.SuperMapOf(map[string]any{
+					"chat_hist_entry_type": "group activity",
+					"info":                 "You were added",
+				}, nil)),
 			}, nil),
 		}, nil))
 
@@ -474,10 +474,10 @@ func TestGroupChat(t *testing.T) {
 				"id":          newGroup.Id,
 				"name":        newGroup.Name,
 				"description": newGroup.Description,
-				"last_activity": td.Map(map[string]any{
-					"type": "group activity",
-					"info": "You were added",
-				}, nil),
+				"history": td.Contains(td.SuperMapOf(map[string]any{
+					"chat_hist_entry_type": "group activity",
+					"info":                 "You were added",
+				}, nil)),
 			}, nil),
 		}, nil))
 
@@ -1251,38 +1251,38 @@ func TestGroupChat(t *testing.T) {
 			"toAction": "get group chat history",
 			"data": td.All(
 				td.Contains(td.SuperMapOf(map[string]any{
-					"hist_item_type": "group activity",
-					"info":           "You were added",
+					"chat_hist_entry_type": "group activity",
+					"info":                 "You were added",
 				}, nil)),
 				td.Contains(td.SuperMapOf(map[string]any{
-					"hist_item_type": "group activity",
-					"info":           fmt.Sprintf("%s changed group name from %s to %s", user1.Username, oldGroupName, newGroup.Name),
+					"chat_hist_entry_type": "group activity",
+					"info":                 fmt.Sprintf("%s changed group name from %s to %s", user1.Username, oldGroupName, newGroup.Name),
 				}, nil)),
 				td.Contains(td.SuperMapOf(map[string]any{
-					"hist_item_type": "group activity",
-					"info":           fmt.Sprintf("%s changed group description from %s to %s", user1.Username, oldGroupDescription, newGroup.Description),
+					"chat_hist_entry_type": "group activity",
+					"info":                 fmt.Sprintf("%s changed group description from %s to %s", user1.Username, oldGroupDescription, newGroup.Description),
 				}, nil)),
 				td.Contains(td.SuperMapOf(map[string]any{
-					"hist_item_type": "group activity",
-					"info":           fmt.Sprintf("%s changed group picture", user2.Username),
+					"chat_hist_entry_type": "group activity",
+					"info":                 fmt.Sprintf("%s changed group picture", user2.Username),
 				}, nil)),
 				td.Contains(td.SuperMapOf(map[string]any{
-					"hist_item_type": "group activity",
-					"info":           fmt.Sprintf("%s removed %s from group admins", user2.Username, user1.Username),
+					"chat_hist_entry_type": "group activity",
+					"info":                 fmt.Sprintf("%s removed %s from group admins", user2.Username, user1.Username),
 				}, nil)),
 				td.Contains(td.SuperMapOf(map[string]any{
-					"hist_item_type": "group activity",
-					"info":           fmt.Sprintf("%s removed %s", user2.Username, user1.Username),
+					"chat_hist_entry_type": "group activity",
+					"info":                 fmt.Sprintf("%s removed %s", user2.Username, user1.Username),
 				}, nil)),
 				td.Contains(td.SuperMapOf(map[string]any{
-					"hist_item_type": "group activity",
-					"info":           fmt.Sprintf("%s left", user3.Username),
+					"chat_hist_entry_type": "group activity",
+					"info":                 fmt.Sprintf("%s left", user3.Username),
 				}, nil)),
 				td.Contains(td.SuperMapOf(map[string]any{
-					"hist_item_type":  "message",
-					"id":              user4NewMsgId,
-					"content":         td.All(td.Contains(`"type":"text"`), td.Contains(`"textContent":"Hi. How're you doing?"`)),
-					"delivery_status": "read",
+					"chat_hist_entry_type": "message",
+					"id":                   user4NewMsgId,
+					"content":              td.All(td.Contains(`"type":"text"`), td.Contains(`"textContent":"Hi. How're you doing?"`)),
+					"delivery_status":      "read",
 					"sender": td.SuperMapOf(map[string]any{
 						"username": user4.Username,
 					}, nil),

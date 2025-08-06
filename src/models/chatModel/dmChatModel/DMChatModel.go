@@ -2,7 +2,6 @@ package dmChat
 
 import (
 	"context"
-	"i9chat/src/appTypes"
 	"i9chat/src/helpers"
 	"i9chat/src/models/db"
 	"log"
@@ -28,7 +27,7 @@ func SendMessage(ctx context.Context, clientUsername, partnerUsername, msgConten
 		MERGE (partnerUser)-[:HAS_CHAT]->(partnerChat:DMChat{ owner_username: $partner_username, partner_username: $client_username })-[:WITH_USER]->(clientUser)
 
 		WITH clientUser, clientChat, partnerUser, partnerChat
-		CREATE (message:DMMessage:DMChatEntry{ id: randomUUID(), chat_entry_type: "message", content: $message_content, delivery_status: "sent", created_at: $created_at }),
+		CREATE (message:DMMessage:DMChatEntry{ id: randomUUID(), chat_hist_entry_type: "message", content: $message_content, delivery_status: "sent", created_at: $created_at }),
 			(clientUser)-[:SENDS_MESSAGE]->(message)-[:IN_DM_CHAT]->(clientChat),
 			(partnerUser)-[:RECEIVES_MESSAGE]->(message)-[:IN_DM_CHAT]->(partnerChat)
 			
@@ -66,8 +65,8 @@ func ReactToMessage(ctx context.Context, clientUsername, partnerUsername, msgId,
 			(partnerUser)-[:HAS_CHAT]->(partnerChat)-[:WITH_USER]->(clientUser)
 		
 		WITH clientUser, message, partnerUser, partnerChat
-		MERGE (msgrxn:DMMessageRxn:DMChatEntry{ reactor_username: clientUser.username, message_id: message.id })
-		SET msgrxn.reaction = $reaction, msgrxn.chat_entry_type = "reaction"
+		MERGE (msgrxn:DMChatEntry{ reactor_username: clientUser.username, message_id: message.id })
+		SET msgrxn.reaction = $reaction, msgrxn.chat_hist_entry_type = "reaction"
 
 		MERGE (clientUser)-[crxn:REACTS_TO_MESSAGE]->(message)
 		SET crxn.reaction = $reaction, crxn.created_at = $at
@@ -99,21 +98,16 @@ func ReactToMessage(ctx context.Context, clientUsername, partnerUsername, msgId,
 	return done, nil
 }
 
-type reaction struct {
-	appTypes.User `json:"user"`
-	Rxn           string `json:"reaction"`
-}
-
 type ChatHistoryEntry struct {
-	EntryType string `json:"chat_entry_type"`
+	EntryType string `json:"chat_hist_entry_type"`
 	CreatedAt string `json:"created_at"`
 
 	// type: message
-	Id             string `json:"id,omitempty"`
-	Content        string `json:"content,omitempty"`
-	DeliveryStatus string `json:"delivery_status,omitempty"`
-	appTypes.User  `json:"sender,omitempty"`
-	Reactions      []reaction `json:"reactions,omitempty"`
+	Id             string           `json:"id,omitempty"`
+	Content        string           `json:"content,omitempty"`
+	DeliveryStatus string           `json:"delivery_status,omitempty"`
+	Sender         map[string]any   `json:"sender,omitempty"`
+	Reactions      []map[string]any `json:"reactions,omitempty"`
 }
 
 func ChatHistory(ctx context.Context, clientUsername, partnerUsername string, limit int, offset time.Time) ([]ChatHistoryEntry, error) {

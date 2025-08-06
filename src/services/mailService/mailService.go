@@ -10,10 +10,6 @@ import (
 )
 
 func SendMail(email string, subject string, body string) {
-	if os.Getenv("GO_ENV") == "test" || os.Getenv("GO_ENV") == "" {
-		return
-	}
-
 	user := os.Getenv("MAILING_EMAIL")
 	pass := os.Getenv("MAILING_PASSWORD")
 

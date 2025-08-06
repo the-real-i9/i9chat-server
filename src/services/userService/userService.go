@@ -97,7 +97,7 @@ func FindNearbyUsers(ctx context.Context, clientUsername string, x, y, radius fl
 	return user.FindNearby(ctx, clientUsername, x, y, radius)
 }
 
-func GetMyChats(ctx context.Context, clientUsername string) ([]user.ChatItem, error) {
+func GetMyChats(ctx context.Context, clientUsername string) (any, error) {
 	return user.GetMyChats(ctx, clientUsername)
 }
 

@@ -3,7 +3,6 @@ package realtimeController
 import (
 	"context"
 	"i9chat/src/helpers"
-	dmChat "i9chat/src/models/chatModel/dmChatModel"
 	"i9chat/src/services/chatServices/dmChatService"
 	"i9chat/src/services/chatServices/groupChatService"
 	"time"
@@ -93,7 +92,7 @@ func getGroupInfoHndl(ctx context.Context, actionData map[string]any) (map[strin
 	return groupChatService.GetGroupInfo(ctx, acd.GroupId)
 }
 
-func getDMChatHistoryHndl(ctx context.Context, clientUsername string, actionData map[string]any) ([]dmChat.ChatHistoryEntry, error) {
+func getDMChatHistoryHndl(ctx context.Context, clientUsername string, actionData map[string]any) (any, error) {
 	var acd dmChatHistory
 
 	helpers.ToStruct(actionData, &acd)

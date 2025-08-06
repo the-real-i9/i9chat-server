@@ -10,11 +10,6 @@ type ClientUser struct {
 	Username string
 }
 
-type User struct {
-	Username string `json:"username,omitempty"`
-	PPUrl    string `json:"profile_pic_url,omitempty"`
-}
-
 type ServerWSMsg struct {
 	Event string `json:"event"`
 	Data  any    `json:"data"`
