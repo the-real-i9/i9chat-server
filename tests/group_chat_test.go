@@ -1005,19 +1005,19 @@ func TestGroupChat(t *testing.T) {
 		t.Log("user2 requests group info")
 
 		err := user2.WSConn.WriteJSON(map[string]any{
-			"event": "get group info",
+			"action": "get group info",
 			"data": map[string]any{
 				"groupId": newGroup.Id,
 			},
 		})
 		require.NoError(t, err)
 
-		// user2's server reply (response) to event sent
+		// user2's server reply (response) to action
 		user2ServerReply := <-user2.ServerWSMsg
 
 		td.Cmp(td.Require(t), user2ServerReply, td.Map(map[string]any{
-			"event":   "server reply",
-			"toEvent": "get group info",
+			"event":    "server reply",
+			"toAction": "get group info",
 			"data": td.SuperMapOf(map[string]any{
 				"name":                 newGroup.Name,
 				"description":          newGroup.Description,
@@ -1033,7 +1033,7 @@ func TestGroupChat(t *testing.T) {
 		t.Log("Action: user4 sends message to group | other members receives the message")
 
 		err := user4.WSConn.WriteJSON(map[string]any{
-			"event": "send group chat message",
+			"action": "send group chat message",
 			"data": map[string]any{
 				"groupId": newGroup.Id,
 				"msg": map[string]any{
@@ -1047,12 +1047,12 @@ func TestGroupChat(t *testing.T) {
 		})
 		require.NoError(t, err)
 
-		// user4's server reply (response) to event sent
+		// user4's server reply (response) to action
 		user4ServerReply := <-user4.ServerWSMsg
 
 		td.Cmp(td.Require(t), user4ServerReply, td.Map(map[string]any{
-			"event":   "server reply",
-			"toEvent": "send group chat message",
+			"event":    "server reply",
+			"toAction": "send group chat message",
 			"data": td.Map(map[string]any{
 				"new_msg_id": td.Ignore(),
 			}, nil),
@@ -1104,7 +1104,7 @@ func TestGroupChat(t *testing.T) {
 
 		// user2 acknowledges 'delivered'
 		err := user2.WSConn.WriteJSON(map[string]any{
-			"event": "ack group chat message delivered",
+			"action": "ack group chat message delivered",
 			"data": map[string]any{
 				"groupId": newGroup.Id,
 				"msgId":   user4NewMsgId,
@@ -1116,8 +1116,8 @@ func TestGroupChat(t *testing.T) {
 		user2ServerReply := <-user2.ServerWSMsg
 
 		td.Cmp(td.Require(t), user2ServerReply, td.Map(map[string]any{
-			"event":   "server reply",
-			"toEvent": "ack group chat message delivered",
+			"event":    "server reply",
+			"toAction": "ack group chat message delivered",
 			"data": td.Map(map[string]any{
 				"delivered_to_all": false, // message hasn't delivered to all members
 			}, nil),
@@ -1125,7 +1125,7 @@ func TestGroupChat(t *testing.T) {
 
 		// user5 acknowledges 'delivered'
 		err = user5.WSConn.WriteJSON(map[string]any{
-			"event": "ack group chat message delivered",
+			"action": "ack group chat message delivered",
 			"data": map[string]any{
 				"groupId": newGroup.Id,
 				"msgId":   user4NewMsgId,
@@ -1137,8 +1137,8 @@ func TestGroupChat(t *testing.T) {
 		user5ServerReply := <-user5.ServerWSMsg
 
 		td.Cmp(td.Require(t), user5ServerReply, td.Map(map[string]any{
-			"event":   "server reply",
-			"toEvent": "ack group chat message delivered",
+			"event":    "server reply",
+			"toAction": "ack group chat message delivered",
 			"data": td.Map(map[string]any{
 				"delivered_to_all": true, // message has now delivered to all members
 				// user5 will now mark message as 'delivered'
@@ -1171,7 +1171,7 @@ func TestGroupChat(t *testing.T) {
 
 		// user5 acknowledges 'read'
 		err := user5.WSConn.WriteJSON(map[string]any{
-			"event": "ack group chat message read",
+			"action": "ack group chat message read",
 			"data": map[string]any{
 				"groupId": newGroup.Id,
 				"msgId":   user4NewMsgId,
@@ -1183,8 +1183,8 @@ func TestGroupChat(t *testing.T) {
 		user5ServerReply := <-user5.ServerWSMsg
 
 		td.Cmp(td.Require(t), user5ServerReply, td.Map(map[string]any{
-			"event":   "server reply",
-			"toEvent": "ack group chat message read",
+			"event":    "server reply",
+			"toAction": "ack group chat message read",
 			"data": td.Map(map[string]any{
 				"read_by_all": false, // message hasn't been read by all members
 			}, nil),
@@ -1192,7 +1192,7 @@ func TestGroupChat(t *testing.T) {
 
 		// user2 acknowledges 'read'
 		err = user2.WSConn.WriteJSON(map[string]any{
-			"event": "ack group chat message read",
+			"action": "ack group chat message read",
 			"data": map[string]any{
 				"groupId": newGroup.Id,
 				"msgId":   user4NewMsgId,
@@ -1204,8 +1204,8 @@ func TestGroupChat(t *testing.T) {
 		user2ServerReply := <-user2.ServerWSMsg
 
 		td.Cmp(td.Require(t), user2ServerReply, td.Map(map[string]any{
-			"event":   "server reply",
-			"toEvent": "ack group chat message read",
+			"event":    "server reply",
+			"toAction": "ack group chat message read",
 			"data": td.Map(map[string]any{
 				"read_by_all": true, // message has now been read by all members
 				// user2 will now mark message as 'read'
@@ -1236,19 +1236,19 @@ func TestGroupChat(t *testing.T) {
 		t.Log("Action: user5 opens group chat history")
 
 		err := user5.WSConn.WriteJSON(map[string]any{
-			"event": "get group chat history",
+			"action": "get group chat history",
 			"data": map[string]any{
 				"groupId": newGroup.Id,
 			},
 		})
 		require.NoError(t, err)
 
-		// user5's server reply (response) to event sent
+		// user5's server reply (response) to aciton
 		user5ServerReply := <-user5.ServerWSMsg
 
 		td.Cmp(td.Require(t), user5ServerReply, td.Map(map[string]any{
-			"event":   "server reply",
-			"toEvent": "get group chat history",
+			"event":    "server reply",
+			"toAction": "get group chat history",
 			"data": td.All(
 				td.Contains(td.SuperMapOf(map[string]any{
 					"hist_item_type": "group activity",

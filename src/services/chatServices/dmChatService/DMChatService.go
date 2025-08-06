@@ -13,7 +13,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
-func GetChatHistory(ctx context.Context, clientUsername, partnerUsername string, limit int, offset int64) ([]any, error) {
+func GetChatHistory(ctx context.Context, clientUsername, partnerUsername string, limit int, offset int64) ([]dmChat.ChatHistoryEntry, error) {
 	return dmChat.ChatHistory(ctx, clientUsername, partnerUsername, limit, time.UnixMilli(offset).UTC())
 }
 

@@ -1074,7 +1074,7 @@ func AckMessageDelivered(ctx context.Context, clientUsername, groupId, msgId str
 		memberUsernames := resMap["member_usernames"].([]any)
 		delvtoUsernames := resMap["delv_to_usernames"].([]any)
 
-		delvToAll := helpers.AllAinB(memberUsernames, delvtoUsernames)
+		delvToAll := helpers.AsubsetB(memberUsernames, delvtoUsernames)
 
 		resMap["all"] = delvToAll
 
@@ -1153,7 +1153,7 @@ func AckMessageRead(ctx context.Context, clientUsername, groupId, msgId string, 
 		memberUsernames := resMap["member_usernames"].([]any)
 		readbyUsernames := resMap["read_by_usernames"].([]any)
 
-		readByAll := helpers.AllAinB(memberUsernames, readbyUsernames)
+		readByAll := helpers.AsubsetB(memberUsernames, readbyUsernames)
 
 		resMap["all"] = readByAll
 

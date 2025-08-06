@@ -2,6 +2,7 @@ package dmChat
 
 import (
 	"context"
+	"i9chat/src/appTypes"
 	"i9chat/src/helpers"
 	"i9chat/src/models/db"
 	"log"
@@ -25,17 +26,11 @@ func SendMessage(ctx context.Context, clientUsername, partnerUsername, msgConten
 		MATCH (clientUser:User{ username: $client_username }), (partnerUser:User{ username: $partner_username })
 		MERGE (clientUser)-[:HAS_CHAT]->(clientChat:DMChat{ owner_username: $client_username, partner_username: $partner_username })-[:WITH_USER]->(partnerUser)
 		MERGE (partnerUser)-[:HAS_CHAT]->(partnerChat:DMChat{ owner_username: $partner_username, partner_username: $client_username })-[:WITH_USER]->(clientUser)
-		SET clientChat.last_activity_type = "message", 
-			partnerChat.last_activity_type = "message",
-			clientChat.updated_at = $created_at, 
-			partnerChat.updated_at = $created_at
 
 		WITH clientUser, clientChat, partnerUser, partnerChat
-		CREATE (message:DMMessage{ id: randomUUID(), content: $message_content, delivery_status: "sent", created_at: $created_at }),
+		CREATE (message:DMMessage:DMChatEntry{ id: randomUUID(), chat_entry_type: "message", content: $message_content, delivery_status: "sent", created_at: $created_at }),
 			(clientUser)-[:SENDS_MESSAGE]->(message)-[:IN_DM_CHAT]->(clientChat),
 			(partnerUser)-[:RECEIVES_MESSAGE]->(message)-[:IN_DM_CHAT]->(partnerChat)
-		SET clientChat.last_message_id = message.id,
-			partnerChat.last_message_id = message.id
 			
 		WITH message, toString(message.created_at) AS created_at, clientUser { .username, .profile_pic_url, .connection_status } AS sender
 		RETURN { new_msg_id: message.id } AS client_resp,
@@ -62,25 +57,81 @@ func SendMessage(ctx context.Context, clientUsername, partnerUsername, msgConten
 	return newMsg, nil
 }
 
-func ReactToMessage(ctx context.Context, clientUsername, msgId string, reaction rune) error {
+func ReactToMessage(ctx context.Context, clientUsername, partnerUsername, msgId, reaction string, at time.Time) (bool, error) {
+	res, err := db.Query(
+		ctx,
+		`
+		MATCH (clientUser)-[:HAS_CHAT]->(clientChat:Chat{ owner_username: $client_username, partner_username: $partner_username })-[:WITH_USER]->(partnerUser),
+			(clientChat)<-[:IN_DM_CHAT]-(message:DMMessage{ id: $message_id }),
+			(partnerUser)-[:HAS_CHAT]->(partnerChat)-[:WITH_USER]->(clientUser)
+		
+		WITH clientUser, message, partnerUser, partnerChat
+		MERGE (msgrxn:DMMessageRxn:DMChatEntry{ reactor_username: clientUser.username, message_id: message.id })
+		SET msgrxn.reaction = $reaction, msgrxn.chat_entry_type = "reaction"
 
-	return nil
+		MERGE (clientUser)-[crxn:REACTS_TO_MESSAGE]->(message)
+		SET crxn.reaction = $reaction, crxn.created_at = $at
+		
+		MERGE (clientUser)-[:SENDS_REACTION]->(msgrxn)-[:IN_DM_CHAT]->(clientChat)
+		MERGE (partnerUser)-[:RECEIVES_REACTION]->(msgrxn)-[:IN_DM_CHAT]->(partnerChat)
+
+		RETURN true AS done
+		`,
+		map[string]any{
+			"client_username":  clientUsername,
+			"partner_username": partnerUsername,
+			"message_id":       msgId,
+			"reaction":         reaction,
+			"at":               at,
+		},
+	)
+	if err != nil {
+		log.Println("DMChatModel.go: ReactToMessage:", err)
+		return false, fiber.ErrInternalServerError
+	}
+
+	if len(res.Records) == 0 {
+		return false, nil
+	}
+
+	done, _, _ := neo4j.GetRecordValue[bool](res.Records[0], "done")
+
+	return done, nil
 }
 
-func ChatHistory(ctx context.Context, clientUsername, partnerUsername string, limit int, offset time.Time) ([]any, error) {
+type reaction struct {
+	appTypes.User `json:"user"`
+	Rxn           string `json:"reaction"`
+}
+
+type ChatHistoryEntry struct {
+	EntryType string `json:"chat_entry_type"`
+	CreatedAt string `json:"created_at"`
+
+	// type: message
+	Id             string `json:"id,omitempty"`
+	Content        string `json:"content,omitempty"`
+	DeliveryStatus string `json:"delivery_status,omitempty"`
+	appTypes.User  `json:"sender,omitempty"`
+	Reactions      []reaction `json:"reactions,omitempty"`
+}
+
+func ChatHistory(ctx context.Context, clientUsername, partnerUsername string, limit int, offset time.Time) ([]ChatHistoryEntry, error) {
+	var chatHistory []ChatHistoryEntry
+
 	res, err := db.Query(
 		ctx,
 		`
 		MATCH (clientChat:DMChat{ owner_username: $client_username, partner_username: $partner_username })
 		
-		OPTIONAL MATCH (clientChat)<-[:IN_DM_CHAT]-(message:DMMessage WHERE message.created_at < $offset)
-		OPTIONAL MATCH (message)<-[:SENDS_MESSAGE]-(senderUser)
-		OPTIONAL MATCH (message)<-[rxn:REACTS_TO_MESSAGE]-(reactorUser)
+		OPTIONAL MATCH (clientChat)<-[:IN_DM_CHAT]-(entry:DMChatEntry WHERE entry.created_at < $offset)
+		OPTIONAL MATCH (entry)<-[:SENDS_MESSAGE]-(senderUser)
+		OPTIONAL MATCH (entry)<-[rxn:REACTS_TO_MESSAGE]-(reactorUser)
 			
-		WITH message, toString(message.created_at) AS created_at, senderUser { .username, .profile_pic_url } AS sender, collect({ user: reactorUser { .username, .profile_pic_url }, reaction: rxn.reaction }) AS reactions
-		ORDER BY message.created_at
+		WITH entry, toString(entry.created_at) AS created_at, senderUser { .username, .profile_pic_url } AS sender, collect({ user: reactorUser { .username, .profile_pic_url }, reaction: rxn.reaction }) AS reactions
+		ORDER BY entry.created_at
 		LIMIT $limit
-		RETURN collect(message { .*, created_at, sender, reactions }) AS chat_history
+		RETURN collect(entry { .*, created_at, sender, reactions }) AS chat_history
 		`,
 		map[string]any{
 			"client_username":  clientUsername,
@@ -98,9 +149,11 @@ func ChatHistory(ctx context.Context, clientUsername, partnerUsername string, li
 		return nil, nil
 	}
 
-	messages, _, _ := neo4j.GetRecordValue[[]any](res.Records[0], "chat_history")
+	history, _, _ := neo4j.GetRecordValue[[]any](res.Records[0], "chat_history")
 
-	return messages, nil
+	helpers.ToStruct(history, &chatHistory)
+
+	return chatHistory, nil
 }
 
 func AckMessageDelivered(ctx context.Context, clientUsername, partnerUsername, msgId string, deliveredAt time.Time) (bool, error) {

@@ -9,18 +9,19 @@ import (
 	"github.com/go-ozzo/ozzo-validation/v4/is"
 )
 
-type clientEventBody struct {
-	Event string         `json:"event"`
-	Data  map[string]any `json:"data"`
+// Realtime Action Body
+type rtActionBody struct {
+	Action string         `json:"action"`
+	Data   map[string]any `json:"data"`
 }
 
-func (b clientEventBody) Validate() error {
+func (b rtActionBody) Validate() error {
 	err := validation.ValidateStruct(&b,
-		validation.Field(&b.Event, validation.Required),
+		validation.Field(&b.Action, validation.Required),
 		validation.Field(&b.Data, validation.Required),
 	)
 
-	return helpers.ValidationError(err, "realtimeController_validation.go", "clientEventBody")
+	return helpers.ValidationError(err, "realtimeController_validation.go", "rtActionBody")
 }
 
 type sendDMChatMsg struct {

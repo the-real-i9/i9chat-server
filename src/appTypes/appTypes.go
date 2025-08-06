@@ -10,6 +10,11 @@ type ClientUser struct {
 	Username string
 }
 
+type User struct {
+	Username string `json:"username,omitempty"`
+	PPUrl    string `json:"profile_pic_url,omitempty"`
+}
+
 type ServerWSMsg struct {
 	Event string `json:"event"`
 	Data  any    `json:"data"`
@@ -38,30 +43,18 @@ type MsgContent struct {
 }
 
 func (m *MsgContent) SetMediaMIME(mediaType, mediaExt string) {
-	mediaTypePtr := new(string)
-	*mediaTypePtr = mediaType
-
-	mediaExtPtr := new(string)
-	*mediaExtPtr = mediaExt
-
-	m.MimeType = mediaTypePtr
-	m.Extension = mediaExtPtr
+	m.MimeType = &mediaType
+	m.Extension = &mediaExt
 }
 
-func (m *MsgContent) SetMediaSize(size int64) {
-	mediaSizePtr := new(int64)
-	*mediaSizePtr = size
-
-	m.Size = mediaSizePtr
+func (m *MsgContent) SetMediaSize(mediaSize int64) {
+	m.Size = &mediaSize
 }
 
-func (m *MsgContent) SetMediaUrl(url string) {
+func (m *MsgContent) SetMediaUrl(mediaUrl string) {
 	m.Data = nil
 
-	mediaUrlPtr := new(string)
-	*mediaUrlPtr = url
-
-	m.Url = mediaUrlPtr
+	m.Url = &mediaUrl
 }
 
 func (m MsgContent) Validate() error {

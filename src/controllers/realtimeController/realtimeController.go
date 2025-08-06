@@ -25,7 +25,7 @@ var WSStream = websocket.New(func(c *websocket.Conn) {
 	var w_err error
 
 	for {
-		var body clientEventBody
+		var body rtActionBody
 
 		if w_err != nil {
 			log.Println(w_err)
@@ -39,94 +39,94 @@ var WSStream = websocket.New(func(c *websocket.Conn) {
 		}
 
 		if val_err := body.Validate(); val_err != nil {
-			w_err = c.WriteJSON(helpers.WSErrReply(val_err, body.Event))
+			w_err = c.WriteJSON(helpers.WSErrReply(val_err, body.Action))
 			continue
 		}
 
-		switch body.Event {
+		switch body.Action {
 		case "send dm chat message":
 			respData, err := sendDMChatMsgHndl(ctx, clientUser.Username, body.Data)
 			if err != nil {
-				w_err = c.WriteJSON(helpers.WSErrReply(err, body.Event))
+				w_err = c.WriteJSON(helpers.WSErrReply(err, body.Action))
 				continue
 			}
 
-			w_err = c.WriteJSON(helpers.WSReply(respData, body.Event))
+			w_err = c.WriteJSON(helpers.WSReply(respData, body.Action))
 		case "ack dm chat message delivered":
 
 			respData, err := ackDMChatMsgDeliveredHndl(ctx, clientUser.Username, body.Data)
 			if err != nil {
-				w_err = c.WriteJSON(helpers.WSErrReply(err, body.Event))
+				w_err = c.WriteJSON(helpers.WSErrReply(err, body.Action))
 				continue
 			}
 
-			w_err = c.WriteJSON(helpers.WSReply(respData, body.Event))
+			w_err = c.WriteJSON(helpers.WSReply(respData, body.Action))
 		case "ack dm chat message read":
 
 			respData, err := ackDMChatMsgReadHndl(ctx, clientUser.Username, body.Data)
 			if err != nil {
-				w_err = c.WriteJSON(helpers.WSErrReply(err, body.Event))
+				w_err = c.WriteJSON(helpers.WSErrReply(err, body.Action))
 				continue
 			}
 
-			w_err = c.WriteJSON(helpers.WSReply(respData, body.Event))
+			w_err = c.WriteJSON(helpers.WSReply(respData, body.Action))
 		case "get dm chat history":
 
 			respData, err := getDMChatHistoryHndl(ctx, clientUser.Username, body.Data)
 			if err != nil {
-				w_err = c.WriteJSON(helpers.WSErrReply(err, body.Event))
+				w_err = c.WriteJSON(helpers.WSErrReply(err, body.Action))
 				continue
 			}
 
-			w_err = c.WriteJSON(helpers.WSReply(respData, body.Event))
+			w_err = c.WriteJSON(helpers.WSReply(respData, body.Action))
 		case "send group chat message":
 
 			respData, err := sendGroupChatMsgHndl(ctx, clientUser.Username, body.Data)
 			if err != nil {
-				w_err = c.WriteJSON(helpers.WSErrReply(err, body.Event))
+				w_err = c.WriteJSON(helpers.WSErrReply(err, body.Action))
 				continue
 			}
 
-			w_err = c.WriteJSON(helpers.WSReply(respData, body.Event))
+			w_err = c.WriteJSON(helpers.WSReply(respData, body.Action))
 		case "ack group chat message delivered":
 
 			respData, err := ackGroupChatMsgDeliveredHndl(ctx, clientUser.Username, body.Data)
 			if err != nil {
-				w_err = c.WriteJSON(helpers.WSErrReply(err, body.Event))
+				w_err = c.WriteJSON(helpers.WSErrReply(err, body.Action))
 				continue
 			}
 
-			w_err = c.WriteJSON(helpers.WSReply(respData, body.Event))
+			w_err = c.WriteJSON(helpers.WSReply(respData, body.Action))
 		case "ack group chat message read":
 
 			respData, err := ackGroupChatMsgReadHndl(ctx, clientUser.Username, body.Data)
 			if err != nil {
-				w_err = c.WriteJSON(helpers.WSErrReply(err, body.Event))
+				w_err = c.WriteJSON(helpers.WSErrReply(err, body.Action))
 				continue
 			}
 
-			w_err = c.WriteJSON(helpers.WSReply(respData, body.Event))
+			w_err = c.WriteJSON(helpers.WSReply(respData, body.Action))
 		case "get group chat history":
 
 			respData, err := getGroupChatHistoryHndl(ctx, clientUser.Username, body.Data)
 			if err != nil {
-				w_err = c.WriteJSON(helpers.WSErrReply(err, body.Event))
+				w_err = c.WriteJSON(helpers.WSErrReply(err, body.Action))
 				continue
 			}
 
-			w_err = c.WriteJSON(helpers.WSReply(respData, body.Event))
+			w_err = c.WriteJSON(helpers.WSReply(respData, body.Action))
 		case "get group info":
 
 			respData, err := getGroupInfoHndl(ctx, body.Data)
 			if err != nil {
-				w_err = c.WriteJSON(helpers.WSErrReply(err, body.Event))
+				w_err = c.WriteJSON(helpers.WSErrReply(err, body.Action))
 				continue
 			}
 
-			w_err = c.WriteJSON(helpers.WSReply(respData, body.Event))
+			w_err = c.WriteJSON(helpers.WSReply(respData, body.Action))
 
 		default:
-			w_err = c.WriteJSON(helpers.WSErrReply(fmt.Errorf("invalid event: %s", body.Event), body.Event))
+			w_err = c.WriteJSON(helpers.WSErrReply(fmt.Errorf("invalid event: %s", body.Action), body.Action))
 			continue
 		}
 	}

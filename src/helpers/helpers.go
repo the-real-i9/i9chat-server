@@ -26,7 +26,7 @@ func ToStruct(val any, dest any) {
 	}
 }
 
-func WSErrReply(err error, toEvent string) map[string]any {
+func WSErrReply(err error, toAction string) map[string]any {
 
 	errCode := fiber.StatusInternalServerError
 
@@ -35,8 +35,8 @@ func WSErrReply(err error, toEvent string) map[string]any {
 	}
 
 	errResp := map[string]any{
-		"event":   "server error",
-		"toEvent": toEvent,
+		"event":    "server error",
+		"toAction": toAction,
 		"data": map[string]any{
 			"statusCode": errCode,
 			"errorMsg":   fmt.Sprint(err),
@@ -46,12 +46,12 @@ func WSErrReply(err error, toEvent string) map[string]any {
 	return errResp
 }
 
-func WSReply(data any, toEvent string) map[string]any {
+func WSReply(data any, toAction string) map[string]any {
 
 	reply := map[string]any{
-		"event":   "server reply",
-		"toEvent": toEvent,
-		"data":    data,
+		"event":    "server reply",
+		"toAction": toAction,
+		"data":     data,
 	}
 
 	return reply
@@ -72,7 +72,7 @@ func Cookie(name, value, path string, maxAge int) *fiber.Cookie {
 	return c
 }
 
-func AllAinB[T comparable](sA []T, sB []T) bool {
+func AsubsetB[T comparable](sA []T, sB []T) bool {
 	if len(sB) == 0 {
 		return false
 	}
