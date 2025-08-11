@@ -25,7 +25,7 @@ func RequestNewAccount(ctx context.Context, email string) (any, map[string]any, 
 		return nil, nil, fiber.NewError(fiber.StatusBadRequest, fmt.Sprintf("An account with %s already exists", email))
 	}
 
-	verfCode, expires := securityServices.GenerateVerifCodeExp()
+	verfCode, expires := securityServices.GenerateTokenCodeExp()
 
 	go mailService.SendMail(email, "Email Verification", fmt.Sprintf("Your email verification code is: <b>%s</b>", verfCode))
 

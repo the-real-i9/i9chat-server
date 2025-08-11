@@ -1,4 +1,4 @@
-package middlewares
+package sessionMiddlewares
 
 import (
 	"encoding/json"
@@ -7,7 +7,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
-func ValidateSession(c *fiber.Ctx) error {
+func SignupSession(c *fiber.Ctx) error {
 	ssStr := c.Cookies("signup")
 
 	if ssStr == "" {

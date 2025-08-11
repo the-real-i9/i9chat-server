@@ -81,7 +81,7 @@ func TestUserAuth(t *testing.T) {
 	{
 		t.Log("Action: user1 sends the correct email verf code")
 
-		reqBody, err := makeReqBody(map[string]any{"code": os.Getenv("DUMMY_VERF_TOKEN")})
+		reqBody, err := makeReqBody(map[string]any{"code": os.Getenv("DUMMY_TOKEN")})
 		require.NoError(t, err)
 
 		req, err := http.NewRequest("POST", signupPath+"/verify_email", reqBody)

@@ -1,7 +1,7 @@
 package appRoutes
 
 import (
-	"i9chat/src/middlewares"
+	"i9chat/src/middlewares/authMiddlewares"
 	"i9chat/src/routes/appRoutes/groupChatRoutes"
 	"i9chat/src/routes/appRoutes/realtimeRoute"
 	"i9chat/src/routes/appRoutes/userRoutes"
@@ -10,7 +10,7 @@ import (
 )
 
 func Route(router fiber.Router) {
-	router.Use(middlewares.UserAuth)
+	router.Use(authMiddlewares.UserAuth)
 
 	router.Route("/user", userRoutes.Route)
 

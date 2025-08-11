@@ -43,7 +43,7 @@ jobs:
           GCS_BUCKET: ${{ vars.GCS_BUCKET }}
           GCS_API_KEY: ${{ secrets.GCS_API_KEY }}
           SERVER_HOST: ${{ vars.SERVER_HOST }}
-          DUMMY_VERF_TOKEN: ${{ secrets.DUMMY_VERF_TOKEN }}
+          DUMMY_TOKEN: ${{ secrets.DUMMY_TOKEN }}
           GO_ENV: test
 
       - name: Run Test
@@ -52,4 +52,4 @@ jobs:
           NEO4J_URL: "neo4j://localhost"
           NEO4J_USER: neo4j
           NEO4J_PASSWORD: "pa@sw$*d"
-          DUMMY_VERF_TOKEN: ${{ secrets.DUMMY_VERF_TOKEN }}
+          DUMMY_TOKEN: ${{ secrets.DUMMY_TOKEN }}

@@ -99,7 +99,7 @@ func TestGroupChat(t *testing.T) {
 			}
 
 			{
-				reqBody, err := makeReqBody(map[string]any{"code": os.Getenv("DUMMY_VERF_TOKEN")})
+				reqBody, err := makeReqBody(map[string]any{"code": os.Getenv("DUMMY_TOKEN")})
 				require.NoError(t, err)
 
 				req, err := http.NewRequest("POST", signupPath+"/verify_email", reqBody)

@@ -95,7 +95,7 @@ func SessionFind(ctx context.Context, username string) (map[string]any, error) {
 	res, err := db.Query(
 		ctx,
 		`
-		MATCH (u:User { username: $username })
+		MATCH (u:User{ username: $username })
 
 		WITH u, { x: toFloat(u.geolocation.x), y: toFloat(u.geolocation.y) } AS geolocation, toString(u.last_seen) AS last_seen
 		RETURN u { .username, .email, .profile_pic_url, .presence, last_seen, geolocation } AS found_user
@@ -116,6 +116,26 @@ func SessionFind(ctx context.Context, username string) (map[string]any, error) {
 	found_user, _, _ := neo4j.GetRecordValue[map[string]any](res.Records[0], "found_user")
 
 	return found_user, nil
+}
+
+func ChangePassword(ctx context.Context, email, newPassword string) error {
+	_, err := db.Query(
+		ctx,
+		`
+		MATCH (user:User{ email: $email })
+		SET user.password = $newPassword
+		`,
+		map[string]any{
+			"email":       email,
+			"newPassword": newPassword,
+		},
+	)
+	if err != nil {
+		log.Println("userModel.go: ChangePassword:", err)
+		return fiber.ErrInternalServerError
+	}
+
+	return nil
 }
 
 func FindNearby(ctx context.Context, clientUsername string, x, y, radius float64) ([]any, error) {
