@@ -18,7 +18,6 @@ func TestUserOps(t *testing.T) {
 		Email:    "mikeross@gmail.com",
 		Username: "mikeross",
 		Password: "recheal_zane",
-		Phone:    "08183443588",
 		Geolocation: UserGeolocation{
 			X: 5.0,
 			Y: 2.0,
@@ -29,7 +28,6 @@ func TestUserOps(t *testing.T) {
 		Email:    "harveyspecter@gmail.com",
 		Username: "harvey",
 		Password: "scottie_",
-		Phone:    "08183443589",
 		Geolocation: UserGeolocation{
 			X: 4.0,
 			Y: 3.0,
@@ -40,7 +38,6 @@ func TestUserOps(t *testing.T) {
 		Email:    "jessicapearson@gmail.com",
 		Username: "jessica",
 		Password: "jeff_malone",
-		Phone:    "08183443590",
 		Geolocation: UserGeolocation{
 			X: 3.0,
 			Y: 4.0,
@@ -110,7 +107,6 @@ func TestUserOps(t *testing.T) {
 				reqBody, err := makeReqBody(map[string]any{
 					"username": user.Username,
 					"password": user.Password,
-					"phone":    user.Phone,
 					"geolocation": map[string]any{
 						"x": user.Geolocation.X,
 						"y": user.Geolocation.Y,
@@ -144,60 +140,6 @@ func TestUserOps(t *testing.T) {
 				user.SessionCookie = res.Header.Get("Set-Cookie")
 			}
 		}
-	}
-
-	{
-		t.Log("Action: user1 changes her phone number")
-
-		user1.Phone = "07083249523"
-
-		reqBody, err := makeReqBody(map[string]any{"newPhoneNumber": user1.Phone})
-		require.NoError(t, err)
-
-		req, err := http.NewRequest("POST", userPath+"/change_phone_number", reqBody)
-		require.NoError(t, err)
-		req.Header.Set("Cookie", user1.SessionCookie)
-		req.Header.Add("Content-Type", "application/json")
-
-		res, err := http.DefaultClient.Do(req)
-		require.NoError(t, err)
-
-		if !assert.Equal(t, http.StatusOK, res.StatusCode) {
-			rb, err := errResBody(res.Body)
-			require.NoError(t, err)
-			t.Log("unexpected error:", rb)
-			return
-		}
-
-		rb, err := succResBody[bool](res.Body)
-		require.NoError(t, err)
-		require.True(t, rb)
-	}
-
-	{
-		t.Log("Action: user1 confirms her updated profile | phone number changed")
-
-		req, err := http.NewRequest("GET", userPath+"/my_profile", nil)
-		require.NoError(t, err)
-		req.Header.Set("Cookie", user1.SessionCookie)
-
-		res, err := http.DefaultClient.Do(req)
-		require.NoError(t, err)
-
-		if !assert.Equal(t, http.StatusOK, res.StatusCode) {
-			rb, err := errResBody(res.Body)
-			require.NoError(t, err)
-			t.Log("unexpected error:", rb)
-			return
-		}
-
-		rb, err := succResBody[map[string]any](res.Body)
-		require.NoError(t, err)
-
-		td.Cmp(td.Require(t), rb, td.SuperMapOf(map[string]any{
-			"username": user1.Username,
-			"phone":    user1.Phone,
-		}, nil))
 	}
 
 	{

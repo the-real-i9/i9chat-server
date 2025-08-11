@@ -19,7 +19,6 @@ func TestUserAuth(t *testing.T) {
 		Email:    "suberu@gmail.com",
 		Username: "suberu",
 		Password: "sketeppy",
-		Phone:    "08283443588",
 		Geolocation: UserGeolocation{
 			X: 5.0,
 			Y: 2.0,
@@ -116,7 +115,6 @@ func TestUserAuth(t *testing.T) {
 		reqBody, err := makeReqBody(map[string]any{
 			"username": user1.Username,
 			"password": user1.Password,
-			"phone":    user1.Phone,
 			"geolocation": map[string]any{
 				"x": user1.Geolocation.X,
 				"y": user1.Geolocation.Y,

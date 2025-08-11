@@ -42,14 +42,15 @@ The following is a summary of the features supported by this API. Visit the API 
 
 ### Group Chat
 
+- Everything in DM Chat
 - Start a Group, Add members, Make Admins etc.
 - Join Group, Leave Group etc.
-- Everything in DM Chat
 
-### Search for people you know
+### Make Friends
 
-- You can search for users by their emails, usernames, or phone numbers.
-- You can also exchange a bunch of numbers from a phonebook for corresponding accounts.
+- You can search for friends by their email, or username.
+- Send friend request
+- Friend Suggestions
 
 ### Moments (Upcoming)
 

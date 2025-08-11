@@ -249,7 +249,7 @@ func ReactToMessage(ctx context.Context, clientUsername, partnerUsername, msgId,
 			(partnerUser)-[:HAS_CHAT]->(partnerChat)-[:WITH_USER]->(clientUser)
 		
 		WITH clientUser, message, partnerUser, partnerChat
-		MERGE (msgrxn:DMChatEntry{ reactor_username: clientUser.username, message_id: message.id })
+		MERGE (msgrxn:DMMessageReaction:DMChatEntry{ reactor_username: clientUser.username, message_id: message.id })
 		SET msgrxn.reaction = $reaction, msgrxn.chat_hist_entry_type = "reaction"
 
 		MERGE (clientUser)-[crxn:REACTS_TO_MESSAGE]->(message)

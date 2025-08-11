@@ -53,17 +53,17 @@ func initNeo4jDriver() error {
 			return nil, err
 		}
 
-		_, err = tx.Run(ctx, `CREATE CONSTRAINT unique_phone IF NOT EXISTS FOR (u:User) REQUIRE u.phone IS UNIQUE`, nil)
-		if err != nil {
-			return nil, err
-		}
-
 		_, err = tx.Run(ctx, `CREATE CONSTRAINT unique_dm_chat IF NOT EXISTS FOR (dmc:DMChat) REQUIRE (dmc.owner_username, dmc.partner_username) IS UNIQUE`, nil)
 		if err != nil {
 			return nil, err
 		}
 
 		_, err = tx.Run(ctx, `CREATE CONSTRAINT unique_dm_msg IF NOT EXISTS FOR (dmm:DMMessage) REQUIRE dmm.id IS UNIQUE`, nil)
+		if err != nil {
+			return nil, err
+		}
+
+		_, err = tx.Run(ctx, `CREATE CONSTRAINT unique_dm_msg_rxn IF NOT EXISTS FOR (dmmrxn:DMMessageReaction) REQUIRE (dmmrxn.reactor_username, dmmrxn.message_id) IS UNIQUE`, nil)
 		if err != nil {
 			return nil, err
 		}
@@ -79,6 +79,11 @@ func initNeo4jDriver() error {
 		}
 
 		_, err = tx.Run(ctx, `CREATE CONSTRAINT unique_group_msg IF NOT EXISTS FOR (gm:GroupMessage) REQUIRE gm.id IS UNIQUE`, nil)
+		if err != nil {
+			return nil, err
+		}
+
+		_, err = tx.Run(ctx, `CREATE CONSTRAINT unique_group_msg_rxn IF NOT EXISTS FOR (gmrxn:GroupMessageReaction) REQUIRE (gmrxn.reactor_username, gmrxn.message_id) IS UNIQUE`, nil)
 		if err != nil {
 			return nil, err
 		}

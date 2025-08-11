@@ -20,7 +20,6 @@ func TestDMChat(t *testing.T) {
 		Email:    "louislitt@gmail.com",
 		Username: "louislitt",
 		Password: "who's norma",
-		Phone:    "08145423518",
 		Geolocation: UserGeolocation{
 			X: 5.0,
 			Y: 3.0,
@@ -31,7 +30,6 @@ func TestDMChat(t *testing.T) {
 		Email:    "jeffmalone@gmail.com",
 		Username: "jeffyboy",
 		Password: "jessica_",
-		Phone:    "08113425589",
 		Geolocation: UserGeolocation{
 			X: 4.0,
 			Y: 3.0,
@@ -101,7 +99,6 @@ func TestDMChat(t *testing.T) {
 				reqBody, err := makeReqBody(map[string]any{
 					"username": user.Username,
 					"password": user.Password,
-					"phone":    user.Phone,
 					"geolocation": map[string]any{
 						"x": user.Geolocation.X,
 						"y": user.Geolocation.Y,

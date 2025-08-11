@@ -22,7 +22,6 @@ func TestGroupChat(t *testing.T) {
 		Email:    "harrydasouza@gmail.com",
 		Username: "harry",
 		Password: "harry_dasou",
-		Phone:    "07049423518",
 		Geolocation: UserGeolocation{
 			X: 0.0,
 			Y: 5.0,
@@ -33,7 +32,6 @@ func TestGroupChat(t *testing.T) {
 		Email:    "conradharrigan@gmail.com",
 		Username: "conrad",
 		Password: "grandpa_harr",
-		Phone:    "09113625189",
 		Geolocation: UserGeolocation{
 			X: 1.0,
 			Y: 6.0,
@@ -44,7 +42,6 @@ func TestGroupChat(t *testing.T) {
 		Email:    "kevinharrigan@gmail.com",
 		Username: "kevin",
 		Password: "daddy_harr",
-		Phone:    "09113615682",
 		Geolocation: UserGeolocation{
 			X: 2.0,
 			Y: 7.0,
@@ -55,7 +52,6 @@ func TestGroupChat(t *testing.T) {
 		Email:    "eddieharrigan@gmail.com",
 		Username: "eddie",
 		Password: "badchild_harr",
-		Phone:    "09125614672",
 		Geolocation: UserGeolocation{
 			X: 3.0,
 			Y: 6.0,
@@ -66,7 +62,6 @@ func TestGroupChat(t *testing.T) {
 		Email:    "meaveharrigan@gmail.com",
 		Username: "meave",
 		Password: "witchie_harr",
-		Phone:    "07025514772",
 		Geolocation: UserGeolocation{
 			X: 4.0,
 			Y: 5.0,
@@ -136,7 +131,6 @@ func TestGroupChat(t *testing.T) {
 				reqBody, err := makeReqBody(map[string]any{
 					"username": user.Username,
 					"password": user.Password,
-					"phone":    user.Phone,
 					"geolocation": map[string]any{
 						"x": user.Geolocation.X,
 						"y": user.Geolocation.Y,

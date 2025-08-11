@@ -33,7 +33,6 @@ type UserT struct {
 	Email         string
 	Username      string
 	Password      string
-	Phone         string
 	Geolocation   UserGeolocation
 	SessionCookie string
 	WSConn        *websocket.Conn
