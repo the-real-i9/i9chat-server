@@ -97,7 +97,8 @@ func SessionFind(ctx context.Context, username string) (map[string]any, error) {
 		`
 		MATCH (u:User { username: $username })
 
-		RETURN u { .username, .profile_pic_url, .presence } AS found_user
+		WITH u, { x: toFloat(u.geolocation.x), y: toFloat(u.geolocation.y) } AS geolocation, toString(u.last_seen) AS last_seen
+		RETURN u { .username, .email, .profile_pic_url, .presence, last_seen, geolocation } AS found_user
 		`,
 		map[string]any{
 			"username": username,
