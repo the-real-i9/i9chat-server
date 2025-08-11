@@ -24,8 +24,13 @@ func main() {
 
 	app := fiber.New()
 
-	app.Use(helmet.New())
-	app.Use(cors.New())
+	app.Use(helmet.New(helmet.Config{
+		CrossOriginResourcePolicy: "cross-origin",
+	}))
+	app.Use(cors.New(cors.Config{
+		AllowOrigins:     "http://localhost:5173",
+		AllowCredentials: true,
+	}))
 
 	app.Use(encryptcookie.New(encryptcookie.Config{
 		Key: os.Getenv("COOKIE_SECRET"),

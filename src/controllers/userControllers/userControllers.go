@@ -8,6 +8,19 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
+func GetSessionUser(c *fiber.Ctx) error {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	clientUser := c.Locals("user").(appTypes.ClientUser)
+
+	respData, app_err := userService.SessionUser(ctx, clientUser.Username)
+	if app_err != nil {
+		return app_err
+	}
+
+	return c.JSON(respData)
+}
 func ChangeProfilePicture(c *fiber.Ctx) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -26,31 +39,6 @@ func ChangeProfilePicture(c *fiber.Ctx) error {
 	}
 
 	respData, app_err := userService.ChangeProfilePicture(ctx, clientUser.Username, body.PictureData)
-	if app_err != nil {
-		return app_err
-	}
-
-	return c.JSON(respData)
-}
-
-func ChangePhone(c *fiber.Ctx) error {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	clientUser := c.Locals("user").(appTypes.ClientUser)
-
-	var body changePhoneBody
-
-	body_err := c.BodyParser(&body)
-	if body_err != nil {
-		return body_err
-	}
-
-	if val_err := body.Validate(); val_err != nil {
-		return val_err
-	}
-
-	respData, app_err := userService.ChangePhone(ctx, clientUser.Username, body.Phone)
 	if app_err != nil {
 		return app_err
 	}

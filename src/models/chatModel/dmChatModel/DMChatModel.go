@@ -56,58 +56,15 @@ func SendMessage(ctx context.Context, clientUsername, partnerUsername, msgConten
 	return newMsg, nil
 }
 
-func ReactToMessage(ctx context.Context, clientUsername, partnerUsername, msgId, reaction string, at time.Time) (bool, error) {
-	res, err := db.Query(
-		ctx,
-		`
-		MATCH (clientUser)-[:HAS_CHAT]->(clientChat:Chat{ owner_username: $client_username, partner_username: $partner_username })-[:WITH_USER]->(partnerUser),
-			(clientChat)<-[:IN_DM_CHAT]-(message:DMMessage{ id: $message_id }),
-			(partnerUser)-[:HAS_CHAT]->(partnerChat)-[:WITH_USER]->(clientUser)
-		
-		WITH clientUser, message, partnerUser, partnerChat
-		MERGE (msgrxn:DMChatEntry{ reactor_username: clientUser.username, message_id: message.id })
-		SET msgrxn.reaction = $reaction, msgrxn.chat_hist_entry_type = "reaction"
-
-		MERGE (clientUser)-[crxn:REACTS_TO_MESSAGE]->(message)
-		SET crxn.reaction = $reaction, crxn.created_at = $at
-		
-		MERGE (clientUser)-[:SENDS_REACTION]->(msgrxn)-[:IN_DM_CHAT]->(clientChat)
-		MERGE (partnerUser)-[:RECEIVES_REACTION]->(msgrxn)-[:IN_DM_CHAT]->(partnerChat)
-
-		RETURN true AS done
-		`,
-		map[string]any{
-			"client_username":  clientUsername,
-			"partner_username": partnerUsername,
-			"message_id":       msgId,
-			"reaction":         reaction,
-			"at":               at,
-		},
-	)
-	if err != nil {
-		log.Println("DMChatModel.go: ReactToMessage:", err)
-		return false, fiber.ErrInternalServerError
-	}
-
-	if len(res.Records) == 0 {
-		return false, nil
-	}
-
-	done, _, _ := neo4j.GetRecordValue[bool](res.Records[0], "done")
-
-	return done, nil
-}
-
 type ChatHistoryEntry struct {
-	EntryType string `json:"chat_hist_entry_type"`
-	CreatedAt string `json:"created_at"`
-
-	// type: message
+	EntryType      string           `json:"chat_hist_entry_type"`
+	CreatedAt      string           `json:"created_at"`
 	Id             string           `json:"id,omitempty"`
 	Content        string           `json:"content,omitempty"`
 	DeliveryStatus string           `json:"delivery_status,omitempty"`
 	Sender         map[string]any   `json:"sender,omitempty"`
 	Reactions      []map[string]any `json:"reactions,omitempty"`
+	RepliedTo      map[string]any   `json:"replied_to,omitempty"`
 }
 
 func ChatHistory(ctx context.Context, clientUsername, partnerUsername string, limit int, offset time.Time) ([]ChatHistoryEntry, error) {
@@ -117,15 +74,27 @@ func ChatHistory(ctx context.Context, clientUsername, partnerUsername string, li
 		ctx,
 		`
 		MATCH (clientChat:DMChat{ owner_username: $client_username, partner_username: $partner_username })
-		
+
 		OPTIONAL MATCH (clientChat)<-[:IN_DM_CHAT]-(entry:DMChatEntry WHERE entry.created_at < $offset)
 		OPTIONAL MATCH (entry)<-[:SENDS_MESSAGE]-(senderUser)
 		OPTIONAL MATCH (entry)<-[rxn:REACTS_TO_MESSAGE]-(reactorUser)
-			
-		WITH entry, toString(entry.created_at) AS created_at, senderUser { .username, .profile_pic_url } AS sender, collect({ user: reactorUser { .username, .profile_pic_url }, reaction: rxn.reaction }) AS reactions
+		OPTIONAL MATCH (entry)-[:REPLIES_TO]->(repliedMsg:DMMessage)
+		OPTIONAL MATCH (repliedMsg)<-[:SENDS_MESSAGE]-(repliedSender:User)
+
+		WITH entry, toString(entry.created_at) AS created_at,
+			senderUser { .username, .profile_pic_url } AS sender,
+			CASE WHEN rxn IS NOT NULL
+				THEN collect({ user: reactorUser { .username, .profile_pic_url }, reaction: rxn.reaction })
+				ELSE NULL
+			END AS reactions,
+			CASE WHEN entry.chat_hist_entry_type = "reply" AND repliedMsg IS NOT NULL
+				THEN repliedMsg { .id, .content, .created_at, sender: repliedSender { .username, .profile_pic_url } }
+				ELSE NULL
+			END AS replied_to
 		ORDER BY entry.created_at
 		LIMIT $limit
-		RETURN collect(entry { .*, created_at, sender, reactions }) AS chat_history
+		
+		RETURN collect(entry { .*, created_at, sender, reactions, replied_to }) AS chat_history
 		`,
 		map[string]any{
 			"client_username":  clientUsername,
@@ -211,5 +180,140 @@ func AckMessageRead(ctx context.Context, clientUsername, partnerUsername, msgId 
 
 	done, _, _ := neo4j.GetRecordValue[bool](res.Records[0], "done")
 
+	return done, nil
+}
+
+func ReplyToMessage(
+	ctx context.Context,
+	clientUsername, partnerUsername, msgContent, replyToMsgId string,
+	createdAt time.Time,
+) (NewMessage, error) {
+	var newMsg NewMessage
+
+	res, err := db.Query(
+		ctx,
+		`
+		MATCH (clientUser:User{ username: $client_username }), (partnerUser:User{ username: $partner_username })
+		MATCH (originalMsg:DMMessage { id: $reply_to_msg_id })
+		MERGE (clientUser)-[:HAS_CHAT]->(clientChat:DMChat{ owner_username: $client_username, partner_username: $partner_username })-[:WITH_USER]->(partnerUser)
+		MERGE (partnerUser)-[:HAS_CHAT]->(partnerChat:DMChat{ owner_username: $partner_username, partner_username: $client_username })-[:WITH_USER]->(clientUser)
+
+		WITH clientUser, clientChat, partnerUser, partnerChat, originalMsg
+		CREATE (replyMsg:DMMessage:DMChatEntry{
+			id: randomUUID(),
+			chat_hist_entry_type: "reply",
+			content: $message_content,
+			delivery_status: "sent",
+			created_at: $created_at,
+			reply_to_message_id: $reply_to_msg_id
+		}),
+		(clientUser)-[:SENDS_MESSAGE]->(replyMsg)-[:IN_DM_CHAT]->(clientChat),
+		(partnerUser)-[:RECEIVES_MESSAGE]->(replyMsg)-[:IN_DM_CHAT]->(partnerChat),
+		(replyMsg)-[:REPLIES_TO]->(originalMsg)
+
+		WITH replyMsg, toString(replyMsg.created_at) AS created_at,
+			clientUser { .username, .profile_pic_url, .connection_status } AS sender,
+			originalMsg { .id, .content, .created_at, sender: head([(originalMsg)<-[:SENDS_MESSAGE]-(u:User) | u { .username, .profile_pic_url }]) } AS replied_to
+
+		RETURN { new_msg_id: replyMsg.id } AS client_resp,
+			replyMsg { .*, created_at, sender, replied_to } AS partner_resp
+		`,
+		map[string]any{
+			"client_username":  clientUsername,
+			"partner_username": partnerUsername,
+			"message_content":  msgContent,
+			"created_at":       createdAt,
+			"reply_to_msg_id":  replyToMsgId,
+		},
+	)
+	if err != nil {
+		log.Println("DMChatModel.go: ReplyToMessage:", err)
+		return newMsg, fiber.ErrInternalServerError
+	}
+
+	if len(res.Records) == 0 {
+		return newMsg, nil
+	}
+
+	helpers.ToStruct(res.Records[0].AsMap(), &newMsg)
+
+	return newMsg, nil
+}
+
+func ReactToMessage(ctx context.Context, clientUsername, partnerUsername, msgId, reaction string, at time.Time) (bool, error) {
+	res, err := db.Query(
+		ctx,
+		`
+		MATCH (clientUser)-[:HAS_CHAT]->(clientChat:Chat{ owner_username: $client_username, partner_username: $partner_username })-[:WITH_USER]->(partnerUser),
+			(clientChat)<-[:IN_DM_CHAT]-(message:DMMessage{ id: $message_id }),
+			(partnerUser)-[:HAS_CHAT]->(partnerChat)-[:WITH_USER]->(clientUser)
+		
+		WITH clientUser, message, partnerUser, partnerChat
+		MERGE (msgrxn:DMChatEntry{ reactor_username: clientUser.username, message_id: message.id })
+		SET msgrxn.reaction = $reaction, msgrxn.chat_hist_entry_type = "reaction"
+
+		MERGE (clientUser)-[crxn:REACTS_TO_MESSAGE]->(message)
+		SET crxn.reaction = $reaction, crxn.created_at = $at
+		
+		MERGE (clientUser)-[:SENDS_REACTION]->(msgrxn)-[:IN_DM_CHAT]->(clientChat)
+		MERGE (partnerUser)-[:RECEIVES_REACTION]->(msgrxn)-[:IN_DM_CHAT]->(partnerChat)
+
+		RETURN true AS done
+		`,
+		map[string]any{
+			"client_username":  clientUsername,
+			"partner_username": partnerUsername,
+			"message_id":       msgId,
+			"reaction":         reaction,
+			"at":               at,
+		},
+	)
+	if err != nil {
+		log.Println("DMChatModel.go: ReactToMessage:", err)
+		return false, fiber.ErrInternalServerError
+	}
+
+	if len(res.Records) == 0 {
+		return false, nil
+	}
+
+	done, _, _ := neo4j.GetRecordValue[bool](res.Records[0], "done")
+
+	return done, nil
+}
+
+func RemoveReactionToMessage(ctx context.Context, clientUsername, partnerUsername, msgId string) (bool, error) {
+	res, err := db.Query(
+		ctx,
+		`
+		MATCH (clientUser)-[:HAS_CHAT]->(clientChat:DMChat{ owner_username: $client_username, partner_username: $partner_username })-[:WITH_USER]->(partnerUser),
+			(partnerUser)-[:HAS_CHAT]->(partnerChat)-[:WITH_USER]->(clientUser),
+			(clientChat)<-[:IN_DM_CHAT]-(message:DMMessage{ id: $message_id }),
+			
+			(msgrxn:DMChatEntry{ reactor_username: $client_username, message_id: $message_id }),
+			(clientUser)-[crxn:REACTS_TO_MESSAGE]->(message),
+			(clientUser)-[s:SENDS_REACTION]->(msgrxn),
+			(partnerUser)-[r:RECEIVES_REACTION]->(msgrxn)
+
+		DETACH DELETE msgrxn, crxn
+		
+		RETURN true AS done
+    `,
+		map[string]any{
+			"client_username":  clientUsername,
+			"partner_username": partnerUsername,
+			"message_id":       msgId,
+		},
+	)
+	if err != nil {
+		log.Println("DMChatModel.go: RemoveReactionFromMessage:", err)
+		return false, fiber.ErrInternalServerError
+	}
+
+	if len(res.Records) == 0 {
+		return false, nil
+	}
+
+	done, _, _ := neo4j.GetRecordValue[bool](res.Records[0], "done")
 	return done, nil
 }

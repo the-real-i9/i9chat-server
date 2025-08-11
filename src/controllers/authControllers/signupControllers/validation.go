@@ -41,7 +41,6 @@ func (b verifyEmailBody) Validate() error {
 
 type registerUserBody struct {
 	Username    string                   `json:"username"`
-	Phone       string                   `json:"phone"`
 	Password    string                   `json:"password"`
 	Geolocation appTypes.UserGeolocation `json:"geolocation"`
 }

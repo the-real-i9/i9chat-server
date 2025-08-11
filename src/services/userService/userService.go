@@ -52,6 +52,15 @@ func GoOffline(ctx context.Context, clientUsername string) {
 	// }(dmPartners)
 }
 
+func SessionUser(ctx context.Context, clientUsername string) (any, error) {
+	user, err2 := user.SessionFind(ctx, clientUsername)
+	if err2 != nil {
+		return nil, err2
+	}
+
+	return user, nil
+}
+
 func ChangeProfilePicture(ctx context.Context, clientUsername string, pictureData []byte) (any, error) {
 	// if any picture size validation error, do it here
 
@@ -66,15 +75,6 @@ func ChangeProfilePicture(ctx context.Context, clientUsername string, pictureDat
 	err2 := user.ChangeProfilePicture(ctx, clientUsername, newPicUrl)
 	if err2 != nil {
 		return nil, err2
-	}
-
-	return true, nil
-}
-
-func ChangePhone(ctx context.Context, clientUsername string, newPhone string) (any, error) {
-	err := user.ChangePhone(ctx, clientUsername, newPhone)
-	if err != nil {
-		return nil, err
 	}
 
 	return true, nil
