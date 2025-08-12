@@ -3,6 +3,7 @@ package userControllers
 import (
 	"context"
 	"i9chat/src/appTypes"
+	"i9chat/src/helpers"
 	"i9chat/src/services/userService"
 
 	"github.com/gofiber/fiber/v2"
@@ -128,7 +129,7 @@ func GetMyProfile(c *fiber.Ctx) error {
 }
 
 func SignOut(c *fiber.Ctx) error {
-	c.ClearCookie("user")
+	c.Cookie(helpers.Cookie("user", "", 0))
 
 	return c.JSON("You've been logged out!")
 }

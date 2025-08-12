@@ -22,7 +22,7 @@ func RequestNewAccount(ctx context.Context, email string) (any, map[string]any, 
 	}
 
 	if userExists {
-		return nil, nil, fiber.NewError(fiber.StatusBadRequest, fmt.Sprintf("An account with %s already exists", email))
+		return nil, nil, fiber.NewError(fiber.StatusConflict, fmt.Sprintf("An account with %s already exists", email))
 	}
 
 	verfCode, expires := securityServices.GenerateTokenCodeExp()
@@ -70,7 +70,7 @@ func VerifyEmail(ctx context.Context, sessionData map[string]any, inputVerfCode 
 	return respData, newSessionData, nil
 }
 
-func RegisterUser(ctx context.Context, sessionData map[string]any, username, password string, geolocation appTypes.UserGeolocation) (any, string, error) {
+func RegisterUser(ctx context.Context, sessionData map[string]any, username, password string) (any, string, error) {
 	email := sessionData["email"].(string)
 
 	userExists, err := user.Exists(ctx, username)
@@ -79,7 +79,7 @@ func RegisterUser(ctx context.Context, sessionData map[string]any, username, pas
 	}
 
 	if userExists {
-		return nil, "", fiber.NewError(fiber.StatusBadRequest, "Username:", username, ", is unavailable")
+		return nil, "", fiber.NewError(fiber.StatusConflict, "Username unavailable")
 	}
 
 	hashedPassword, err := securityServices.HashPassword(password)
@@ -87,7 +87,7 @@ func RegisterUser(ctx context.Context, sessionData map[string]any, username, pas
 		return nil, "", err
 	}
 
-	newUser, err := user.New(ctx, email, username, hashedPassword, geolocation)
+	newUser, err := user.New(ctx, email, username, hashedPassword)
 	if err != nil {
 		return nil, "", err
 	}

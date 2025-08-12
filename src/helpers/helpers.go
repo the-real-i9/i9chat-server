@@ -57,16 +57,16 @@ func WSReply(data any, toAction string) map[string]any {
 	return reply
 }
 
-func Cookie(name, value, path string, maxAge int) *fiber.Cookie {
+func Cookie(name, value string, maxAge int) *fiber.Cookie {
 	c := &fiber.Cookie{
 		HTTPOnly: true,
 		Secure:   false,
+		Path:     "/",
 		Domain:   os.Getenv("SERVER_HOST"),
 	}
 
 	c.Name = name
 	c.Value = value
-	c.Path = path
 	c.MaxAge = maxAge
 
 	return c

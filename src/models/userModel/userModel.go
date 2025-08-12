@@ -38,20 +38,18 @@ func Exists(ctx context.Context, emailOrUsername string) (bool, error) {
 	return userExists, nil
 }
 
-func New(ctx context.Context, email, username, password string, geolocation appTypes.UserGeolocation) (map[string]any, error) {
+func New(ctx context.Context, email, username, password string) (map[string]any, error) {
 	res, err := db.Query(
 		ctx,
 		`
-		CREATE (u:User { email: $email, username: $username, password: $password, profile_pic_url: "", geolocation: point({ x: $x, y: $y, crs: "cartesian" }), presence: "offline" })
-		WITH u, { x: toFloat(u.geolocation.x), y: toFloat(u.geolocation.y) } AS geolocation, toString(u.last_seen) AS last_seen
-		RETURN u { .username, .email, .profile_pic_url, .presence, last_seen, geolocation } AS new_user
+		CREATE (u:User { email: $email, username: $username, password: $password, profile_pic_url: "", presence: "online" })
+		WITH u, toString(u.last_seen) AS last_seen
+		RETURN u { .username, .email, .profile_pic_url, .presence, last_seen } AS new_user
 		`,
 		map[string]any{
 			"email":    email,
 			"username": username,
 			"password": password,
-			"x":        geolocation.X,
-			"y":        geolocation.Y,
 		},
 	)
 	if err != nil {
@@ -70,8 +68,8 @@ func SigninFind(ctx context.Context, uniqueIdent string) (map[string]any, error)
 	MATCH (u:User)
 	WHERE u.username = $uniqueIdent OR u.email = $uniqueIdent
 
-	WITH u, { x: toFloat(u.geolocation.x), y: toFloat(u.geolocation.y) } AS geolocation, toString(u.last_seen) AS last_seen
-	RETURN u { .username, .email, .profile_pic_url, .presence, last_seen, .password, geolocation } AS found_user
+	WITH u, toString(u.last_seen) AS last_seen
+	RETURN u { .username, .email, .profile_pic_url, .presence, last_seen, .password } AS found_user
 	`,
 		map[string]any{
 			"uniqueIdent": uniqueIdent,
@@ -97,8 +95,8 @@ func SessionFind(ctx context.Context, username string) (map[string]any, error) {
 		`
 		MATCH (u:User{ username: $username })
 
-		WITH u, { x: toFloat(u.geolocation.x), y: toFloat(u.geolocation.y) } AS geolocation, toString(u.last_seen) AS last_seen
-		RETURN u { .username, .email, .profile_pic_url, .presence, last_seen, geolocation } AS found_user
+		WITH u, toString(u.last_seen) AS last_seen
+		RETURN u { .username, .email, .profile_pic_url, .presence, last_seen } AS found_user
 		`,
 		map[string]any{
 			"username": username,
@@ -142,10 +140,10 @@ func FindNearby(ctx context.Context, clientUsername string, x, y, radius float64
 	res, err := db.Query(ctx,
 		`
 		MATCH (u:User)
-		WHERE u.username <> $client_username AND point.distance(point({ x: $live_long, y: $live_lat }), u.geolocation) <= $radius
+		WHERE u.username <> $client_username AND point.distance(point({ x: $live_long, y: $live_lat, crs: "WGS-84-2D" }), u.geolocation) <= $radius
 
-		WITH u, { x: toFloat(u.geolocation.x), y: toFloat(u.geolocation.y) } AS geolocation, toString(u.last_seen) AS last_seen
-		RETURN collect(u { .username, .email, .profile_pic_url, .presence, last_seen, geolocation }) AS nearby_users
+		WITH u, toString(u.last_seen) AS last_seen
+		RETURN collect(u { .username, .email, .profile_pic_url, .presence, last_seen }) AS nearby_users
 	`,
 		map[string]any{
 			"client_username": clientUsername,
@@ -174,8 +172,8 @@ func FindOne(ctx context.Context, emailUsername string) (map[string]any, error) 
 		MATCH (u:User)
 		WHERE u.username = $eup OR u.email = $eup
 
-		WITH u, { x: toFloat(u.geolocation.x), y: toFloat(u.geolocation.y) } AS geolocation, toString(u.last_seen) AS last_seen
-		RETURN u { .username, .email, .profile_pic_url, .presence, last_seen, geolocation } AS found_user
+		WITH u, toString(u.last_seen) AS last_seen
+		RETURN u { .username, .email, .profile_pic_url, .presence, last_seen } AS found_user
 		`,
 		map[string]any{
 			"eup": emailUsername,
@@ -332,7 +330,7 @@ func UpdateLocation(ctx context.Context, clientUsername string, newGeolocation a
 	_, err := db.Query(ctx,
 		`
 		MATCH (u:User{ username: $client_username })
-		SET u.geolocation = point({ x: $x, y: $y })
+		SET u.geolocation = point({ x: $x, y: $y, crs: "WGS-84-2D" })
 		`,
 		map[string]any{
 			"client_username": clientUsername,

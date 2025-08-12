@@ -12,9 +12,17 @@ import (
 func Route(router fiber.Router) {
 	router.Post("/signup/request_new_account", signupControllers.RequestNewAccount)
 
-	router.Post("/signup/verify_email", authSess.SignupSession, signupControllers.VerifyEmail)
+	router.Post(
+		"/signup/verify_email",
+		authSess.SignupSession,
+		signupControllers.VerifyEmail,
+	)
 
-	router.Post("/signup/register_user", authSess.SignupSession, signupControllers.RegisterUser)
+	router.Post(
+		"/signup/register_user",
+		authSess.SignupSession,
+		signupControllers.RegisterUser,
+	)
 
 	router.Post("/signin", signinControllers.Signin)
 

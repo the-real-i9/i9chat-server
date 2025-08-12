@@ -37,7 +37,8 @@ func RequestNewAccount(c *fiber.Ctx) error {
 		return fiber.ErrInternalServerError
 	}
 
-	c.Cookie(helpers.Cookie("signup", string(sd), "/api/auth/signup/verify_email", int(time.Hour/time.Second)))
+	c.Cookie(helpers.Cookie("passwordReset", "", 0))
+	c.Cookie(helpers.Cookie("signup", string(sd), int(time.Hour/time.Second)))
 
 	return c.JSON(respData)
 }
@@ -70,7 +71,7 @@ func VerifyEmail(c *fiber.Ctx) error {
 		return fiber.ErrInternalServerError
 	}
 
-	c.Cookie(helpers.Cookie("signup", string(nsd), "/api/auth/signup/register_user", int(time.Hour/time.Second)))
+	c.Cookie(helpers.Cookie("signup", string(nsd), int(time.Hour/time.Second)))
 
 	return c.JSON(respData)
 }
@@ -93,7 +94,7 @@ func RegisterUser(c *fiber.Ctx) error {
 		return val_err
 	}
 
-	respData, authJwt, app_err := signupService.RegisterUser(ctx, sessionData, body.Username, body.Password, body.Geolocation)
+	respData, authJwt, app_err := signupService.RegisterUser(ctx, sessionData, body.Username, body.Password)
 	if app_err != nil {
 		return app_err
 	}
@@ -104,7 +105,8 @@ func RegisterUser(c *fiber.Ctx) error {
 		return fiber.ErrInternalServerError
 	}
 
-	c.Cookie(helpers.Cookie("user", string(usd), "/api/app", int(10*24*time.Hour/time.Second)))
+	c.Cookie(helpers.Cookie("signup", "", 0))
+	c.Cookie(helpers.Cookie("user", string(usd), int(10*24*time.Hour/time.Second)))
 
 	return c.JSON(respData)
 }

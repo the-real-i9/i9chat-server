@@ -20,7 +20,7 @@ func RequestPasswordReset(ctx context.Context, email string) (any, map[string]an
 	}
 
 	if !userExists {
-		return nil, nil, fiber.NewError(fiber.StatusNotFound, "No user with this email exists.")
+		return nil, nil, fiber.NewError(fiber.StatusNotFound, "Non-existent user")
 	}
 
 	pwdrToken, expires := securityServices.GenerateTokenCodeExp()

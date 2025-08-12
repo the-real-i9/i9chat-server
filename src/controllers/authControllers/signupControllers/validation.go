@@ -1,7 +1,6 @@
 package signupControllers
 
 import (
-	"i9chat/src/appTypes"
 	"i9chat/src/helpers"
 	"regexp"
 
@@ -40,9 +39,8 @@ func (b verifyEmailBody) Validate() error {
 }
 
 type registerUserBody struct {
-	Username    string                   `json:"username"`
-	Password    string                   `json:"password"`
-	Geolocation appTypes.UserGeolocation `json:"geolocation"`
+	Username string `json:"username"`
+	Password string `json:"password"`
 }
 
 func (b registerUserBody) Validate() error {
@@ -57,7 +55,6 @@ func (b registerUserBody) Validate() error {
 			validation.Required,
 			validation.Length(8, 0).Error("minimum of 8 characters"),
 		),
-		validation.Field(&b.Geolocation, validation.Required),
 	)
 
 	return helpers.ValidationError(err, "signupControllers_validation.go", "registerUserBody")

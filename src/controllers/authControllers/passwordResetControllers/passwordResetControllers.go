@@ -37,7 +37,7 @@ func RequestPasswordReset(c *fiber.Ctx) error {
 		return fiber.ErrInternalServerError
 	}
 
-	c.Cookie(helpers.Cookie("passwordReset", string(sd), "/api/auth/forgot_password/confirm_email", int(time.Hour/time.Second)))
+	c.Cookie(helpers.Cookie("passwordReset", string(sd), int(time.Hour/time.Second)))
 
 	return c.JSON(respData)
 }
@@ -70,7 +70,7 @@ func ConfirmEmail(c *fiber.Ctx) error {
 		return fiber.ErrInternalServerError
 	}
 
-	c.Cookie(helpers.Cookie("passwordReset", string(nsd), "/api/auth/forgot_password/reset_password", int(time.Hour/time.Second)))
+	c.Cookie(helpers.Cookie("passwordReset", string(nsd), int(time.Hour/time.Second)))
 
 	return c.JSON(respData)
 }
@@ -98,7 +98,7 @@ func ResetPassword(c *fiber.Ctx) error {
 		return app_err
 	}
 
-	c.ClearCookie()
+	c.Cookie(helpers.Cookie("passwordReset", "", 0))
 
 	return c.JSON(respData)
 }
