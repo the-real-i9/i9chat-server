@@ -1151,8 +1151,238 @@ func AckMessageRead(ctx context.Context, clientUsername, groupId, msgId string, 
 	return msgAck, nil
 }
 
-func ReactToMessage(ctx context.Context, groupChatId, msgId, clientUsername, reaction string, at time.Time) error {
-	return nil
+func ReplyToMessage(ctx context.Context, clientUsername, groupId, targetMsgId, msgContent string, at time.Time) (NewMessage, error) {
+	var newMessage NewMessage
+
+	res, err := db.MultiQuery(ctx, func(tx neo4j.ManagedTransaction) (any, error) {
+		resMap := make(map[string]any, 4)
+
+		res, err := tx.Run(
+			ctx,
+			`
+			MATCH (group)<-[:WITH_GROUP]-(clientChat:GroupChat{ owner_username: $client_username, group_id: $group_id })<-[:HAS_CHAT]-(clientUser)
+			WHERE EXISTS { (clientUser)-[:IS_MEMBER_OF]->(group) }
+
+			MATCH (targetMsg:GroupMessage { id: $target_msg_id })
+
+			CREATE (replyMsg:GroupMessage:GroupChatEntry{ id: randomUUID(), chat_hist_entry_type: "reply", content: $message_content, delivery_status: "sent", created_at: $at }),
+				(clientUser)-[:SENDS_MESSAGE]->(replyMsg)-[:IN_GROUP_CHAT]->(clientChat),
+				(replyMsg)-[:REPLIES_TO]->(targetMsg)
+			
+			WITH group, replyMsg.id AS replyMsgId
+
+			OPTIONAL MATCH (group)<-[:IS_MEMBER_OF]-(memberUser WHERE memberUser.username <> $client_username)
+
+			RETURN { new_msg_id: replyMsgId } AS client_resp,
+				collect(memberUser.username) AS member_usernames, replyMsgId AS new_reply_msg_id
+			`,
+			map[string]any{
+				"client_username": clientUsername,
+				"group_id":        groupId,
+				"message_content": msgContent,
+				"target_msg_id":   targetMsgId,
+				"at":              at,
+			},
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		if !res.Next(ctx) {
+			return nil, nil
+		}
+
+		maps.Copy(resMap, res.Record().AsMap())
+
+		memberUsernames := resMap["member_usernames"].([]any)
+
+		if len(memberUsernames) > 0 {
+			res, err := tx.Run(
+				ctx,
+				`
+				MATCH (replyMsg:GroupMessage{ id: $new_reply_msg_id })<-[:SENDS_MESSAGE]-(clientUser),
+					(targetMsg:GroupMessage { id: $target_msg_id })<-[:SENDS_MESSAGE]-(targetMsgSender)
+
+				MATCH (group:Group{ id: $group_id })<-[:IS_MEMBER_OF]-(memberUser WHERE memberUser.username IN $member_usernames),
+					(memberChat:GroupChat{ owner_username: memberUser.username, group_id: $group_id })
+				
+				CREATE (memberUser)-[:RECEIVES_MESSAGE]->(replyMsg)-[:IN_GROUP_CHAT]->(memberChat)
+
+				WITH replyMsg, toString(replyMsg.created_at) AS created_at, 
+					clientUser { .username, .profile_pic_url } AS sender,
+					targetMsg { .id, .content, sender_username: targetMsgSender.username } AS replied_to
+
+				RETURN replyMsg { .*, created_at, sender, replied_to } AS member_resp
+				`,
+				map[string]any{
+					"group_id":         groupId,
+					"client_username":  clientUsername,
+					"member_usernames": memberUsernames,
+					"new_reply_msg_id": resMap["new_reply_msg_id"],
+					"target_msg_id":    targetMsgId,
+					"at":               at,
+				},
+			)
+			if err != nil {
+				return nil, err
+			}
+
+			if !res.Next(ctx) {
+				return nil, fmt.Errorf("crosscheck possible logical error")
+			}
+
+			maps.Copy(resMap, res.Record().AsMap())
+		}
+
+		return resMap, nil
+	})
+	if err != nil {
+		log.Println("groupChatModel.go: ReplyToMessage:", err)
+		return newMessage, fiber.ErrInternalServerError
+	}
+
+	helpers.ToStruct(res, &newMessage)
+
+	return newMessage, nil
+}
+
+type RxnToMessage struct {
+	ClientData      map[string]any `json:"client_resp"`
+	MemberData      map[string]any `json:"member_resp"`
+	MemberUsernames []string       `json:"member_usernames"`
+}
+
+func ReactToMessage(ctx context.Context, clientUsername, groupId, msgId, reaction string, at time.Time) (RxnToMessage, error) {
+	var rxnToMessage RxnToMessage
+
+	res, err := db.MultiQuery(ctx, func(tx neo4j.ManagedTransaction) (any, error) {
+		resMap := make(map[string]any, 4)
+
+		res, err := tx.Run(
+			ctx,
+			`
+			MATCH (group)<-[:WITH_GROUP]-(clientChat:GroupChat{ owner_username: $client_username, group_id: $group_id })<-[:HAS_CHAT]-(clientUser)
+			WHERE EXISTS { (clientUser)-[:IS_MEMBER_OF]->(group) }
+
+			MATCH (clientChat)<-[IN_GROUP_CHAT]-(message:GroupMessage{ id: $message_id })
+
+			WITH clientUser, message, clientChat
+			MERGE (msgrxn:GroupMessageReaction:GroupChatEntry{ reactor_username: clientUser.username, message_id: message.id })-[:REACTION_TO_MESSAGE]->(message)
+			SET msgrxn.reaction = $reaction, msgrxn.chat_hist_entry_type = "reaction", msgrxn.created_at = $at
+
+			MERGE (clientUser)-[crxn:REACTS_TO_MESSAGE]->(message)
+			SET crxn.reaction = $reaction, crxn.created_at = $at
+
+			MERGE (clientUser)-[:SENDS_REACTION]->(msgrxn)-[:IN_GROUP_CHAT]->(clientChat)
+
+			WITH group
+
+			OPTIONAL MATCH (group)<-[:IS_MEMBER_OF]-(memberUser WHERE memberUser.username <> $client_username)
+
+			RETURN true AS client_resp, collect(memberUser.username) AS member_usernames
+			`,
+			map[string]any{
+				"client_username": clientUsername,
+				"group_id":        groupId,
+				"message_id":      msgId,
+				"reaction":        reaction,
+				"at":              at,
+			},
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		if !res.Next(ctx) {
+			return nil, nil
+		}
+
+		maps.Copy(resMap, res.Record().AsMap())
+
+		memberUsernames := resMap["member_usernames"].([]any)
+
+		if len(memberUsernames) > 0 {
+			res, err := tx.Run(
+				ctx,
+				`
+				MATCH (clientUser)-[:SENDS_REACTION]->(msgrxn:GroupMessageReaction:GroupChatEntry{ reactor_username: $client_username, message_id: $message_id })-[:REACTION_TO_MESSAGE]->(message)
+
+				MATCH (group:Group{ id: $group_id })<-[:IS_MEMBER_OF]-(memberUser WHERE memberUser.username IN $member_usernames),
+					(memberChat:GroupChat{ owner_username: memberUser.username, group_id: $group_id })
+				
+				MERGE (memberUser)-[:RECEIVES_REACTION]->(msgrxn)-[:IN_GROUP_CHAT]->(memberChat)
+
+				WITH clientUser { .username, .profile_pic_url } AS reactor, msgrxn { .reaction, .created_at } AS reaction
+
+				RETURN { group_id: group.id, msg_id: message.id, reactor, reaction } AS member_resp
+				`,
+				map[string]any{
+					"group_id":         groupId,
+					"client_username":  clientUsername,
+					"member_usernames": memberUsernames,
+					"at":               at,
+				},
+			)
+			if err != nil {
+				return nil, err
+			}
+
+			if !res.Next(ctx) {
+				return nil, fmt.Errorf("crosscheck possible logical error")
+			}
+
+			maps.Copy(resMap, res.Record().AsMap())
+		}
+
+		return resMap, nil
+	})
+	if err != nil {
+		log.Println("groupChatModel.go: ReactToMessage:", err)
+		return rxnToMessage, fiber.ErrInternalServerError
+	}
+
+	helpers.ToStruct(res, &rxnToMessage)
+
+	return rxnToMessage, nil
+}
+
+func RemoveReactionToMessage(ctx context.Context, clientUsername, groupId, msgId string) (member_usernames []any, done bool, err error) {
+	res, err := db.Query(
+		ctx,
+		`
+		MATCH (group)<-[:WITH_GROUP]-(clientChat:GroupChat{ owner_username: $client_username, group_id: $group_id })<-[:HAS_CHAT]-(clientUser)
+		WHERE EXISTS { (clientUser)-[:IS_MEMBER_OF]->(group) }
+
+		MATCH (clientChat)<-[IN_GROUP_CHAT]-(message:GroupMessage{ id: $message_id }),
+			(msgrxn:GroupMessageReaction:GroupChatEntry{ reactor_username: clientUser.username, message_id: message.id }),
+			(clientUser)-[crxn:REACTS_TO_MESSAGE]->(message)
+		
+		DETACH DELETE msgrxn, crxn
+		
+		WITH group
+
+		OPTIONAL MATCH (group)<-[:IS_MEMBER_OF]-(memberUser WHERE memberUser.username <> $client_username)
+
+		RETURN collect(memberUser.username) AS member_usernames, true AS done
+		`,
+		map[string]any{
+			"client_username": clientUsername,
+			"group_id":        groupId,
+			"message_id":      msgId,
+		},
+	)
+	if err != nil {
+		log.Println("groupChatModel.go: RemoveReactionToMessage:", err)
+		return nil, false, fiber.ErrInternalServerError
+	}
+
+	if len(res.Records) == 0 {
+		return nil, false, nil
+	}
+
+	recMap := res.Records[0].AsMap()
+
+	return recMap["member_usernames"].([]any), recMap["done"].(bool), nil
 }
 
 type ChatHistoryEntry struct {
@@ -1160,12 +1390,19 @@ type ChatHistoryEntry struct {
 	CreatedAt string `json:"created_at"`
 
 	// for group message
-	Id             string         `json:"id,omitempty"`
-	Content        string         `json:"content,omitempty"`
-	DeliveryStatus string         `json:"delivery_status,omitempty"`
-	Sender         map[string]any `json:"sender,omitempty"`
+	Id             string           `json:"id,omitempty"`
+	Content        string           `json:"content,omitempty"`
+	DeliveryStatus string           `json:"delivery_status,omitempty"`
+	Sender         map[string]any   `json:"sender,omitempty"`
+	Reactions      []map[string]any `json:"reactions,omitempty"`
 
-	// for group activity
+	// for reply entry
+	RepliedTo map[string]any `json:"replied_to,omitempty"`
+
+	// for reaction entry
+	Reaction string `json:"reaction,omitempty"`
+
+	// for group activity entry
 	Info string `json:"info,omitempty"`
 }
 
@@ -1176,18 +1413,30 @@ func ChatHistory(ctx context.Context, clientUsername, groupId string, limit int,
 		ctx,
 		`
 		MATCH (clientChat:GroupChat{ owner_username: $client_username, group_id: $group_id })
+
 		OPTIONAL MATCH (clientChat)<-[:IN_GROUP_CHAT]-(entry:GroupChatEntry WHERE entry.created_at < $offset)
 		OPTIONAL MATCH (entry)<-[:SENDS_MESSAGE]-(senderUser)
 		OPTIONAL MATCH (entry)<-[rxn:REACTS_TO_MESSAGE]-(reactorUser)
+		OPTIONAL MATCH (entry)-[:REPLIES_TO]->(repliedMsg:GroupMessage)
+		OPTIONAL MATCH (repliedMsg)<-[:SENDS_MESSAGE]-(repliedSender)
 		
-		WITH entry, 
-			toString(entry.created_at) AS created_at, 
-			senderUser { .username, .profile_pic_url } AS sender, 
-			collect({ user: reactorUser { .username, .profile_pic_url }, reaction: rxn.reaction }) AS reactions
-		ORDER BY created_at
+		WITH entry, toString(entry.created_at) AS created_at, 
+			CASE WHEN senderUser IS NOT NULL
+				THEN senderUser { .username, .profile_pic_url } 
+				ELSE NULL
+			END AS sender,
+			CASE WHEN rxn IS NOT NULL
+				THEN collect({ reactor: reactorUser { .username, .profile_pic_url }, reaction: rxn { .reaction, .created_at })
+				ELSE NULL
+			END AS reactions,
+			CASE WHEN repliedMsg IS NOT NULL
+				THEN repliedMsg { .id, .content, sender_username: repliedSender.username }
+				ELSE NULL
+			END AS replied_to
+		ORDER BY entry.created_at
 		LIMIT $limit
 		
-		RETURN collect(entry { .*, created_at, sender, reactions }) AS chat_history
+		RETURN collect(entry { .*, created_at, sender, reactions, replied_to }) AS chat_history
 		`,
 		map[string]any{
 			"group_id":        groupId,

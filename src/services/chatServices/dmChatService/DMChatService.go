@@ -83,6 +83,66 @@ func AckMessageRead(ctx context.Context, clientUsername, partnerUsername, msgId 
 	return done, nil
 }
 
-func React() {
+func ReplyToMessage(ctx context.Context, clientUsername, partnerUsername, targetMsgId string, msgContent *appTypes.MsgContent, at int64) (map[string]any, error) {
 
+	err := appServices.UploadMessageMedia(ctx, clientUsername, msgContent)
+	if err != nil {
+		return nil, err
+	}
+
+	msgContentJson, err := json.Marshal(*msgContent)
+	if err != nil {
+		log.Println("DMChatService.go: ReplyToMessage: json.Marshal:", err)
+		return nil, fiber.ErrInternalServerError
+	}
+
+	newMessage, err := dmChat.ReplyToMessage(ctx, clientUsername, partnerUsername, targetMsgId, string(msgContentJson), time.UnixMilli(at).UTC())
+	if err != nil {
+		return nil, err
+	}
+
+	if newMessage.PartnerData != nil {
+		go eventStreamService.Send(partnerUsername, appTypes.ServerWSMsg{
+			Event: "new dm chat message",
+			Data:  newMessage.PartnerData,
+		})
+	}
+
+	return newMessage.ClientData, nil
+}
+
+func ReactToMessage(ctx context.Context, clientUsername, partnerUsername, msgId, reaction string, at int64) (any, error) {
+	rxnToMessage, err := dmChat.ReactToMessage(ctx, clientUsername, partnerUsername, msgId, reaction, time.UnixMilli(at).UTC())
+	if err != nil {
+		return nil, err
+	}
+
+	if rxnToMessage.PartnerData != nil {
+		go eventStreamService.Send(partnerUsername, appTypes.ServerWSMsg{
+			Event: "dm chat message reaction",
+			Data:  rxnToMessage.PartnerData,
+		})
+	}
+
+	return rxnToMessage.ClientData, nil
+}
+
+func RemoveReactionToMessage(ctx context.Context, clientUsername, partnerUsername, msgId string) (any, error) {
+	done, err := dmChat.RemoveReactionToMessage(ctx, clientUsername, partnerUsername, msgId)
+	if err != nil {
+		return nil, err
+	}
+
+	if done {
+		go eventStreamService.Send(partnerUsername, appTypes.ServerWSMsg{
+			Event: "dm chat message reaction removed",
+			Data: map[string]any{
+				"partner_username": clientUsername,
+				"msg_id":           msgId,
+				"reactor_username": clientUsername,
+			},
+		})
+	}
+
+	return done, nil
 }

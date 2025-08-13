@@ -194,8 +194,9 @@ func FindOne(ctx context.Context, emailUsername string) (map[string]any, error) 
 }
 
 type Chat struct {
-	ChatType string `json:"chat_type"`
-	UnreadMC int    `json:"unread_messages_count"`
+	ChatType  string `json:"chat_type"`
+	ChatIdent string `json:"chat_ident"`
+	UnreadMC  int    `json:"unread_messages_count"`
 
 	// for dm chat
 	Partner map[string]any `json:"partner,omitempty"`
@@ -213,15 +214,21 @@ func GetMyChats(ctx context.Context, clientUsername string) ([]Chat, error) {
 		CALL () {
 			MATCH (clientChat:DMChat{ owner_username: $client_username })-[:WITH_USER]->(partnerUser)
 
-			WITH clientChat, toString(clientChat.updated_at) AS updated_at, partnerUser { .username, .profile_pic_url, .connection_status } AS partner,
+			WITH clientChat, 
+				toString(clientChat.updated_at) AS updated_at, 
+				partnerUser { .username, .profile_pic_url, .presence, .last_seen } AS partner, 
+				partnerUser.username AS chat_ident
 				
-			RETURN clientChat { partner, .unread_messages_count, chat_type: "dm" } AS chat, clientChat.updated_at AS updated_at
+			RETURN clientChat { chat_ident, partner, .unread_messages_count, chat_type: "DM" } AS chat, clientChat.updated_at AS updated_at
 		UNION
 			MATCH (clientChat:GroupChat{ owner_username: $client_username })-[:WITH_GROUP]->(group)
 
-			WITH clientChat, toString(clientChat.updated_at) AS updated_at, group { .name, .picture_url } AS group_info,
+			WITH clientChat, 
+				toString(clientChat.updated_at) AS updated_at, 
+				group { .name, .description, .picture_url } AS group_info, 
+				group.id AS chat_ident
 
-			RETURN clientChat { group_info, .unread_messages_count, chat_type: "group" } AS chat, clientChat.updated_at AS updated_at
+			RETURN clientChat { chat_ident, group_info, .unread_messages_count, chat_type: "group" } AS chat, clientChat.updated_at AS updated_at
 		}
 		WITH chat, updated_at
 		ORDER BY updated_at DESC

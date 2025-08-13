@@ -103,6 +103,61 @@ func AckMessageRead(ctx context.Context, clientUsername, groupId, msgId string, 
 	return map[string]any{"read_by_all": msgAck.All}, nil
 }
 
+func ReplyToMessage(ctx context.Context, clientUsername, groupId, targetMsgId string, msgContent *appTypes.MsgContent, at int64) (map[string]any, error) {
+
+	err := appServices.UploadMessageMedia(ctx, clientUsername, msgContent)
+	if err != nil {
+		return nil, err
+	}
+
+	msgContentJson, err := json.Marshal(*msgContent)
+	if err != nil {
+		log.Println("groupChatService.go: ReplyToMessage: json.Marshal:", err)
+		return nil, fiber.ErrInternalServerError
+	}
+
+	newMessage, err := groupChat.ReplyToMessage(ctx, clientUsername, groupId, targetMsgId, string(msgContentJson), time.UnixMilli(at).UTC())
+	if err != nil {
+		return nil, err
+	}
+
+	if newMessage.MemberData != nil {
+		go broadcastNewMessage(newMessage.MemberUsernames, newMessage.MemberData, groupId)
+	}
+
+	return newMessage.ClientData, nil
+}
+
+func ReactToMessage(ctx context.Context, clientUsername, groupId, msgId, reaction string, at int64) (any, error) {
+	rxnToMessage, err := groupChat.ReactToMessage(ctx, clientUsername, groupId, msgId, reaction, time.UnixMilli(at).UTC())
+	if err != nil {
+		return nil, err
+	}
+
+	if rxnToMessage.MemberData != nil {
+		go broadcastMsgReaction(rxnToMessage.MemberUsernames, rxnToMessage.MemberData)
+	}
+
+	return rxnToMessage.ClientData, nil
+}
+
+func RemoveReactionToMessage(ctx context.Context, clientUsername, groupId, msgId string, at int64) (any, error) {
+	memberUsernames, done, err := groupChat.RemoveReactionToMessage(ctx, clientUsername, groupId, msgId)
+	if err != nil {
+		return nil, err
+	}
+
+	if done {
+		go broadcastMsgReactionRemoved(memberUsernames, map[string]any{
+			"group_id":         groupId,
+			"msg_id":           msgId,
+			"reactor_username": clientUsername,
+		})
+	}
+
+	return done, nil
+}
+
 func ChangeGroupName(ctx context.Context, groupId, clientUsername, newName string) (any, error) {
 	newActivity, err := groupChat.ChangeName(ctx, groupId, clientUsername, newName)
 	if err != nil {

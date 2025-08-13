@@ -58,3 +58,22 @@ func broadcastMsgRead(memberUsernames []string, data any) {
 		})
 	}
 }
+
+func broadcastMsgReaction(memberUsernames []string, data any) {
+	for _, mu := range memberUsernames {
+		eventStreamService.Send(mu, appTypes.ServerWSMsg{
+			Event: "group chat message reaction",
+			Data:  data,
+		})
+	}
+}
+
+func broadcastMsgReactionRemoved(memberUsernames []any, data any) {
+	for _, mu := range memberUsernames {
+		mu := mu.(string)
+		eventStreamService.Send(mu, appTypes.ServerWSMsg{
+			Event: "group chat message reaction removed",
+			Data:  data,
+		})
+	}
+}
