@@ -43,7 +43,7 @@ func New(ctx context.Context, email, username, password string) (map[string]any,
 		ctx,
 		`
 		CREATE (u:User { email: $email, username: $username, password: $password, profile_pic_url: "", presence: "online" })
-		WITH u, toString(u.last_seen) AS last_seen
+		WITH u, NULL AS last_seen
 		RETURN u { .username, .email, .profile_pic_url, .presence, last_seen } AS new_user
 		`,
 		map[string]any{
@@ -68,7 +68,7 @@ func SigninFind(ctx context.Context, uniqueIdent string) (map[string]any, error)
 	MATCH (u:User)
 	WHERE u.username = $uniqueIdent OR u.email = $uniqueIdent
 
-	WITH u, toString(u.last_seen) AS last_seen
+	WITH u, coalesce(u.last_seen.epochMillis, null) AS last_seen
 	RETURN u { .username, .email, .profile_pic_url, .presence, last_seen, .password } AS found_user
 	`,
 		map[string]any{
@@ -95,7 +95,7 @@ func SessionFind(ctx context.Context, username string) (map[string]any, error) {
 		`
 		MATCH (u:User{ username: $username })
 
-		WITH u, toString(u.last_seen) AS last_seen
+		WITH u, coalesce(u.last_seen.epochMillis, null) AS last_seen
 		RETURN u { .username, .email, .profile_pic_url, .presence, last_seen } AS found_user
 		`,
 		map[string]any{
@@ -142,7 +142,7 @@ func FindNearby(ctx context.Context, clientUsername string, x, y, radius float64
 		MATCH (u:User)
 		WHERE u.username <> $client_username AND point.distance(point({ x: $live_long, y: $live_lat, crs: "WGS-84-2D" }), u.geolocation) <= $radius
 
-		WITH u, toString(u.last_seen) AS last_seen
+		WITH u, coalesce(u.last_seen.epochMillis, null) AS last_seen
 		RETURN collect(u { .username, .email, .profile_pic_url, .presence, last_seen }) AS nearby_users
 	`,
 		map[string]any{
@@ -172,7 +172,7 @@ func FindOne(ctx context.Context, emailUsername string) (map[string]any, error) 
 		MATCH (u:User)
 		WHERE u.username = $eup OR u.email = $eup
 
-		WITH u, toString(u.last_seen) AS last_seen
+		WITH u, coalesce(u.last_seen.epochMillis, null) AS last_seen
 		RETURN u { .username, .email, .profile_pic_url, .presence, last_seen } AS found_user
 		`,
 		map[string]any{
@@ -215,23 +215,20 @@ func GetMyChats(ctx context.Context, clientUsername string) ([]Chat, error) {
 			MATCH (clientChat:DMChat{ owner_username: $client_username })-[:WITH_USER]->(partnerUser)
 
 			WITH clientChat, 
-				toString(clientChat.updated_at) AS updated_at, 
 				partnerUser { .username, .profile_pic_url, .presence, .last_seen } AS partner, 
 				partnerUser.username AS chat_ident
 				
-			RETURN clientChat { chat_ident, partner, .unread_messages_count, chat_type: "DM" } AS chat, clientChat.updated_at AS updated_at
+			RETURN clientChat { chat_ident, partner, .unread_messages_count, chat_type: "DM" } AS chat
 		UNION
 			MATCH (clientChat:GroupChat{ owner_username: $client_username })-[:WITH_GROUP]->(group)
 
 			WITH clientChat, 
-				toString(clientChat.updated_at) AS updated_at, 
 				group { .name, .description, .picture_url } AS group_info, 
 				group.id AS chat_ident
 
-			RETURN clientChat { chat_ident, group_info, .unread_messages_count, chat_type: "group" } AS chat, clientChat.updated_at AS updated_at
+			RETURN clientChat { chat_ident, group_info, .unread_messages_count, chat_type: "group" } AS chat
 		}
-		WITH chat, updated_at
-		ORDER BY updated_at DESC
+		WITH chat
 
 		RETURN collect(chat) AS my_chats
 		`,
@@ -260,7 +257,7 @@ func GetMyProfile(ctx context.Context, clientUsername string) (map[string]any, e
 		ctx,
 		`
 		MATCH (u:User{ username: $client_username })
-		WITH u, { x: toFloat(u.geolocation.x), y: toFloat(u.geolocation.y) } AS geolocation, toString(u.last_seen) AS last_seen
+		WITH u, { x: toFloat(u.geolocation.x), y: toFloat(u.geolocation.y) } AS geolocation, coalesce(u.last_seen.epochMillis, null) AS last_seen
 		RETURN u { .username, .email, .profile_pic_url, .presence, last_seen, geolocation } AS my_profile
 		`,
 		map[string]any{

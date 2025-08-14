@@ -21,12 +21,12 @@ type UserGeolocation struct {
 }
 
 type MsgProps struct {
-	TextContent *string `json:"textContent,omitempty"`
+	TextContent *string `json:"text_content,omitempty"`
 	Data        []byte  `json:"data,omitempty"`
 	Url         *string `json:"url,omitempty"`
 	Duration    *int64  `json:"duration,omitempty"`
 	Caption     *string `json:"caption,omitempty"`
-	MimeType    *string `json:"mimeType,omitempty"`
+	MimeType    *string `json:"mime_type,omitempty"`
 	Size        *int64  `json:"size,omitempty"`
 	Name        *string `json:"name,omitempty"`
 	Extension   *string `json:"extension,omitempty"`

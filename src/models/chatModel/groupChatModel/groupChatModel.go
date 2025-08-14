@@ -954,7 +954,7 @@ func SendMessage(ctx context.Context, clientUsername, groupId, msgContent string
 				
 				CREATE (memberUser)-[:RECEIVES_MESSAGE]->(message)-[:IN_GROUP_CHAT]->(memberChat)
 
-				WITH message, toString(message.created_at) AS created_at, clientUser { .username, .profile_pic_url } AS sender
+				WITH message, message.created_at.epochMillis AS created_at, clientUser { .username, .profile_pic_url } AS sender
 
 				RETURN message { .*, created_at, sender } AS member_resp
 				`,
@@ -1208,7 +1208,7 @@ func ReplyToMessage(ctx context.Context, clientUsername, groupId, targetMsgId, m
 				
 				CREATE (memberUser)-[:RECEIVES_MESSAGE]->(replyMsg)-[:IN_GROUP_CHAT]->(memberChat)
 
-				WITH replyMsg, toString(replyMsg.created_at) AS created_at, 
+				WITH replyMsg, replyMsg.created_at.epochMillis AS created_at, 
 					clientUser { .username, .profile_pic_url } AS sender,
 					targetMsg { .id, .content, sender_username: targetMsgSender.username } AS replied_to
 
@@ -1312,9 +1312,9 @@ func ReactToMessage(ctx context.Context, clientUsername, groupId, msgId, reactio
 				
 				MERGE (memberUser)-[:RECEIVES_REACTION]->(msgrxn)-[:IN_GROUP_CHAT]->(memberChat)
 
-				WITH clientUser { .username, .profile_pic_url } AS reactor, msgrxn { .reaction, .created_at } AS reaction
+				WITH group, message, msgrxn, clientUser { .username, .profile_pic_url } AS reactor
 
-				RETURN { group_id: group.id, msg_id: message.id, reactor, reaction } AS member_resp
+				RETURN { group_id: group.id, msg_id: message.id, reactor, reaction: msgrxn.reaction, at: msgrxn.created_at.epochMillis } AS member_resp
 				`,
 				map[string]any{
 					"group_id":         groupId,
@@ -1387,7 +1387,7 @@ func RemoveReactionToMessage(ctx context.Context, clientUsername, groupId, msgId
 
 type ChatHistoryEntry struct {
 	EntryType string `json:"chat_hist_entry_type"`
-	CreatedAt string `json:"created_at"`
+	CreatedAt int64  `json:"created_at"`
 
 	// for group message
 	Id             string           `json:"id,omitempty"`
@@ -1420,13 +1420,13 @@ func ChatHistory(ctx context.Context, clientUsername, groupId string, limit int,
 		OPTIONAL MATCH (entry)-[:REPLIES_TO]->(repliedMsg:GroupMessage)
 		OPTIONAL MATCH (repliedMsg)<-[:SENDS_MESSAGE]-(repliedSender)
 		
-		WITH entry, toString(entry.created_at) AS created_at, 
+		WITH entry, entry.created_at.epochMillis AS created_at, 
 			CASE WHEN senderUser IS NOT NULL
 				THEN senderUser { .username, .profile_pic_url } 
 				ELSE NULL
 			END AS sender,
 			CASE WHEN rxn IS NOT NULL
-				THEN collect({ reactor: reactorUser { .username, .profile_pic_url }, reaction: rxn { .reaction, .created_at })
+				THEN collect({ reactor: reactorUser { .username, .profile_pic_url }, reaction: rxn.reaction, at: rxn.created_at.epochMillis })
 				ELSE NULL
 			END AS reactions,
 			CASE WHEN repliedMsg IS NOT NULL

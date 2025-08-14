@@ -31,7 +31,7 @@ func SendMessage(ctx context.Context, clientUsername, partnerUsername, msgConten
 			(clientUser)-[:SENDS_MESSAGE]->(message)-[:IN_DM_CHAT]->(clientChat),
 			(partnerUser)-[:RECEIVES_MESSAGE]->(message)-[:IN_DM_CHAT]->(partnerChat)
 			
-		WITH message, toString(message.created_at) AS created_at, clientUser { .username, .profile_pic_url, .connection_status } AS sender
+		WITH message, message.created_at.epochMillis AS created_at, clientUser { .username, .profile_pic_url, .connection_status } AS sender
 		RETURN { new_msg_id: message.id } AS client_resp,
 			message { .*, created_at, sender } AS partner_resp
 		`,
@@ -137,7 +137,7 @@ func ReplyToMessage(ctx context.Context, clientUsername, partnerUsername, target
 			(partnerUser)-[:RECEIVES_MESSAGE]->(replyMsg)-[:IN_DM_CHAT]->(partnerChat),
 			(replyMsg)-[:REPLIES_TO]->(targetMsg)
 
-		WITH replyMsg, toString(replyMsg.created_at) AS created_at,
+		WITH replyMsg, replyMsg.created_at.epochMillis AS created_at,
 			clientUser { .username, .profile_pic_url, .connection_status } AS sender,
 			targetMsg { .id, .content, sender_username: targetMsgSender.username } AS replied_to
 
@@ -192,11 +192,10 @@ func ReactToMessage(ctx context.Context, clientUsername, partnerUsername, msgId,
 		MERGE (partnerUser)-[:RECEIVES_REACTION]->(msgrxn)-[:IN_DM_CHAT]->(partnerChat)
 
 		WITH clientUser.username AS partner_username, message.id AS msg_id, 
-			clientUser { .username, .profile_pic_url } AS reactor, 
-			crxn { .reaction, .created_at } AS reaction
+			clientUser { .username, .profile_pic_url } AS reactor, crxn
 
 		RETURN true AS client_resp,
-			{ partner_username, msg_id, reactor, reaction } AS partner_resp
+			{ partner_username, msg_id, reactor, reaction: crxn.reaction, at: crxn.created_at.epochMillis } AS partner_resp
 
 		`,
 		map[string]any{
@@ -257,7 +256,7 @@ func RemoveReactionToMessage(ctx context.Context, clientUsername, partnerUsernam
 
 type ChatHistoryEntry struct {
 	EntryType string `json:"chat_hist_entry_type"`
-	CreatedAt string `json:"created_at"`
+	CreatedAt int64  `json:"created_at"`
 
 	// for message and reply entry
 	Id             string           `json:"id,omitempty"`
@@ -287,13 +286,13 @@ func ChatHistory(ctx context.Context, clientUsername, partnerUsername string, li
 		OPTIONAL MATCH (entry)-[:REPLIES_TO]->(repliedMsg:DMMessage)
 		OPTIONAL MATCH (repliedMsg)<-[:SENDS_MESSAGE]-(repliedSender)
 
-		WITH entry, toString(entry.created_at) AS created_at,
+		WITH entry, entry.created_at.epochMillis AS created_at,
 			CASE WHEN senderUser IS NOT NULL
 				THEN senderUser { .username, .profile_pic_url } 
 				ELSE NULL
 			END AS sender,
 			CASE WHEN rxn IS NOT NULL
-				THEN collect({ reactor: reactorUser { .username, .profile_pic_url }, reaction: rxn { .reaction, .created_at })
+				THEN collect({ reactor: reactorUser { .username, .profile_pic_url }, reaction: rxn.reaction, at: rxn.created_at.epochMillis })
 				ELSE NULL
 			END AS reactions,
 			CASE WHEN repliedMsg IS NOT NULL
