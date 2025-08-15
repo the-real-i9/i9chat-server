@@ -131,10 +131,7 @@ func TestGroupChat(t *testing.T) {
 				reqBody, err := makeReqBody(map[string]any{
 					"username": user.Username,
 					"password": user.Password,
-					"geolocation": map[string]any{
-						"x": user.Geolocation.X,
-						"y": user.Geolocation.Y,
-					},
+					
 				})
 				require.NoError(t, err)
 
@@ -1033,7 +1030,7 @@ func TestGroupChat(t *testing.T) {
 				"msg": map[string]any{
 					"type": "text",
 					"props": map[string]any{
-						"textContent": "Hi. How're you doing?",
+						"text_content": "Hi. How're you doing?",
 					},
 				},
 				"at": time.Now().UTC().UnixMilli(),
@@ -1065,7 +1062,7 @@ func TestGroupChat(t *testing.T) {
 			"data": td.Map(map[string]any{
 				"message": td.SuperMapOf(map[string]any{
 					"id":              user4NewMsgId,
-					"content":         td.All(td.Contains(`"type":"text"`), td.Contains(`"textContent":"Hi. How're you doing?"`)),
+					"content":         td.All(td.Contains(`"type":"text"`), td.Contains(`"text_content":"Hi. How're you doing?"`)),
 					"delivery_status": "sent",
 					"sender": td.SuperMapOf(map[string]any{
 						"username": user4.Username,
@@ -1082,7 +1079,7 @@ func TestGroupChat(t *testing.T) {
 			"data": td.Map(map[string]any{
 				"message": td.SuperMapOf(map[string]any{
 					"id":              user4NewMsgId,
-					"content":         td.All(td.Contains(`"type":"text"`), td.Contains(`"textContent":"Hi. How're you doing?"`)),
+					"content":         td.All(td.Contains(`"type":"text"`), td.Contains(`"text_content":"Hi. How're you doing?"`)),
 					"delivery_status": "sent",
 					"sender": td.SuperMapOf(map[string]any{
 						"username": user4.Username,
@@ -1275,7 +1272,7 @@ func TestGroupChat(t *testing.T) {
 				td.Contains(td.SuperMapOf(map[string]any{
 					"chat_hist_entry_type": "message",
 					"id":                   user4NewMsgId,
-					"content":              td.All(td.Contains(`"type":"text"`), td.Contains(`"textContent":"Hi. How're you doing?"`)),
+					"content":              td.All(td.Contains(`"type":"text"`), td.Contains(`"text_content":"Hi. How're you doing?"`)),
 					"delivery_status":      "read",
 					"sender": td.SuperMapOf(map[string]any{
 						"username": user4.Username,

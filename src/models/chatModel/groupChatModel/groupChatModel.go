@@ -1420,14 +1420,20 @@ func ChatHistory(ctx context.Context, clientUsername, groupId string, limit int,
 		OPTIONAL MATCH (entry)-[:REPLIES_TO]->(repliedMsg:GroupMessage)
 		OPTIONAL MATCH (repliedMsg)<-[:SENDS_MESSAGE]-(repliedSender)
 		
-		WITH entry, entry.created_at.epochMillis AS created_at, 
+		WITH entry, senderUser, repliedMsg, repliedSender,
+     collect(CASE WHEN rxn IS NOT NULL 
+             THEN { reactor: reactorUser { .username, .profile_pic_url }, reaction: rxn.reaction, at: rxn.created_at.epochMillis }
+             ELSE NULL 
+             END) AS reaction_list
+
+		WITH entry, entry.created_at.epochMillis AS created_at,
 			CASE WHEN senderUser IS NOT NULL
 				THEN senderUser { .username, .profile_pic_url } 
 				ELSE NULL
 			END AS sender,
-			CASE WHEN rxn IS NOT NULL
-				THEN collect({ reactor: reactorUser { .username, .profile_pic_url }, reaction: rxn.reaction, at: rxn.created_at.epochMillis })
-				ELSE NULL
+			CASE WHEN size([r IN reaction_list WHERE r IS NOT NULL]) > 0
+         THEN [r IN reaction_list WHERE r IS NOT NULL]
+         ELSE NULL
 			END AS reactions,
 			CASE WHEN repliedMsg IS NOT NULL
 				THEN repliedMsg { .id, .content, sender_username: repliedSender.username }

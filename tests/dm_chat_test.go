@@ -98,11 +98,7 @@ func TestDMChat(t *testing.T) {
 			{
 				reqBody, err := makeReqBody(map[string]any{
 					"username": user.Username,
-					"password": user.Password,
-					"geolocation": map[string]any{
-						"x": user.Geolocation.X,
-						"y": user.Geolocation.Y,
-					},
+					"password": user.Password,					
 				})
 				require.NoError(t, err)
 
@@ -196,7 +192,7 @@ func TestDMChat(t *testing.T) {
 				"msg": map[string]any{
 					"type": "text",
 					"props": map[string]any{
-						"textContent": "Hi. How're you doing?",
+						"text_content": "Hi. How're you doing?",
 					},
 				},
 				"at": time.Now().UTC().UnixMilli(),
@@ -227,7 +223,7 @@ func TestDMChat(t *testing.T) {
 			"event": "new dm chat message",
 			"data": td.SuperMapOf(map[string]any{
 				"id":              user1NewMsgId,
-				"content":         td.All(td.Contains(`"type":"text"`), td.Contains(`"textContent":"Hi. How're you doing?"`)),
+				"content":         td.All(td.Contains(`"type":"text"`), td.Contains(`"text_content":"Hi. How're you doing?"`)),
 				"delivery_status": "sent",
 				"sender": td.SuperMapOf(map[string]any{
 					"username": user1.Username,
@@ -448,7 +444,7 @@ func TestDMChat(t *testing.T) {
 			"data": td.All(
 				td.Contains(td.SuperMapOf(map[string]any{
 					"id":              user1NewMsgId,
-					"content":         td.All(td.Contains(`"type":"text"`), td.Contains(`"textContent":"Hi. How're you doing?"`)),
+					"content":         td.All(td.Contains(`"type":"text"`), td.Contains(`"text_content":"Hi. How're you doing?"`)),
 					"delivery_status": "read",
 					"sender": td.SuperMapOf(map[string]any{
 						"username": user1.Username,

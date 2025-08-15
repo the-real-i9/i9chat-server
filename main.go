@@ -49,5 +49,4 @@ func main() {
 	}
 
 	log.Fatalln(app.Listen("0.0.0.0:" + PORT))
-
 }

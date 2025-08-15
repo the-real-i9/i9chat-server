@@ -140,7 +140,7 @@ func FindNearby(ctx context.Context, clientUsername string, x, y, radius float64
 	res, err := db.Query(ctx,
 		`
 		MATCH (u:User)
-		WHERE u.username <> $client_username AND point.distance(point({ x: $live_long, y: $live_lat, crs: "WGS-84-2D" }), u.geolocation) <= $radius
+		WHERE u.username <> $client_username AND point.distance(point({ x: $live_long, y: $live_lat, crs: "WGS-84" }), u.geolocation) <= $radius
 
 		WITH u, coalesce(u.last_seen.epochMillis, null) AS last_seen
 		RETURN collect(u { .username, .email, .profile_pic_url, .presence, last_seen }) AS nearby_users
@@ -330,11 +330,11 @@ func ChangePresence(ctx context.Context, clientUsername, presence string, lastSe
 	return pus, nil
 }
 
-func UpdateLocation(ctx context.Context, clientUsername string, newGeolocation appTypes.UserGeolocation) error {
+func SetLocation(ctx context.Context, clientUsername string, newGeolocation appTypes.UserGeolocation) error {
 	_, err := db.Query(ctx,
 		`
 		MATCH (u:User{ username: $client_username })
-		SET u.geolocation = point({ x: $x, y: $y, crs: "WGS-84-2D" })
+		SET u.geolocation = point({ x: $x, y: $y, crs: "WGS-84" })
 		`,
 		map[string]any{
 			"client_username": clientUsername,

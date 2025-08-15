@@ -37,8 +37,8 @@ func RequestNewAccount(c *fiber.Ctx) error {
 		return fiber.ErrInternalServerError
 	}
 
-	c.Cookie(helpers.Cookie("passwordReset", "", 0))
 	c.Cookie(helpers.Cookie("signup", string(sd), int(time.Hour/time.Second)))
+	c.Cookie(helpers.Cookie("passwordReset", "", 0))
 
 	return c.JSON(respData)
 }
@@ -105,8 +105,8 @@ func RegisterUser(c *fiber.Ctx) error {
 		return fiber.ErrInternalServerError
 	}
 
-	c.Cookie(helpers.Cookie("signup", "", 0))
 	c.Cookie(helpers.Cookie("user", string(usd), int(10*24*time.Hour/time.Second)))
+	c.Cookie(helpers.Cookie("signup", "", 0))
 
 	return c.JSON(respData)
 }

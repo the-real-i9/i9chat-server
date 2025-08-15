@@ -80,8 +80,8 @@ func ChangeProfilePicture(ctx context.Context, clientUsername string, pictureDat
 	return true, nil
 }
 
-func UpdateMyLocation(ctx context.Context, clientUsername string, newGeolocation appTypes.UserGeolocation) (any, error) {
-	err := user.UpdateLocation(ctx, clientUsername, newGeolocation)
+func SetMyLocation(ctx context.Context, clientUsername string, newGeolocation appTypes.UserGeolocation) (any, error) {
+	err := user.SetLocation(ctx, clientUsername, newGeolocation)
 	if err != nil {
 		return nil, err
 	}

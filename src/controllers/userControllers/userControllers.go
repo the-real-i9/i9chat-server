@@ -47,7 +47,7 @@ func ChangeProfilePicture(c *fiber.Ctx) error {
 	return c.JSON(respData)
 }
 
-func UpdateMyLocation(c *fiber.Ctx) error {
+func SetMyLocation(c *fiber.Ctx) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -64,7 +64,7 @@ func UpdateMyLocation(c *fiber.Ctx) error {
 		return val_err
 	}
 
-	respData, app_err := userService.UpdateMyLocation(ctx, clientUser.Username, body.NewGeolocation)
+	respData, app_err := userService.SetMyLocation(ctx, clientUser.Username, body.NewGeolocation)
 
 	if app_err != nil {
 		return app_err

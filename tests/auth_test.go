@@ -115,10 +115,6 @@ func TestUserAuth(t *testing.T) {
 		reqBody, err := makeReqBody(map[string]any{
 			"username": user1.Username,
 			"password": user1.Password,
-			"geolocation": map[string]any{
-				"x": user1.Geolocation.X,
-				"y": user1.Geolocation.Y,
-			},
 		})
 		require.NoError(t, err)
 
@@ -233,7 +229,7 @@ func TestUserAuth(t *testing.T) {
 		res, err := http.Post(signupPath+"/request_new_account", "application/json", reqBody)
 		require.NoError(t, err)
 
-		if !assert.Equal(t, http.StatusBadRequest, res.StatusCode) {
+		if !assert.Equal(t, http.StatusConflict, res.StatusCode) {
 			rb, err := errResBody(res.Body)
 			require.NoError(t, err)
 			t.Log("unexpected error:", rb)
