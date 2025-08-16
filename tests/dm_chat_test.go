@@ -98,7 +98,7 @@ func TestDMChat(t *testing.T) {
 			{
 				reqBody, err := makeReqBody(map[string]any{
 					"username": user.Username,
-					"password": user.Password,					
+					"password": user.Password,
 				})
 				require.NoError(t, err)
 
@@ -222,8 +222,13 @@ func TestDMChat(t *testing.T) {
 		td.Cmp(td.Require(t), user2NewMsgReceived, td.Map(map[string]any{
 			"event": "new dm chat message",
 			"data": td.SuperMapOf(map[string]any{
-				"id":              user1NewMsgId,
-				"content":         td.All(td.Contains(`"type":"text"`), td.Contains(`"text_content":"Hi. How're you doing?"`)),
+				"id": user1NewMsgId,
+				"content": td.SuperMapOf(map[string]any{
+					"type": "text",
+					"props": td.SuperMapOf(map[string]any{
+						"text_content": "Hi. How're you doing?",
+					}, nil),
+				}, nil),
 				"delivery_status": "sent",
 				"sender": td.SuperMapOf(map[string]any{
 					"username": user1.Username,
@@ -346,8 +351,13 @@ func TestDMChat(t *testing.T) {
 		td.Cmp(td.Require(t), user1NewMsgReceived, td.Map(map[string]any{
 			"event": "new dm chat message",
 			"data": td.SuperMapOf(map[string]any{
-				"id":              user2NewMsgId,
-				"content":         td.All(td.Contains(`"type":"photo"`), td.Contains(`"caption":"I'm guuud!"`)),
+				"id": user2NewMsgId,
+				"content": td.SuperMapOf(map[string]any{
+					"type": "photo",
+					"props": td.SuperMapOf(map[string]any{
+						"caption": "I'm guuud!",
+					}, nil),
+				}, nil),
 				"delivery_status": "sent",
 				"sender": td.SuperMapOf(map[string]any{
 					"username": user2.Username,
@@ -427,38 +437,53 @@ func TestDMChat(t *testing.T) {
 	{
 		t.Log("Action: user1 opens his chat history with user2")
 
-		err := user1.WSConn.WriteJSON(map[string]any{
-			"action": "get dm chat history",
-			"data": map[string]any{
-				"partnerUsername": user2.Username,
-			},
-		})
+		req, err := http.NewRequest("GET", dmChatPath+"/"+user2.Username+"/history", nil)
+		require.NoError(t, err)
+		req.Header.Add("Content-Type", "application/json")
+		req.Header.Set("Cookie", user1.SessionCookie)
+
+		res, err := http.DefaultClient.Do(req)
 		require.NoError(t, err)
 
-		// user1's server reply (response) to action
-		user1ServerReply := <-user1.ServerWSMsg
+		if !assert.Equal(t, http.StatusOK, res.StatusCode) {
+			rb, err := errResBody(res.Body)
+			require.NoError(t, err)
+			t.Log("unexpected error:", rb)
+			return
+		}
 
-		td.Cmp(td.Require(t), user1ServerReply, td.Map(map[string]any{
-			"event":    "server reply",
-			"toAction": "get dm chat history",
-			"data": td.All(
+		rb, err := succResBody[[]map[string]any](res.Body)
+		require.NoError(t, err)
+
+		td.Cmp(td.Require(t), rb,
+			td.All(
 				td.Contains(td.SuperMapOf(map[string]any{
-					"id":              user1NewMsgId,
-					"content":         td.All(td.Contains(`"type":"text"`), td.Contains(`"text_content":"Hi. How're you doing?"`)),
+					"id": user1NewMsgId,
+					"content": td.SuperMapOf(map[string]any{
+						"type": "text",
+						"props": td.SuperMapOf(map[string]any{
+							"text_content": "Hi. How're you doing?",
+						}, nil),
+					}, nil),
 					"delivery_status": "read",
 					"sender": td.SuperMapOf(map[string]any{
 						"username": user1.Username,
 					}, nil),
 				}, nil)),
 				td.Contains(td.SuperMapOf(map[string]any{
-					"id":              user2NewMsgId,
-					"content":         td.All(td.Contains(`"type":"photo"`), td.Contains(`"caption":"I'm guuud!"`)),
+					"id": user2NewMsgId,
+					"content": td.SuperMapOf(map[string]any{
+						"type": "photo",
+						"props": td.SuperMapOf(map[string]any{
+							"caption": "I'm guuud!",
+						}, nil),
+					}, nil),
 					"delivery_status": "read",
 					"sender": td.SuperMapOf(map[string]any{
 						"username": user2.Username,
 					}, nil),
 				}, nil)),
 			),
-		}, nil))
+		)
 	}
 }

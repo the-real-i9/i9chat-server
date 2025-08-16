@@ -24,6 +24,9 @@ const signinPath = HOST_URL + "/api/auth/signin"
 const userPath = HOST_URL + "/api/app/user"
 const signoutPath = userPath + "/signout"
 
+const dmChatPath = HOST_URL + "/api/app/dm_chat"
+const groupChatPath = HOST_URL + "/api/app/group_chat"
+
 type UserGeolocation struct {
 	X float64
 	Y float64

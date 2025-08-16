@@ -102,33 +102,3 @@ func (d groupInfo) Validate() error {
 
 	return helpers.ValidationError(err, "realtimeController_validation.go", "groupInfo")
 }
-
-type dmChatHistory struct {
-	PartnerUsername string `json:"partnerUsername"`
-	Limit           int    `json:"limit"`
-	Offset          int64  `json:"offset"`
-}
-
-func (b dmChatHistory) Validate() error {
-
-	err := validation.ValidateStruct(&b,
-		validation.Field(&b.PartnerUsername, validation.Required),
-	)
-
-	return helpers.ValidationError(err, "realtimeController_validation.go", "dmChatHistory")
-}
-
-type groupChatHistory struct {
-	GroupId string `json:"groupId"`
-	Limit   int    `json:"limit"`
-	Offset  int64  `json:"offset"`
-}
-
-func (b groupChatHistory) Validate() error {
-
-	err := validation.ValidateStruct(&b,
-		validation.Field(&b.GroupId, validation.Required, is.UUID),
-	)
-
-	return helpers.ValidationError(err, "realtimeController_validation.go", "groupChatHistory")
-}

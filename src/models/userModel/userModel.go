@@ -223,7 +223,7 @@ func GetMyChats(ctx context.Context, clientUsername string) ([]Chat, error) {
 			MATCH (clientChat:GroupChat{ owner_username: $client_username })-[:WITH_GROUP]->(group)
 
 			WITH clientChat, 
-				group { .name, .description, .picture_url } AS group_info, 
+				group { .id, .name, .description, .picture_url } AS group_info, 
 				group.id AS chat_ident
 
 			RETURN clientChat { chat_ident, group_info, .unread_messages_count, chat_type: "group" } AS chat

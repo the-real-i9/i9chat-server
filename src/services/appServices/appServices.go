@@ -90,7 +90,7 @@ func UploadMessageMedia(ctx context.Context, username string, msg *appTypes.MsgC
 		return uploadAudio(ctx, username, msg)
 	case "video":
 		return uploadVideo(ctx, username, msg)
-	case "image":
+	case "photo":
 		return uploadImage(ctx, username, msg)
 	case "file":
 		return uploadFile(ctx, username, msg)

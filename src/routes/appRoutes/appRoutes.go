@@ -2,6 +2,7 @@ package appRoutes
 
 import (
 	"i9chat/src/middlewares/authMiddlewares"
+	"i9chat/src/routes/appRoutes/dmChatRoutes"
 	"i9chat/src/routes/appRoutes/groupChatRoutes"
 	"i9chat/src/routes/appRoutes/realtimeRoute"
 	"i9chat/src/routes/appRoutes/userRoutes"
@@ -17,4 +18,6 @@ func Route(router fiber.Router) {
 	router.Route("/ws", realtimeRoute.Route)
 
 	router.Route("/group_chat", groupChatRoutes.Route)
+
+	router.Route("/dm_chat", dmChatRoutes.Route)
 }

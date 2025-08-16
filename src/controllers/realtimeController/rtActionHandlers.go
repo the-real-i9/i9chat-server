@@ -5,7 +5,6 @@ import (
 	"i9chat/src/helpers"
 	"i9chat/src/services/chatServices/dmChatService"
 	"i9chat/src/services/chatServices/groupChatService"
-	"time"
 )
 
 func sendDMChatMsgHndl(ctx context.Context, clientUsername string, actionData map[string]any) (map[string]any, error) {
@@ -90,44 +89,4 @@ func getGroupInfoHndl(ctx context.Context, actionData map[string]any) (map[strin
 	}
 
 	return groupChatService.GetGroupInfo(ctx, acd.GroupId)
-}
-
-func getDMChatHistoryHndl(ctx context.Context, clientUsername string, actionData map[string]any) (any, error) {
-	var acd dmChatHistory
-
-	helpers.ToStruct(actionData, &acd)
-
-	if val_err := acd.Validate(); val_err != nil {
-		return nil, val_err
-	}
-
-	if acd.Offset == 0 {
-		acd.Offset = time.Now().UTC().UnixMilli()
-	}
-
-	if acd.Limit == 0 {
-		acd.Limit = 50
-	}
-
-	return dmChatService.GetChatHistory(ctx, clientUsername, acd.PartnerUsername, acd.Limit, acd.Offset)
-}
-
-func getGroupChatHistoryHndl(ctx context.Context, clientUsername string, actionData map[string]any) (any, error) {
-	var acd groupChatHistory
-
-	helpers.ToStruct(actionData, &acd)
-
-	if val_err := acd.Validate(); val_err != nil {
-		return nil, val_err
-	}
-
-	if acd.Offset == 0 {
-		acd.Offset = time.Now().UTC().UnixMilli()
-	}
-
-	if acd.Limit == 0 {
-		acd.Limit = 50
-	}
-
-	return groupChatService.GetChatHistory(ctx, clientUsername, acd.GroupId, acd.Limit, acd.Offset)
 }

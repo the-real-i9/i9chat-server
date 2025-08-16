@@ -13,8 +13,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-const groupChatPath string = HOST_URL + "/api/app/group_chat"
-
 func TestGroupChat(t *testing.T) {
 	t.Parallel()
 
@@ -131,7 +129,6 @@ func TestGroupChat(t *testing.T) {
 				reqBody, err := makeReqBody(map[string]any{
 					"username": user.Username,
 					"password": user.Password,
-					
 				})
 				require.NoError(t, err)
 
@@ -1061,8 +1058,13 @@ func TestGroupChat(t *testing.T) {
 			"event": "new group chat message",
 			"data": td.Map(map[string]any{
 				"message": td.SuperMapOf(map[string]any{
-					"id":              user4NewMsgId,
-					"content":         td.All(td.Contains(`"type":"text"`), td.Contains(`"text_content":"Hi. How're you doing?"`)),
+					"id": user4NewMsgId,
+					"content": td.SuperMapOf(map[string]any{
+						"type": "text",
+						"props": td.SuperMapOf(map[string]any{
+							"text_content": "Hi. How're you doing?",
+						}, nil),
+					}, nil),
 					"delivery_status": "sent",
 					"sender": td.SuperMapOf(map[string]any{
 						"username": user4.Username,
@@ -1078,8 +1080,13 @@ func TestGroupChat(t *testing.T) {
 			"event": "new group chat message",
 			"data": td.Map(map[string]any{
 				"message": td.SuperMapOf(map[string]any{
-					"id":              user4NewMsgId,
-					"content":         td.All(td.Contains(`"type":"text"`), td.Contains(`"text_content":"Hi. How're you doing?"`)),
+					"id": user4NewMsgId,
+					"content": td.SuperMapOf(map[string]any{
+						"type": "text",
+						"props": td.SuperMapOf(map[string]any{
+							"text_content": "Hi. How're you doing?",
+						}, nil),
+					}, nil),
 					"delivery_status": "sent",
 					"sender": td.SuperMapOf(map[string]any{
 						"username": user4.Username,
@@ -1226,21 +1233,26 @@ func TestGroupChat(t *testing.T) {
 	{
 		t.Log("Action: user5 opens group chat history")
 
-		err := user5.WSConn.WriteJSON(map[string]any{
-			"action": "get group chat history",
-			"data": map[string]any{
-				"groupId": newGroup.Id,
-			},
-		})
+		req, err := http.NewRequest("GET", groupChatPath+"/"+newGroup.Id+"/history", nil)
+		require.NoError(t, err)
+		req.Header.Add("Content-Type", "application/json")
+		req.Header.Set("Cookie", user5.SessionCookie)
+
+		res, err := http.DefaultClient.Do(req)
 		require.NoError(t, err)
 
-		// user5's server reply (response) to aciton
-		user5ServerReply := <-user5.ServerWSMsg
+		if !assert.Equal(t, http.StatusOK, res.StatusCode) {
+			rb, err := errResBody(res.Body)
+			require.NoError(t, err)
+			t.Log("unexpected error:", rb)
+			return
+		}
 
-		td.Cmp(td.Require(t), user5ServerReply, td.Map(map[string]any{
-			"event":    "server reply",
-			"toAction": "get group chat history",
-			"data": td.All(
+		rb, err := succResBody[[]map[string]any](res.Body)
+		require.NoError(t, err)
+
+		td.Cmp(td.Require(t), rb,
+			td.All(
 				td.Contains(td.SuperMapOf(map[string]any{
 					"chat_hist_entry_type": "group activity",
 					"info":                 "You were added",
@@ -1272,13 +1284,18 @@ func TestGroupChat(t *testing.T) {
 				td.Contains(td.SuperMapOf(map[string]any{
 					"chat_hist_entry_type": "message",
 					"id":                   user4NewMsgId,
-					"content":              td.All(td.Contains(`"type":"text"`), td.Contains(`"text_content":"Hi. How're you doing?"`)),
-					"delivery_status":      "read",
+					"content": td.SuperMapOf(map[string]any{
+						"type": "text",
+						"props": td.SuperMapOf(map[string]any{
+							"text_content": "Hi. How're you doing?",
+						}, nil),
+					}, nil),
+					"delivery_status": "read",
 					"sender": td.SuperMapOf(map[string]any{
 						"username": user4.Username,
 					}, nil),
 				}, nil)),
 			),
-		}, nil))
+		)
 	}
 }

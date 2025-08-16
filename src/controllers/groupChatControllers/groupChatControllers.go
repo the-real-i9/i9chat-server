@@ -6,6 +6,7 @@ import (
 	"i9chat/src/appTypes"
 	"i9chat/src/services/chatServices/groupChatService"
 	"net/url"
+	"time"
 
 	"github.com/gofiber/fiber/v2"
 )
@@ -49,6 +50,20 @@ func GetGroupMembershipInfo(c *fiber.Ctx) error {
 	clientUser := c.Locals("user").(appTypes.ClientUser)
 
 	respData, app_err := groupChatService.GetGroupMemInfo(ctx, clientUser.Username, c.Params("group_id"))
+	if app_err != nil {
+		return app_err
+	}
+
+	return c.JSON(respData)
+}
+
+func GetGroupChatHistory(c *fiber.Ctx) error {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	clientUser := c.Locals("user").(appTypes.ClientUser)
+
+	respData, app_err := groupChatService.GetChatHistory(ctx, clientUser.Username, c.Params("group_id"), c.QueryInt("limit", 50), int64(c.QueryInt("offset", int(time.Now().UTC().UnixMilli()))))
 	if app_err != nil {
 		return app_err
 	}

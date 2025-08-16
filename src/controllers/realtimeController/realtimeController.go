@@ -70,15 +70,6 @@ var WSStream = websocket.New(func(c *websocket.Conn) {
 			}
 
 			w_err = c.WriteJSON(helpers.WSReply(respData, body.Action))
-		case "get dm chat history":
-
-			respData, err := getDMChatHistoryHndl(ctx, clientUser.Username, body.Data)
-			if err != nil {
-				w_err = c.WriteJSON(helpers.WSErrReply(err, body.Action))
-				continue
-			}
-
-			w_err = c.WriteJSON(helpers.WSReply(respData, body.Action))
 		case "send group chat message":
 
 			respData, err := sendGroupChatMsgHndl(ctx, clientUser.Username, body.Data)
@@ -100,15 +91,6 @@ var WSStream = websocket.New(func(c *websocket.Conn) {
 		case "ack group chat message read":
 
 			respData, err := ackGroupChatMsgReadHndl(ctx, clientUser.Username, body.Data)
-			if err != nil {
-				w_err = c.WriteJSON(helpers.WSErrReply(err, body.Action))
-				continue
-			}
-
-			w_err = c.WriteJSON(helpers.WSReply(respData, body.Action))
-		case "get group chat history":
-
-			respData, err := getGroupChatHistoryHndl(ctx, clientUser.Username, body.Data)
 			if err != nil {
 				w_err = c.WriteJSON(helpers.WSErrReply(err, body.Action))
 				continue
