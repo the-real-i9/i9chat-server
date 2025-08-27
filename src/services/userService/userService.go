@@ -45,7 +45,7 @@ func GoOffline(ctx context.Context, clientUsername string) {
 			Event: "user offline",
 			Data: map[string]any{
 				"user":      clientUsername,
-				"last_seen": lastSeen,
+				"last_seen": lastSeen.UnixMilli(),
 			},
 		})
 	}

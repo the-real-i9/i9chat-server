@@ -310,7 +310,7 @@ func ChangePresence(ctx context.Context, clientUsername, presence string, lastSe
 		SET user.presence = $presence, user.last_seen = %s
 
 		WITH user
-		OPTIONAL MATCH (user)-[:HAS_DM_CHAT]->()-[:WITH_USER]->(partnerUser)
+		OPTIONAL MATCH (user)-[:HAS_CHAT]->(:DMChat)-[:WITH_USER]->(partnerUser)
 		
 		RETURN collect(partnerUser.username) AS partner_usernames
 		`, lastSeenVal),

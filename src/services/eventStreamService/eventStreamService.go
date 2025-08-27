@@ -3,6 +3,7 @@ package eventStreamService
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"i9chat/src/appTypes"
 	"i9chat/src/models/db"
 	"log"
@@ -15,8 +16,8 @@ import (
 
 var usersEventPipes = &sync.Map{}
 
-func Send(receiverUser string, message appTypes.ServerWSMsg) {
-	if userPipe, ok := usersEventPipes.Load(receiverUser); ok {
+func Send(receiverUserKey string, message appTypes.ServerWSMsg) {
+	if userPipe, ok := usersEventPipes.Load(receiverUserKey); ok {
 		pipe := userPipe.(*websocket.Conn)
 
 		if err := pipe.WriteJSON(message); err != nil {
@@ -32,10 +33,17 @@ func Send(receiverUser string, message appTypes.ServerWSMsg) {
 		return
 	}
 
-	storeUndeliveredEventMsg(receiverUser, strMsg)
+	var receiverUser string
+
+	fmt.Sscanf(receiverUserKey, "user-%s-alerts", &receiverUser)
+
+	storeUndeliveredEventMsg(receiverUser, string(strMsg))
 }
 
 func Subscribe(clientUsername string, pipe *websocket.Conn) {
+	// add user pipe to user event pipes
+	usersEventPipes.Store("user-"+clientUsername+"-alerts", pipe)
+
 	undEventMsgs := getUndeliveredEventMsgs(clientUsername)
 
 	for _, eventMsg := range undEventMsgs {
@@ -43,7 +51,7 @@ func Subscribe(clientUsername string, pipe *websocket.Conn) {
 
 		var msg appTypes.ServerWSMsg
 
-		if err := json.Unmarshal(eventMsg["msg"].([]byte), &msg); err != nil {
+		if err := json.Unmarshal([]byte(eventMsg["msg"].(string)), &msg); err != nil {
 			log.Println("error: eventStreamService.go: Subscribe: json.Unmarshal", err)
 			return
 		}
@@ -55,16 +63,13 @@ func Subscribe(clientUsername string, pipe *websocket.Conn) {
 
 		go deleteDeliveredEventMsg(clientUsername, eventMsg["id"].(string))
 	}
-
-	// add user pipe to user event pipes
-	usersEventPipes.Store(clientUsername, pipe)
 }
 
 func Unsubscribe(clientUsername string) {
-	go usersEventPipes.Delete(clientUsername)
+	go usersEventPipes.Delete("user-" + clientUsername + "-alerts")
 }
 
-func storeUndeliveredEventMsg(username string, msg []byte) {
+func storeUndeliveredEventMsg(username, msg string) {
 	_, err := db.Query(
 		context.Background(),
 		`
