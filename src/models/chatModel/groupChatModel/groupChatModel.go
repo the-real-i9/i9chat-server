@@ -32,26 +32,27 @@ func New(ctx context.Context, clientUsername, name, description, pictureUrl stri
 		CREATE (clientUser)-[:IS_MEMBER_OF { role: "admin" }]->(group),
 			(clientUser)-[:HAS_CHAT]->(clientChat:GroupChat{ owner_username: $client_username, group_id: group.id, last_activity_type: "group activity", last_group_activity_at: $created_at, updated_at: $created_at })-[:WITH_GROUP]->(group),
 			(clientUser)-[:RECEIVES_ACTIVITY]->(:GroupChatEntry{ chat_hist_entry_type: "group activity", info: "You created " + $name, created_at: $created_at })-[:IN_GROUP_CHAT]->(clientChat),
-			(clientUser)-[:RECEIVES_ACTIVITY]->(:GroupChatEntry{ chat_hist_entry_type: "group activity", info: "You added " + $init_users_str, created_at: $created_at })-[:IN_GROUP_CHAT]->(clientChat)
+			(clientUser)-[:RECEIVES_ACTIVITY]->(:GroupChatEntry{ chat_hist_entry_type: "group activity", info: "You added " + $init_users_str, created_at: $created_after_at })-[:IN_GROUP_CHAT]->(clientChat)
 
 		WITH group, initUser
 		CREATE (initUser)-[:IS_MEMBER_OF { role: "member" }]->(group),
 			(initUser)-[:HAS_CHAT]->(initUserChat:GroupChat{ owner_username: initUser.username, group_id: group.id, last_activity_type: "group activity", last_group_activity_at: $created_at, updated_at: $created_at })-[:WITH_GROUP]->(group),
 			(initUser)-[:RECEIVES_ACTIVITY]->(:GroupChatEntry{ chat_hist_entry_type: "group activity", info: $client_username + " created " + $name, created_at: $created_at })-[:IN_GROUP_CHAT]->(initUserChat),
-			(initUser)-[:RECEIVES_ACTIVITY]->(:GroupChatEntry{ chat_hist_entry_type: "group activity", info: "You were added", created_at: $created_at })-[:IN_GROUP_CHAT]->(initUserChat)
+			(initUser)-[:RECEIVES_ACTIVITY]->(:GroupChatEntry{ chat_hist_entry_type: "group activity", info: "You were added", created_at: $created_after_at })-[:IN_GROUP_CHAT]->(initUserChat)
 
 		WITH group
-		RETURN group { .id, .name, .description, .picture_url, history: [{ chat_hist_entry_type: "group activity", info: "You created " + $name, created_at: $created_at }, { chat_hist_entry_type: "group activity", info: "You added " + $init_users_str, created_at: $created_at }] } AS client_resp,
-			group { .id, .name, .description, .picture_url, history: [{ chat_hist_entry_type: "group activity", info: $client_username + " created " + $name, created_at: $created_at }, { chat_hist_entry_type: "group activity", info: "You were added", created_at: $created_at }] } AS init_member_resp
+		RETURN group { .id, .name, .description, .picture_url, history: [{ chat_hist_entry_type: "group activity", info: "You created " + $name, created_at: $created_at }, { chat_hist_entry_type: "group activity", info: "You added " + $init_users_str, created_at: $created_after_at }] } AS client_resp,
+			group { .id, .name, .description, .picture_url, history: [{ chat_hist_entry_type: "group activity", info: $client_username + " created " + $name, created_at: $created_at }, { chat_hist_entry_type: "group activity", info: "You were added", created_at: $created_after_at }] } AS init_member_resp
 		`,
 		map[string]any{
-			"client_username": clientUsername,
-			"name":            name,
-			"description":     description,
-			"picture_url":     pictureUrl,
-			"init_users":      initUsers,
-			"init_users_str":  strings.Join(initUsers, ", "),
-			"created_at":      createdAt,
+			"client_username":  clientUsername,
+			"name":             name,
+			"description":      description,
+			"picture_url":      pictureUrl,
+			"init_users":       initUsers,
+			"init_users_str":   strings.Join(initUsers, ", "),
+			"created_at":       createdAt,
+			"created_after_at": createdAt.Add(500 * time.Millisecond),
 		},
 	)
 	if err != nil {
