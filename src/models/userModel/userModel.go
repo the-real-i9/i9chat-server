@@ -42,9 +42,9 @@ func New(ctx context.Context, email, username, password string) (map[string]any,
 	res, err := db.Query(
 		ctx,
 		`
-		CREATE (u:User { email: $email, username: $username, password: $password, profile_pic_url: "", presence: "online" })
+		CREATE (u:User { email: $email, username: $username, password: $password, profile_pic_url: "", presence: "online", bio: "i9chat is Awesome!" })
 		WITH u, NULL AS last_seen
-		RETURN u { .username, .email, .profile_pic_url, .presence, last_seen } AS new_user
+		RETURN u { .username, .email, .profile_pic_url, .bio, .presence, last_seen } AS new_user
 		`,
 		map[string]any{
 			"email":    email,
@@ -69,7 +69,7 @@ func SigninFind(ctx context.Context, uniqueIdent string) (map[string]any, error)
 	WHERE u.username = $uniqueIdent OR u.email = $uniqueIdent
 
 	WITH u, coalesce(u.last_seen.epochMillis, null) AS last_seen
-	RETURN u { .username, .email, .profile_pic_url, .presence, last_seen, .password } AS found_user
+	RETURN u { .username, .email, .profile_pic_url, .presence, .bio, last_seen, .password } AS found_user
 	`,
 		map[string]any{
 			"uniqueIdent": uniqueIdent,
@@ -96,7 +96,7 @@ func SessionFind(ctx context.Context, username string) (map[string]any, error) {
 		MATCH (u:User{ username: $username })
 
 		WITH u, coalesce(u.last_seen.epochMillis, null) AS last_seen
-		RETURN u { .username, .email, .profile_pic_url, .presence, last_seen } AS found_user
+		RETURN u { .username, .email, .profile_pic_url, .bio, .presence, last_seen } AS found_user
 		`,
 		map[string]any{
 			"username": username,
@@ -143,7 +143,7 @@ func FindNearby(ctx context.Context, clientUsername string, x, y, radius float64
 		WHERE u.username <> $client_username AND point.distance(point({ x: $live_long, y: $live_lat, crs: "WGS-84" }), u.geolocation) <= $radius
 
 		WITH u, coalesce(u.last_seen.epochMillis, null) AS last_seen
-		RETURN collect(u { .username, .email, .profile_pic_url, .presence, last_seen }) AS nearby_users
+		RETURN collect(u { .username, .email, .profile_pic_url, .bio, .presence, last_seen }) AS nearby_users
 	`,
 		map[string]any{
 			"client_username": clientUsername,
@@ -173,7 +173,7 @@ func FindOne(ctx context.Context, emailUsername string) (map[string]any, error) 
 		WHERE u.username = $eup OR u.email = $eup
 
 		WITH u, coalesce(u.last_seen.epochMillis, null) AS last_seen
-		RETURN u { .username, .email, .profile_pic_url, .presence, last_seen } AS found_user
+		RETURN u { .username, .email, .profile_pic_url, .bio, .presence, last_seen } AS found_user
 		`,
 		map[string]any{
 			"eup": emailUsername,
@@ -258,7 +258,7 @@ func GetMyProfile(ctx context.Context, clientUsername string) (map[string]any, e
 		`
 		MATCH (u:User{ username: $client_username })
 		WITH u, { x: toFloat(u.geolocation.x), y: toFloat(u.geolocation.y) } AS geolocation, coalesce(u.last_seen.epochMillis, null) AS last_seen
-		RETURN u { .username, .email, .profile_pic_url, .presence, last_seen, geolocation } AS my_profile
+		RETURN u { .username, .email, .profile_pic_url, .bio, .presence, last_seen, geolocation } AS my_profile
 		`,
 		map[string]any{
 			"client_username": clientUsername,
@@ -291,6 +291,25 @@ func ChangeProfilePicture(ctx context.Context, clientUsername, newPicUrl string)
 	)
 	if err != nil {
 		log.Println("userModel.go: ChangeProfilePicture:", err)
+		return fiber.ErrInternalServerError
+	}
+
+	return nil
+}
+
+func ChangeBio(ctx context.Context, clientUsername, newBio string) error {
+	_, err := db.Query(ctx,
+		`
+		MATCH (u:User{ username: $client_username })
+		SET u.bio = $new_bio
+		`,
+		map[string]any{
+			"client_username": clientUsername,
+			"new_bio":         newBio,
+		},
+	)
+	if err != nil {
+		log.Println("userModel.go: ChangeBio:", err)
 		return fiber.ErrInternalServerError
 	}
 

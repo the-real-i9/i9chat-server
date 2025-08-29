@@ -22,6 +22,7 @@ func GetSessionUser(c *fiber.Ctx) error {
 
 	return c.JSON(respData)
 }
+
 func ChangeProfilePicture(c *fiber.Ctx) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -40,6 +41,31 @@ func ChangeProfilePicture(c *fiber.Ctx) error {
 	}
 
 	respData, app_err := userService.ChangeProfilePicture(ctx, clientUser.Username, body.PictureData)
+	if app_err != nil {
+		return app_err
+	}
+
+	return c.JSON(respData)
+}
+
+func ChangeBio(c *fiber.Ctx) error {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	clientUser := c.Locals("user").(appTypes.ClientUser)
+
+	var body changeBioBody
+
+	body_err := c.BodyParser(&body)
+	if body_err != nil {
+		return body_err
+	}
+
+	if val_err := body.Validate(); val_err != nil {
+		return val_err
+	}
+
+	respData, app_err := userService.ChangeBio(ctx, clientUser.Username, body.NewBio)
 	if app_err != nil {
 		return app_err
 	}
@@ -77,7 +103,7 @@ func FindUser(c *fiber.Ctx) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	respData, app_err := userService.FindUser(ctx, c.Query("eup"))
+	respData, app_err := userService.FindUser(ctx, c.Query("eu"))
 
 	if app_err != nil {
 		return app_err

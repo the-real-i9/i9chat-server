@@ -22,6 +22,21 @@ func (b changeProfilePictureBody) Validate() error {
 	return helpers.ValidationError(err, "userControllers_validation.go", "changeProfilePictureBody")
 }
 
+type changeBioBody struct {
+	NewBio string `json:"newBio"`
+}
+
+func (b changeBioBody) Validate() error {
+	err := validation.ValidateStruct(&b,
+		validation.Field(&b.NewBio,
+			validation.Required,
+			validation.Length(1, 150).Error("maximum bio length is 150 characters"),
+		),
+	)
+
+	return helpers.ValidationError(err, "userControllers_validation.go", "changeBioBody")
+}
+
 type updateMyGeolocationBody struct {
 	NewGeolocation appTypes.UserGeolocation `json:"newGeolocation"`
 }
