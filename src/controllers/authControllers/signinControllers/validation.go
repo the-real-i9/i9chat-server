@@ -1,6 +1,7 @@
 package signinControllers
 
 import (
+	"i9chat/src/appErrors/userErrors"
 	"i9chat/src/helpers"
 	"strings"
 
@@ -19,14 +20,12 @@ func (b signInBody) Validate() error {
 		validation.Field(&b.EmailOrUsername,
 			validation.Required,
 			validation.When(strings.ContainsAny(b.EmailOrUsername, "@"),
-				is.EmailFormat.Error("invalid email or username"),
+				is.EmailFormat.Error("incorrect email format"),
 			).Else(
 				validation.Length(3, 0).Error("invalid email or username"),
 			),
 		),
-		validation.Field(&b.Password,
-			validation.Required,
-		),
+		validation.Field(&b.Password, validation.Required),
 	)
 
 	return helpers.ValidationError(err, "signinControllers_validation.go", "signInBody")

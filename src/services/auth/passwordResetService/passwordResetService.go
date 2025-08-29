@@ -3,6 +3,7 @@ package passwordResetService
 import (
 	"context"
 	"fmt"
+	"i9chat/src/appErrors/userErrors"
 	"i9chat/src/helpers"
 	user "i9chat/src/models/userModel"
 	"i9chat/src/services/mailService"
@@ -20,7 +21,7 @@ func RequestPasswordReset(ctx context.Context, email string) (any, map[string]an
 	}
 
 	if !userExists {
-		return nil, nil, fiber.NewError(fiber.StatusNotFound, "Non-existent user")
+		return nil, nil, fiber.NewError(fiber.StatusNotFound, userErrors.NonExistingUser)
 	}
 
 	pwdrToken, expires := securityServices.GenerateTokenCodeExp()
@@ -50,11 +51,11 @@ func ConfirmEmail(ctx context.Context, sessionData map[string]any, inputResetTok
 	helpers.ToStruct(sessionData, &sd)
 
 	if sd.PwdrToken != inputResetToken {
-		return "", nil, fiber.NewError(fiber.StatusBadRequest, "Incorrect password reset token! Check or Re-submit your email.")
+		return "", nil, fiber.NewError(fiber.StatusBadRequest, userErrors.IncorrectResetToken)
 	}
 
 	if sd.PwdrTokenExpires.Before(time.Now()) {
-		return "", nil, fiber.NewError(fiber.StatusBadRequest, "Password reset token expired! Re-submit your email.")
+		return "", nil, fiber.NewError(fiber.StatusBadRequest, userErrors.ResetTokenExpired)
 	}
 
 	newSessionData := map[string]any{"email": sd.Email}

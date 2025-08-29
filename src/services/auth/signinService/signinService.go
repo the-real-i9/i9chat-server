@@ -2,6 +2,7 @@ package signinService
 
 import (
 	"context"
+	"i9chat/src/appErrors/userErrors"
 	"i9chat/src/appTypes"
 	user "i9chat/src/models/userModel"
 	"i9chat/src/services/securityServices"
@@ -18,7 +19,7 @@ func Signin(ctx context.Context, emailOrUsername, password string) (any, string,
 	}
 
 	if theUser == nil {
-		return nil, "", fiber.NewError(fiber.StatusNotFound, "Incorrect email/username or password")
+		return nil, "", fiber.NewError(fiber.StatusNotFound, userErrors.IncorrectCredentials)
 	}
 
 	hashedPassword := theUser["password"].(string)
@@ -29,7 +30,7 @@ func Signin(ctx context.Context, emailOrUsername, password string) (any, string,
 	}
 
 	if !yes {
-		return nil, "", fiber.NewError(fiber.StatusNotFound, "Incorrect email/username or password")
+		return nil, "", fiber.NewError(fiber.StatusNotFound, userErrors.IncorrectCredentials)
 	}
 
 	authJwt, err := securityServices.JwtSign(appTypes.ClientUser{

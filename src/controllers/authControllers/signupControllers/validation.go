@@ -16,7 +16,7 @@ func (b requestNewAccountBody) Validate() error {
 	err := validation.ValidateStruct(&b,
 		validation.Field(&b.Email,
 			validation.Required,
-			is.EmailFormat,
+			is.EmailFormat.Error("incorrect email format"),
 		),
 	)
 
@@ -29,10 +29,7 @@ type verifyEmailBody struct {
 
 func (b verifyEmailBody) Validate() error {
 	err := validation.ValidateStruct(&b,
-		validation.Field(&b.Code,
-			validation.Required,
-			validation.Length(6, 6).Error("invalid code value"),
-		),
+		validation.Field(&b.Code, validation.Required),
 	)
 
 	return helpers.ValidationError(err, "signupControllers_validation.go", "verifyEmailBody")
@@ -49,11 +46,11 @@ func (b registerUserBody) Validate() error {
 		validation.Field(&b.Username,
 			validation.Required,
 			validation.Length(3, 0).Error("username too short"),
-			validation.Match(regexp.MustCompile("^[[:alnum:]][[:alnum:]_-]+[[:alnum:]]$")).Error("invalid username syntax"),
+			validation.Match(regexp.MustCompile("^[[:alnum:]][[:alnum:]_-]+[[:alnum:]]$")).Error("username contains invalid characters"),
 		),
 		validation.Field(&b.Password,
 			validation.Required,
-			validation.Length(8, 0).Error("minimum of 8 characters"),
+			validation.Length(8, 0).Error("password too short. minimum of 8 characters"),
 		),
 	)
 

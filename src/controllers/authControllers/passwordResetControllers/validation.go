@@ -15,7 +15,7 @@ func (b requestPasswordResetBody) Validate() error {
 	err := validation.ValidateStruct(&b,
 		validation.Field(&b.Email,
 			validation.Required,
-			is.EmailFormat,
+			is.EmailFormat.Error("incorrect email format"),
 		),
 	)
 
@@ -43,11 +43,11 @@ func (b resetPasswordBody) Validate() error {
 	err := validation.ValidateStruct(&b,
 		validation.Field(&b.NewPassword,
 			validation.Required,
-			validation.Length(8, 0).Error("password too short. minimun of 8 characters"),
+			validation.Length(8, 0).Error("password too short. minimum of 8 characters"),
 		),
 		validation.Field(&b.ConfirmNewPassword,
 			validation.Required,
-			validation.In(b.NewPassword).Error("passwords mismatch"),
+			validation.In(b.NewPassword).Error("password mismatched"),
 		),
 	)
 

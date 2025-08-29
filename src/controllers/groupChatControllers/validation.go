@@ -79,7 +79,7 @@ type addUsersToGroupAction struct {
 
 func (d addUsersToGroupAction) Validate() error {
 	err := validation.ValidateStruct(&d,
-		validation.Field(&d.NewUsers, validation.Required, validation.Length(1, 0)),
+		validation.Field(&d.NewUsers, validation.Required, validation.Length(1, 0).Error("no users provided")),
 	)
 
 	return helpers.ValidationError(err, "groupChat_validation.go", "addUsersToGroupAction")

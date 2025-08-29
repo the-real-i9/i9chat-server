@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"i9chat/src/appErrors/userErrors"
 	"i9chat/src/appGlobals"
 	"log"
 	"os"
@@ -30,7 +31,7 @@ func Upload(ctx context.Context, filePath string, data []byte) (string, error) {
 	err := stWriter.Close()
 	if err != nil {
 		if errors.Is(err, context.DeadlineExceeded) {
-			return "", fiber.NewError(fiber.StatusRequestTimeout, "media upload timed out")
+			return "", fiber.NewError(fiber.StatusRequestTimeout, userErrors.MediaUploadTimedOut)
 		}
 
 		log.Println("cloudStorageService.go: UploadFile:", err)

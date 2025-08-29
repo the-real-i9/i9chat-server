@@ -3,6 +3,7 @@ package signupService
 import (
 	"context"
 	"fmt"
+	"i9chat/src/appErrors/userErrors"
 	"i9chat/src/appTypes"
 	"i9chat/src/helpers"
 	user "i9chat/src/models/userModel"
@@ -22,7 +23,7 @@ func RequestNewAccount(ctx context.Context, email string) (any, map[string]any, 
 	}
 
 	if userExists {
-		return nil, nil, fiber.NewError(fiber.StatusConflict, fmt.Sprintf("An account with %s already exists", email))
+		return nil, nil, fiber.NewError(fiber.StatusConflict, userErrors.EmailAlreadyExists)
 	}
 
 	verfCode, expires := securityServices.GenerateTokenCodeExp()
@@ -52,11 +53,11 @@ func VerifyEmail(ctx context.Context, sessionData map[string]any, inputVerfCode 
 	helpers.ToStruct(sessionData, &sd)
 
 	if sd.VCode != inputVerfCode {
-		return "", nil, fiber.NewError(fiber.StatusBadRequest, "Incorrect verification code! Check or Re-submit your email.")
+		return "", nil, fiber.NewError(fiber.StatusBadRequest, userErrors.IncorrectVerfCode)
 	}
 
 	if sd.VCodeExpires.Before(time.Now()) {
-		return "", nil, fiber.NewError(fiber.StatusBadRequest, "Verification code expired! Re-submit your email.")
+		return "", nil, fiber.NewError(fiber.StatusBadRequest, userErrors.VerfCodeExpired)
 	}
 
 	go mailService.SendMail(sd.Email, "Email Verification Success", fmt.Sprintf("Your email %s has been verified!", sd.Email))
@@ -79,7 +80,7 @@ func RegisterUser(ctx context.Context, sessionData map[string]any, username, pas
 	}
 
 	if userExists {
-		return nil, "", fiber.NewError(fiber.StatusConflict, "Username unavailable")
+		return nil, "", fiber.NewError(fiber.StatusConflict, userErrors.UsernameUnavailable)
 	}
 
 	hashedPassword, err := securityServices.HashPassword(password)

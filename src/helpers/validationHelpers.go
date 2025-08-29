@@ -15,7 +15,7 @@ func ValidationError(err error, filename, structname string) error {
 			return fiber.ErrInternalServerError
 		}
 
-		return fiber.NewError(fiber.StatusBadRequest, fmt.Sprint("validation error: ", err))
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Sprintf("%s", err))
 	}
 
 	return nil
