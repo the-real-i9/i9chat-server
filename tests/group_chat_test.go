@@ -2,6 +2,7 @@ package tests
 
 import (
 	"fmt"
+	"i9chat/src/helpers"
 	"net/http"
 	"os"
 	"testing"
@@ -437,7 +438,7 @@ func TestGroupChat(t *testing.T) {
 		rb, err := succResBody[string](res.Body)
 		require.NoError(t, err)
 
-		require.Equal(t, fmt.Sprintf("You added %s, %s", user4.Username, user5.Username), rb)
+		require.Equal(t, fmt.Sprintf("You added %s", helpers.JoinWithCommaAnd(user4.Username, user5.Username)), rb)
 
 		user4GCUserAddedNotif := <-user4.ServerWSMsg
 
@@ -474,7 +475,7 @@ func TestGroupChat(t *testing.T) {
 		td.Cmp(td.Require(t), user1GCNewUsersAddedNotif, td.Map(map[string]any{
 			"event": "new group chat activity",
 			"data": td.Map(map[string]any{
-				"info":     fmt.Sprintf("%s added %s, %s", user2.Username, user4.Username, user5.Username),
+				"info":     fmt.Sprintf("%s added %s", user2.Username, helpers.JoinWithCommaAnd(user4.Username, user5.Username)),
 				"group_id": newGroup.Id,
 			}, nil),
 		}, nil))
@@ -484,7 +485,7 @@ func TestGroupChat(t *testing.T) {
 		td.Cmp(td.Require(t), user3GCNewUsersAddedNotif, td.Map(map[string]any{
 			"event": "new group chat activity",
 			"data": td.Map(map[string]any{
-				"info":     fmt.Sprintf("%s added %s, %s", user2.Username, user4.Username, user5.Username),
+				"info":     fmt.Sprintf("%s added %s", user2.Username, helpers.JoinWithCommaAnd(user4.Username, user5.Username)),
 				"group_id": newGroup.Id,
 			}, nil),
 		}, nil))

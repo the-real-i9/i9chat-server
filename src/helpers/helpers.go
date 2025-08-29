@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"reflect"
+	"strings"
 
 	"github.com/gofiber/fiber/v2"
 )
@@ -24,6 +25,22 @@ func ToStruct(val any, dest any) {
 	if err := json.Unmarshal(bt, dest); err != nil {
 		log.Println("helpers.go: ToStruct: json.Unmarshal:", err)
 	}
+}
+
+func JoinWithCommaAnd(items ...string) string {
+	n := len(items)
+	if n == 0 {
+		return ""
+	}
+	if n == 1 {
+		return items[0]
+	}
+	if n == 2 {
+		return items[0] + " and " + items[1]
+	}
+
+	// Join all except the last with commas, then append "and last"
+	return strings.Join(items[:n-1], ", ") + ", and " + items[n-1]
 }
 
 func WSErrReply(err error, toAction string) map[string]any {

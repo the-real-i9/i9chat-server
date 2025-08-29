@@ -18,9 +18,9 @@ var WSStream = websocket.New(func(c *websocket.Conn) {
 
 	clientUser := c.Locals("user").(appTypes.ClientUser)
 
-	eventStreamService.Subscribe(clientUser.Username, c)
+	userService.GoOnline(context.Background(), clientUser.Username)
 
-	go userService.GoOnline(context.Background(), clientUser.Username)
+	eventStreamService.Subscribe(clientUser.Username, c)
 
 	var w_err error
 

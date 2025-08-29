@@ -3,7 +3,6 @@ package eventStreamService
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"i9chat/src/appTypes"
 	"i9chat/src/models/db"
 	"log"
@@ -16,8 +15,8 @@ import (
 
 var usersEventPipes = &sync.Map{}
 
-func Send(receiverUserKey string, message appTypes.ServerWSMsg) {
-	if userPipe, ok := usersEventPipes.Load(receiverUserKey); ok {
+func Send(receiverUser string, message appTypes.ServerWSMsg) {
+	if userPipe, ok := usersEventPipes.Load(receiverUser); ok {
 		pipe := userPipe.(*websocket.Conn)
 
 		if err := pipe.WriteJSON(message); err != nil {
@@ -33,16 +32,12 @@ func Send(receiverUserKey string, message appTypes.ServerWSMsg) {
 		return
 	}
 
-	var receiverUser string
-
-	fmt.Sscanf(receiverUserKey, "user-%s-alerts", &receiverUser)
-
 	storeUndeliveredEventMsg(receiverUser, string(strMsg))
 }
 
 func Subscribe(clientUsername string, pipe *websocket.Conn) {
 	// add user pipe to user event pipes
-	usersEventPipes.Store("user-"+clientUsername+"-alerts", pipe)
+	usersEventPipes.Store(clientUsername, pipe)
 
 	undEventMsgs := getUndeliveredEventMsgs(clientUsername)
 
@@ -66,7 +61,7 @@ func Subscribe(clientUsername string, pipe *websocket.Conn) {
 }
 
 func Unsubscribe(clientUsername string) {
-	go usersEventPipes.Delete("user-" + clientUsername + "-alerts")
+	go usersEventPipes.Delete(clientUsername)
 }
 
 func storeUndeliveredEventMsg(username, msg string) {

@@ -7,7 +7,6 @@ import (
 	"i9chat/src/models/db"
 	"log"
 	"maps"
-	"strings"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -26,17 +25,22 @@ func New(ctx context.Context, clientUsername, name, description, pictureUrl stri
 		ctx,
 		`
 		MATCH (initUser:User WHERE initUser.username IN $init_users), (clientUser:User{ username: $client_username })
+
+		WITH collect(initUser) AS initUserRows, head(collect(clientUser)) AS clientUser
+
 		CREATE (group:Group{ id: randomUUID(), name: $name, description: $description, picture_url: $picture_url, created_at: $created_at })
 
-		WITH group, initUser, clientUser
 		CREATE (clientUser)-[:IS_MEMBER_OF { role: "admin" }]->(group),
-			(clientUser)-[:HAS_CHAT]->(clientChat:GroupChat{ owner_username: $client_username, group_id: group.id, last_activity_type: "group activity", last_group_activity_at: $created_at, updated_at: $created_at })-[:WITH_GROUP]->(group),
+			(clientUser)-[:HAS_CHAT]->(clientChat:GroupChat{ owner_username: $client_username, group_id: group.id, updated_at: $created_at })-[:WITH_GROUP]->(group),
 			(clientUser)-[:RECEIVES_ACTIVITY]->(:GroupChatEntry{ chat_hist_entry_type: "group activity", info: "You created " + $name, created_at: $created_at })-[:IN_GROUP_CHAT]->(clientChat),
 			(clientUser)-[:RECEIVES_ACTIVITY]->(:GroupChatEntry{ chat_hist_entry_type: "group activity", info: "You added " + $init_users_str, created_at: $created_after_at })-[:IN_GROUP_CHAT]->(clientChat)
 
+		WITH group, initUserRows
+		UNWIND initUserRows AS initUser
+
 		WITH group, initUser
 		CREATE (initUser)-[:IS_MEMBER_OF { role: "member" }]->(group),
-			(initUser)-[:HAS_CHAT]->(initUserChat:GroupChat{ owner_username: initUser.username, group_id: group.id, last_activity_type: "group activity", last_group_activity_at: $created_at, updated_at: $created_at })-[:WITH_GROUP]->(group),
+			(initUser)-[:HAS_CHAT]->(initUserChat:GroupChat{ owner_username: initUser.username, group_id: group.id, updated_at: $created_at })-[:WITH_GROUP]->(group),
 			(initUser)-[:RECEIVES_ACTIVITY]->(:GroupChatEntry{ chat_hist_entry_type: "group activity", info: $client_username + " created " + $name, created_at: $created_at })-[:IN_GROUP_CHAT]->(initUserChat),
 			(initUser)-[:RECEIVES_ACTIVITY]->(:GroupChatEntry{ chat_hist_entry_type: "group activity", info: "You were added", created_at: $created_after_at })-[:IN_GROUP_CHAT]->(initUserChat)
 
@@ -50,7 +54,7 @@ func New(ctx context.Context, clientUsername, name, description, pictureUrl stri
 			"description":      description,
 			"picture_url":      pictureUrl,
 			"init_users":       initUsers,
-			"init_users_str":   strings.Join(initUsers, ", "),
+			"init_users_str":   helpers.JoinWithCommaAnd(initUsers...),
 			"created_at":       createdAt,
 			"created_after_at": createdAt.Add(500 * time.Millisecond),
 		},
@@ -89,8 +93,6 @@ func ChangeName(ctx context.Context, groupId, clientUsername, newName string) (N
 			MATCH (group)<-[:WITH_GROUP]-(clientChat:GroupChat{ owner_username: $client_username, group_id: $group_id })<-[:HAS_CHAT]-(clientUser),
 				(clientUser)-[:IS_MEMBER_OF { role: "admin" }]->(group)
 				
-			SET clientChat.last_activity_type = "group activity",
-				clientChat.last_group_activity_at = $at
 			CREATE (clientUser)-[:RECEIVES_ACTIVITY]->(cligact:GroupChatEntry{ chat_hist_entry_type: "group activity", info: "You changed group name from " + group.name + " to " + $new_name, created_at: $at })-[:IN_GROUP_CHAT]->(clientChat)
 
 			WITH group, cligact, group.name AS old_name
@@ -128,8 +130,7 @@ func ChangeName(ctx context.Context, groupId, clientUsername, newName string) (N
 				`
 				MATCH (group:Group{ id: $group_id })<-[:IS_MEMBER_OF]-(memberUser WHERE memberUser.username IN $member_usernames),
 					(memberChat:GroupChat{ owner_username: memberUser.username, group_id: $group_id })
-				SET memberChat.last_activity_type = "group activity",
-					memberChat.last_group_activity_at = $at
+				
 				CREATE (memberUser)-[:RECEIVES_ACTIVITY]->(memgact:GroupChatEntry{ chat_hist_entry_type: "group activity", info: $client_username + " changed group name from " + $old_name + " to " + $new_name, created_at: $at })-[:IN_GROUP_CHAT]->(memberChat)
 
 				RETURN memgact.info AS member_resp
@@ -353,22 +354,30 @@ func AddUsers(ctx context.Context, groupId, clientUsername string, newUsers []st
 				(clientUser)-[:IS_MEMBER_OF { role: "admin" }]->(group),
 				(newUser:User WHERE newUser.username IN $new_users AND NOT EXISTS { (newUser)-[:LEFT_GROUP]->(group) }
 					AND NOT EXISTS { (newUser)-[:IS_MEMBER_OF]->(group) })
+				
 
-			CREATE (clientUser)-[:RECEIVES_ACTIVITY]->(cligact:GroupChatEntry{ chat_hist_entry_type: "group activity", info: "You added " + $new_users_str, created_at: $at })-[:IN_GROUP_CHAT]->(clientChat)
+			WITH collect({ group: group, newUser: newUser }) AS rows,
+		    head(collect(clientUser)) AS clientUser,
+		    head(collect(clientChat)) AS clientChat
 
-			WITH group, newUser, cligact
+			CREATE (clientUser)-[:RECEIVES_ACTIVITY]->(:GroupChatEntry{ chat_hist_entry_type: "group activity", info: "You added " + $new_users_str, created_at: $at })-[:IN_GROUP_CHAT]->(clientChat)
+			
+			WITH rows
+			UNWIND rows AS row
+			WITH row.group AS group, row.newUser AS newUser
+
 			OPTIONAL MATCH (group)<-[:IS_MEMBER_OF]-(memberUser WHERE memberUser.username <> $client_username)
 			OPTIONAL MATCH(group)-[rur:REMOVED_USER]->(newUser) 
 
 			DELETE rur
 
-			WITH group, newUser, cligact, collect(memberUser.username) AS member_usernames
+			WITH group, newUser, collect(memberUser.username) AS member_usernames
 			CREATE (newUser)-[:IS_MEMBER_OF { role: "member" }]->(group)
 			MERGE (newUser)-[:HAS_CHAT]->(newUserChat:GroupChat{ owner_username: newUser.username, group_id: $group_id })-[:WITH_GROUP]->(group)
 			
 			CREATE (newUser)-[:RECEIVES_ACTIVITY]->(:GroupChatEntry{ chat_hist_entry_type: "group activity",  info: "You were added", created_at: $at })-[:IN_GROUP_CHAT]->(newUserChat)
 
-			RETURN cligact.info AS client_resp, 
+			RETURN "You added " + $new_users_str AS client_resp, 
 				group { .id, .name, .description, .picture_url, history: [{ chat_hist_entry_type: "group activity", info: "You were added", created_at: $at }] } AS new_user_resp,
 				member_usernames
 			`,
@@ -376,7 +385,7 @@ func AddUsers(ctx context.Context, groupId, clientUsername string, newUsers []st
 				"client_username": clientUsername,
 				"group_id":        groupId,
 				"new_users":       newUsers,
-				"new_users_str":   strings.Join(newUsers, ", "),
+				"new_users_str":   helpers.JoinWithCommaAnd(newUsers...),
 				"at":              at,
 			},
 		)
@@ -406,7 +415,7 @@ func AddUsers(ctx context.Context, groupId, clientUsername string, newUsers []st
 				map[string]any{
 					"group_id":         groupId,
 					"client_username":  clientUsername,
-					"new_users_str":    strings.Join(newUsers, ", "),
+					"new_users_str":    helpers.JoinWithCommaAnd(newUsers...),
 					"member_usernames": memberUsernames,
 					"at":               at,
 				},
