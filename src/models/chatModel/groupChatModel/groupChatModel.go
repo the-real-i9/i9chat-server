@@ -23,7 +23,7 @@ func New(ctx context.Context, clientUsername, name, description, pictureUrl stri
 
 	res, err := db.Query(
 		ctx,
-		`
+		`/*cypher*/
 		MATCH (initUser:User WHERE initUser.username IN $init_users), (clientUser:User{ username: $client_username })
 
 		WITH collect(initUser) AS initUserRows, head(collect(clientUser)) AS clientUser
@@ -83,13 +83,13 @@ func ChangeName(ctx context.Context, groupId, clientUsername, newName string) (N
 	var newActivity NewActivity
 
 	res, err := db.MultiQuery(ctx, func(tx neo4j.ManagedTransaction) (any, error) {
-		resMap := make(map[string]any, 4)
+		resMap := make(map[string]an/*cypher*/y, 4)
 
 		at := time.Now().UTC()
 
 		res, err := tx.Run(
 			ctx,
-			`
+			`/*cypher*/
 			MATCH (group)<-[:WITH_GROUP]-(clientChat:GroupChat{ owner_username: $client_username, group_id: $group_id })<-[:HAS_CHAT]-(clientUser),
 				(clientUser)-[:IS_MEMBER_OF { role: "admin" }]->(group)
 				
@@ -127,7 +127,7 @@ func ChangeName(ctx context.Context, groupId, clientUsername, newName string) (N
 		if len(memberUsernames) > 0 {
 			res, err := tx.Run(
 				ctx,
-				`
+				`/*cypher*/
 				MATCH (group:Group{ id: $group_id })<-[:IS_MEMBER_OF]-(memberUser WHERE memberUser.username IN $member_usernames),
 					(memberChat:GroupChat{ owner_username: memberUser.username, group_id: $group_id })
 				
@@ -171,13 +171,13 @@ func ChangeDescription(ctx context.Context, groupId, clientUsername, newDescript
 	var newActivity NewActivity
 
 	res, err := db.MultiQuery(ctx, func(tx neo4j.ManagedTransaction) (any, error) {
-		resMap := make(map[string]any, 4)
+		resMap := make(map[string]an/*cypher*/y, 4)
 
 		at := time.Now().UTC()
 
 		res, err := tx.Run(
 			ctx,
-			`
+			`/*cypher*/
 			MATCH (group)<-[:WITH_GROUP]-(clientChat:GroupChat{ owner_username: $client_username, group_id: $group_id })<-[:HAS_CHAT]-(clientUser),
 				(clientUser)-[:IS_MEMBER_OF { role: "admin" }]->(group)
 			
@@ -215,7 +215,7 @@ func ChangeDescription(ctx context.Context, groupId, clientUsername, newDescript
 		if len(memberUsernames) > 0 {
 			res, err := tx.Run(
 				ctx,
-				`
+				`/*cypher*/
 				MATCH (group:Group{ id: $group_id })<-[:IS_MEMBER_OF]-(memberUser WHERE memberUser.username IN $member_usernames),
 					(memberChat:GroupChat{ owner_username: memberUser.username, group_id: $group_id })
 				
@@ -259,13 +259,13 @@ func ChangePicture(ctx context.Context, groupId, clientUsername, newPictureUrl s
 	var newActivity NewActivity
 
 	res, err := db.MultiQuery(ctx, func(tx neo4j.ManagedTransaction) (any, error) {
-		resMap := make(map[string]any, 3)
+		resMap := make(map[string]an/*cypher*/y, 3)
 
 		at := time.Now().UTC()
 
 		res, err := tx.Run(
 			ctx,
-			`
+			`/*cypher*/
 			MATCH (group)<-[:WITH_GROUP]-(clientChat:GroupChat{ owner_username: $client_username, group_id: $group_id })<-[:HAS_CHAT]-(clientUser),
 				(clientUser)-[:IS_MEMBER_OF { role: "admin" }]->(group)
 			
@@ -301,7 +301,7 @@ func ChangePicture(ctx context.Context, groupId, clientUsername, newPictureUrl s
 		if len(memberUsernames) > 0 {
 			res, err := tx.Run(
 				ctx,
-				`
+				`/*cypher*/
 				MATCH (group:Group{ id: $group_id })<-[:IS_MEMBER_OF]-(memberUser WHERE memberUser.username IN $member_usernames),
 					(memberChat:GroupChat{ owner_username: memberUser.username, group_id: $group_id })
 				
@@ -343,13 +343,13 @@ func AddUsers(ctx context.Context, groupId, clientUsername string, newUsers []st
 	var newActivity NewActivity
 
 	res, err := db.MultiQuery(ctx, func(tx neo4j.ManagedTransaction) (any, error) {
-		resMap := make(map[string]any, 4)
+		resMap := make(map[string]an/*cypher*/y, 4)
 
 		at := time.Now().UTC()
 
 		res, err := tx.Run(
 			ctx,
-			`
+			`/*cypher*/
 			MATCH (group)<-[:WITH_GROUP]-(clientChat:GroupChat{ owner_username: $client_username, group_id: $group_id })<-[:HAS_CHAT]-(clientUser),
 				(clientUser)-[:IS_MEMBER_OF { role: "admin" }]->(group),
 				(newUser:User WHERE newUser.username IN $new_users AND NOT EXISTS { (newUser)-[:LEFT_GROUP]->(group) }
@@ -404,7 +404,7 @@ func AddUsers(ctx context.Context, groupId, clientUsername string, newUsers []st
 		if len(memberUsernames) > 0 {
 			res, err := tx.Run(
 				ctx,
-				`
+				`/*cypher*/
 				MATCH (group:Group{ id: $group_id })<-[:IS_MEMBER_OF]-(memberUser WHERE memberUser.username IN $member_usernames),
 					(memberChat:GroupChat{ owner_username: memberUser.username, group_id: $group_id })
 				
@@ -449,13 +449,13 @@ func RemoveUser(ctx context.Context, groupId, clientUsername, targetUser string)
 	var newActivity NewActivity
 
 	res, err := db.MultiQuery(ctx, func(tx neo4j.ManagedTransaction) (any, error) {
-		resMap := make(map[string]any, 4)
+		resMap := make(map[string]an/*cypher*/y, 4)
 
 		at := time.Now().UTC()
 
 		res, err := tx.Run(
 			ctx,
-			`
+			`/*cypher*/
 			MATCH (group)<-[:WITH_GROUP]-(clientChat:GroupChat{ owner_username: $client_username, group_id: $group_id })<-[:HAS_CHAT]-(clientUser),
 				(clientUser)-[:IS_MEMBER_OF { role: "admin" }]->(group),
 				(group)<-[mem:IS_MEMBER_OF]-(targetUser:User{ username: $target_user })
@@ -500,7 +500,7 @@ func RemoveUser(ctx context.Context, groupId, clientUsername, targetUser string)
 		if len(memberUsernames) > 0 {
 			res, err := tx.Run(
 				ctx,
-				`
+				`/*cypher*/
 				MATCH (group:Group{ id: $group_id })<-[:IS_MEMBER_OF]-(memberUser WHERE memberUser.username IN $member_usernames),
 					(memberChat:GroupChat{ owner_username: memberUser.username, group_id: $group_id })
 				
@@ -545,13 +545,13 @@ func Join(ctx context.Context, groupId, clientUsername string) (NewActivity, err
 	var newActivity NewActivity
 
 	res, err := db.MultiQuery(ctx, func(tx neo4j.ManagedTransaction) (any, error) {
-		resMap := make(map[string]any, 3)
+		resMap := make(map[string]an/*cypher*/y, 3)
 
 		at := time.Now().UTC()
 
 		res, err := tx.Run(
 			ctx,
-			`
+			`/*cypher*/
 			MATCH (clientUser:User{ username: $client_username }), (group:Group{ id: $group_id })
 			WHERE NOT EXISTS { (clientUser)-[:IS_MEMBER_OF]->(group) }
 				AND NOT EXISTS { (group)-[:REMOVED_USER]->(clientUser) }
@@ -591,7 +591,7 @@ func Join(ctx context.Context, groupId, clientUsername string) (NewActivity, err
 		if len(memberUsernames) > 0 {
 			res, err := tx.Run(
 				ctx,
-				`
+				`/*cypher*/
 				MATCH (group:Group{ id: $group_id })<-[:IS_MEMBER_OF]-(memberUser WHERE memberUser.username IN $member_usernames),
 					(memberChat:GroupChat{ owner_username: memberUser.username, group_id: $group_id })
 				
@@ -633,13 +633,13 @@ func Leave(ctx context.Context, groupId, clientUsername string) (NewActivity, er
 	var newActivity NewActivity
 
 	res, err := db.MultiQuery(ctx, func(tx neo4j.ManagedTransaction) (any, error) {
-		resMap := make(map[string]any, 3)
+		resMap := make(map[string]an/*cypher*/y, 3)
 
 		at := time.Now().UTC()
 
 		res, err := tx.Run(
 			ctx,
-			`
+			`/*cypher*/
 			MATCH (group:Group{ id: $group_id })<-[mem:IS_MEMBER_OF]-(clientUser:User{ username: $client_username }),
 				(clientChat:GroupChat{ owner_username: clientUser.username, group_id: $group_id })
 
@@ -677,7 +677,7 @@ func Leave(ctx context.Context, groupId, clientUsername string) (NewActivity, er
 		if len(memberUsernames) > 0 {
 			res, err := tx.Run(
 				ctx,
-				`
+				`/*cypher*/
 				MATCH (group:Group{ id: $group_id })<-[:IS_MEMBER_OF]-(memberUser WHERE memberUser.username IN $member_usernames),
 					(memberChat:GroupChat{ owner_username: memberUser.username, group_id: $group_id })
 				
@@ -719,13 +719,13 @@ func MakeUserAdmin(ctx context.Context, groupId, clientUsername, targetUser stri
 	var newActivity NewActivity
 
 	res, err := db.MultiQuery(ctx, func(tx neo4j.ManagedTransaction) (any, error) {
-		resMap := make(map[string]any, 4)
+		resMap := make(map[string]an/*cypher*/y, 4)
 
 		at := time.Now().UTC()
 
 		res, err := tx.Run(
 			ctx,
-			`
+			`/*cypher*/
 			MATCH (group)<-[:WITH_GROUP]-(clientChat:GroupChat{ owner_username: $client_username, group_id: $group_id })<-[:HAS_CHAT]-(clientUser),
 				(clientUser)-[:IS_MEMBER_OF { role: "admin" }]->(group),
 				(group)<-[mem:IS_MEMBER_OF { role: "member" }]-(targetUser:User{ username: $target_user })
@@ -768,7 +768,7 @@ func MakeUserAdmin(ctx context.Context, groupId, clientUsername, targetUser stri
 		if len(memberUsernames) > 0 {
 			res, err := tx.Run(
 				ctx,
-				`
+				`/*cypher*/
 				MATCH (group:Group{ id: $group_id })<-[:IS_MEMBER_OF]-(memberUser WHERE memberUser.username IN $member_usernames),
 					(memberChat:GroupChat{ owner_username: memberUser.username, group_id: $group_id })
 				
@@ -813,13 +813,13 @@ func RemoveUserFromAdmins(ctx context.Context, groupId, clientUsername, targetUs
 	var newActivity NewActivity
 
 	res, err := db.MultiQuery(ctx, func(tx neo4j.ManagedTransaction) (any, error) {
-		resMap := make(map[string]any, 4)
+		resMap := make(map[string]an/*cypher*/y, 4)
 
 		at := time.Now().UTC()
 
 		res, err := tx.Run(
 			ctx,
-			`
+			`/*cypher*/
 			MATCH (group)<-[:WITH_GROUP]-(clientChat:GroupChat{ owner_username: $client_username, group_id: $group_id })<-[:HAS_CHAT]-(clientUser),
 				(clientUser)-[:IS_MEMBER_OF { role: "admin" }]->(group),
 				(group)<-[mem:IS_MEMBER_OF { role: "admin" }]-(targetUser:User{ username: $target_user })
@@ -862,7 +862,7 @@ func RemoveUserFromAdmins(ctx context.Context, groupId, clientUsername, targetUs
 		if len(memberUsernames) > 0 {
 			res, err = tx.Run(
 				ctx,
-				`
+				`/*cypher*/
 				MATCH (group:Group{ id: $group_id })<-[:IS_MEMBER_OF]-(memberUser WHERE memberUser.username IN $member_usernames),
 					(memberChat:GroupChat{ owner_username: memberUser.username, group_id: $group_id })
 				
@@ -913,11 +913,11 @@ func SendMessage(ctx context.Context, clientUsername, groupId, msgContent string
 	var newMessage NewMessage
 
 	res, err := db.MultiQuery(ctx, func(tx neo4j.ManagedTransaction) (any, error) {
-		resMap := make(map[string]any, 4)
+		resMap := make(map[string]an/*cypher*/y, 4)
 
 		res, err := tx.Run(
 			ctx,
-			`
+			`/*cypher*/
 			MATCH (group)<-[:WITH_GROUP]-(clientChat:GroupChat{ owner_username: $client_username, group_id: $group_id })<-[:HAS_CHAT]-(clientUser)
 			WHERE EXISTS { (clientUser)-[:IS_MEMBER_OF]->(group) }
 
@@ -956,7 +956,7 @@ func SendMessage(ctx context.Context, clientUsername, groupId, msgContent string
 		if len(memberUsernames) > 0 {
 			res, err := tx.Run(
 				ctx,
-				`
+				`/*cypher*/
 				MATCH (message:GroupMessage{ id: $new_msg_id })<-[:SENDS_MESSAGE]-(clientUser)
 
 				MATCH (group:Group{ id: $group_id })<-[:IS_MEMBER_OF]-(memberUser WHERE memberUser.username IN $member_usernames),
@@ -1008,13 +1008,13 @@ func AckMessageDelivered(ctx context.Context, clientUsername, groupId, msgId str
 	var msgAck MsgAck
 
 	res, err := db.MultiQuery(ctx, func(tx neo4j.ManagedTransaction) (any, error) {
-		resMap := make(map[string]any, 3)
+		resMap := make(map[string]an/*cypher*/y, 3)
 
 		at := time.Now().UTC()
 
 		res, err := tx.Run(
 			ctx,
-			`
+			`/*cypher*/
 			MATCH (group)<-[:WITH_GROUP]-(clientChat:GroupChat{ owner_username: $client_username, group_id: $group_id })<-[:HAS_CHAT]-(clientUser),
 				(clientChat)<-[:IN_GROUP_CHAT]-(message:GroupMessage{ id: $message_id, delivery_status: "sent" })<-[:RECEIVES_MESSAGE]-(clientUser),
 				(msgSender)-[:SENDS_MESSAGE]->(message)
@@ -1057,7 +1057,7 @@ func AckMessageDelivered(ctx context.Context, clientUsername, groupId, msgId str
 		if delvToAll {
 			_, err := tx.Run(
 				ctx,
-				`
+				`/*cypher*/
 				MATCH (message:GroupMessage{ id: $msg_id })
 				SET message.delivery_status = "delivered"
 				`,
@@ -1086,13 +1086,13 @@ func AckMessageRead(ctx context.Context, clientUsername, groupId, msgId string, 
 	var msgAck MsgAck
 
 	res, err := db.MultiQuery(ctx, func(tx neo4j.ManagedTransaction) (any, error) {
-		resMap := make(map[string]any, 3)
+		resMap := make(map[string]an/*cypher*/y, 3)
 
 		at := time.Now().UTC()
 
 		res, err := tx.Run(
 			ctx,
-			`
+			`/*cypher*/
 			MATCH (group)<-[:WITH_GROUP]-(clientChat:GroupChat{ owner_username: $client_username, group_id: $group_id })<-[:HAS_CHAT]-(clientUser),
 				(clientChat)<-[:IN_GROUP_CHAT]-(message:GroupMessage{ id: $message_id } WHERE message.delivery_status <> "read")<-[:RECEIVES_MESSAGE]-(clientUser),
 				(msgSender)-[:SENDS_MESSAGE]->(message)
@@ -1136,7 +1136,7 @@ func AckMessageRead(ctx context.Context, clientUsername, groupId, msgId string, 
 		if readByAll {
 			_, err := tx.Run(
 				ctx,
-				`
+				`/*cypher*/
 				MATCH (message:GroupMessage{ id: $msg_id })
 				SET message.delivery_status = "read"
 				`,
@@ -1165,11 +1165,11 @@ func ReplyToMessage(ctx context.Context, clientUsername, groupId, targetMsgId, m
 	var newMessage NewMessage
 
 	res, err := db.MultiQuery(ctx, func(tx neo4j.ManagedTransaction) (any, error) {
-		resMap := make(map[string]any, 4)
+		resMap := make(map[string]an/*cypher*/y, 4)
 
 		res, err := tx.Run(
 			ctx,
-			`
+			`/*cypher*/
 			MATCH (group)<-[:WITH_GROUP]-(clientChat:GroupChat{ owner_username: $client_username, group_id: $group_id })<-[:HAS_CHAT]-(clientUser)
 			WHERE EXISTS { (clientUser)-[:IS_MEMBER_OF]->(group) }
 
@@ -1209,7 +1209,7 @@ func ReplyToMessage(ctx context.Context, clientUsername, groupId, targetMsgId, m
 		if len(memberUsernames) > 0 {
 			res, err := tx.Run(
 				ctx,
-				`
+				`/*cypher*/
 				MATCH (replyMsg:GroupMessage{ id: $new_reply_msg_id })<-[:SENDS_MESSAGE]-(clientUser),
 					(targetMsg:GroupMessage { id: $target_msg_id })<-[:SENDS_MESSAGE]-(targetMsgSender)
 
@@ -1266,11 +1266,11 @@ func ReactToMessage(ctx context.Context, clientUsername, groupId, msgId, reactio
 	var rxnToMessage RxnToMessage
 
 	res, err := db.MultiQuery(ctx, func(tx neo4j.ManagedTransaction) (any, error) {
-		resMap := make(map[string]any, 4)
+		resMap := make(map[string]an/*cypher*/y, 4)
 
 		res, err := tx.Run(
 			ctx,
-			`
+			`/*cypher*/
 			MATCH (group)<-[:WITH_GROUP]-(clientChat:GroupChat{ owner_username: $client_username, group_id: $group_id })<-[:HAS_CHAT]-(clientUser)
 			WHERE EXISTS { (clientUser)-[:IS_MEMBER_OF]->(group) }
 
@@ -1314,7 +1314,7 @@ func ReactToMessage(ctx context.Context, clientUsername, groupId, msgId, reactio
 		if len(memberUsernames) > 0 {
 			res, err := tx.Run(
 				ctx,
-				`
+				`/*cypher*/
 				MATCH (clientUser)-[:SENDS_REACTION]->(msgrxn:GroupMessageReaction:GroupChatEntry{ reactor_username: $client_username, message_id: $message_id })-[:REACTION_TO_MESSAGE]->(message)
 
 				MATCH (group:Group{ id: $group_id })<-[:IS_MEMBER_OF]-(memberUser WHERE memberUser.username IN $member_usernames),
@@ -1359,7 +1359,7 @@ func ReactToMessage(ctx context.Context, clientUsername, groupId, msgId, reactio
 func RemoveReactionToMessage(ctx context.Context, clientUsername, groupId, msgId string) (member_usernames []any, done bool, err error) {
 	res, err := db.Query(
 		ctx,
-		`
+		`/*cypher*/
 		MATCH (group)<-[:WITH_GROUP]-(clientChat:GroupChat{ owner_username: $client_username, group_id: $group_id })<-[:HAS_CHAT]-(clientUser)
 		WHERE EXISTS { (clientUser)-[:IS_MEMBER_OF]->(group) }
 
@@ -1422,7 +1422,7 @@ func ChatHistory(ctx context.Context, clientUsername, groupId string, limit int,
 
 	res, err := db.Query(
 		ctx,
-		`
+		`/*cypher*/
 		MATCH (clientChat:GroupChat{ owner_username: $client_username, group_id: $group_id })
 
 		OPTIONAL MATCH (clientChat)<-[:IN_GROUP_CHAT]-(entry:GroupChatEntry WHERE entry.created_at < $offset)
@@ -1489,7 +1489,7 @@ func ChatHistory(ctx context.Context, clientUsername, groupId string, limit int,
 func GroupInfo(ctx context.Context, groupId string) (map[string]any, error) {
 	res, err := db.Query(
 		ctx,
-		`
+		`/*cypher*/
 		MATCH (group:Group{ id: $group_id })
 
 		OPTIONAL MATCH (group)<-[:IS_MEMBER_OF]-(memberUser)
@@ -1519,7 +1519,7 @@ func GroupInfo(ctx context.Context, groupId string) (map[string]any, error) {
 func GroupMemInfo(ctx context.Context, clientUsername, groupId string) (map[string]any, error) {
 	res, err := db.Query(
 		ctx,
-		`
+		`/*cypher*/
 		MATCH (group:Group{ id: $group_id }), (clientUser:User { username: $client_username })
 
 		OPTIONAL MATCH (group)<-[member:IS_MEMBER_OF]-(clientUser)

@@ -21,7 +21,7 @@ func SendMessage(ctx context.Context, clientUsername, partnerUsername, msgConten
 
 	res, err := db.Query(
 		ctx,
-		`
+		`/*cypher*/
 		MATCH (clientUser:User{ username: $client_username }), (partnerUser:User{ username: $partner_username })
 		MERGE (clientUser)-[:HAS_CHAT]->(clientChat:DMChat{ owner_username: $client_username, partner_username: $partner_username })-[:WITH_USER]->(partnerUser)
 		MERGE (partnerUser)-[:HAS_CHAT]->(partnerChat:DMChat{ owner_username: $partner_username, partner_username: $client_username })-[:WITH_USER]->(clientUser)
@@ -59,7 +59,7 @@ func SendMessage(ctx context.Context, clientUsername, partnerUsername, msgConten
 func AckMessageDelivered(ctx context.Context, clientUsername, partnerUsername, msgId string, deliveredAt time.Time) (bool, error) {
 	res, err := db.Query(
 		ctx,
-		`
+		`/*cypher*/
 		MATCH (clientChat:DMChat{ owner_username: $client_username, partner_username: $partner_username }),
       (clientChat)<-[:IN_DM_CHAT]-(message:DMMessage{ id: $message_id, delivery_status: "sent" })<-[:RECEIVES_MESSAGE]-()
     SET message.delivery_status = "delivered", message.delivered_at = $delivered_at, clientChat.unread_messages_count = coalesce(clientChat.unread_messages_count, 0) + 1
@@ -90,7 +90,7 @@ func AckMessageDelivered(ctx context.Context, clientUsername, partnerUsername, m
 func AckMessageRead(ctx context.Context, clientUsername, partnerUsername, msgId string, readAt time.Time) (bool, error) {
 	res, err := db.Query(
 		ctx,
-		`
+		`/*cypher*/
 		MATCH (clientChat:DMChat{ owner_username: $client_username, partner_username: $partner_username }),
       (clientChat)<-[:IN_DM_CHAT]-(message:DMMessage{ id: $message_id } WHERE message.delivery_status IN ["sent", "delivered"])<-[:RECEIVES_MESSAGE]-()
 
@@ -125,7 +125,7 @@ func ReplyToMessage(ctx context.Context, clientUsername, partnerUsername, target
 
 	res, err := db.Query(
 		ctx,
-		`
+		`/*cypher*/
 		MATCH (clientUser:User{ username: $client_username }), (partnerUser:User{ username: $partner_username })
 		MATCH (targetMsg:DMMessage { id: $target_msg_id })<-[:SENDS_MESSAGE]-(targetMsgSender)
 		MERGE (clientUser)-[:HAS_CHAT]->(clientChat:DMChat{ owner_username: $client_username, partner_username: $partner_username })-[:WITH_USER]->(partnerUser)
@@ -176,7 +176,7 @@ func ReactToMessage(ctx context.Context, clientUsername, partnerUsername, msgId,
 
 	res, err := db.Query(
 		ctx,
-		`
+		`/*cypher*/
 		MATCH (clientUser)-[:HAS_CHAT]->(clientChat:Chat{ owner_username: $client_username, partner_username: $partner_username })-[:WITH_USER]->(partnerUser),
 			(clientChat)<-[:IN_DM_CHAT]-(message:DMMessage{ id: $message_id }),
 			(partnerUser)-[:HAS_CHAT]->(partnerChat)-[:WITH_USER]->(clientUser)
@@ -223,7 +223,7 @@ func ReactToMessage(ctx context.Context, clientUsername, partnerUsername, msgId,
 func RemoveReactionToMessage(ctx context.Context, clientUsername, partnerUsername, msgId string) (bool, error) {
 	res, err := db.Query(
 		ctx,
-		`
+		`/*cypher*/
 		MATCH (clientUser)-[:HAS_CHAT]->(clientChat:DMChat{ owner_username: $client_username, partner_username: $partner_username })-[:WITH_USER]->(partnerUser),
 			(partnerUser)-[:HAS_CHAT]->(partnerChat)-[:WITH_USER]->(clientUser),
 			(clientChat)<-[:IN_DM_CHAT]-(message:DMMessage{ id: $message_id }),
@@ -278,7 +278,7 @@ func ChatHistory(ctx context.Context, clientUsername, partnerUsername string, li
 
 	res, err := db.Query(
 		ctx,
-		`
+		`/*cypher*/
 		MATCH (clientChat:DMChat{ owner_username: $client_username, partner_username: $partner_username })
 
 		OPTIONAL MATCH (clientChat)<-[:IN_DM_CHAT]-(entry:DMChatEntry WHERE entry.created_at < $offset)

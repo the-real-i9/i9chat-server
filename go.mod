@@ -1,6 +1,6 @@
 module i9chat
 
-go 1.24.1
+go 1.25.0
 
 require (
 	cloud.google.com/go/storage v1.56.0

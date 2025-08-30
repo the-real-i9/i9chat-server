@@ -14,8 +14,9 @@ import (
 )
 
 func Exists(ctx context.Context, emailOrUsername string) (bool, error) {
-	res, err := db.Query(ctx,
-		`
+	res, err := db.Query(
+		ctx,
+		`/*cypher*/
 		RETURN EXISTS {
 			MATCH (u:User) WHERE u.username = $emailOrUsername OR u.email = $emailOrUsername
 		} AS user_exists
@@ -41,7 +42,7 @@ func Exists(ctx context.Context, emailOrUsername string) (bool, error) {
 func New(ctx context.Context, email, username, password string) (map[string]any, error) {
 	res, err := db.Query(
 		ctx,
-		`
+		`/*cypher*/
 		CREATE (u:User { email: $email, username: $username, password: $password, profile_pic_url: "", presence: "online", bio: "i9chat is Awesome!" })
 		WITH u, NULL AS last_seen
 		RETURN u { .username, .email, .profile_pic_url, .bio, .presence, last_seen } AS new_user
@@ -63,8 +64,9 @@ func New(ctx context.Context, email, username, password string) (map[string]any,
 }
 
 func SigninFind(ctx context.Context, uniqueIdent string) (map[string]any, error) {
-	res, err := db.Query(ctx,
-		`
+	res, err := db.Query(
+		ctx,
+		`/*cypher*/
 	MATCH (u:User)
 	WHERE u.username = $uniqueIdent OR u.email = $uniqueIdent
 
@@ -92,7 +94,7 @@ func SigninFind(ctx context.Context, uniqueIdent string) (map[string]any, error)
 func SessionFind(ctx context.Context, username string) (map[string]any, error) {
 	res, err := db.Query(
 		ctx,
-		`
+		`/*cypher*/
 		MATCH (u:User{ username: $username })
 
 		WITH u, coalesce(u.last_seen.epochMillis, null) AS last_seen
@@ -119,7 +121,7 @@ func SessionFind(ctx context.Context, username string) (map[string]any, error) {
 func ChangePassword(ctx context.Context, email, newPassword string) error {
 	_, err := db.Query(
 		ctx,
-		`
+		`/*cypher*/
 		MATCH (user:User{ email: $email })
 		SET user.password = $newPassword
 		`,
@@ -137,8 +139,9 @@ func ChangePassword(ctx context.Context, email, newPassword string) error {
 }
 
 func FindNearby(ctx context.Context, clientUsername string, x, y, radius float64) ([]any, error) {
-	res, err := db.Query(ctx,
-		`
+	res, err := db.Query(
+		ctx,
+		`/*cypher*/
 		MATCH (u:User)
 		WHERE u.username <> $client_username AND point.distance(point({ x: $live_long, y: $live_lat, crs: "WGS-84" }), u.geolocation) <= $radius
 
@@ -167,8 +170,9 @@ func FindNearby(ctx context.Context, clientUsername string, x, y, radius float64
 }
 
 func FindOne(ctx context.Context, emailUsername string) (map[string]any, error) {
-	res, err := db.Query(ctx,
-		`
+	res, err := db.Query(
+		ctx,
+		`/*cypher*/
 		MATCH (u:User)
 		WHERE u.username = $eup OR u.email = $eup
 
@@ -210,7 +214,7 @@ func GetMyChats(ctx context.Context, clientUsername string) ([]Chat, error) {
 
 	res, err := db.Query(
 		ctx,
-		`
+		`/*cypher*/
 		CALL () {
 			MATCH (clientChat:DMChat{ owner_username: $client_username })-[:WITH_USER]->(partnerUser)
 
@@ -255,7 +259,7 @@ func GetMyChats(ctx context.Context, clientUsername string) ([]Chat, error) {
 func GetMyProfile(ctx context.Context, clientUsername string) (map[string]any, error) {
 	res, err := db.Query(
 		ctx,
-		`
+		`/*cypher*/
 		MATCH (u:User{ username: $client_username })
 		WITH u, { x: toFloat(u.geolocation.x), y: toFloat(u.geolocation.y) } AS geolocation, coalesce(u.last_seen.epochMillis, null) AS last_seen
 		RETURN u { .username, .email, .profile_pic_url, .bio, .presence, last_seen, geolocation } AS my_profile
@@ -279,8 +283,9 @@ func GetMyProfile(ctx context.Context, clientUsername string) (map[string]any, e
 }
 
 func ChangeProfilePicture(ctx context.Context, clientUsername, newPicUrl string) error {
-	_, err := db.Query(ctx,
-		`
+	_, err := db.Query(
+		ctx,
+		`/*cypher*/
 		MATCH (u:User{ username: $client_username })
 		SET u.profile_pic_url = $new_pic_url
 		`,
@@ -298,8 +303,9 @@ func ChangeProfilePicture(ctx context.Context, clientUsername, newPicUrl string)
 }
 
 func ChangeBio(ctx context.Context, clientUsername, newBio string) error {
-	_, err := db.Query(ctx,
-		`
+	_, err := db.Query(
+		ctx,
+		`/*cypher*/
 		MATCH (u:User{ username: $client_username })
 		SET u.bio = $new_bio
 		`,
@@ -323,8 +329,9 @@ func ChangePresence(ctx context.Context, clientUsername, presence string, lastSe
 	} else {
 		lastSeenVal = "$last_seen"
 	}
-	res, err := db.Query(ctx,
-		fmt.Sprintf(`
+	res, err := db.Query(
+		ctx,
+		fmt.Sprintf(`/*cypher*/
 		MATCH (user:User{ username: $client_username })
 		SET user.presence = $presence, user.last_seen = %s
 
@@ -350,8 +357,9 @@ func ChangePresence(ctx context.Context, clientUsername, presence string, lastSe
 }
 
 func SetLocation(ctx context.Context, clientUsername string, newGeolocation appTypes.UserGeolocation) error {
-	_, err := db.Query(ctx,
-		`
+	_, err := db.Query(
+		ctx,
+		`/*cypher*/
 		MATCH (u:User{ username: $client_username })
 		SET u.geolocation = point({ x: $x, y: $y, crs: "WGS-84" })
 		`,

@@ -67,7 +67,7 @@ func Unsubscribe(clientUsername string) {
 func storeUndeliveredEventMsg(username, msg string) {
 	_, err := db.Query(
 		context.Background(),
-		`
+		`/*cypher*/
 		MATCH (clientUser:User{ username: $username })
 
 		CREATE (clientUser)-[:HAS_UNDELIVERED_EVENT_MSG { at: $at }]->(:UndEventMessage{ id: randomUUID(), msg: $msg })
@@ -86,7 +86,7 @@ func storeUndeliveredEventMsg(username, msg string) {
 func deleteDeliveredEventMsg(username, msgId string) {
 	_, err := db.Query(
 		context.Background(),
-		`
+		`/*cypher*/
 		MATCH (clientUser:User{ username: $username })-[:HAS_UNDELIVERED_EVENT_MSG]->(dEventMsg:UndEventMessage{ id: $msgId })
 
 		DETACH DELETE dEventMsg
@@ -105,7 +105,7 @@ func deleteDeliveredEventMsg(username, msgId string) {
 func getUndeliveredEventMsgs(username string) []any {
 	res, err := db.Query(
 		context.Background(),
-		`
+		`/*cypher*/
 		MATCH (clientUser:User{ username: $username })-[rel:HAS_UNDELIVERED_EVENT_MSG]->(undEventMsg:UndEventMessage)
 
 		ORDER BY rel.at ASC
