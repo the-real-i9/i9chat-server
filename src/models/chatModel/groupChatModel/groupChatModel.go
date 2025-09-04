@@ -83,7 +83,7 @@ func ChangeName(ctx context.Context, groupId, clientUsername, newName string) (N
 	var newActivity NewActivity
 
 	res, err := db.MultiQuery(ctx, func(tx neo4j.ManagedTransaction) (any, error) {
-		resMap := make(map[string]an/*cypher*/y, 4)
+		resMap := make(map[string]any, 4)
 
 		at := time.Now().UTC()
 
@@ -171,7 +171,7 @@ func ChangeDescription(ctx context.Context, groupId, clientUsername, newDescript
 	var newActivity NewActivity
 
 	res, err := db.MultiQuery(ctx, func(tx neo4j.ManagedTransaction) (any, error) {
-		resMap := make(map[string]an/*cypher*/y, 4)
+		resMap := make(map[string]any, 4)
 
 		at := time.Now().UTC()
 
@@ -259,7 +259,7 @@ func ChangePicture(ctx context.Context, groupId, clientUsername, newPictureUrl s
 	var newActivity NewActivity
 
 	res, err := db.MultiQuery(ctx, func(tx neo4j.ManagedTransaction) (any, error) {
-		resMap := make(map[string]an/*cypher*/y, 3)
+		resMap := make(map[string]any, 3)
 
 		at := time.Now().UTC()
 
@@ -343,7 +343,7 @@ func AddUsers(ctx context.Context, groupId, clientUsername string, newUsers []st
 	var newActivity NewActivity
 
 	res, err := db.MultiQuery(ctx, func(tx neo4j.ManagedTransaction) (any, error) {
-		resMap := make(map[string]an/*cypher*/y, 4)
+		resMap := make(map[string]any, 4)
 
 		at := time.Now().UTC()
 
@@ -449,7 +449,7 @@ func RemoveUser(ctx context.Context, groupId, clientUsername, targetUser string)
 	var newActivity NewActivity
 
 	res, err := db.MultiQuery(ctx, func(tx neo4j.ManagedTransaction) (any, error) {
-		resMap := make(map[string]an/*cypher*/y, 4)
+		resMap := make(map[string]any, 4)
 
 		at := time.Now().UTC()
 
@@ -545,7 +545,7 @@ func Join(ctx context.Context, groupId, clientUsername string) (NewActivity, err
 	var newActivity NewActivity
 
 	res, err := db.MultiQuery(ctx, func(tx neo4j.ManagedTransaction) (any, error) {
-		resMap := make(map[string]an/*cypher*/y, 3)
+		resMap := make(map[string]any, 3)
 
 		at := time.Now().UTC()
 
@@ -633,7 +633,7 @@ func Leave(ctx context.Context, groupId, clientUsername string) (NewActivity, er
 	var newActivity NewActivity
 
 	res, err := db.MultiQuery(ctx, func(tx neo4j.ManagedTransaction) (any, error) {
-		resMap := make(map[string]an/*cypher*/y, 3)
+		resMap := make(map[string]any, 3)
 
 		at := time.Now().UTC()
 
@@ -719,7 +719,7 @@ func MakeUserAdmin(ctx context.Context, groupId, clientUsername, targetUser stri
 	var newActivity NewActivity
 
 	res, err := db.MultiQuery(ctx, func(tx neo4j.ManagedTransaction) (any, error) {
-		resMap := make(map[string]an/*cypher*/y, 4)
+		resMap := make(map[string]any, 4)
 
 		at := time.Now().UTC()
 
@@ -813,7 +813,7 @@ func RemoveUserFromAdmins(ctx context.Context, groupId, clientUsername, targetUs
 	var newActivity NewActivity
 
 	res, err := db.MultiQuery(ctx, func(tx neo4j.ManagedTransaction) (any, error) {
-		resMap := make(map[string]an/*cypher*/y, 4)
+		resMap := make(map[string]any, 4)
 
 		at := time.Now().UTC()
 
@@ -913,7 +913,7 @@ func SendMessage(ctx context.Context, clientUsername, groupId, msgContent string
 	var newMessage NewMessage
 
 	res, err := db.MultiQuery(ctx, func(tx neo4j.ManagedTransaction) (any, error) {
-		resMap := make(map[string]an/*cypher*/y, 4)
+		resMap := make(map[string]any, 4)
 
 		res, err := tx.Run(
 			ctx,
@@ -1008,7 +1008,7 @@ func AckMessageDelivered(ctx context.Context, clientUsername, groupId, msgId str
 	var msgAck MsgAck
 
 	res, err := db.MultiQuery(ctx, func(tx neo4j.ManagedTransaction) (any, error) {
-		resMap := make(map[string]an/*cypher*/y, 3)
+		resMap := make(map[string]any, 3)
 
 		at := time.Now().UTC()
 
@@ -1086,7 +1086,7 @@ func AckMessageRead(ctx context.Context, clientUsername, groupId, msgId string, 
 	var msgAck MsgAck
 
 	res, err := db.MultiQuery(ctx, func(tx neo4j.ManagedTransaction) (any, error) {
-		resMap := make(map[string]an/*cypher*/y, 3)
+		resMap := make(map[string]any, 3)
 
 		at := time.Now().UTC()
 
@@ -1165,7 +1165,7 @@ func ReplyToMessage(ctx context.Context, clientUsername, groupId, targetMsgId, m
 	var newMessage NewMessage
 
 	res, err := db.MultiQuery(ctx, func(tx neo4j.ManagedTransaction) (any, error) {
-		resMap := make(map[string]an/*cypher*/y, 4)
+		resMap := make(map[string]any, 4)
 
 		res, err := tx.Run(
 			ctx,
@@ -1266,7 +1266,7 @@ func ReactToMessage(ctx context.Context, clientUsername, groupId, msgId, reactio
 	var rxnToMessage RxnToMessage
 
 	res, err := db.MultiQuery(ctx, func(tx neo4j.ManagedTransaction) (any, error) {
-		resMap := make(map[string]an/*cypher*/y, 4)
+		resMap := make(map[string]any, 4)
 
 		res, err := tx.Run(
 			ctx,
