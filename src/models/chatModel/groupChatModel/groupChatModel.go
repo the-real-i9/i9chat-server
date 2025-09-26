@@ -966,7 +966,7 @@ func SendMessage(ctx context.Context, clientUsername, groupId, msgContent string
 
 				WITH message, message.created_at.epochMillis AS created_at, clientUser { .username, .profile_pic_url } AS sender
 
-				RETURN message { .*, content: apoc.convert.fromJsonMap(message.content), created_at, sender } AS member_resp
+				RETURN message { .*, is_own: false, content: apoc.convert.fromJsonMap(message.content), created_at, sender } AS member_resp
 				`,
 				map[string]any{
 					"group_id":         groupId,
@@ -1220,7 +1220,7 @@ func ReplyToMessage(ctx context.Context, clientUsername, groupId, targetMsgId, m
 
 				WITH replyMsg, replyMsg.created_at.epochMillis AS created_at, 
 					clientUser { .username, .profile_pic_url } AS sender,
-					targetMsg { .id, .content, sender_username: targetMsgSender.username } AS replied_to
+					targetMsg { .id, .content, sender_username: targetMsgSender.username, is_own: targetMsgSender.username = $client_username } AS replied_to
 
 				RETURN replyMsg { .*, content: apoc.convert.fromJsonMap(replyMsg.content) created_at, sender, replied_to } AS member_resp
 				`,
@@ -1404,7 +1404,7 @@ type ChatHistoryEntry struct {
 	Content        map[string]any   `json:"content,omitempty"`
 	DeliveryStatus string           `json:"delivery_status,omitempty"`
 	Sender         map[string]any   `json:"sender,omitempty"`
-	IsOwn          bool             `json:"is_own,omitempty"`
+	IsOwn          bool             `json:"is_own"`
 	Reactions      []map[string]any `json:"reactions,omitempty"`
 
 	// for reply entry
