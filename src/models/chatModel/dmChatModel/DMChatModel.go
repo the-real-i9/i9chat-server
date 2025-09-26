@@ -31,7 +31,7 @@ func SendMessage(ctx context.Context, clientUsername, partnerUsername, msgConten
 			(clientUser)-[:SENDS_MESSAGE]->(message)-[:IN_DM_CHAT]->(clientChat),
 			(partnerUser)-[:RECEIVES_MESSAGE]->(message)-[:IN_DM_CHAT]->(partnerChat)
 			
-		WITH message, message.created_at.epochMillis AS created_at, clientUser { .username, .profile_pic_url, .connection_status } AS sender
+		WITH message, message.created_at.epochMillis AS created_at, clientUser { .username, .profile_pic_url, .presence } AS sender
 		RETURN { new_msg_id: message.id } AS client_resp,
 			message { .*, content: apoc.convert.fromJsonMap(message.content), created_at, sender } AS partner_resp
 		`,
@@ -138,7 +138,7 @@ func ReplyToMessage(ctx context.Context, clientUsername, partnerUsername, target
 			(replyMsg)-[:REPLIES_TO]->(targetMsg)
 
 		WITH replyMsg, replyMsg.created_at.epochMillis AS created_at,
-			clientUser { .username, .profile_pic_url, .connection_status } AS sender,
+			clientUser { .username, .profile_pic_url, .presence } AS sender,
 			targetMsg { .id, .content, sender_username: targetMsgSender.username } AS replied_to
 
 		RETURN { new_msg_id: replyMsg.id } AS client_resp,
