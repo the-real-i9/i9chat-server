@@ -1218,11 +1218,11 @@ func ReplyToMessage(ctx context.Context, clientUsername, groupId, targetMsgId, m
 				
 				CREATE (memberUser)-[:RECEIVES_MESSAGE]->(replyMsg)-[:IN_GROUP_CHAT]->(memberChat)
 
-				WITH replyMsg, replyMsg.created_at.epochMillis AS created_at, 
+				WITH replyMsg, targetMsgSender, replyMsg.created_at.epochMillis AS created_at, 
 					clientUser { .username, .profile_pic_url } AS sender,
-					targetMsg { .id, .content, sender_username: targetMsgSender.username, is_own: targetMsgSender.username = $client_username } AS reply_target_msg
+					targetMsg { .id, content: apoc.convert.fromJsonMap(targetMsg.content), sender_username: targetMsgSender.username, is_own: targetMsgSender.username = $client_username } AS reply_target_msg
 
-				RETURN replyMsg { .*, content: apoc.convert.fromJsonMap(replyMsg.content) created_at, sender, reply_target_msg } AS member_resp
+				RETURN replyMsg { .*, is_own: false, content: apoc.convert.fromJsonMap(replyMsg.content) created_at, sender, reply_target_msg } AS member_resp
 				`,
 				map[string]any{
 					"group_id":         groupId,
