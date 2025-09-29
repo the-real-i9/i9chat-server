@@ -132,7 +132,7 @@ func ReplyToMessage(ctx context.Context, clientUsername, partnerUsername, target
 		MERGE (partnerUser)-[:HAS_CHAT]->(partnerChat:DMChat{ owner_username: $partner_username, partner_username: $client_username })-[:WITH_USER]->(clientUser)
 
 		WITH clientUser, clientChat, partnerUser, partnerChat, targetMsg
-		CREATE (replyMsg:DMMessage:DMChatEntry{ id: randomUUID(), chat_hist_entry_type: "message", is_reply: true, content: $message_content, delivery_status: "sent", created_at: $at }),
+		CREATE (replyMsg:DMMessage:DMChatEntry{ id: randomUUID(), chat_hist_entry_type: "message", content: $message_content, delivery_status: "sent", created_at: $at }),
 			(clientUser)-[:SENDS_MESSAGE]->(replyMsg)-[:IN_DM_CHAT]->(clientChat),
 			(partnerUser)-[:RECEIVES_MESSAGE]->(replyMsg)-[:IN_DM_CHAT]->(partnerChat),
 			(replyMsg)-[:REPLIES_TO]->(targetMsg)
@@ -267,7 +267,6 @@ type ChatHistoryEntry struct {
 	Reactions      []map[string]any `json:"reactions,omitempty"`
 
 	// for a reply message entry
-	IsReply        bool           `json:"is_reply"`
 	ReplyTargetMsg map[string]any `json:"reply_target_msg,omitempty"`
 
 	// for reaction entry
@@ -311,7 +310,7 @@ func ChatHistory(ctx context.Context, clientUsername, partnerUsername string, li
 				THEN replyTargetMsg { .id, content: apoc.convert.fromJsonMap(replyTargetMsg.content), sender_username: replyTargetMsgSender.username, is_own: replyTargetMsgSender.username = $client_username }
 				ELSE NULL
 			END AS reply_target_msg,
-			CASE WHEN entry.chat_hist_entry_type = "message" OR entry.chat_hist_entry_type = "reply"
+			CASE WHEN entry.chat_hist_entry_type = "message"
 				THEN apoc.convert.fromJsonMap(entry.content)
 				ELSE NULL
 			END AS content

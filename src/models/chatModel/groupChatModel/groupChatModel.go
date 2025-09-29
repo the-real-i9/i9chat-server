@@ -1175,7 +1175,7 @@ func ReplyToMessage(ctx context.Context, clientUsername, groupId, targetMsgId, m
 
 			MATCH (targetMsg:GroupMessage { id: $target_msg_id })
 
-			CREATE (replyMsg:GroupMessage:GroupChatEntry{ id: randomUUID(), chat_hist_entry_type: "message", is_reply: true, content: $message_content, delivery_status: "sent", created_at: $at }),
+			CREATE (replyMsg:GroupMessage:GroupChatEntry{ id: randomUUID(), chat_hist_entry_type: "message", content: $message_content, delivery_status: "sent", created_at: $at }),
 				(clientUser)-[:SENDS_MESSAGE]->(replyMsg)-[:IN_GROUP_CHAT]->(clientChat),
 				(replyMsg)-[:REPLIES_TO]->(targetMsg)
 			
@@ -1408,7 +1408,6 @@ type ChatHistoryEntry struct {
 	Reactions      []map[string]any `json:"reactions,omitempty"`
 
 	// for reply message entry
-	IsReply        bool           `json:"is_reply"`
 	ReplyTargetMsg map[string]any `json:"reply_target_msg,omitempty"`
 
 	// for reaction entry
