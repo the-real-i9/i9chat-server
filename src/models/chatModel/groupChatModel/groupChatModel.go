@@ -1408,7 +1408,7 @@ type ChatHistoryEntry struct {
 	Reactions      []map[string]any `json:"reactions,omitempty"`
 
 	// for reply message entry
-	IsReply        bool           `json:"is_reply,omitempty"`
+	IsReply        bool           `json:"is_reply"`
 	ReplyTargetMsg map[string]any `json:"reply_target_msg,omitempty"`
 
 	// for reaction entry
