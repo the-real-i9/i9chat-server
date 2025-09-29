@@ -25,14 +25,17 @@ func (b rtActionBody) Validate() error {
 }
 
 type sendDMChatMsg struct {
-	PartnerUsername string               `json:"partnerUsername"`
-	Msg             *appTypes.MsgContent `json:"msg"`
-	At              int64                `json:"at"`
+	PartnerUsername  string               `json:"partnerUsername"`
+	IsReply          bool                 `json:"isReply"`
+	ReplyTargetMsgId string               `json:"replyTargetMsgId"`
+	Msg              *appTypes.MsgContent `json:"msg"`
+	At               int64                `json:"at"`
 }
 
 func (vb sendDMChatMsg) Validate() error {
 	err := validation.ValidateStruct(&vb,
 		validation.Field(&vb.PartnerUsername, validation.Required),
+		validation.Field(&vb.ReplyTargetMsgId, is.UUID),
 		validation.Field(&vb.Msg, validation.Required),
 		validation.Field(&vb.At,
 			validation.Required,
@@ -60,15 +63,18 @@ func (d dmChatMsgAck) Validate() error {
 }
 
 type sendGroupChatMsg struct {
-	GroupId string               `json:"groupId"`
-	Msg     *appTypes.MsgContent `json:"msg"`
-	At      int64                `json:"at"`
+	GroupId          string               `json:"groupId"`
+	IsReply          bool                 `json:"isReply"`
+	ReplyTargetMsgId string               `json:"replyTargetMsgId"`
+	Msg              *appTypes.MsgContent `json:"msg"`
+	At               int64                `json:"at"`
 }
 
 func (vb sendGroupChatMsg) Validate() error {
 	err := validation.ValidateStruct(&vb,
-		validation.Field(&vb.Msg, validation.Required),
 		validation.Field(&vb.GroupId, validation.Required, is.UUID),
+		validation.Field(&vb.ReplyTargetMsgId, is.UUID),
+		validation.Field(&vb.Msg, validation.Required),
 		validation.Field(&vb.At, validation.Required, validation.Max(time.Now().UTC().UnixMilli()).Error("invalid future time")),
 	)
 

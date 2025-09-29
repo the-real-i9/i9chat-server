@@ -16,7 +16,7 @@ func sendDMChatMsgHndl(ctx context.Context, clientUsername string, actionData ma
 		return nil, val_err
 	}
 
-	return dmChatService.SendMessage(ctx, clientUsername, acd.PartnerUsername, acd.Msg, acd.At)
+	return dmChatService.SendMessage(ctx, clientUsername, acd.PartnerUsername, acd.ReplyTargetMsgId, acd.IsReply, acd.Msg, acd.At)
 }
 
 func ackDMChatMsgDeliveredHndl(ctx context.Context, clientUsername string, actionData map[string]any) (any, error) {
@@ -52,7 +52,7 @@ func sendGroupChatMsgHndl(ctx context.Context, clientUsername string, actionData
 		return nil, val_err
 	}
 
-	return groupChatService.SendMessage(ctx, clientUsername, acd.GroupId, acd.Msg, acd.At)
+	return groupChatService.SendMessage(ctx, clientUsername, acd.GroupId, acd.ReplyTargetMsgId, acd.IsReply, acd.Msg, acd.At)
 }
 
 func ackGroupChatMsgDeliveredHndl(ctx context.Context, clientUsername string, actionData map[string]any) (any, error) {

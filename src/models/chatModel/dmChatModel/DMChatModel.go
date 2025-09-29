@@ -132,17 +132,17 @@ func ReplyToMessage(ctx context.Context, clientUsername, partnerUsername, target
 		MERGE (partnerUser)-[:HAS_CHAT]->(partnerChat:DMChat{ owner_username: $partner_username, partner_username: $client_username })-[:WITH_USER]->(clientUser)
 
 		WITH clientUser, clientChat, partnerUser, partnerChat, targetMsg
-		CREATE (replyMsg:DMMessage:DMChatEntry{ id: randomUUID(), chat_hist_entry_type: "reply", content: $message_content, delivery_status: "sent", created_at: $at }),
+		CREATE (replyMsg:DMMessage:DMChatEntry{ id: randomUUID(), chat_hist_entry_type: "message", is_reply: true, content: $message_content, delivery_status: "sent", created_at: $at }),
 			(clientUser)-[:SENDS_MESSAGE]->(replyMsg)-[:IN_DM_CHAT]->(clientChat),
 			(partnerUser)-[:RECEIVES_MESSAGE]->(replyMsg)-[:IN_DM_CHAT]->(partnerChat),
 			(replyMsg)-[:REPLIES_TO]->(targetMsg)
 
 		WITH replyMsg, replyMsg.created_at.epochMillis AS created_at,
 			clientUser { .username, .profile_pic_url, .presence } AS sender,
-			targetMsg { .id, .content, sender_username: targetMsgSender.username, is_own: targetMsgSender.username = $client_username } AS replied_to
+			targetMsg { .id, .content, sender_username: targetMsgSender.username, is_own: targetMsgSender.username = $client_username } AS reply_target_msg
 
 		RETURN { new_msg_id: replyMsg.id } AS client_resp,
-			replyMsg { .*, is_own: false, replyMsg: apoc.convert.fromJsonMap(replyMsg.content), created_at, sender, replied_to } AS partner_resp
+			replyMsg { .*, is_own: false, replyMsg: apoc.convert.fromJsonMap(replyMsg.content), created_at, sender, reply_target_msg } AS partner_resp
 		`,
 		map[string]any{
 			"client_username":  clientUsername,
@@ -258,7 +258,7 @@ type ChatHistoryEntry struct {
 	EntryType string `json:"chat_hist_entry_type"`
 	CreatedAt int64  `json:"created_at"`
 
-	// for message and reply entry
+	// for message entry
 	Id             string           `json:"id,omitempty"`
 	Content        map[string]any   `json:"content,omitempty"`
 	DeliveryStatus string           `json:"delivery_status,omitempty"`
@@ -266,8 +266,9 @@ type ChatHistoryEntry struct {
 	IsOwn          bool             `json:"is_own"`
 	Reactions      []map[string]any `json:"reactions,omitempty"`
 
-	// for reply entry
-	RepliedTo map[string]any `json:"replied_to,omitempty"`
+	// for a reply message entry
+	IsReply        bool           `json:"is_reply,omitempty"`
+	ReplyTargetMsg map[string]any `json:"reply_target_msg,omitempty"`
 
 	// for reaction entry
 	Reaction string `json:"reaction,omitempty"`
@@ -284,10 +285,10 @@ func ChatHistory(ctx context.Context, clientUsername, partnerUsername string, li
 		OPTIONAL MATCH (clientChat)<-[:IN_DM_CHAT]-(entry:DMChatEntry WHERE entry.created_at < $offset)
 		OPTIONAL MATCH (entry)<-[:SENDS_MESSAGE]-(senderUser)
 		OPTIONAL MATCH (entry)<-[rxn:REACTS_TO_MESSAGE]-(reactorUser)
-		OPTIONAL MATCH (entry)-[:REPLIES_TO]->(repliedMsg:DMMessage)
-		OPTIONAL MATCH (repliedMsg)<-[:SENDS_MESSAGE]-(repliedSender)
+		OPTIONAL MATCH (entry)-[:REPLIES_TO]->(replyTargetMsg:DMMessage)
+		OPTIONAL MATCH (replyTargetMsg)<-[:SENDS_MESSAGE]-(replyTargetMsgSender)
 
-		WITH entry, senderUser, repliedMsg, repliedSender,
+		WITH entry, senderUser, replyTargetMsg, replyTargetMsgSender,
      collect(CASE WHEN rxn IS NOT NULL 
              THEN { reactor: reactorUser { .username, .profile_pic_url }, reaction: rxn.reaction, at: rxn.created_at.epochMillis }
              ELSE NULL 
@@ -306,10 +307,10 @@ func ChatHistory(ctx context.Context, clientUsername, partnerUsername string, li
          THEN [r IN reaction_list WHERE r IS NOT NULL]
          ELSE NULL
 			END AS reactions,
-			CASE WHEN repliedMsg IS NOT NULL
-				THEN repliedMsg { .id, content: apoc.convert.fromJsonMap(repliedMsg.content), sender_username: repliedSender.username, is_own: repliedSender.username = $client_username }
+			CASE WHEN replyTargetMsg IS NOT NULL
+				THEN replyTargetMsg { .id, content: apoc.convert.fromJsonMap(replyTargetMsg.content), sender_username: replyTargetMsgSender.username, is_own: replyTargetMsgSender.username = $client_username }
 				ELSE NULL
-			END AS replied_to,
+			END AS reply_target_msg,
 			CASE WHEN entry.chat_hist_entry_type = "message" OR entry.chat_hist_entry_type = "reply"
 				THEN apoc.convert.fromJsonMap(entry.content)
 				ELSE NULL
@@ -317,7 +318,7 @@ func ChatHistory(ctx context.Context, clientUsername, partnerUsername string, li
 		ORDER BY entry.created_at
 		LIMIT $limit
 		
-		RETURN collect(entry { .*, content, created_at, sender, is_own, reactions, replied_to }) AS chat_history
+		RETURN collect(entry { .*, content, created_at, sender, is_own, reactions, reply_target_msg }) AS chat_history
 		`,
 		map[string]any{
 			"client_username":  clientUsername,

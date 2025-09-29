@@ -46,7 +46,7 @@ func GetGroupMemInfo(ctx context.Context, clientUsername, groupId string) (map[s
 	return groupChat.GroupMemInfo(ctx, clientUsername, groupId)
 }
 
-func SendMessage(ctx context.Context, clientUsername, groupId string, msgContent *appTypes.MsgContent, at int64) (map[string]any, error) {
+func SendMessage(ctx context.Context, clientUsername, groupId, replyTargetMsgId string, isReply bool, msgContent *appTypes.MsgContent, at int64) (map[string]any, error) {
 
 	err := appServices.UploadMessageMedia(ctx, clientUsername, msgContent)
 	if err != nil {
@@ -59,9 +59,18 @@ func SendMessage(ctx context.Context, clientUsername, groupId string, msgContent
 		return nil, fiber.ErrInternalServerError
 	}
 
-	newMessage, err := groupChat.SendMessage(ctx, clientUsername, groupId, string(msgContentJson), time.UnixMilli(at).UTC())
-	if err != nil {
-		return nil, err
+	var newMessage groupChat.NewMessage
+
+	if !isReply {
+		newMessage, err = groupChat.SendMessage(ctx, clientUsername, groupId, string(msgContentJson), time.UnixMilli(at).UTC())
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		newMessage, err = groupChat.ReplyToMessage(ctx, clientUsername, groupId, replyTargetMsgId, string(msgContentJson), time.UnixMilli(at).UTC())
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	if newMessage.MemberData != nil {
@@ -101,31 +110,6 @@ func AckMessageRead(ctx context.Context, clientUsername, groupId, msgId string, 
 	}
 
 	return map[string]any{"read_by_all": msgAck.All}, nil
-}
-
-func ReplyToMessage(ctx context.Context, clientUsername, groupId, targetMsgId string, msgContent *appTypes.MsgContent, at int64) (map[string]any, error) {
-
-	err := appServices.UploadMessageMedia(ctx, clientUsername, msgContent)
-	if err != nil {
-		return nil, err
-	}
-
-	msgContentJson, err := json.Marshal(*msgContent)
-	if err != nil {
-		log.Println("groupChatService.go: ReplyToMessage: json.Marshal:", err)
-		return nil, fiber.ErrInternalServerError
-	}
-
-	newMessage, err := groupChat.ReplyToMessage(ctx, clientUsername, groupId, targetMsgId, string(msgContentJson), time.UnixMilli(at).UTC())
-	if err != nil {
-		return nil, err
-	}
-
-	if newMessage.MemberData != nil {
-		go broadcastNewMessage(newMessage.MemberUsernames, newMessage.MemberData, groupId)
-	}
-
-	return newMessage.ClientData, nil
 }
 
 func ReactToMessage(ctx context.Context, clientUsername, groupId, msgId, reaction string, at int64) (any, error) {

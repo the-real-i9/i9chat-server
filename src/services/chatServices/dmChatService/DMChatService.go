@@ -17,7 +17,7 @@ func GetChatHistory(ctx context.Context, clientUsername, partnerUsername string,
 	return dmChat.ChatHistory(ctx, clientUsername, partnerUsername, limit, time.UnixMilli(offset).UTC())
 }
 
-func SendMessage(ctx context.Context, clientUsername, partnerUsername string, msgContent *appTypes.MsgContent, at int64) (map[string]any, error) {
+func SendMessage(ctx context.Context, clientUsername, partnerUsername, replyTargetMsgId string, isReply bool, msgContent *appTypes.MsgContent, at int64) (map[string]any, error) {
 
 	err := appServices.UploadMessageMedia(ctx, clientUsername, msgContent)
 	if err != nil {
@@ -30,9 +30,18 @@ func SendMessage(ctx context.Context, clientUsername, partnerUsername string, ms
 		return nil, fiber.ErrInternalServerError
 	}
 
-	newMessage, err := dmChat.SendMessage(ctx, clientUsername, partnerUsername, string(msgContentJson), time.UnixMilli(at).UTC())
-	if err != nil {
-		return nil, err
+	var newMessage dmChat.NewMessage
+
+	if !isReply {
+		newMessage, err = dmChat.SendMessage(ctx, clientUsername, partnerUsername, string(msgContentJson), time.UnixMilli(at).UTC())
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		newMessage, err = dmChat.ReplyToMessage(ctx, clientUsername, partnerUsername, replyTargetMsgId, string(msgContentJson), time.UnixMilli(at).UTC())
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	if newMessage.PartnerData != nil {
@@ -81,34 +90,6 @@ func AckMessageRead(ctx context.Context, clientUsername, partnerUsername, msgId 
 	}
 
 	return done, nil
-}
-
-func ReplyToMessage(ctx context.Context, clientUsername, partnerUsername, targetMsgId string, msgContent *appTypes.MsgContent, at int64) (map[string]any, error) {
-
-	err := appServices.UploadMessageMedia(ctx, clientUsername, msgContent)
-	if err != nil {
-		return nil, err
-	}
-
-	msgContentJson, err := json.Marshal(*msgContent)
-	if err != nil {
-		log.Println("DMChatService.go: ReplyToMessage: json.Marshal:", err)
-		return nil, fiber.ErrInternalServerError
-	}
-
-	newMessage, err := dmChat.ReplyToMessage(ctx, clientUsername, partnerUsername, targetMsgId, string(msgContentJson), time.UnixMilli(at).UTC())
-	if err != nil {
-		return nil, err
-	}
-
-	if newMessage.PartnerData != nil {
-		go eventStreamService.Send(partnerUsername, appTypes.ServerWSMsg{
-			Event: "new dm chat message",
-			Data:  newMessage.PartnerData,
-		})
-	}
-
-	return newMessage.ClientData, nil
 }
 
 func ReactToMessage(ctx context.Context, clientUsername, partnerUsername, msgId, reaction string, at int64) (any, error) {
