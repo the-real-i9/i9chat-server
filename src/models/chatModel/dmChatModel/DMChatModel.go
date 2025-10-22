@@ -207,7 +207,7 @@ func ReactToMessage(ctx context.Context, clientUsername, partnerUsername, msgId,
 		},
 	)
 	if err != nil {
-		log.Println("DMChatModel.go: ReactTs]tyoMessage:", err)
+		log.Println("DMChatModel.go: ReactToMessage:", err)
 		return rxnToMessage, fiber.ErrInternalServerError
 	}
 

@@ -13,7 +13,7 @@ import (
 )
 
 func uploadVoice(ctx context.Context, username string, msg *appTypes.MsgContent) error {
-	voiceUrl, err := cloudStorageService.Upload(ctx, fmt.Sprintf("voice_messages/user-%s/voice-%d.ogg", username, time.Now().UnixNano()), msg.Data)
+	voiceUrl, err := cloudStorageService.Upload(ctx, fmt.Sprintf("voice_messages/user-%s/voice-%d%s", username, time.Now().UnixNano(), *msg.Extension), msg.Data)
 
 	if err != nil {
 		return err
@@ -25,7 +25,7 @@ func uploadVoice(ctx context.Context, username string, msg *appTypes.MsgContent)
 }
 
 func uploadAudio(ctx context.Context, username string, msg *appTypes.MsgContent) error {
-	audioUrl, err := cloudStorageService.Upload(ctx, fmt.Sprintf("audio_messages/user-%s/aud-%d.mp3", username, time.Now().UnixNano()), msg.Data)
+	audioUrl, err := cloudStorageService.Upload(ctx, fmt.Sprintf("audio_messages/user-%s/aud-%d%s", username, time.Now().UnixNano(), *msg.Extension), msg.Data)
 	if err != nil {
 		return err
 	}
@@ -36,7 +36,7 @@ func uploadAudio(ctx context.Context, username string, msg *appTypes.MsgContent)
 }
 
 func uploadVideo(ctx context.Context, username string, msg *appTypes.MsgContent) error {
-	videoUrl, err := cloudStorageService.Upload(ctx, fmt.Sprintf("video_messages/user-%s/vid-%d.mp4", username, time.Now().UnixNano()), msg.Data)
+	videoUrl, err := cloudStorageService.Upload(ctx, fmt.Sprintf("video_messages/user-%s/vid-%d%s", username, time.Now().UnixNano(), *msg.Extension), msg.Data)
 	if err != nil {
 		return err
 	}
@@ -47,7 +47,7 @@ func uploadVideo(ctx context.Context, username string, msg *appTypes.MsgContent)
 }
 
 func uploadImage(ctx context.Context, username string, msg *appTypes.MsgContent) error {
-	imageUrl, err := cloudStorageService.Upload(ctx, fmt.Sprintf("image_messages/user-%s/img-%d.jpg", username, time.Now().UnixNano()), msg.Data)
+	imageUrl, err := cloudStorageService.Upload(ctx, fmt.Sprintf("image_messages/user-%s/img-%d%s", username, time.Now().UnixNano(), *msg.Extension), msg.Data)
 	if err != nil {
 		return err
 	}
@@ -58,7 +58,7 @@ func uploadImage(ctx context.Context, username string, msg *appTypes.MsgContent)
 }
 
 func uploadFile(ctx context.Context, username string, msg *appTypes.MsgContent) error {
-	fileUrl, err := cloudStorageService.Upload(ctx, fmt.Sprintf("file_messages/user-%s/img-%d.jpg", username, time.Now().UnixNano()), msg.Data)
+	fileUrl, err := cloudStorageService.Upload(ctx, fmt.Sprintf("file_messages/user-%s/fil-%d%s", username, time.Now().UnixNano(), *msg.Extension), msg.Data)
 	if err != nil {
 		return err
 	}
