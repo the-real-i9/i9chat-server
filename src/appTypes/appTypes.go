@@ -7,10 +7,11 @@ import (
 )
 
 type ClientUser struct {
-	Username string
+	Username      string
+	ProfilePicUrl string
 }
 
-type ServerWSMsg struct {
+type ServerEventMsg struct {
 	Event string `json:"event"`
 	Data  any    `json:"data"`
 }

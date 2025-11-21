@@ -12,41 +12,45 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
-func Signin(ctx context.Context, emailOrUsername, password string) (any, string, error) {
-	theUser, err := user.SigninFind(ctx, emailOrUsername)
+type signinRespT struct {
+	Msg  string           `json:"msg"`
+	User user.ToAuthUserT `json:"user"`
+}
+
+func Signin(ctx context.Context, emailOrUsername, password string) (signinRespT, string, error) {
+	var resp signinRespT
+
+	theUser, err := user.AuthFind(ctx, emailOrUsername)
 	if err != nil {
-		return nil, "", err
+		return resp, "", err
 	}
 
-	if theUser == nil {
-		return nil, "", fiber.NewError(fiber.StatusNotFound, userErrors.IncorrectCredentials)
+	if theUser.Username != "" {
+		return resp, "", fiber.NewError(fiber.StatusNotFound, userErrors.IncorrectCredentials)
 	}
 
-	hashedPassword := theUser["password"].(string)
+	hashedPassword := theUser.Password
 
 	yes, err := securityServices.PasswordMatchesHash(hashedPassword, password)
 	if err != nil {
-		return nil, "", err
+		return resp, "", err
 	}
 
 	if !yes {
-		return nil, "", fiber.NewError(fiber.StatusNotFound, userErrors.IncorrectCredentials)
+		return resp, "", fiber.NewError(fiber.StatusNotFound, userErrors.IncorrectCredentials)
 	}
 
 	authJwt, err := securityServices.JwtSign(appTypes.ClientUser{
-		Username: theUser["username"].(string),
+		Username:      theUser.Username,
+		ProfilePicUrl: theUser.ProfilePicUrl,
 	}, os.Getenv("AUTH_JWT_SECRET"), time.Now().UTC().Add(10*24*time.Hour))
 
 	if err != nil {
-		return nil, "", err
+		return resp, "", err
 	}
 
-	delete(theUser, "password")
+	resp.Msg = "Signin success!"
+	resp.User = theUser
 
-	respData := map[string]any{
-		"msg":  "Signin success!",
-		"user": theUser,
-	}
-
-	return respData, authJwt, nil
+	return resp, authJwt, nil
 }

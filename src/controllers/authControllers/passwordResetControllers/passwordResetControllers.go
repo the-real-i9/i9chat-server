@@ -1,7 +1,6 @@
 package passwordResetControllers
 
 import (
-	"context"
 	"encoding/json"
 	"i9chat/src/helpers"
 	"i9chat/src/services/auth/passwordResetService"
@@ -12,8 +11,7 @@ import (
 )
 
 func RequestPasswordReset(c *fiber.Ctx) error {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := c.Context()
 
 	var body requestPasswordResetBody
 
@@ -43,8 +41,7 @@ func RequestPasswordReset(c *fiber.Ctx) error {
 }
 
 func ConfirmEmail(c *fiber.Ctx) error {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := c.Context()
 
 	sessionData := c.Locals("passwordReset_sess_data").(map[string]any)
 
@@ -76,8 +73,7 @@ func ConfirmEmail(c *fiber.Ctx) error {
 }
 
 func ResetPassword(c *fiber.Ctx) error {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := c.Context()
 
 	sessionData := c.Locals("passwordReset_sess_data").(map[string]any)
 

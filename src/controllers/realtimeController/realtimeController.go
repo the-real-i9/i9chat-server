@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"i9chat/src/appTypes"
 	"i9chat/src/helpers"
-	"i9chat/src/services/eventStreamService"
+	"i9chat/src/services/realtimeService"
 	"i9chat/src/services/userService"
 	"log"
 
@@ -18,9 +18,9 @@ var WSStream = websocket.New(func(c *websocket.Conn) {
 
 	clientUser := c.Locals("user").(appTypes.ClientUser)
 
-	userService.GoOnline(context.Background(), clientUser.Username)
+	go userService.GoOnline(context.Background(), clientUser.Username)
 
-	eventStreamService.Subscribe(clientUser.Username, c)
+	realtimeService.AddPipe(ctx, clientUser.Username, c)
 
 	var w_err error
 
@@ -43,34 +43,70 @@ var WSStream = websocket.New(func(c *websocket.Conn) {
 			continue
 		}
 
+		cancelUserPresenceSub := make(map[string]context.CancelFunc)
+
 		switch body.Action {
-		case "send dm chat message":
-			respData, err := sendDMChatMsgHndl(ctx, clientUser.Username, body.Data)
+		case "subscribe to user presence change":
+			var data subToUserPresenceAcd
+
+			helpers.ToStruct(body.Data, &data)
+
+			if err := data.Validate(); err != nil {
+				w_err = c.WriteJSON(helpers.WSErrReply(err, body.Action))
+				continue
+			}
+
+			for _, tu := range data.Usernames {
+				ctx, cancel := context.WithCancel(ctx)
+
+				realtimeService.SubscribeToUserPresence(ctx, clientUser.Username, tu, cancel)
+
+				cancelUserPresenceSub[tu] = cancel
+			}
+		case "unsubscribe from user presence change":
+			var data unsubFromUserPresenceAcd
+
+			helpers.ToStruct(body.Data, &data)
+
+			if err := data.Validate(); err != nil {
+				w_err = c.WriteJSON(helpers.WSErrReply(err, body.Action))
+				continue
+			}
+
+			for _, tu := range data.Usernames {
+				if cancel, ok := cancelUserPresenceSub[tu]; ok {
+					cancel()
+				}
+
+				delete(cancelUserPresenceSub, tu)
+			}
+		case "direct chat: send message":
+			respData, err := sendDirectChatMsgHndl(ctx, clientUser.Username, body.Data)
 			if err != nil {
 				w_err = c.WriteJSON(helpers.WSErrReply(err, body.Action))
 				continue
 			}
 
 			w_err = c.WriteJSON(helpers.WSReply(respData, body.Action))
-		case "ack dm chat message delivered":
+		case "direct chat: ack message delivered":
 
-			respData, err := ackDMChatMsgDeliveredHndl(ctx, clientUser.Username, body.Data)
+			respData, err := ackDirectChatMsgDeliveredHndl(ctx, clientUser.Username, body.Data)
 			if err != nil {
 				w_err = c.WriteJSON(helpers.WSErrReply(err, body.Action))
 				continue
 			}
 
 			w_err = c.WriteJSON(helpers.WSReply(respData, body.Action))
-		case "ack dm chat message read":
+		case "direct chat: ack message read":
 
-			respData, err := ackDMChatMsgReadHndl(ctx, clientUser.Username, body.Data)
+			respData, err := ackDirectChatMsgReadHndl(ctx, clientUser.Username, body.Data)
 			if err != nil {
 				w_err = c.WriteJSON(helpers.WSErrReply(err, body.Action))
 				continue
 			}
 
 			w_err = c.WriteJSON(helpers.WSReply(respData, body.Action))
-		case "send group chat message":
+		case "group chat: send message":
 
 			respData, err := sendGroupChatMsgHndl(ctx, clientUser.Username, body.Data)
 			if err != nil {
@@ -79,7 +115,7 @@ var WSStream = websocket.New(func(c *websocket.Conn) {
 			}
 
 			w_err = c.WriteJSON(helpers.WSReply(respData, body.Action))
-		case "ack group chat message delivered":
+		case "group chat: ack message delivered":
 
 			respData, err := ackGroupChatMsgDeliveredHndl(ctx, clientUser.Username, body.Data)
 			if err != nil {
@@ -88,7 +124,7 @@ var WSStream = websocket.New(func(c *websocket.Conn) {
 			}
 
 			w_err = c.WriteJSON(helpers.WSReply(respData, body.Action))
-		case "ack group chat message read":
+		case "group chat: ack message read":
 
 			respData, err := ackGroupChatMsgReadHndl(ctx, clientUser.Username, body.Data)
 			if err != nil {
@@ -97,7 +133,7 @@ var WSStream = websocket.New(func(c *websocket.Conn) {
 			}
 
 			w_err = c.WriteJSON(helpers.WSReply(respData, body.Action))
-		case "get group info":
+		case "group: get info":
 
 			respData, err := getGroupInfoHndl(ctx, body.Data)
 			if err != nil {
@@ -115,5 +151,5 @@ var WSStream = websocket.New(func(c *websocket.Conn) {
 
 	go userService.GoOffline(context.Background(), clientUser.Username)
 
-	eventStreamService.Unsubscribe(clientUser.Username)
+	realtimeService.RemovePipe(clientUser.Username)
 })

@@ -15,8 +15,6 @@ func Route(router fiber.Router) {
 	router.Post("/change_bio", UC.ChangeBio)
 	router.Post("/set_geolocation", UC.SetMyLocation)
 
-	router.Get("/find_user", UC.
-		FindUser)
 	router.Get("/find_nearby_users", UC.FindNearbyUsers)
 
 	router.Get("/my_chats", UC.GetMyChats)

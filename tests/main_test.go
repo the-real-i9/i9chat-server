@@ -3,15 +3,21 @@ package tests
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
+	"i9chat/src/initializers"
+	"i9chat/src/routes/appRoutes"
+	"i9chat/src/routes/authRoutes"
 	"io"
 	"log"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/fasthttp/websocket"
-	"github.com/neo4j/neo4j-go-driver/v5/neo4j"
+	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/cors"
+	"github.com/gofiber/fiber/v2/middleware/encryptcookie"
+	"github.com/gofiber/fiber/v2/middleware/helmet"
 )
 
 const HOST_URL string = "http://localhost:8000"
@@ -24,7 +30,7 @@ const signinPath = HOST_URL + "/api/auth/signin"
 const userPath = HOST_URL + "/api/app/user"
 const signoutPath = userPath + "/signout"
 
-const dmChatPath = HOST_URL + "/api/app/dm_chat"
+const directChatPath = HOST_URL + "/api/app/dm_chat"
 const groupChatPath = HOST_URL + "/api/app/group_chat"
 
 type UserGeolocation struct {
@@ -33,29 +39,55 @@ type UserGeolocation struct {
 }
 
 type UserT struct {
-	Email         string
-	Username      string
-	Password      string
-	Geolocation   UserGeolocation
-	SessionCookie string
-	WSConn        *websocket.Conn
-	ServerWSMsg   chan map[string]any
+	Email          string
+	Username       string
+	Password       string
+	Geolocation    UserGeolocation
+	SessionCookie  string
+	WSConn         *websocket.Conn
+	ServerEventMsg chan map[string]any
 }
 
 func TestMain(m *testing.M) {
-	dbDriver, err := neo4j.NewDriverWithContext(os.Getenv("NEO4J_URL"), neo4j.BasicAuth(os.Getenv("NEO4J_USER"), os.Getenv("NEO4J_PASSWORD"), ""))
-	if err != nil {
-		log.Fatalln(err)
+	if err := initializers.InitApp(); err != nil {
+		log.Fatal(err)
 	}
 
-	ctx := context.Background()
+	defer initializers.CleanUp()
 
-	defer dbDriver.Close(ctx)
+	app := fiber.New()
 
-	// cleaup db
-	neo4j.ExecuteQuery(ctx, dbDriver, `MATCH (n) DETACH DELETE n`, nil, neo4j.EagerResultTransformer)
+	app.Use(helmet.New())
+	app.Use(cors.New())
+
+	app.Use(encryptcookie.New(encryptcookie.Config{
+		Key: os.Getenv("COOKIE_SECRET"),
+	}))
+
+	app.Route("/api/auth", authRoutes.Route)
+	app.Route("/api/app", appRoutes.Route)
+
+	var PORT string
+
+	if os.Getenv("GO_ENV") != "production" {
+		PORT = "8000"
+	} else {
+		PORT = os.Getenv("PORT")
+	}
+
+	go func() {
+		app.Listen("0.0.0.0:" + PORT)
+	}()
+
+	waitReady := time.NewTimer(2 * time.Second)
+	<-waitReady.C
 
 	c := m.Run()
+
+	waitFinish := time.NewTimer(2 * time.Second)
+	<-waitFinish.C
+
+	app.Shutdown()
 
 	os.Exit(c)
 }

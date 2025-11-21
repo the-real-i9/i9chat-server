@@ -1,7 +1,6 @@
 package signinControllers
 
 import (
-	"context"
 	"encoding/json"
 	"i9chat/src/helpers"
 	"i9chat/src/services/auth/signinService"
@@ -12,8 +11,7 @@ import (
 )
 
 func Signin(c *fiber.Ctx) error {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := c.Context()
 
 	var body signInBody
 

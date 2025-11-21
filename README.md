@@ -14,6 +14,6 @@ The following is a summary of the features supported by this API. Visit the API 
 
 ### Group Messaging
 
-- Everything in DM Chat
+- Everything in direct messaging
 - Create Group, Add members, Make Admins etc.
 - Join Group, Leave Group etc.

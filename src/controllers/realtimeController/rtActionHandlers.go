@@ -3,12 +3,12 @@ package realtimeController
 import (
 	"context"
 	"i9chat/src/helpers"
-	"i9chat/src/services/chatServices/dmChatService"
+	"i9chat/src/services/chatServices/directChatService"
 	"i9chat/src/services/chatServices/groupChatService"
 )
 
-func sendDMChatMsgHndl(ctx context.Context, clientUsername string, actionData map[string]any) (map[string]any, error) {
-	var acd sendDMChatMsg
+func sendDirectChatMsgHndl(ctx context.Context, clientUsername string, actionData map[string]any) (map[string]any, error) {
+	var acd sendDirectChatMsg
 
 	helpers.ToStruct(actionData, &acd)
 
@@ -16,11 +16,11 @@ func sendDMChatMsgHndl(ctx context.Context, clientUsername string, actionData ma
 		return nil, val_err
 	}
 
-	return dmChatService.SendMessage(ctx, clientUsername, acd.PartnerUsername, acd.ReplyTargetMsgId, acd.IsReply, acd.Msg, acd.At)
+	return directChatService.SendMessage(ctx, clientUsername, acd.PartnerUsername, acd.ReplyTargetMsgId, acd.IsReply, acd.Msg, acd.At)
 }
 
-func ackDMChatMsgDeliveredHndl(ctx context.Context, clientUsername string, actionData map[string]any) (any, error) {
-	var acd dmChatMsgAck
+func ackDirectChatMsgDeliveredHndl(ctx context.Context, clientUsername string, actionData map[string]any) (any, error) {
+	var acd directChatMsgAck
 
 	helpers.ToStruct(actionData, &acd)
 
@@ -28,11 +28,11 @@ func ackDMChatMsgDeliveredHndl(ctx context.Context, clientUsername string, actio
 		return nil, val_err
 	}
 
-	return dmChatService.AckMessageDelivered(ctx, clientUsername, acd.PartnerUsername, acd.MsgId, acd.At)
+	return directChatService.AckMessageDelivered(ctx, clientUsername, acd.PartnerUsername, acd.MsgId, acd.At)
 }
 
-func ackDMChatMsgReadHndl(ctx context.Context, clientUsername string, actionData map[string]any) (any, error) {
-	var acd dmChatMsgAck
+func ackDirectChatMsgReadHndl(ctx context.Context, clientUsername string, actionData map[string]any) (any, error) {
+	var acd directChatMsgAck
 
 	helpers.ToStruct(actionData, &acd)
 
@@ -40,7 +40,7 @@ func ackDMChatMsgReadHndl(ctx context.Context, clientUsername string, actionData
 		return nil, val_err
 	}
 
-	return dmChatService.AckMessageRead(ctx, clientUsername, acd.PartnerUsername, acd.MsgId, acd.At)
+	return directChatService.AckMessageRead(ctx, clientUsername, acd.PartnerUsername, acd.MsgId, acd.At)
 }
 
 func sendGroupChatMsgHndl(ctx context.Context, clientUsername string, actionData map[string]any) (map[string]any, error) {

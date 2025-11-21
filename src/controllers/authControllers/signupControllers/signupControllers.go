@@ -1,7 +1,6 @@
 package signupControllers
 
 import (
-	"context"
 	"encoding/json"
 	"i9chat/src/helpers"
 	"i9chat/src/services/auth/signupService"
@@ -12,8 +11,7 @@ import (
 )
 
 func RequestNewAccount(c *fiber.Ctx) error {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := c.Context()
 
 	var body requestNewAccountBody
 
@@ -44,8 +42,7 @@ func RequestNewAccount(c *fiber.Ctx) error {
 }
 
 func VerifyEmail(c *fiber.Ctx) error {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := c.Context()
 
 	sessionData := c.Locals("signup_sess_data").(map[string]any)
 
@@ -77,8 +74,7 @@ func VerifyEmail(c *fiber.Ctx) error {
 }
 
 func RegisterUser(c *fiber.Ctx) error {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := c.Context()
 
 	sessionData := c.Locals("signup_sess_data").(map[string]any)
 

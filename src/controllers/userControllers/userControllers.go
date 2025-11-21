@@ -1,7 +1,6 @@
 package userControllers
 
 import (
-	"context"
 	"i9chat/src/appTypes"
 	"i9chat/src/helpers"
 	"i9chat/src/services/userService"
@@ -10,22 +9,13 @@ import (
 )
 
 func GetSessionUser(c *fiber.Ctx) error {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
 	clientUser := c.Locals("user").(appTypes.ClientUser)
 
-	respData, app_err := userService.SessionUser(ctx, clientUser.Username)
-	if app_err != nil {
-		return app_err
-	}
-
-	return c.JSON(respData)
+	return c.JSON(clientUser)
 }
 
 func ChangeProfilePicture(c *fiber.Ctx) error {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := c.Context()
 
 	clientUser := c.Locals("user").(appTypes.ClientUser)
 
@@ -49,8 +39,7 @@ func ChangeProfilePicture(c *fiber.Ctx) error {
 }
 
 func ChangeBio(c *fiber.Ctx) error {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := c.Context()
 
 	clientUser := c.Locals("user").(appTypes.ClientUser)
 
@@ -74,8 +63,7 @@ func ChangeBio(c *fiber.Ctx) error {
 }
 
 func SetMyLocation(c *fiber.Ctx) error {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := c.Context()
 
 	clientUser := c.Locals("user").(appTypes.ClientUser)
 
@@ -99,22 +87,8 @@ func SetMyLocation(c *fiber.Ctx) error {
 	return c.JSON(respData)
 }
 
-func FindUser(c *fiber.Ctx) error {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	respData, app_err := userService.FindUser(ctx, c.Query("eu"))
-
-	if app_err != nil {
-		return app_err
-	}
-
-	return c.JSON(respData)
-}
-
 func FindNearbyUsers(c *fiber.Ctx) error {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := c.Context()
 
 	clientUser := c.Locals("user").(appTypes.ClientUser)
 
@@ -127,8 +101,7 @@ func FindNearbyUsers(c *fiber.Ctx) error {
 }
 
 func GetMyChats(c *fiber.Ctx) error {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := c.Context()
 
 	clientUser := c.Locals("user").(appTypes.ClientUser)
 
@@ -141,8 +114,7 @@ func GetMyChats(c *fiber.Ctx) error {
 }
 
 func GetMyProfile(c *fiber.Ctx) error {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := c.Context()
 
 	clientUser := c.Locals("user").(appTypes.ClientUser)
 

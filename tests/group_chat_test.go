@@ -184,10 +184,10 @@ func TestGroupChat(t *testing.T) {
 			defer wsConn.CloseHandler()(websocket.CloseNormalClosure, user.Username+": GoodBye!")
 
 			user.WSConn = wsConn
-			user.ServerWSMsg = make(chan map[string]any)
+			user.ServerEventMsg = make(chan map[string]any)
 
 			go func() {
-				userCommChan := user.ServerWSMsg
+				userCommChan := user.ServerEventMsg
 
 				for {
 					userCommChan := userCommChan
@@ -263,7 +263,7 @@ func TestGroupChat(t *testing.T) {
 
 		newGroup.Id = rb["id"].(string)
 
-		user2RecvNewGroup := <-user2.ServerWSMsg
+		user2RecvNewGroup := <-user2.ServerEventMsg
 
 		td.Cmp(td.Require(t), user2RecvNewGroup, td.Map(map[string]any{
 			"event": "new group chat",
@@ -313,7 +313,7 @@ func TestGroupChat(t *testing.T) {
 			}, nil)),
 		}, nil))
 
-		user1GCJoinNotif := <-user1.ServerWSMsg
+		user1GCJoinNotif := <-user1.ServerEventMsg
 
 		td.Cmp(td.Require(t), user1GCJoinNotif, td.Map(map[string]any{
 			"event": "new group chat activity",
@@ -323,7 +323,7 @@ func TestGroupChat(t *testing.T) {
 			}, nil),
 		}, nil))
 
-		user2GCJoinNotif := <-user2.ServerWSMsg
+		user2GCJoinNotif := <-user2.ServerEventMsg
 
 		td.Cmp(td.Require(t), user2GCJoinNotif, td.Map(map[string]any{
 			"event": "new group chat activity",
@@ -362,7 +362,7 @@ func TestGroupChat(t *testing.T) {
 
 		require.Equal(t, fmt.Sprintf("You made %s group admin", user2.Username), rb)
 
-		user2GCNewAdminNotif := <-user2.ServerWSMsg
+		user2GCNewAdminNotif := <-user2.ServerEventMsg
 
 		td.Cmp(td.Require(t), user2GCNewAdminNotif, td.Map(map[string]any{
 			"event": "new group chat activity",
@@ -372,7 +372,7 @@ func TestGroupChat(t *testing.T) {
 			}, nil),
 		}, nil))
 
-		user3GCNewAdminNotif := <-user3.ServerWSMsg
+		user3GCNewAdminNotif := <-user3.ServerEventMsg
 
 		td.Cmp(td.Require(t), user3GCNewAdminNotif, td.Map(map[string]any{
 			"event": "new group chat activity",
@@ -440,7 +440,7 @@ func TestGroupChat(t *testing.T) {
 
 		require.Equal(t, fmt.Sprintf("You added %s", helpers.JoinWithCommaAnd(user4.Username, user5.Username)), rb)
 
-		user4GCUserAddedNotif := <-user4.ServerWSMsg
+		user4GCUserAddedNotif := <-user4.ServerEventMsg
 
 		td.Cmp(td.Require(t), user4GCUserAddedNotif, td.Map(map[string]any{
 			"event": "new group chat",
@@ -455,7 +455,7 @@ func TestGroupChat(t *testing.T) {
 			}, nil),
 		}, nil))
 
-		user5GCUserAddedNotif := <-user5.ServerWSMsg
+		user5GCUserAddedNotif := <-user5.ServerEventMsg
 
 		td.Cmp(td.Require(t), user5GCUserAddedNotif, td.Map(map[string]any{
 			"event": "new group chat",
@@ -470,7 +470,7 @@ func TestGroupChat(t *testing.T) {
 			}, nil),
 		}, nil))
 
-		user1GCNewUsersAddedNotif := <-user1.ServerWSMsg
+		user1GCNewUsersAddedNotif := <-user1.ServerEventMsg
 
 		td.Cmp(td.Require(t), user1GCNewUsersAddedNotif, td.Map(map[string]any{
 			"event": "new group chat activity",
@@ -480,7 +480,7 @@ func TestGroupChat(t *testing.T) {
 			}, nil),
 		}, nil))
 
-		user3GCNewUsersAddedNotif := <-user3.ServerWSMsg
+		user3GCNewUsersAddedNotif := <-user3.ServerEventMsg
 
 		td.Cmp(td.Require(t), user3GCNewUsersAddedNotif, td.Map(map[string]any{
 			"event": "new group chat activity",
@@ -523,7 +523,7 @@ func TestGroupChat(t *testing.T) {
 
 		require.Equal(t, fmt.Sprintf("You changed group name from %s to %s", oldGroupName, newGroup.Name), rb)
 
-		user2GCNameChangeNotif := <-user2.ServerWSMsg
+		user2GCNameChangeNotif := <-user2.ServerEventMsg
 
 		td.Cmp(td.Require(t), user2GCNameChangeNotif, td.Map(map[string]any{
 			"event": "new group chat activity",
@@ -533,7 +533,7 @@ func TestGroupChat(t *testing.T) {
 			}, nil),
 		}, nil))
 
-		user3GCNameChangeNotif := <-user3.ServerWSMsg
+		user3GCNameChangeNotif := <-user3.ServerEventMsg
 
 		td.Cmp(td.Require(t), user3GCNameChangeNotif, td.Map(map[string]any{
 			"event": "new group chat activity",
@@ -543,7 +543,7 @@ func TestGroupChat(t *testing.T) {
 			}, nil),
 		}, nil))
 
-		user4GCNameChangeNotif := <-user4.ServerWSMsg
+		user4GCNameChangeNotif := <-user4.ServerEventMsg
 
 		td.Cmp(td.Require(t), user4GCNameChangeNotif, td.Map(map[string]any{
 			"event": "new group chat activity",
@@ -553,7 +553,7 @@ func TestGroupChat(t *testing.T) {
 			}, nil),
 		}, nil))
 
-		user5GCNameChangeNotif := <-user5.ServerWSMsg
+		user5GCNameChangeNotif := <-user5.ServerEventMsg
 
 		td.Cmp(td.Require(t), user5GCNameChangeNotif, td.Map(map[string]any{
 			"event": "new group chat activity",
@@ -596,7 +596,7 @@ func TestGroupChat(t *testing.T) {
 
 		require.Equal(t, fmt.Sprintf("You changed group description from %s to %s", oldGroupDescription, newGroup.Description), rb)
 
-		user2GCDescriptionChangeNotif := <-user2.ServerWSMsg
+		user2GCDescriptionChangeNotif := <-user2.ServerEventMsg
 
 		td.Cmp(td.Require(t), user2GCDescriptionChangeNotif, td.Map(map[string]any{
 			"event": "new group chat activity",
@@ -606,7 +606,7 @@ func TestGroupChat(t *testing.T) {
 			}, nil),
 		}, nil))
 
-		user3GCDescriptionChangeNotif := <-user3.ServerWSMsg
+		user3GCDescriptionChangeNotif := <-user3.ServerEventMsg
 
 		td.Cmp(td.Require(t), user3GCDescriptionChangeNotif, td.Map(map[string]any{
 			"event": "new group chat activity",
@@ -616,7 +616,7 @@ func TestGroupChat(t *testing.T) {
 			}, nil),
 		}, nil))
 
-		user4GCDescriptionChangeNotif := <-user4.ServerWSMsg
+		user4GCDescriptionChangeNotif := <-user4.ServerEventMsg
 
 		td.Cmp(td.Require(t), user4GCDescriptionChangeNotif, td.Map(map[string]any{
 			"event": "new group chat activity",
@@ -626,7 +626,7 @@ func TestGroupChat(t *testing.T) {
 			}, nil),
 		}, nil))
 
-		user5GCDescriptionChangeNotif := <-user5.ServerWSMsg
+		user5GCDescriptionChangeNotif := <-user5.ServerEventMsg
 
 		td.Cmp(td.Require(t), user5GCDescriptionChangeNotif, td.Map(map[string]any{
 			"event": "new group chat activity",
@@ -667,7 +667,7 @@ func TestGroupChat(t *testing.T) {
 
 		require.Equal(t, "You changed group picture", rb)
 
-		user1GCPictureChangeNotif := <-user1.ServerWSMsg
+		user1GCPictureChangeNotif := <-user1.ServerEventMsg
 
 		td.Cmp(td.Require(t), user1GCPictureChangeNotif, td.Map(map[string]any{
 			"event": "new group chat activity",
@@ -677,7 +677,7 @@ func TestGroupChat(t *testing.T) {
 			}, nil),
 		}, nil))
 
-		user3GCPictureChangeNotif := <-user3.ServerWSMsg
+		user3GCPictureChangeNotif := <-user3.ServerEventMsg
 
 		td.Cmp(td.Require(t), user3GCPictureChangeNotif, td.Map(map[string]any{
 			"event": "new group chat activity",
@@ -687,7 +687,7 @@ func TestGroupChat(t *testing.T) {
 			}, nil),
 		}, nil))
 
-		user4GCPictureChangeNotif := <-user4.ServerWSMsg
+		user4GCPictureChangeNotif := <-user4.ServerEventMsg
 
 		td.Cmp(td.Require(t), user4GCPictureChangeNotif, td.Map(map[string]any{
 			"event": "new group chat activity",
@@ -697,7 +697,7 @@ func TestGroupChat(t *testing.T) {
 			}, nil),
 		}, nil))
 
-		user5GCPictureChangeNotif := <-user5.ServerWSMsg
+		user5GCPictureChangeNotif := <-user5.ServerEventMsg
 
 		td.Cmp(td.Require(t), user5GCPictureChangeNotif, td.Map(map[string]any{
 			"event": "new group chat activity",
@@ -736,7 +736,7 @@ func TestGroupChat(t *testing.T) {
 
 		require.Equal(t, fmt.Sprintf("You removed %s from group admins", user1.Username), rb)
 
-		user1GCAdminRemovalNotif := <-user1.ServerWSMsg
+		user1GCAdminRemovalNotif := <-user1.ServerEventMsg
 
 		td.Cmp(td.Require(t), user1GCAdminRemovalNotif, td.Map(map[string]any{
 			"event": "new group chat activity",
@@ -746,7 +746,7 @@ func TestGroupChat(t *testing.T) {
 			}, nil),
 		}, nil))
 
-		user3GCAdminRemovalNotif := <-user3.ServerWSMsg
+		user3GCAdminRemovalNotif := <-user3.ServerEventMsg
 
 		td.Cmp(td.Require(t), user3GCAdminRemovalNotif, td.Map(map[string]any{
 			"event": "new group chat activity",
@@ -756,7 +756,7 @@ func TestGroupChat(t *testing.T) {
 			}, nil),
 		}, nil))
 
-		user4GCAdminRemovalNotif := <-user4.ServerWSMsg
+		user4GCAdminRemovalNotif := <-user4.ServerEventMsg
 
 		td.Cmp(td.Require(t), user4GCAdminRemovalNotif, td.Map(map[string]any{
 			"event": "new group chat activity",
@@ -766,7 +766,7 @@ func TestGroupChat(t *testing.T) {
 			}, nil),
 		}, nil))
 
-		user5GCAdminRemovalNotif := <-user5.ServerWSMsg
+		user5GCAdminRemovalNotif := <-user5.ServerEventMsg
 
 		td.Cmp(td.Require(t), user5GCAdminRemovalNotif, td.Map(map[string]any{
 			"event": "new group chat activity",
@@ -834,7 +834,7 @@ func TestGroupChat(t *testing.T) {
 
 		require.Equal(t, fmt.Sprintf("You removed %s", user1.Username), rb)
 
-		user1GCAdminRemovalNotif := <-user1.ServerWSMsg
+		user1GCAdminRemovalNotif := <-user1.ServerEventMsg
 
 		td.Cmp(td.Require(t), user1GCAdminRemovalNotif, td.Map(map[string]any{
 			"event": "new group chat activity",
@@ -844,7 +844,7 @@ func TestGroupChat(t *testing.T) {
 			}, nil),
 		}, nil))
 
-		user3GCAdminRemovalNotif := <-user3.ServerWSMsg
+		user3GCAdminRemovalNotif := <-user3.ServerEventMsg
 
 		td.Cmp(td.Require(t), user3GCAdminRemovalNotif, td.Map(map[string]any{
 			"event": "new group chat activity",
@@ -854,7 +854,7 @@ func TestGroupChat(t *testing.T) {
 			}, nil),
 		}, nil))
 
-		user4GCAdminRemovalNotif := <-user4.ServerWSMsg
+		user4GCAdminRemovalNotif := <-user4.ServerEventMsg
 
 		td.Cmp(td.Require(t), user4GCAdminRemovalNotif, td.Map(map[string]any{
 			"event": "new group chat activity",
@@ -864,7 +864,7 @@ func TestGroupChat(t *testing.T) {
 			}, nil),
 		}, nil))
 
-		user5GCAdminRemovalNotif := <-user5.ServerWSMsg
+		user5GCAdminRemovalNotif := <-user5.ServerEventMsg
 
 		td.Cmp(td.Require(t), user5GCAdminRemovalNotif, td.Map(map[string]any{
 			"event": "new group chat activity",
@@ -930,7 +930,7 @@ func TestGroupChat(t *testing.T) {
 
 		require.Equal(t, "You left", rb)
 
-		user2GCLeaveNotif := <-user2.ServerWSMsg
+		user2GCLeaveNotif := <-user2.ServerEventMsg
 
 		td.Cmp(td.Require(t), user2GCLeaveNotif, td.Map(map[string]any{
 			"event": "new group chat activity",
@@ -940,7 +940,7 @@ func TestGroupChat(t *testing.T) {
 			}, nil),
 		}, nil))
 
-		user4GCLeaveNotif := <-user4.ServerWSMsg
+		user4GCLeaveNotif := <-user4.ServerEventMsg
 
 		td.Cmp(td.Require(t), user4GCLeaveNotif, td.Map(map[string]any{
 			"event": "new group chat activity",
@@ -950,7 +950,7 @@ func TestGroupChat(t *testing.T) {
 			}, nil),
 		}, nil))
 
-		user5GCLeaveNotif := <-user5.ServerWSMsg
+		user5GCLeaveNotif := <-user5.ServerEventMsg
 
 		td.Cmp(td.Require(t), user5GCLeaveNotif, td.Map(map[string]any{
 			"event": "new group chat activity",
@@ -1002,7 +1002,7 @@ func TestGroupChat(t *testing.T) {
 		require.NoError(t, err)
 
 		// user2's server reply (response) to action
-		user2ServerReply := <-user2.ServerWSMsg
+		user2ServerReply := <-user2.ServerEventMsg
 
 		td.Cmp(td.Require(t), user2ServerReply, td.Map(map[string]any{
 			"event":    "server reply",
@@ -1037,7 +1037,7 @@ func TestGroupChat(t *testing.T) {
 		require.NoError(t, err)
 
 		// user4's server reply (response) to action
-		user4ServerReply := <-user4.ServerWSMsg
+		user4ServerReply := <-user4.ServerEventMsg
 
 		td.Cmp(td.Require(t), user4ServerReply, td.Map(map[string]any{
 			"event":    "server reply",
@@ -1053,7 +1053,7 @@ func TestGroupChat(t *testing.T) {
 	{
 		t.Log("Action: user2 & user 5 receives the new message in group")
 
-		user2NewMsgReceived := <-user2.ServerWSMsg
+		user2NewMsgReceived := <-user2.ServerEventMsg
 
 		td.Cmp(td.Require(t), user2NewMsgReceived, td.Map(map[string]any{
 			"event": "new group chat message",
@@ -1075,7 +1075,7 @@ func TestGroupChat(t *testing.T) {
 			}, nil),
 		}, nil))
 
-		user5NewMsgReceived := <-user5.ServerWSMsg
+		user5NewMsgReceived := <-user5.ServerEventMsg
 
 		td.Cmp(td.Require(t), user5NewMsgReceived, td.Map(map[string]any{
 			"event": "new group chat message",
@@ -1112,7 +1112,7 @@ func TestGroupChat(t *testing.T) {
 		})
 		require.NoError(t, err)
 
-		user2ServerReply := <-user2.ServerWSMsg
+		user2ServerReply := <-user2.ServerEventMsg
 
 		td.Cmp(td.Require(t), user2ServerReply, td.Map(map[string]any{
 			"event":    "server reply",
@@ -1133,7 +1133,7 @@ func TestGroupChat(t *testing.T) {
 		})
 		require.NoError(t, err)
 
-		user5ServerReply := <-user5.ServerWSMsg
+		user5ServerReply := <-user5.ServerEventMsg
 
 		td.Cmp(td.Require(t), user5ServerReply, td.Map(map[string]any{
 			"event":    "server reply",
@@ -1153,7 +1153,7 @@ func TestGroupChat(t *testing.T) {
 		// since he's the last user to acknowledge 'delivered' when the server detects
 		// that all members have now acknowledged 'delivered'
 
-		user2DelvAckReceipt := <-user2.ServerWSMsg
+		user2DelvAckReceipt := <-user2.ServerEventMsg
 
 		td.Cmp(td.Require(t), user2DelvAckReceipt, td.Map(map[string]any{
 			"event": "group chat message delivered",
@@ -1179,7 +1179,7 @@ func TestGroupChat(t *testing.T) {
 		})
 		require.NoError(t, err)
 
-		user5ServerReply := <-user5.ServerWSMsg
+		user5ServerReply := <-user5.ServerEventMsg
 
 		td.Cmp(td.Require(t), user5ServerReply, td.Map(map[string]any{
 			"event":    "server reply",
@@ -1200,7 +1200,7 @@ func TestGroupChat(t *testing.T) {
 		})
 		require.NoError(t, err)
 
-		user2ServerReply := <-user2.ServerWSMsg
+		user2ServerReply := <-user2.ServerEventMsg
 
 		td.Cmp(td.Require(t), user2ServerReply, td.Map(map[string]any{
 			"event":    "server reply",
@@ -1220,7 +1220,7 @@ func TestGroupChat(t *testing.T) {
 		// since he's the last user to acknowledge 'read' when the server detects
 		// that all members have now acknowledged 'read'
 
-		user5ReadAckReceipt := <-user5.ServerWSMsg
+		user5ReadAckReceipt := <-user5.ServerEventMsg
 
 		td.Cmp(td.Require(t), user5ReadAckReceipt, td.Map(map[string]any{
 			"event": "group chat message read",

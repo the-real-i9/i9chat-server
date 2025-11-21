@@ -3,12 +3,15 @@ package initializers
 import (
 	"context"
 	"i9chat/src/appGlobals"
-	"log"
+	"i9chat/src/backgroundWorkers"
+	"i9chat/src/helpers"
 	"os"
 
 	"cloud.google.com/go/storage"
 	"github.com/joho/godotenv"
 	"github.com/neo4j/neo4j-go-driver/v5/neo4j"
+	"github.com/redis/go-redis/v9"
+	"github.com/redis/go-redis/v9/maintnotifications"
 	"google.golang.org/api/option"
 )
 
@@ -29,14 +32,20 @@ func initNeo4jDriver() error {
 		return err
 	}
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := context.Background()
+
+	if os.Getenv("GO_ENV") == "test" {
+		_, err := neo4j.ExecuteQuery(ctx, driver, `MATCH (n) DETACH DELETE n`, nil, neo4j.EagerResultTransformer)
+		if err != nil {
+			return err
+		}
+	}
 
 	sess := driver.NewSession(ctx, neo4j.SessionConfig{})
 
 	defer func() {
 		if err := sess.Close(ctx); err != nil {
-			log.Println("initializers.go: initNeo4jDriver: sess.Close:", err)
+			helpers.LogError(err)
 		}
 	}()
 
@@ -53,17 +62,17 @@ func initNeo4jDriver() error {
 			return nil, err
 		}
 
-		_, err = tx.Run(ctx, `CREATE CONSTRAINT unique_dm_chat IF NOT EXISTS FOR (dmc:DMChat) REQUIRE (dmc.owner_username, dmc.partner_username) IS UNIQUE`, nil)
+		_, err = tx.Run(ctx, `CREATE CONSTRAINT unique_direct_chat IF NOT EXISTS FOR (dc:DirectChat) REQUIRE (dc.owner_username, dc.partner_username) IS UNIQUE`, nil)
 		if err != nil {
 			return nil, err
 		}
 
-		_, err = tx.Run(ctx, `CREATE CONSTRAINT unique_dm_msg IF NOT EXISTS FOR (dmm:DMMessage) REQUIRE dmm.id IS UNIQUE`, nil)
+		_, err = tx.Run(ctx, `CREATE CONSTRAINT unique_direct_msg IF NOT EXISTS FOR (dm:DirectMessage) REQUIRE dm.id IS UNIQUE`, nil)
 		if err != nil {
 			return nil, err
 		}
 
-		_, err = tx.Run(ctx, `CREATE CONSTRAINT unique_dm_msg_rxn IF NOT EXISTS FOR (dmmrxn:DMMessageReaction) REQUIRE (dmmrxn.reactor_username, dmmrxn.message_id) IS UNIQUE`, nil)
+		_, err = tx.Run(ctx, `CREATE CONSTRAINT unique_direct_msg_rxn IF NOT EXISTS FOR (dmrxn:DirectMessageReaction) REQUIRE (dmrxn.reactor_username, dmrxn.message_id) IS UNIQUE`, nil)
 		if err != nil {
 			return nil, err
 		}
@@ -100,10 +109,43 @@ func initNeo4jDriver() error {
 	return nil
 }
 
+func initRedisClient() error {
+	client := redis.NewClient(&redis.Options{
+		Addr:     os.Getenv("REDIS_ADDR"),
+		Password: os.Getenv("REDIS_PASS"),
+		DB:       0,
+
+		// Explicitly disable maintenance notifications
+		// This prevents the client from sending CLIENT MAINT_NOTIFICATIONS ON
+		MaintNotificationsConfig: &maintnotifications.Config{
+			Mode: maintnotifications.ModeDisabled,
+		},
+	})
+
+	if os.Getenv("GO_ENV") == "test" {
+		err := client.FlushDB(context.Background()).Err()
+		if err != nil {
+			return err
+		}
+	}
+
+	appGlobals.RedisClient = client
+
+	backgroundWorkers.Start(client)
+
+	return nil
+}
+
 func InitApp() error {
 
 	if os.Getenv("GO_ENV") == "" {
 		if err := godotenv.Load(".env"); err != nil {
+			return err
+		}
+	}
+
+	if os.Getenv("GO_ENV") == "test" {
+		if err := godotenv.Load(".test.env"); err != nil {
 			return err
 		}
 	}
@@ -116,11 +158,15 @@ func InitApp() error {
 		return err
 	}
 
+	if err := initRedisClient(); err != nil {
+		return err
+	}
+
 	return nil
 }
 
 func CleanUp() {
 	if err := appGlobals.Neo4jDriver.Close(context.TODO()); err != nil {
-		log.Println("error closing neo4j driver", err)
+		helpers.LogError(err)
 	}
 }

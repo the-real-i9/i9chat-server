@@ -6,24 +6,32 @@ import (
 	"log"
 	"os"
 	"reflect"
+	"runtime"
 	"strings"
 
 	"github.com/gofiber/fiber/v2"
 )
 
 func ToStruct(val any, dest any) {
-	destElem := reflect.TypeOf(dest).Elem()
-	if destElem.Kind() != reflect.Struct && !(destElem.Kind() == reflect.Slice && destElem.Elem().Kind() == reflect.Struct) {
+	valType := reflect.TypeOf(val)
+
+	if valType.Kind() != reflect.Map && !(valType.Kind() == reflect.Slice && valType.Elem().Kind() == reflect.Map) {
+		panic("expected 'val' to be a map or slice of maps")
+	}
+
+	destType := reflect.TypeOf(dest).Elem()
+
+	if destType.Kind() != reflect.Struct && !(destType.Kind() == reflect.Slice && destType.Elem().Kind() == reflect.Struct) {
 		panic("expected 'dest' to be a pointer to struct or slice of structs")
 	}
 
 	bt, err := json.Marshal(val)
 	if err != nil {
-		log.Println("helpers.go: ToStruct: json.Marshal:", err)
+		LogError(err)
 	}
 
 	if err := json.Unmarshal(bt, dest); err != nil {
-		log.Println("helpers.go: ToStruct: json.Unmarshal:", err)
+		LogError(err)
 	}
 }
 
@@ -111,4 +119,38 @@ func AsubsetB[T comparable](sA []T, sB []T) bool {
 	}
 
 	return true
+}
+
+func LogError(err error) {
+	if err == nil {
+		return
+	}
+
+	pc, file, line, ok := runtime.Caller(1)
+	fn := "unknown"
+	if !ok {
+		file = "???"
+		line = 0
+	} else {
+		fn = runtime.FuncForPC(pc).Name()
+	}
+
+	log.Printf("[ERROR] %s:%d %s(): %v\n", file, line, fn, err)
+}
+
+func ToJson(data any) string {
+	d, err := json.Marshal(data)
+	if err != nil {
+		LogError(err)
+	}
+	return string(d)
+}
+
+func FromJson[T any](jsonStr string) (res T) {
+	err := json.Unmarshal([]byte(jsonStr), &res)
+	if err != nil {
+		LogError(err)
+	}
+
+	return
 }

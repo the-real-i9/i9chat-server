@@ -2,13 +2,13 @@ package groupChatService
 
 import (
 	"i9chat/src/appTypes"
-	"i9chat/src/services/eventStreamService"
+	"i9chat/src/services/realtimeService"
 )
 
 func broadcastNewGroup(targetUsers []string, data any) {
 	for _, tu := range targetUsers {
 
-		eventStreamService.Send(tu, appTypes.ServerWSMsg{
+		realtimeService.SendEventMsg(tu, appTypes.ServerEventMsg{
 			Event: "new group chat",
 			Data:  data,
 		})
@@ -18,7 +18,7 @@ func broadcastNewGroup(targetUsers []string, data any) {
 func broadcastNewMessage(memberUsernames []string, data any, groupId string) {
 	for _, mu := range memberUsernames {
 
-		eventStreamService.Send(mu, appTypes.ServerWSMsg{
+		realtimeService.SendEventMsg(mu, appTypes.ServerEventMsg{
 			Event: "new group chat message",
 			Data: map[string]any{
 				"message":  data,
@@ -31,7 +31,7 @@ func broadcastNewMessage(memberUsernames []string, data any, groupId string) {
 func broadcastActivity(memberUsernames []string, data any, groupId string) {
 	for _, mu := range memberUsernames {
 
-		eventStreamService.Send(mu, appTypes.ServerWSMsg{
+		realtimeService.SendEventMsg(mu, appTypes.ServerEventMsg{
 			Event: "new group chat activity",
 			Data: map[string]any{
 				"info":     data,
@@ -43,7 +43,7 @@ func broadcastActivity(memberUsernames []string, data any, groupId string) {
 
 func broadcastMsgDelivered(memberUsernames []string, data any) {
 	for _, mu := range memberUsernames {
-		eventStreamService.Send(mu, appTypes.ServerWSMsg{
+		realtimeService.SendEventMsg(mu, appTypes.ServerEventMsg{
 			Event: "group chat message delivered",
 			Data:  data,
 		})
@@ -52,7 +52,7 @@ func broadcastMsgDelivered(memberUsernames []string, data any) {
 
 func broadcastMsgRead(memberUsernames []string, data any) {
 	for _, mu := range memberUsernames {
-		eventStreamService.Send(mu, appTypes.ServerWSMsg{
+		realtimeService.SendEventMsg(mu, appTypes.ServerEventMsg{
 			Event: "group chat message read",
 			Data:  data,
 		})
@@ -61,7 +61,7 @@ func broadcastMsgRead(memberUsernames []string, data any) {
 
 func broadcastMsgReaction(memberUsernames []string, data any) {
 	for _, mu := range memberUsernames {
-		eventStreamService.Send(mu, appTypes.ServerWSMsg{
+		realtimeService.SendEventMsg(mu, appTypes.ServerEventMsg{
 			Event: "group chat message reaction",
 			Data:  data,
 		})
@@ -71,7 +71,7 @@ func broadcastMsgReaction(memberUsernames []string, data any) {
 func broadcastMsgReactionRemoved(memberUsernames []any, data any) {
 	for _, mu := range memberUsernames {
 		mu := mu.(string)
-		eventStreamService.Send(mu, appTypes.ServerWSMsg{
+		realtimeService.SendEventMsg(mu, appTypes.ServerEventMsg{
 			Event: "group chat message reaction removed",
 			Data:  data,
 		})

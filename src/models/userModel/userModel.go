@@ -6,8 +6,8 @@ import (
 	"i9chat/src/appTypes"
 	"i9chat/src/helpers"
 	"i9chat/src/models/db"
+	"i9chat/src/models/modelHelpers"
 	"log"
-	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/neo4j/neo4j-go-driver/v5/neo4j"
@@ -26,26 +26,28 @@ func Exists(ctx context.Context, emailOrUsername string) (bool, error) {
 		},
 	)
 	if err != nil {
-		log.Println("userModel.go: Exists:", err)
+		helpers.LogError(err)
 		return false, fiber.ErrInternalServerError
 	}
 
-	userExists, _, err := neo4j.GetRecordValue[bool](res.Records[0], "user_exists")
-	if err != nil {
-		log.Println("userModel.go: Exists:", err)
-		return false, fiber.ErrInternalServerError
-	}
+	userExists := modelHelpers.RKeyGet[bool](res.Records, "user_exists")
 
 	return userExists, nil
 }
 
-func New(ctx context.Context, email, username, password string) (map[string]any, error) {
+type NewUserT struct {
+	Email         string `json:"email"`
+	Username      string `json:"username"`
+	ProfilePicUrl string `json:"profile_pic_url" db:"profile_pic_url"`
+	Bio           string `json:"bio"`
+}
+
+func New(ctx context.Context, email, username, password string) (newUser NewUserT, err error) {
 	res, err := db.Query(
 		ctx,
 		`/*cypher*/
-		CREATE (u:User { email: $email, username: $username, password: $password, profile_pic_url: "", presence: "online", bio: "i9chat is Awesome!" })
-		WITH u, NULL AS last_seen
-		RETURN u { .username, .email, .profile_pic_url, .bio, .presence, last_seen } AS new_user
+		CREATE (u:User { email: $email, username: $username, password: $password, profile_pic_url: "{notset}", presence: "online", bio: "i9chat is Awesome!" })
+		RETURN u { .username, .email, .profile_pic_url, .bio } AS new_user
 		`,
 		map[string]any{
 			"email":    email,
@@ -54,76 +56,57 @@ func New(ctx context.Context, email, username, password string) (map[string]any,
 		},
 	)
 	if err != nil {
-		log.Println("userModel.go: New:", err)
-		return nil, fiber.ErrInternalServerError
+		helpers.LogError(err)
+		return newUser, fiber.ErrInternalServerError
 	}
 
-	new_user, _, _ := neo4j.GetRecordValue[map[string]any](res.Records[0], "new_user")
+	newUser = modelHelpers.RKeyGet[NewUserT](res.Records, "new_user")
 
-	return new_user, nil
+	return newUser, nil
 }
 
-func SigninFind(ctx context.Context, uniqueIdent string) (map[string]any, error) {
+type ToAuthUserT struct {
+	Email         string `json:"email"`
+	Username      string `json:"username"`
+	ProfilePicUrl string `json:"profile_pic_url" db:"profile_pic_url"`
+	Password      string `json:"-"`
+}
+
+func AuthFind(ctx context.Context, uniqueIdent string) (user ToAuthUserT, err error) {
 	res, err := db.Query(
 		ctx,
 		`/*cypher*/
 	MATCH (u:User)
 	WHERE u.username = $uniqueIdent OR u.email = $uniqueIdent
 
-	WITH u, coalesce(u.last_seen.epochMillis, null) AS last_seen
-	RETURN u { .username, .email, .profile_pic_url, .presence, .bio, last_seen, .password } AS found_user
+	RETURN u { .email, .username, .profile_pic_url, .password } AS found_user
 	`,
 		map[string]any{
 			"uniqueIdent": uniqueIdent,
 		},
 	)
 	if err != nil {
-		log.Println("userModel.go: SigninFind:", err)
-		return nil, fiber.ErrInternalServerError
+		helpers.LogError(err)
+		return user, fiber.ErrInternalServerError
 	}
 
 	if len(res.Records) == 0 {
-		return nil, nil
+		return user, nil
 	}
 
-	found_user, _, _ := neo4j.GetRecordValue[map[string]any](res.Records[0], "found_user")
+	user = modelHelpers.RKeyGet[ToAuthUserT](res.Records, "found_user")
 
-	return found_user, nil
+	return user, nil
 }
 
-func SessionFind(ctx context.Context, username string) (map[string]any, error) {
+func ChangePassword(ctx context.Context, email, newPassword string) (bool, error) {
 	res, err := db.Query(
-		ctx,
-		`/*cypher*/
-		MATCH (u:User{ username: $username })
-
-		WITH u, coalesce(u.last_seen.epochMillis, null) AS last_seen
-		RETURN u { .username, .email, .profile_pic_url, .bio, .presence, last_seen } AS found_user
-		`,
-		map[string]any{
-			"username": username,
-		},
-	)
-	if err != nil {
-		log.Println("userModel.go: SessionFind:", err)
-		return nil, fiber.ErrInternalServerError
-	}
-
-	if len(res.Records) == 0 {
-		return nil, nil
-	}
-
-	found_user, _, _ := neo4j.GetRecordValue[map[string]any](res.Records[0], "found_user")
-
-	return found_user, nil
-}
-
-func ChangePassword(ctx context.Context, email, newPassword string) error {
-	_, err := db.Query(
 		ctx,
 		`/*cypher*/
 		MATCH (user:User{ email: $email })
 		SET user.password = $newPassword
+
+		RETURN true AS done
 		`,
 		map[string]any{
 			"email":       email,
@@ -131,11 +114,15 @@ func ChangePassword(ctx context.Context, email, newPassword string) error {
 		},
 	)
 	if err != nil {
-		log.Println("userModel.go: ChangePassword:", err)
-		return fiber.ErrInternalServerError
+		helpers.LogError(err)
+		return false, fiber.ErrInternalServerError
 	}
 
-	return nil
+	if len(res.Records) == 0 {
+		return false, nil
+	}
+
+	return true, nil
 }
 
 func FindNearby(ctx context.Context, clientUsername string, x, y, radius float64) ([]any, error) {
@@ -145,8 +132,7 @@ func FindNearby(ctx context.Context, clientUsername string, x, y, radius float64
 		MATCH (u:User)
 		WHERE u.username <> $client_username AND point.distance(point({ x: $live_long, y: $live_lat, crs: "WGS-84" }), u.geolocation) <= $radius
 
-		WITH u, coalesce(u.last_seen.epochMillis, null) AS last_seen
-		RETURN collect(u { .username, .email, .profile_pic_url, .bio, .presence, last_seen }) AS nearby_users
+		RETURN collect(u { .username, .profile_pic_url, .bio, .presence, last_seen }) AS nearby_users
 	`,
 		map[string]any{
 			"client_username": clientUsername,
@@ -156,7 +142,7 @@ func FindNearby(ctx context.Context, clientUsername string, x, y, radius float64
 		},
 	)
 	if err != nil {
-		log.Println("userModel.go: FindNearbyUsers:", err)
+		helpers.LogError(err)
 		return nil, fiber.ErrInternalServerError
 	}
 
@@ -169,40 +155,12 @@ func FindNearby(ctx context.Context, clientUsername string, x, y, radius float64
 	return nearbyUsers, nil
 }
 
-func FindOne(ctx context.Context, emailUsername string) (map[string]any, error) {
-	res, err := db.Query(
-		ctx,
-		`/*cypher*/
-		MATCH (u:User)
-		WHERE u.username = $eup OR u.email = $eup
-
-		WITH u, coalesce(u.last_seen.epochMillis, null) AS last_seen
-		RETURN u { .username, .email, .profile_pic_url, .bio, .presence, last_seen } AS found_user
-		`,
-		map[string]any{
-			"eup": emailUsername,
-		},
-	)
-	if err != nil {
-		log.Println("userModel.go: FindOne:", err)
-		return nil, fiber.ErrInternalServerError
-	}
-
-	if len(res.Records) == 0 {
-		return nil, nil
-	}
-
-	foundUser, _, _ := neo4j.GetRecordValue[map[string]any](res.Records[0], "found_user")
-
-	return foundUser, nil
-}
-
 type Chat struct {
 	ChatType  string `json:"chat_type"`
 	ChatIdent string `json:"chat_ident"`
 	UnreadMC  int    `json:"unread_messages_count"`
 
-	// for dm chat
+	// for direct chat
 	Partner map[string]any `json:"partner,omitempty"`
 
 	// for group chat
@@ -210,19 +168,20 @@ type Chat struct {
 }
 
 func GetMyChats(ctx context.Context, clientUsername string) ([]Chat, error) {
+	// serve from cache
 	var myChats []Chat
 
 	res, err := db.Query(
 		ctx,
 		`/*cypher*/
 		CALL () {
-			MATCH (clientChat:DMChat{ owner_username: $client_username })-[:WITH_USER]->(partnerUser)
+			MATCH (clientChat:DirectChat{ owner_username: $client_username })-[:WITH_USER]->(partnerUser)
 
 			WITH clientChat, 
 				partnerUser { .username, .profile_pic_url, .presence, .last_seen } AS partner, 
 				partnerUser.username AS chat_ident
 				
-			RETURN clientChat { chat_ident, partner, .unread_messages_count, chat_type: "DM" } AS chat
+			RETURN clientChat { chat_ident, partner, .unread_messages_count, chat_type: "direct" } AS chat
 		UNION
 			MATCH (clientChat:GroupChat{ owner_username: $client_username })-[:WITH_GROUP]->(group)
 
@@ -257,6 +216,7 @@ func GetMyChats(ctx context.Context, clientUsername string) ([]Chat, error) {
 }
 
 func GetMyProfile(ctx context.Context, clientUsername string) (map[string]any, error) {
+	// serve from redis instead
 	res, err := db.Query(
 		ctx,
 		`/*cypher*/
@@ -282,12 +242,14 @@ func GetMyProfile(ctx context.Context, clientUsername string) (map[string]any, e
 	return mp, nil
 }
 
-func ChangeProfilePicture(ctx context.Context, clientUsername, newPicUrl string) error {
-	_, err := db.Query(
+func ChangeProfilePicture(ctx context.Context, clientUsername, newPicUrl string) (bool, error) {
+	res, err := db.Query(
 		ctx,
 		`/*cypher*/
 		MATCH (u:User{ username: $client_username })
 		SET u.profile_pic_url = $new_pic_url
+
+		RETURN true AS done
 		`,
 		map[string]any{
 			"client_username": clientUsername,
@@ -295,19 +257,25 @@ func ChangeProfilePicture(ctx context.Context, clientUsername, newPicUrl string)
 		},
 	)
 	if err != nil {
-		log.Println("userModel.go: ChangeProfilePicture:", err)
-		return fiber.ErrInternalServerError
+		helpers.LogError(err)
+		return false, fiber.ErrInternalServerError
 	}
 
-	return nil
+	if len(res.Records) == 0 {
+		return false, nil
+	}
+
+	return true, nil
 }
 
-func ChangeBio(ctx context.Context, clientUsername, newBio string) error {
-	_, err := db.Query(
+func ChangeBio(ctx context.Context, clientUsername, newBio string) (bool, error) {
+	res, err := db.Query(
 		ctx,
 		`/*cypher*/
 		MATCH (u:User{ username: $client_username })
 		SET u.bio = $new_bio
+
+		RETURN true AS done
 		`,
 		map[string]any{
 			"client_username": clientUsername,
@@ -315,14 +283,18 @@ func ChangeBio(ctx context.Context, clientUsername, newBio string) error {
 		},
 	)
 	if err != nil {
-		log.Println("userModel.go: ChangeBio:", err)
-		return fiber.ErrInternalServerError
+		helpers.LogError(err)
+		return false, fiber.ErrInternalServerError
 	}
 
-	return nil
+	if len(res.Records) == 0 {
+		return false, nil
+	}
+
+	return true, nil
 }
 
-func ChangePresence(ctx context.Context, clientUsername, presence string, lastSeen time.Time) ([]any, error) {
+func ChangePresence(ctx context.Context, clientUsername, presence string, lastSeen int64) bool {
 	var lastSeenVal string
 	if presence == "online" {
 		lastSeenVal = "null"
@@ -335,10 +307,7 @@ func ChangePresence(ctx context.Context, clientUsername, presence string, lastSe
 		MATCH (user:User{ username: $client_username })
 		SET user.presence = $presence, user.last_seen = %s
 
-		WITH user
-		OPTIONAL MATCH (user)-[:HAS_CHAT]->(:DMChat)-[:WITH_USER]->(partnerUser)
-		
-		RETURN collect(partnerUser.username) AS partner_usernames
+		RETURN true AS done
 		`, lastSeenVal),
 		map[string]any{
 			"client_username": clientUsername,
@@ -347,21 +316,25 @@ func ChangePresence(ctx context.Context, clientUsername, presence string, lastSe
 		},
 	)
 	if err != nil {
-		log.Println("userModel.go: ChangePresence:", err)
-		return nil, err
+		helpers.LogError(err)
+		return false
 	}
 
-	pus, _, _ := neo4j.GetRecordValue[[]any](res.Records[0], "partner_usernames")
+	if len(res.Records) == 0 {
+		return false
+	}
 
-	return pus, nil
+	return true
 }
 
-func SetLocation(ctx context.Context, clientUsername string, newGeolocation appTypes.UserGeolocation) error {
-	_, err := db.Query(
+func SetLocation(ctx context.Context, clientUsername string, newGeolocation appTypes.UserGeolocation) (bool, error) {
+	res, err := db.Query(
 		ctx,
 		`/*cypher*/
 		MATCH (u:User{ username: $client_username })
 		SET u.geolocation = point({ x: $x, y: $y, crs: "WGS-84" })
+
+		RETURN true AS done
 		`,
 		map[string]any{
 			"client_username": clientUsername,
@@ -370,9 +343,13 @@ func SetLocation(ctx context.Context, clientUsername string, newGeolocation appT
 		},
 	)
 	if err != nil {
-		log.Println("userModel.go: UpdateLocation:", err)
-		return fiber.ErrInternalServerError
+		helpers.LogError(err)
+		return false, fiber.ErrInternalServerError
 	}
 
-	return nil
+	if len(res.Records) == 0 {
+		return false, nil
+	}
+
+	return true, nil
 }

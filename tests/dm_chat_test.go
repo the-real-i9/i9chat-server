@@ -13,7 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestDMChat(t *testing.T) {
+func TestDirectChat(t *testing.T) {
 	t.Parallel()
 
 	user1 := UserT{
@@ -153,10 +153,10 @@ func TestDMChat(t *testing.T) {
 			defer wsConn.CloseHandler()(websocket.CloseNormalClosure, user.Username+": GoodBye!")
 
 			user.WSConn = wsConn
-			user.ServerWSMsg = make(chan map[string]any)
+			user.ServerEventMsg = make(chan map[string]any)
 
 			go func() {
-				userCommChan := user.ServerWSMsg
+				userCommChan := user.ServerEventMsg
 
 				for {
 					userCommChan := userCommChan
@@ -186,7 +186,7 @@ func TestDMChat(t *testing.T) {
 		t.Log("Action: user1 sends message to user2")
 
 		err := user1.WSConn.WriteJSON(map[string]any{
-			"action": "send dm chat message",
+			"action": "send direct chat message",
 			"data": map[string]any{
 				"partnerUsername": user2.Username,
 				"msg": map[string]any{
@@ -201,11 +201,11 @@ func TestDMChat(t *testing.T) {
 		require.NoError(t, err)
 
 		// user1's server reply (response) to action
-		user1ServerReply := <-user1.ServerWSMsg
+		user1ServerReply := <-user1.ServerEventMsg
 
 		td.Cmp(td.Require(t), user1ServerReply, td.Map(map[string]any{
 			"event":    "server reply",
-			"toAction": "send dm chat message",
+			"toAction": "send direct chat message",
 			"data": td.Map(map[string]any{
 				"new_msg_id": td.Ignore(),
 			}, nil),
@@ -217,10 +217,10 @@ func TestDMChat(t *testing.T) {
 	{
 		t.Log("Action: user2 receives the message | acknowledges 'delivered'")
 
-		user2NewMsgReceived := <-user2.ServerWSMsg
+		user2NewMsgReceived := <-user2.ServerEventMsg
 
 		td.Cmp(td.Require(t), user2NewMsgReceived, td.Map(map[string]any{
-			"event": "new dm chat message",
+			"event": "new direct chat message",
 			"data": td.SuperMapOf(map[string]any{
 				"id": user1NewMsgId,
 				"content": td.SuperMapOf(map[string]any{
@@ -237,7 +237,7 @@ func TestDMChat(t *testing.T) {
 		}, nil))
 
 		err := user2.WSConn.WriteJSON(map[string]any{
-			"action": "ack dm chat message delivered",
+			"action": "ack direct chat message delivered",
 			"data": map[string]any{
 				"partnerUsername": user1.Username,
 				"msgId":           user1NewMsgId,
@@ -246,11 +246,11 @@ func TestDMChat(t *testing.T) {
 		})
 		require.NoError(t, err)
 
-		user2ServerReply := <-user2.ServerWSMsg
+		user2ServerReply := <-user2.ServerEventMsg
 
 		td.Cmp(td.Require(t), user2ServerReply, td.Map(map[string]any{
 			"event":    "server reply",
-			"toAction": "ack dm chat message delivered",
+			"toAction": "ack direct chat message delivered",
 			"data":     true,
 		}, nil))
 	}
@@ -258,10 +258,10 @@ func TestDMChat(t *testing.T) {
 	{
 		t.Log("Action: user1 receives the 'delivered' acknowledgement | marks message as 'delivered'")
 
-		user1DelvAckReceipt := <-user1.ServerWSMsg
+		user1DelvAckReceipt := <-user1.ServerEventMsg
 
 		td.Cmp(td.Require(t), user1DelvAckReceipt, td.Map(map[string]any{
-			"event": "dm chat message delivered",
+			"event": "direct chat message delivered",
 			"data": td.Map(map[string]any{
 				"partner_username": user2.Username,
 				"msg_id":           user1NewMsgId,
@@ -273,7 +273,7 @@ func TestDMChat(t *testing.T) {
 		t.Log("Action: user2 then acknowledges 'read'")
 
 		err := user2.WSConn.WriteJSON(map[string]any{
-			"action": "ack dm chat message read",
+			"action": "ack direct chat message read",
 			"data": map[string]any{
 				"partnerUsername": user1.Username,
 				"msgId":           user1NewMsgId,
@@ -282,11 +282,11 @@ func TestDMChat(t *testing.T) {
 		})
 		require.NoError(t, err)
 
-		user2ServerReply := <-user2.ServerWSMsg
+		user2ServerReply := <-user2.ServerEventMsg
 
 		td.Cmp(td.Require(t), user2ServerReply, td.Map(map[string]any{
 			"event":    "server reply",
-			"toAction": "ack dm chat message read",
+			"toAction": "ack direct chat message read",
 			"data":     true,
 		}, nil))
 	}
@@ -294,10 +294,10 @@ func TestDMChat(t *testing.T) {
 	{
 		t.Log("Action: user1 receives the 'read' acknowledgement | marks message as 'read'")
 
-		user1ReadAckReceipt := <-user1.ServerWSMsg
+		user1ReadAckReceipt := <-user1.ServerEventMsg
 
 		td.Cmp(td.Require(t), user1ReadAckReceipt, td.Map(map[string]any{
-			"event": "dm chat message read",
+			"event": "direct chat message read",
 			"data": td.Map(map[string]any{
 				"partner_username": user2.Username,
 				"msg_id":           user1NewMsgId,
@@ -314,7 +314,7 @@ func TestDMChat(t *testing.T) {
 		require.NoError(t, err)
 
 		err = user2.WSConn.WriteJSON(map[string]any{
-			"action": "send dm chat message",
+			"action": "send direct chat message",
 			"data": map[string]any{
 				"partnerUsername": user1.Username,
 				"msg": map[string]any{
@@ -330,11 +330,11 @@ func TestDMChat(t *testing.T) {
 		require.NoError(t, err)
 
 		// user2's server reply (response) to action
-		user2ServerReply := <-user2.ServerWSMsg
+		user2ServerReply := <-user2.ServerEventMsg
 
 		td.Cmp(td.Require(t), user2ServerReply, td.Map(map[string]any{
 			"event":    "server reply",
-			"toAction": "send dm chat message",
+			"toAction": "send direct chat message",
 			"data": td.Map(map[string]any{
 				"new_msg_id": td.Ignore(),
 			}, nil),
@@ -346,10 +346,10 @@ func TestDMChat(t *testing.T) {
 	{
 		t.Log("Action: user1 receives the message | acknowledges 'delivered'")
 
-		user1NewMsgReceived := <-user1.ServerWSMsg
+		user1NewMsgReceived := <-user1.ServerEventMsg
 
 		td.Cmp(td.Require(t), user1NewMsgReceived, td.Map(map[string]any{
-			"event": "new dm chat message",
+			"event": "new direct chat message",
 			"data": td.SuperMapOf(map[string]any{
 				"id": user2NewMsgId,
 				"content": td.SuperMapOf(map[string]any{
@@ -366,7 +366,7 @@ func TestDMChat(t *testing.T) {
 		}, nil))
 
 		err := user1.WSConn.WriteJSON(map[string]any{
-			"action": "ack dm chat message delivered",
+			"action": "ack direct chat message delivered",
 			"data": map[string]any{
 				"partnerUsername": user2.Username,
 				"msgId":           user2NewMsgId,
@@ -375,11 +375,11 @@ func TestDMChat(t *testing.T) {
 		})
 		require.NoError(t, err)
 
-		user1ServerReply := <-user1.ServerWSMsg
+		user1ServerReply := <-user1.ServerEventMsg
 
 		td.Cmp(td.Require(t), user1ServerReply, td.Map(map[string]any{
 			"event":    "server reply",
-			"toAction": "ack dm chat message delivered",
+			"toAction": "ack direct chat message delivered",
 			"data":     true,
 		}, nil))
 	}
@@ -387,10 +387,10 @@ func TestDMChat(t *testing.T) {
 	{
 		t.Log("Action: user2 receives the 'delivered' acknowledgement | marks message as 'delivered'")
 
-		user2DelvAckReceipt := <-user2.ServerWSMsg
+		user2DelvAckReceipt := <-user2.ServerEventMsg
 
 		td.Cmp(td.Require(t), user2DelvAckReceipt, td.Map(map[string]any{
-			"event": "dm chat message delivered",
+			"event": "direct chat message delivered",
 			"data": td.Map(map[string]any{
 				"partner_username": user1.Username,
 				"msg_id":           user2NewMsgId,
@@ -402,7 +402,7 @@ func TestDMChat(t *testing.T) {
 		t.Log("Action: user1 then acknowledges 'read'")
 
 		err := user1.WSConn.WriteJSON(map[string]any{
-			"action": "ack dm chat message read",
+			"action": "ack direct chat message read",
 			"data": map[string]any{
 				"partnerUsername": user2.Username,
 				"msgId":           user2NewMsgId,
@@ -411,11 +411,11 @@ func TestDMChat(t *testing.T) {
 		})
 		require.NoError(t, err)
 
-		user1ServerReply := <-user1.ServerWSMsg
+		user1ServerReply := <-user1.ServerEventMsg
 
 		td.Cmp(td.Require(t), user1ServerReply, td.Map(map[string]any{
 			"event":    "server reply",
-			"toAction": "ack dm chat message read",
+			"toAction": "ack direct chat message read",
 			"data":     true,
 		}, nil))
 	}
@@ -423,10 +423,10 @@ func TestDMChat(t *testing.T) {
 	{
 		t.Log("Action: user2 receives the 'read' acknowledgement | marks message as 'read'")
 
-		user2ReadAckReceipt := <-user2.ServerWSMsg
+		user2ReadAckReceipt := <-user2.ServerEventMsg
 
 		td.Cmp(td.Require(t), user2ReadAckReceipt, td.Map(map[string]any{
-			"event": "dm chat message read",
+			"event": "direct chat message read",
 			"data": td.Map(map[string]any{
 				"partner_username": user1.Username,
 				"msg_id":           user2NewMsgId,
@@ -437,7 +437,7 @@ func TestDMChat(t *testing.T) {
 	{
 		t.Log("Action: user1 opens his chat history with user2")
 
-		req, err := http.NewRequest("GET", dmChatPath+"/"+user2.Username+"/history", nil)
+		req, err := http.NewRequest("GET", directChatPath+"/"+user2.Username+"/history", nil)
 		require.NoError(t, err)
 		req.Header.Add("Content-Type", "application/json")
 		req.Header.Set("Cookie", user1.SessionCookie)
