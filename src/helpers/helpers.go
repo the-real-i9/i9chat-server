@@ -1,13 +1,14 @@
 package helpers
 
 import (
-	"encoding/json"
 	"fmt"
 	"log"
 	"os"
 	"reflect"
 	"runtime"
 	"strings"
+
+	"github.com/goccy/go-json"
 
 	"github.com/gofiber/fiber/v2"
 )
@@ -33,6 +34,25 @@ func ToStruct(val any, dest any) {
 	if err := json.Unmarshal(bt, dest); err != nil {
 		LogError(err)
 	}
+}
+
+func ToMap(val any) (dest map[string]any) {
+	valType := reflect.TypeOf(val)
+
+	if valType.Kind() != reflect.Struct && !(valType.Kind() == reflect.Slice && valType.Elem().Kind() == reflect.Struct) {
+		panic("expected 'val' to be a struct or slice of structs")
+	}
+
+	bt, err := json.Marshal(val)
+	if err != nil {
+		LogError(err)
+	}
+
+	if err := json.Unmarshal(bt, dest); err != nil {
+		LogError(err)
+	}
+
+	return
 }
 
 func JoinWithCommaAnd(items ...string) string {

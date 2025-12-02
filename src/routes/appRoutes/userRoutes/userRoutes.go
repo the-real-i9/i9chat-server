@@ -9,12 +9,13 @@ import (
 func Route(router fiber.Router) {
 
 	router.Get("/session_user", UC.GetSessionUser)
-	router.Get("/my_profile", UC.GetMyProfile)
+	router.Get("/me", UC.GetMyProfile)
 
 	router.Post("/change_profile_picture", UC.ChangeProfilePicture)
 	router.Post("/change_bio", UC.ChangeBio)
 	router.Post("/set_geolocation", UC.SetMyLocation)
 
+	router.Get("/find_user", UC.FindUser)
 	router.Get("/find_nearby_users", UC.FindNearbyUsers)
 
 	router.Get("/my_chats", UC.GetMyChats)

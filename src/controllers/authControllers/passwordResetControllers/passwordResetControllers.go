@@ -1,11 +1,12 @@
 package passwordResetControllers
 
 import (
-	"encoding/json"
 	"i9chat/src/helpers"
 	"i9chat/src/services/auth/passwordResetService"
 	"log"
 	"time"
+
+	"github.com/goccy/go-json"
 
 	"github.com/gofiber/fiber/v2"
 )

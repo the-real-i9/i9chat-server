@@ -3,12 +3,30 @@ package appTypes
 import (
 	"slices"
 
+	"github.com/goccy/go-json"
+
 	validation "github.com/go-ozzo/ozzo-validation/v4"
 )
 
 type ClientUser struct {
 	Username      string
 	ProfilePicUrl string
+}
+
+func (c ClientUser) MarshalBinary() ([]byte, error) {
+	return json.Marshal(c)
+}
+
+type BinableMap map[string]any
+
+func (c BinableMap) MarshalBinary() ([]byte, error) {
+	return json.Marshal(c)
+}
+
+type BinableSlice []any
+
+func (c BinableSlice) MarshalBinary() ([]byte, error) {
+	return json.Marshal(c)
 }
 
 type ServerEventMsg struct {

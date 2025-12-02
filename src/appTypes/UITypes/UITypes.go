@@ -1,13 +1,38 @@
 package UITypes
 
+type UserSnippet struct {
+	Username      string `json:"username" db:"username"`
+	ProfilePicUrl string `json:"profile_pic_url" db:"profile_pic_url"`
+	Bio           string `json:"bio" db:"bio"`
+	Presence      string `json:"presence" db:"presence"`
+	LastSeen      int64  `json:"last_seen" db:"last_seen"`
+}
+
+type UserProfile struct {
+	Username      string         `json:"username"`
+	Name          string         `json:"name"`
+	ProfilePicUrl string         `json:"profile_pic_url"`
+	Bio           string         `json:"bio"`
+	Geolocation   map[string]any `json:"geolocation"`
+}
+
 type ChatPartnerUser struct {
 	Username      string `json:"username"`
 	ProfilePicUrl string `json:"profile_pic_url"`
 }
 
+type ChatGroup struct {
+	Id          string `json:"id"`
+	Name        string `json:"name"`
+	PictureUrl  string `json:"picture_url"`
+	Description string `json:"description"`
+}
+
 type ChatSnippet struct {
-	PartnerUser any `json:"partner_user,omitempty"`
-	GroupInfo   any `json:"group_info,omitempty"`
+	Type string `json:"type"`
+
+	PartnerUser any `json:"partner_user,omitempty"` /* stored as partnerUsername, then retrieved ChatPartnerUser */
+	Group       any `json:"group,omitempty"`        /* stored as groupId, then retrieved ChatGroup */
 
 	UnreadMC int64   `json:"unread_messages_count"`
 	Cursor   float64 `json:"cursor"`
@@ -36,7 +61,7 @@ type ChatHistoryEntry struct {
 	// appears always
 	CHEType string `json:"che_type"`
 
-	// appears for message che_type
+	// appears for "message" che_type
 	Id             string         `json:"id,omitempty"`
 	Content        map[string]any `json:"content,omitempty"`
 	DeliveryStatus string         `json:"delivery_status,omitempty"`
@@ -50,9 +75,13 @@ type ChatHistoryEntry struct {
 	// appears if che_type:message is a reply
 	ReplyTargetMsg map[string]any `json:"reply_target_msg,omitempty"`
 
-	// appears for reaction che_type
+	// appears for "reaction" che_type
 	Reactor any    `json:"reactor,omitempty"`
 	Emoji   string `json:"emoji,omitempty"`
+	ToMsgId string `json:"to_msg_id,omitempty"`
+
+	// appears for "group activity" che_type
+	Info string `json:"info,omitempty"`
 
 	// cursor for pagination
 	Cursor float64 `json:"cursor"`

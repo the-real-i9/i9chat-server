@@ -11,7 +11,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
-func CreateNewGroupChat(c *fiber.Ctx) error {
+func CreateNewGroup(c *fiber.Ctx) error {
 	ctx := c.Context()
 
 	clientUser := c.Locals("user").(appTypes.ClientUser)
@@ -27,7 +27,7 @@ func CreateNewGroupChat(c *fiber.Ctx) error {
 		return val_err
 	}
 
-	respData, app_err := groupChatService.NewGroupChat(ctx,
+	respData, app_err := groupChatService.NewGroup(ctx,
 		clientUser.Username,
 		body.Name,
 		body.Description,

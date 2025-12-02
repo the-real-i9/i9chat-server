@@ -1,9 +1,11 @@
 package userControllers
 
 import (
+	"context"
 	"i9chat/src/appTypes"
 	"i9chat/src/helpers"
 	"i9chat/src/services/userService"
+	"time"
 
 	"github.com/gofiber/fiber/v2"
 )
@@ -30,9 +32,13 @@ func ChangeProfilePicture(c *fiber.Ctx) error {
 		return val_err
 	}
 
-	respData, app_err := userService.ChangeProfilePicture(ctx, clientUser.Username, body.PictureData)
+	respData, authJwt, app_err := userService.ChangeProfilePicture(ctx, clientUser.Username, body.PictureData)
 	if app_err != nil {
 		return app_err
+	}
+
+	if respData != nil {
+		c.Cookie(helpers.Cookie("user", helpers.ToJson(map[string]any{"authJwt": authJwt}), int(10*24*time.Hour/time.Second)))
 	}
 
 	return c.JSON(respData)
@@ -79,6 +85,19 @@ func SetMyLocation(c *fiber.Ctx) error {
 	}
 
 	respData, app_err := userService.SetMyLocation(ctx, clientUser.Username, body.NewGeolocation)
+
+	if app_err != nil {
+		return app_err
+	}
+
+	return c.JSON(respData)
+}
+
+func FindUser(c *fiber.Ctx) error {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	respData, app_err := userService.FindUser(ctx, c.Query("username"))
 
 	if app_err != nil {
 		return app_err

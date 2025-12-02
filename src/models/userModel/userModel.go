@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"i9chat/src/appTypes"
+	"i9chat/src/appTypes/UITypes"
 	"i9chat/src/helpers"
 	"i9chat/src/models/db"
 	"i9chat/src/models/modelHelpers"
@@ -125,123 +126,6 @@ func ChangePassword(ctx context.Context, email, newPassword string) (bool, error
 	return true, nil
 }
 
-func FindNearby(ctx context.Context, clientUsername string, x, y, radius float64) ([]any, error) {
-	res, err := db.Query(
-		ctx,
-		`/*cypher*/
-		MATCH (u:User)
-		WHERE u.username <> $client_username AND point.distance(point({ x: $live_long, y: $live_lat, crs: "WGS-84" }), u.geolocation) <= $radius
-
-		RETURN collect(u { .username, .profile_pic_url, .bio, .presence, last_seen }) AS nearby_users
-	`,
-		map[string]any{
-			"client_username": clientUsername,
-			"live_long":       x,
-			"live_lat":        y,
-			"radius":          radius,
-		},
-	)
-	if err != nil {
-		helpers.LogError(err)
-		return nil, fiber.ErrInternalServerError
-	}
-
-	if len(res.Records) == 0 {
-		return nil, nil
-	}
-
-	nearbyUsers, _, _ := neo4j.GetRecordValue[[]any](res.Records[0], "nearby_users")
-
-	return nearbyUsers, nil
-}
-
-type Chat struct {
-	ChatType  string `json:"chat_type"`
-	ChatIdent string `json:"chat_ident"`
-	UnreadMC  int    `json:"unread_messages_count"`
-
-	// for direct chat
-	Partner map[string]any `json:"partner,omitempty"`
-
-	// for group chat
-	GroupInfo map[string]any `json:"group_info,omitempty"`
-}
-
-func GetMyChats(ctx context.Context, clientUsername string) ([]Chat, error) {
-	// serve from cache
-	var myChats []Chat
-
-	res, err := db.Query(
-		ctx,
-		`/*cypher*/
-		CALL () {
-			MATCH (clientChat:DirectChat{ owner_username: $client_username })-[:WITH_USER]->(partnerUser)
-
-			WITH clientChat, 
-				partnerUser { .username, .profile_pic_url, .presence, .last_seen } AS partner, 
-				partnerUser.username AS chat_ident
-				
-			RETURN clientChat { chat_ident, partner, .unread_messages_count, chat_type: "direct" } AS chat
-		UNION
-			MATCH (clientChat:GroupChat{ owner_username: $client_username })-[:WITH_GROUP]->(group)
-
-			WITH clientChat, 
-				group { .id, .name, .description, .picture_url } AS group_info, 
-				group.id AS chat_ident
-
-			RETURN clientChat { chat_ident, group_info, .unread_messages_count, chat_type: "group" } AS chat
-		}
-		WITH chat
-
-		RETURN collect(chat) AS my_chats
-		`,
-		map[string]any{
-			"client_username": clientUsername,
-		},
-	)
-	if err != nil {
-		log.Println("userModel.go: GetChats:", err)
-		return myChats, fiber.ErrInternalServerError
-	}
-
-	if len(res.Records) == 0 {
-		return myChats, nil
-	}
-
-	mc, _, _ := neo4j.GetRecordValue[[]any](res.Records[0], "my_chats")
-
-	helpers.ToStruct(mc, &myChats)
-
-	return myChats, nil
-}
-
-func GetMyProfile(ctx context.Context, clientUsername string) (map[string]any, error) {
-	// serve from redis instead
-	res, err := db.Query(
-		ctx,
-		`/*cypher*/
-		MATCH (u:User{ username: $client_username })
-		WITH u, { x: toFloat(u.geolocation.x), y: toFloat(u.geolocation.y) } AS geolocation, coalesce(u.last_seen.epochMillis, null) AS last_seen
-		RETURN u { .username, .email, .profile_pic_url, .bio, .presence, last_seen, geolocation } AS my_profile
-		`,
-		map[string]any{
-			"client_username": clientUsername,
-		},
-	)
-	if err != nil {
-		log.Println("userModel.go: GetChats:", err)
-		return nil, fiber.ErrInternalServerError
-	}
-
-	if len(res.Records) == 0 {
-		return nil, nil
-	}
-
-	mp, _, _ := neo4j.GetRecordValue[map[string]any](res.Records[0], "my_profile")
-
-	return mp, nil
-}
-
 func ChangeProfilePicture(ctx context.Context, clientUsername, newPicUrl string) (bool, error) {
 	res, err := db.Query(
 		ctx,
@@ -327,14 +211,14 @@ func ChangePresence(ctx context.Context, clientUsername, presence string, lastSe
 	return true
 }
 
-func SetLocation(ctx context.Context, clientUsername string, newGeolocation appTypes.UserGeolocation) (bool, error) {
+func SetLocation(ctx context.Context, clientUsername string, newGeolocation appTypes.UserGeolocation) (map[string]any, error) {
 	res, err := db.Query(
 		ctx,
 		`/*cypher*/
 		MATCH (u:User{ username: $client_username })
 		SET u.geolocation = point({ x: $x, y: $y, crs: "WGS-84" })
 
-		RETURN true AS done
+		RETURN { x: toFloat(u.geolocation.x), y: toFloat(u.geolocation.y) } AS geolocation
 		`,
 		map[string]any{
 			"client_username": clientUsername,
@@ -344,12 +228,124 @@ func SetLocation(ctx context.Context, clientUsername string, newGeolocation appT
 	)
 	if err != nil {
 		helpers.LogError(err)
-		return false, fiber.ErrInternalServerError
+		return nil, fiber.ErrInternalServerError
 	}
 
 	if len(res.Records) == 0 {
-		return false, nil
+		return nil, nil
 	}
 
-	return true, nil
+	loc := modelHelpers.RKeyGet[map[string]any](res.Records, "geolocation")
+
+	return loc, nil
+}
+
+func Find(ctx context.Context, username string) (UITypes.UserSnippet, error) {
+	user, err := modelHelpers.BuildUserSnippetUIFromCache(ctx, username)
+	if err != nil {
+		helpers.LogError(err)
+		return UITypes.UserSnippet{}, fiber.ErrInternalServerError
+	}
+
+	return user, nil
+}
+
+func FindNearby(ctx context.Context, clientUsername string, x, y, radius float64) ([]UITypes.UserSnippet, error) {
+	res, err := db.Query(
+		ctx,
+		`/*cypher*/
+		MATCH (u:User)
+		WHERE u.username <> $client_username AND point.distance(point({ x: $live_long, y: $live_lat, crs: "WGS-84" }), u.geolocation) <= $radius
+
+		RETURN collect(u { .username, .profile_pic_url, .bio, .presence, .last_seen }) AS nearby_users
+	`,
+		map[string]any{
+			"client_username": clientUsername,
+			"live_long":       x,
+			"live_lat":        y,
+			"radius":          radius,
+		},
+	)
+	if err != nil {
+		helpers.LogError(err)
+		return nil, fiber.ErrInternalServerError
+	}
+
+	if len(res.Records) == 0 {
+		return nil, nil
+	}
+
+	nearbyUsers := modelHelpers.RKeyGetMany[UITypes.UserSnippet](res.Records, "nearby_users")
+
+	return nearbyUsers, nil
+}
+
+func GetMyProfile(ctx context.Context, clientUsername string) (UITypes.UserProfile, error) {
+	profile, err := modelHelpers.BuildUserProfileUIFromCache(ctx, clientUsername)
+	if err != nil {
+		helpers.LogError(err)
+		return UITypes.UserProfile{}, fiber.ErrInternalServerError
+	}
+
+	return profile, nil
+}
+
+type Chat struct {
+	ChatType  string `json:"chat_type"`
+	ChatIdent string `json:"chat_ident"`
+	UnreadMC  int    `json:"unread_messages_count"`
+
+	// for direct chat
+	PartnerUser map[string]any `json:"partner_user,omitempty"`
+
+	// for group chat
+	GroupInfo map[string]any `json:"group_info,omitempty"`
+}
+
+func GetMyChats(ctx context.Context, clientUsername string) ([]Chat, error) {
+	// serve from cache
+	var myChats []Chat
+
+	res, err := db.Query(
+		ctx,
+		`/*cypher*/
+		CALL () {
+			MATCH (clientChat:DirectChat{ owner_username: $client_username })-[:WITH_USER]->(partnerUser)
+
+			WITH clientChat, 
+				partnerUser { .username, .profile_pic_url, .presence, .last_seen } AS partner, 
+				partnerUser.username AS chat_ident
+				
+			RETURN clientChat { chat_ident, partner, .unread_messages_count, chat_type: "direct" } AS chat
+		UNION
+			MATCH (clientChat:GroupChat{ owner_username: $client_username })-[:WITH_GROUP]->(group)
+
+			WITH clientChat, 
+				group { .id, .name, .description, .picture_url } AS group_info, 
+				group.id AS chat_ident
+
+			RETURN clientChat { chat_ident, group_info, .unread_messages_count, chat_type: "group" } AS chat
+		}
+		WITH chat
+
+		RETURN collect(chat) AS my_chats
+		`,
+		map[string]any{
+			"client_username": clientUsername,
+		},
+	)
+	if err != nil {
+		log.Println("userModel.go: GetChats:", err)
+		return myChats, fiber.ErrInternalServerError
+	}
+
+	if len(res.Records) == 0 {
+		return myChats, nil
+	}
+
+	mc, _, _ := neo4j.GetRecordValue[[]any](res.Records[0], "my_chats")
+
+	helpers.ToStruct(mc, &myChats)
+
+	return myChats, nil
 }

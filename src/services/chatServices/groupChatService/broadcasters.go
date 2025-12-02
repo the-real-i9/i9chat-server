@@ -5,10 +5,10 @@ import (
 	"i9chat/src/services/realtimeService"
 )
 
-func broadcastNewGroup(targetUsers []string, data any) {
+func broadcastNewGroup(targetUsers []any, data any) {
 	for _, tu := range targetUsers {
 
-		realtimeService.SendEventMsg(tu, appTypes.ServerEventMsg{
+		realtimeService.SendEventMsg(tu.(string), appTypes.ServerEventMsg{
 			Event: "new group chat",
 			Data:  data,
 		})
@@ -28,10 +28,10 @@ func broadcastNewMessage(memberUsernames []string, data any, groupId string) {
 	}
 }
 
-func broadcastActivity(memberUsernames []string, data any, groupId string) {
+func broadcastActivity(memberUsernames []any, data any, groupId string) {
 	for _, mu := range memberUsernames {
 
-		realtimeService.SendEventMsg(mu, appTypes.ServerEventMsg{
+		realtimeService.SendEventMsg(mu.(string), appTypes.ServerEventMsg{
 			Event: "new group chat activity",
 			Data: map[string]any{
 				"info":     data,

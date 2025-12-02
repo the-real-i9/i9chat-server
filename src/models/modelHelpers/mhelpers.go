@@ -51,28 +51,60 @@ func neo4jMapResToStruct(val any, dest any) {
 }
 
 func RKeyGet[T any](r []*neo4j.Record, key string) (res T) {
-	var nilRes T
-
 	if len(r) == 0 {
-		return nilRes
+		return res
 	}
 
-	switch reflect.TypeOf(nilRes).Kind() {
-	case reflect.Struct:
+	typeParamKind := reflect.TypeOf(res).Kind()
+
+	if typeParamKind == reflect.Struct {
 		resAny, ok := r[0].Get(key)
 		if !ok {
-			return nilRes
+			return res
 		}
 
 		neo4jMapResToStruct(resAny, &res)
 
 		return res
-	default:
+	}
+
+	resAny, ok := r[0].Get(key)
+	if !ok {
+		return res
+	}
+
+	return resAny.(T)
+
+}
+
+func RKeyGetMany[T any](r []*neo4j.Record, key string) (res []T) {
+	if len(r) == 0 {
+		return res
+	}
+
+	typeParamKind := reflect.TypeOf(res).Elem().Kind()
+
+	if typeParamKind == reflect.Struct {
 		resAny, ok := r[0].Get(key)
 		if !ok {
-			return nilRes
+			return res
 		}
 
-		return resAny.(T)
+		resAnySlice := resAny.([]map[string]any)
+
+		res := make([]T, len(resAnySlice))
+
+		for i, item := range resAnySlice {
+			neo4jMapResToStruct(item, &res[i])
+		}
+
+		return res
 	}
+
+	resAny, ok := r[0].Get(key)
+	if !ok {
+		return res
+	}
+
+	return resAny.([]T)
 }

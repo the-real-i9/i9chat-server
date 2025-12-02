@@ -7,6 +7,7 @@ require (
 	github.com/fasthttp/websocket v1.5.12
 	github.com/gabriel-vasile/mimetype v1.4.11
 	github.com/go-ozzo/ozzo-validation/v4 v4.3.0
+	github.com/goccy/go-json v0.10.5
 	github.com/gofiber/contrib/websocket v1.3.4
 	github.com/gofiber/fiber/v2 v2.52.9
 	github.com/golang-jwt/jwt/v5 v5.3.0
@@ -16,6 +17,7 @@ require (
 	github.com/redis/go-redis/v9 v9.17.0
 	github.com/stretchr/testify v1.11.1
 	golang.org/x/crypto v0.45.0
+	golang.org/x/sync v0.18.0
 	google.golang.org/api v0.256.0
 	gopkg.in/gomail.v2 v2.0.0-20160411212932-81ebce5c23df
 )
@@ -71,7 +73,6 @@ require (
 	go.opentelemetry.io/otel/trace v1.37.0 // indirect
 	golang.org/x/net v0.47.0 // indirect
 	golang.org/x/oauth2 v0.33.0 // indirect
-	golang.org/x/sync v0.18.0 // indirect
 	golang.org/x/sys v0.38.0 // indirect
 	golang.org/x/text v0.31.0 // indirect
 	golang.org/x/time v0.14.0 // indirect

@@ -1,10 +1,8 @@
 package signinControllers
 
 import (
-	"encoding/json"
 	"i9chat/src/helpers"
 	"i9chat/src/services/auth/signinService"
-	"log"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -29,13 +27,7 @@ func Signin(c *fiber.Ctx) error {
 		return app_err
 	}
 
-	usd, err := json.Marshal(map[string]any{"authJwt": authJwt})
-	if err != nil {
-		log.Println("signinControllers.go: Signin: json.Marshal:", err)
-		return fiber.ErrInternalServerError
-	}
-
-	c.Cookie(helpers.Cookie("user", string(usd), int(10*24*time.Hour/time.Second)))
+	c.Cookie(helpers.Cookie("user", helpers.ToJson(map[string]any{"authJwt": authJwt}), int(10*24*time.Hour/time.Second)))
 	c.Cookie(helpers.Cookie("passwordReset", "", 0))
 
 	return c.JSON(respData)

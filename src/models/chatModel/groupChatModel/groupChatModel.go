@@ -2,25 +2,26 @@ package groupChat
 
 import (
 	"context"
-	"fmt"
+	"i9chat/src/appTypes/UITypes"
 	"i9chat/src/helpers"
 	"i9chat/src/models/db"
-	"log"
-	"maps"
-	"time"
+	"i9chat/src/models/modelHelpers"
 
 	"github.com/gofiber/fiber/v2"
-	"github.com/neo4j/neo4j-go-driver/v5/neo4j"
 )
 
-type NewGroupChat struct {
-	ClientData     map[string]any `json:"client_resp"`
-	InitMemberData map[string]any `json:"init_member_resp"`
+type NewGroup struct {
+	Id             string         `json:"id" db:"id"`
+	Name           string         `json:"name" db:"name"`
+	Description    string         `json:"description" db:"description"`
+	PictureUrl     string         `json:"picture_url" db:"picture_url"`
+	CreatedAt      int64          `json:"created_at" db:"created_at"`
+	InitUsers      []any          `json:"-" db:"init_users"`
+	ClientUserCHEs []any          `json:"-" db:"client_user_ches"`
+	InitUsersCHEs  map[string]any `json:"-" db:"init_users_ches"`
 }
 
-func New(ctx context.Context, clientUsername, name, description, pictureUrl string, initUsers []string, createdAt time.Time) (NewGroupChat, error) {
-	var newGroupChat NewGroupChat
-
+func New(ctx context.Context, clientUsername, name, description, pictureUrl string, initUsers []string, createdAt int64) (NewGroup, error) {
 	res, err := db.Query(
 		ctx,
 		`/*cypher*/
@@ -31,1332 +32,737 @@ func New(ctx context.Context, clientUsername, name, description, pictureUrl stri
 		CREATE (group:Group{ id: randomUUID(), name: $name, description: $description, picture_url: $picture_url, created_at: $created_at })
 
 		CREATE (clientUser)-[:IS_MEMBER_OF { role: "admin" }]->(group),
-			(clientUser)-[:HAS_CHAT]->(clientChat:GroupChat{ owner_username: $client_username, group_id: group.id, updated_at: $created_at })-[:WITH_GROUP]->(group),
-			(clientUser)-[:RECEIVES_ACTIVITY]->(:GroupChatEntry{ chat_hist_entry_type: "group activity", info: "You created " + $name, created_at: $created_at })-[:IN_GROUP_CHAT]->(clientChat),
-			(clientUser)-[:RECEIVES_ACTIVITY]->(:GroupChatEntry{ chat_hist_entry_type: "group activity", info: "You added " + $init_users_str, created_at: $created_after_at })-[:IN_GROUP_CHAT]->(clientChat)
+			(clientUser)-[:HAS_CHAT]->(clientChat:GroupChat{ owner_username: $client_username, group_id: group.id })-[:WITH_GROUP]->(group),
+			(cligact1:GroupChatEntry{ che_id: randomUUID(), che_type: "group activity", info: "You created " + $name })-[:IN_GROUP_CHAT]->(clientChat),
+			(cligact2:GroupChatEntry{ che_id: randomUUID(), che_type: "group activity", info: "You added " + $init_users_str })-[:IN_GROUP_CHAT]->(clientChat)
 
-		WITH group, initUserRows
+		WITH group, initUserRows, [cligact1 {.che_id, .che_type, .info}, cligact2 {.che_id, .che_type, .info}] AS clientUserCHEs
 		UNWIND initUserRows AS initUser
 
-		WITH group, initUser
+		WITH group, initUser, clientUserCHEs
 		CREATE (initUser)-[:IS_MEMBER_OF { role: "member" }]->(group),
-			(initUser)-[:HAS_CHAT]->(initUserChat:GroupChat{ owner_username: initUser.username, group_id: group.id, updated_at: $created_at })-[:WITH_GROUP]->(group),
-			(initUser)-[:RECEIVES_ACTIVITY]->(:GroupChatEntry{ chat_hist_entry_type: "group activity", info: $client_username + " created " + $name, created_at: $created_at })-[:IN_GROUP_CHAT]->(initUserChat),
-			(initUser)-[:RECEIVES_ACTIVITY]->(:GroupChatEntry{ chat_hist_entry_type: "group activity", info: "You were added", created_at: $created_after_at })-[:IN_GROUP_CHAT]->(initUserChat)
+			(initUser)-[:HAS_CHAT]->(initUserChat:GroupChat{ owner_username: initUser.username, group_id: group.id })-[:WITH_GROUP]->(group),
+			(initusergact1:GroupChatEntry{ che_id: randomUUID(), che_type: "group activity", info: $client_username + " created " + $name })-[:IN_GROUP_CHAT]->(initUserChat),
+			(initusergact2:GroupChatEntry{ che_id: randomUUID(), che_type: "group activity", info: "You were added" })-[:IN_GROUP_CHAT]->(initUserChat)
 
-		WITH group
-		RETURN group { .id, .name, .description, .picture_url, history: [{ chat_hist_entry_type: "group activity", info: "You created " + $name, created_at: $created_at }, { chat_hist_entry_type: "group activity", info: "You added " + $init_users_str, created_at: $created_after_at }] } AS client_resp,
-			group { .id, .name, .description, .picture_url, history: [{ chat_hist_entry_type: "group activity", info: $client_username + " created " + $name, created_at: $created_at }, { chat_hist_entry_type: "group activity", info: "You were added", created_at: $created_after_at }] } AS init_member_resp
+		LET initUsersGactColl = collect({ inituser: initUser.username, gact1: initusergact1, gact2: initusergact2})
+			initUsersCHEs = reduce(m = {}, x IN initUsersGactColl | m + [x.inituser]: [x.gact1 {.che_id, .che_type, .info}, x.gact2 {.che_id, .che_type, .info}])
+
+		WITH group, clientUserCHEs, initUsersCHEs
+		RETURN group { .id, .name, .description, .picture_url, .created_at, init_users: $init_users, creator_user_history: clientUserCHEs, init_users_history: initUsersCHEs } AS new_group
 		`,
 		map[string]any{
-			"client_username":  clientUsername,
-			"name":             name,
-			"description":      description,
-			"picture_url":      pictureUrl,
-			"init_users":       initUsers,
-			"init_users_str":   helpers.JoinWithCommaAnd(initUsers...),
-			"created_at":       createdAt,
-			"created_after_at": createdAt.Add(500 * time.Millisecond),
+			"client_username": clientUsername,
+			"name":            name,
+			"description":     description,
+			"picture_url":     pictureUrl,
+			"init_users":      initUsers,
+			"init_users_str":  helpers.JoinWithCommaAnd(initUsers...),
+			"created_at":      createdAt,
 		},
 	)
 	if err != nil {
-		log.Println("groupChatModel.go: New:", err)
-		return newGroupChat, fiber.ErrInternalServerError
+		helpers.LogError(err)
+		return NewGroup{}, fiber.ErrInternalServerError
 	}
 
-	if len(res.Records) == 0 {
-		return newGroupChat, nil
-	}
+	newGroup := modelHelpers.RKeyGet[NewGroup](res.Records, "new_group")
 
-	helpers.ToStruct(res.Records[0].AsMap(), &newGroupChat)
-
-	return newGroupChat, nil
+	return newGroup, nil
 }
 
-type NewActivity struct {
-	ClientData      any      `json:"client_resp"`
-	MemberData      any      `json:"member_resp"`
-	MemberUsernames []string `json:"member_usernames"`
+type EditActivity struct {
+	ClientUserCHE   map[string]any `json:"-" db:"client_user_che"`
+	MemberUsersCHE  map[string]any `json:"-" db:"member_users_che"`
+	MemberUsernames []any          `json:"-" db:"member_usernames"`
 }
 
-func ChangeName(ctx context.Context, groupId, clientUsername, newName string) (NewActivity, error) {
-	var newActivity NewActivity
-
-	res, err := db.MultiQuery(ctx, func(tx neo4j.ManagedTransaction) (any, error) {
-		resMap := make(map[string]any, 4)
-
-		at := time.Now().UTC()
-
-		res, err := tx.Run(
-			ctx,
-			`/*cypher*/
-			MATCH (group)<-[:WITH_GROUP]-(clientChat:GroupChat{ owner_username: $client_username, group_id: $group_id })<-[:HAS_CHAT]-(clientUser),
-				(clientUser)-[:IS_MEMBER_OF { role: "admin" }]->(group)
-				
-			CREATE (clientUser)-[:RECEIVES_ACTIVITY]->(cligact:GroupChatEntry{ chat_hist_entry_type: "group activity", info: "You changed group name from " + group.name + " to " + $new_name, created_at: $at })-[:IN_GROUP_CHAT]->(clientChat)
-
-			WITH group, cligact, group.name AS old_name
-
-			SET group.name = $new_name
-
-			WITH group, cligact, old_name
-
-			OPTIONAL MATCH (group)<-[:IS_MEMBER_OF]-(memberUser WHERE memberUser.username <> $client_username)
-
-			RETURN cligact.info AS client_resp, collect(memberUser.username) AS member_usernames, old_name
-			`,
-			map[string]any{
-				"client_username": clientUsername,
-				"group_id":        groupId,
-				"new_name":        newName,
-				"at":              at,
-			},
-		)
-		if err != nil {
-			return nil, err
-		}
-
-		if !res.Next(ctx) {
-			return nil, nil
-		}
-
-		maps.Copy(resMap, res.Record().AsMap())
-
-		memberUsernames := resMap["member_usernames"].([]any)
-
-		if len(memberUsernames) > 0 {
-			res, err := tx.Run(
-				ctx,
-				`/*cypher*/
-				MATCH (group:Group{ id: $group_id })<-[:IS_MEMBER_OF]-(memberUser WHERE memberUser.username IN $member_usernames),
-					(memberChat:GroupChat{ owner_username: memberUser.username, group_id: $group_id })
-				
-				CREATE (memberUser)-[:RECEIVES_ACTIVITY]->(memgact:GroupChatEntry{ chat_hist_entry_type: "group activity", info: $client_username + " changed group name from " + $old_name + " to " + $new_name, created_at: $at })-[:IN_GROUP_CHAT]->(memberChat)
-
-				RETURN memgact.info AS member_resp
-				`,
-				map[string]any{
-					"group_id":         groupId,
-					"client_username":  clientUsername,
-					"new_name":         newName,
-					"old_name":         resMap["old_name"],
-					"member_usernames": memberUsernames,
-					"at":               at,
-				},
-			)
-			if err != nil {
-				return nil, err
-			}
-
-			if !res.Next(ctx) {
-				return nil, fmt.Errorf("crosscheck possible logical error")
-			}
-
-			maps.Copy(resMap, res.Record().AsMap())
-		}
-
-		return resMap, nil
-	})
-	if err != nil {
-		log.Println("groupChatModel.go: ChangeName:", err)
-		return newActivity, fiber.ErrInternalServerError
-	}
-
-	helpers.ToStruct(res, &newActivity)
-
-	return newActivity, nil
-}
-
-func ChangeDescription(ctx context.Context, groupId, clientUsername, newDescription string) (NewActivity, error) {
-	var newActivity NewActivity
-
-	res, err := db.MultiQuery(ctx, func(tx neo4j.ManagedTransaction) (any, error) {
-		resMap := make(map[string]any, 4)
-
-		at := time.Now().UTC()
-
-		res, err := tx.Run(
-			ctx,
-			`/*cypher*/
-			MATCH (group)<-[:WITH_GROUP]-(clientChat:GroupChat{ owner_username: $client_username, group_id: $group_id })<-[:HAS_CHAT]-(clientUser),
-				(clientUser)-[:IS_MEMBER_OF { role: "admin" }]->(group)
+func ChangeName(ctx context.Context, groupId, clientUsername, newName string) (EditActivity, error) {
+	res, err := db.Query(
+		ctx,
+		`/*cypher*/
+		MATCH (group)<-[:WITH_GROUP]-(clientChat:GroupChat{ owner_username: $client_username, group_id: $group_id })<-[:HAS_CHAT]-(clientUser),
+			(clientUser)-[:IS_MEMBER_OF { role: "admin" }]->(group)
 			
-			CREATE (clientUser)-[:RECEIVES_ACTIVITY]->(cligact:GroupChatEntry{ chat_hist_entry_type: "group activity", info: "You changed group description from " + group.description + " to " + $new_description, created_at: $at })-[:IN_GROUP_CHAT]->(clientChat)
+		CREATE (cligact:GroupChatEntry{ che_id: randomUUID(), che_type: "group activity", info: "You changed group name from " + group.name + " to " + $new_name })-[:IN_GROUP_CHAT]->(clientChat)
 
-			WITH group, cligact, group.description AS old_description
+		LET old_name = group.name
 
-			SET group.description = $new_description
+		SET group.name = $new_name
 
-			WITH group, cligact, old_description
+		WITH cligact { .che_id, .che_type, .info } AS clientUserCHE, old_name, group
 
-			OPTIONAL MATCH (group)<-[:IS_MEMBER_OF]-(memberUser WHERE memberUser.username <> $client_username)
+		OPTIONAL MATCH (group)<-[:IS_MEMBER_OF]-(memberUser WHERE memberUser.username <> $client_username)
+		OPTIONAL MATCH (memberUser)-[:HAS_CHAT]->(memberChat)-[:WITH_GROUP]->(group)
 
-			RETURN cligact.info AS client_resp, collect(memberUser.username) AS member_usernames, old_description
-			`,
-			map[string]any{
-				"client_username": clientUsername,
-				"group_id":        groupId,
-				"new_description": newDescription,
-				"at":              at,
-			},
-		)
-		if err != nil {
-			return nil, err
-		}
+		LET memberUsernames = collect(memberUser.username),
+			memberUsersCHE = reduce(m = {}, mu IN memberUsernames | m + [mu]: { che_id: randomUUID(), che_type: "group activity", info: $client_username + " changed group name from " + old_name + " to " + $new_name })
 
-		if !res.Next(ctx) {
-			return nil, nil
-		}
+		FOREACH (mc IN collect(memberChat) | CREATE (:GroupChatEntry{ che_id: memberUsersCHE[mc.owner_username].che_id, che_type: memberUsersCHE[mc.owner_username].che_type, info: memberUsersCHE[mc.owner_username].info })-[:IN_GROUP_CHAT]->(mc))
 
-		maps.Copy(resMap, res.Record().AsMap())
+		WITH DISTINCT clientUserCHE, memberUsersCHE, memberUsernames
 
-		memberUsernames := resMap["member_usernames"].([]any)
-
-		if len(memberUsernames) > 0 {
-			res, err := tx.Run(
-				ctx,
-				`/*cypher*/
-				MATCH (group:Group{ id: $group_id })<-[:IS_MEMBER_OF]-(memberUser WHERE memberUser.username IN $member_usernames),
-					(memberChat:GroupChat{ owner_username: memberUser.username, group_id: $group_id })
-				
-				CREATE (memberUser)-[:RECEIVES_ACTIVITY]->(memgact:GroupChatEntry{ chat_hist_entry_type: "group activity", info: $client_username + " changed group description from " + $old_description + " to " + $new_description, created_at: $at })-[:IN_GROUP_CHAT]->(memberChat)
-
-				RETURN memgact.info AS member_resp
-				`,
-				map[string]any{
-					"group_id":         groupId,
-					"client_username":  clientUsername,
-					"new_description":  newDescription,
-					"old_description":  resMap["old_description"],
-					"member_usernames": memberUsernames,
-					"at":               at,
-				},
-			)
-			if err != nil {
-				return nil, err
-			}
-
-			if !res.Next(ctx) {
-				return nil, fmt.Errorf("crosscheck possible logical error")
-			}
-
-			maps.Copy(resMap, res.Record().AsMap())
-		}
-
-		return resMap, nil
-	})
+		RETURN { client_user_che: clientUserCHE , member_users_che: memberUsersCHE, member_usernames: memberUsernames } AS new_group_activity
+		`,
+		map[string]any{
+			"client_username": clientUsername,
+			"group_id":        groupId,
+			"new_name":        newName,
+		},
+	)
 	if err != nil {
-		log.Println("groupChatModel.go: ChangeDescription:", err)
-		return newActivity, fiber.ErrInternalServerError
+		helpers.LogError(err)
+		return EditActivity{}, fiber.ErrInternalServerError
 	}
 
-	helpers.ToStruct(res, &newActivity)
+	newGact := modelHelpers.RKeyGet[EditActivity](res.Records, "new_group_activity")
 
-	return newActivity, nil
+	return newGact, nil
 }
 
-func ChangePicture(ctx context.Context, groupId, clientUsername, newPictureUrl string) (NewActivity, error) {
-	var newActivity NewActivity
+func ChangeDescription(ctx context.Context, groupId, clientUsername, newDescription string) (EditActivity, error) {
+	res, err := db.Query(
+		ctx,
+		`/*cypher*/
+		MATCH (group)<-[:WITH_GROUP]-(clientChat:GroupChat{ owner_username: $client_username, group_id: $group_id })<-[:HAS_CHAT]-(clientUser),
+			(clientUser)-[:IS_MEMBER_OF { role: "admin" }]->(group)
+		
+		CREATE (cligact:GroupChatEntry{ che_id: randomUUID(), che_type: "group activity", info: "You changed group description from " + group.description + " to " + $new_description })-[:IN_GROUP_CHAT]->(clientChat)
 
-	res, err := db.MultiQuery(ctx, func(tx neo4j.ManagedTransaction) (any, error) {
-		resMap := make(map[string]any, 3)
+		LET old_description = group.description
 
-		at := time.Now().UTC()
+		SET group.description = $new_description
 
-		res, err := tx.Run(
-			ctx,
-			`/*cypher*/
-			MATCH (group)<-[:WITH_GROUP]-(clientChat:GroupChat{ owner_username: $client_username, group_id: $group_id })<-[:HAS_CHAT]-(clientUser),
-				(clientUser)-[:IS_MEMBER_OF { role: "admin" }]->(group)
+		WITH cligact { .che_id, .che_type, .info } AS clientUserCHE, 
+			old_description, group
+
+		OPTIONAL MATCH (group)<-[:IS_MEMBER_OF]-(memberUser WHERE memberUser.username <> $client_username)
+		OPTIONAL MATCH (memberUser)-[:HAS_CHAT]->(memberChat)-[:WITH_GROUP]->(group)
+
+		LET memberUsernames = collect(memberUser.username),
+			memberUsersCHE = reduce(m = {}, mu IN memberUsernames | m + [mu]: { che_id: randomUUID(), che_type: "group activity", info: $client_username + " changed group description from " + old_description + " to " + $new_description })
+
+		FOREACH (mc IN collect(memberChat) | CREATE (:GroupChatEntry{ che_id: memberUsersCHE[mc.owner_username].che_id, che_type: memberUsersCHE[mc.owner_username].che_type, info: memberUsersCHE[mc.owner_username].info })-[:IN_GROUP_CHAT]->(mc))
+
+		WITH DISTINCT clientUserCHE, memberUsersCHE, memberUsernames
+
+		RETURN { client_user_che: clientUserCHE , member_users_che: memberUsersCHE, member_usernames: memberUsernames } AS new_group_activity
+		`,
+		map[string]any{
+			"client_username": clientUsername,
+			"group_id":        groupId,
+			"new_description": newDescription,
+		},
+	)
+	if err != nil {
+		helpers.LogError(err)
+		return EditActivity{}, fiber.ErrInternalServerError
+	}
+
+	newGact := modelHelpers.RKeyGet[EditActivity](res.Records, "new_group_activity")
+
+	return newGact, nil
+}
+
+func ChangePicture(ctx context.Context, groupId, clientUsername, newPictureUrl string) (EditActivity, error) {
+	res, err := db.Query(
+		ctx,
+		`/*cypher*/
+		MATCH (group)<-[:WITH_GROUP]-(clientChat:GroupChat{ owner_username: $client_username, group_id: $group_id })<-[:HAS_CHAT]-(clientUser),
+			(clientUser)-[:IS_MEMBER_OF { role: "admin" }]->(group)
+		
+		CREATE (cligact:GroupChatEntry{ che_type: "group activity", info: "You changed group picture" })-[:IN_GROUP_CHAT]->(clientChat)
+
+		SET group.picture_url = $new_pic_url
+
+		WITH cligact { .che_id, .che_type, .info } AS clientUserCHE, group
+
+		OPTIONAL MATCH (group)<-[:IS_MEMBER_OF]-(memberUser WHERE memberUser.username <> $client_username)
+		OPTIONAL MATCH (memberUser)-[:HAS_CHAT]->(memberChat)-[:WITH_GROUP]->(group)
+
+		LET memberUsernames = collect(memberUser.username),
+			memberUsersCHE = reduce(m = {}, mu IN memberUsernames | m + [mu]: { che_id: randomUUID(), che_type: "group activity", info: $client_username + " changed group picture" })
+
+		FOREACH (mc IN collect(memberChat) | CREATE (:GroupChatEntry{ che_id: memberUsersCHE[mc.owner_username].che_id, che_type: memberUsersCHE[mc.owner_username].che_type, info: memberUsersCHE[mc.owner_username].info })-[:IN_GROUP_CHAT]->(mc))
+
+		WITH DISTINCT clientUserCHE, memberUsersCHE, memberUsernames
+
+		RETURN { client_user_che: clientUserCHE , member_users_che: memberUsersCHE, member_usernames: memberUsernames } AS new_group_activity
+		`,
+		map[string]any{
+			"client_username": clientUsername,
+			"group_id":        groupId,
+			"new_pic_url":     newPictureUrl,
+		},
+	)
+	if err != nil {
+		helpers.LogError(err)
+		return EditActivity{}, fiber.ErrInternalServerError
+	}
+
+	newGact := modelHelpers.RKeyGet[EditActivity](res.Records, "new_group_activity")
+
+	return newGact, nil
+}
+
+type AddUsersActivity struct {
+	GroupInfo       map[string]any `json:"-" db:"group_info"`
+	ClientUserCHE   map[string]any `json:"-" db:"client_user_che"`
+	NewUsersCHE     map[string]any `json:"-" db:"new_users_che"`
+	MemberUsersCHE  map[string]any `json:"-" db:"member_users_che"`
+	NewUsernames    []any          `json:"-" db:"new_usernames"`
+	MemberUsernames []any          `json:"-" db:"member_usernames"`
+}
+
+func AddUsers(ctx context.Context, groupId, clientUsername string, newUsers []string) (AddUsersActivity, error) {
+	res, err := db.Query(
+		ctx,
+		`/*cypher*/
+		MATCH (group)<-[:WITH_GROUP]-(clientChat:GroupChat{ owner_username: $client_username, group_id: $group_id })<-[:HAS_CHAT]-(clientUser),
+			(clientUser)-[:IS_MEMBER_OF { role: "admin" }]->(group),
+			(newUser:User WHERE newUser.username IN $new_users AND NOT EXISTS { (newUser)-[:LEFT_GROUP]->(group) }
+				AND NOT EXISTS { (newUser)-[:IS_MEMBER_OF]->(group) })
 			
-			CREATE (clientUser)-[:RECEIVES_ACTIVITY]->(cligact:GroupChatEntry{ chat_hist_entry_type: "group activity", info: "You changed group picture", created_at: $at })-[:IN_GROUP_CHAT]->(clientChat)
+		WITH collect(newUser) AS nuRows
+			head(collect(group)) AS group,
+			head(collect(clientUser)) AS clientUser,
+			head(collect(clientChat)) AS clientChat
 
-			SET group.picture_url = $new_pic_url
+		CREATE (cligact:GroupChatEntry{ che_id: randomUUID(), che_type: "group activity", info: "You added " + $new_users_str })-[:IN_GROUP_CHAT]->(clientChat)
 
-			WITH group, cligact
+		WITH group, group AS canNullG, nuRows, cligact { .che_id, .che_type, .info } AS clientUserCHE
+		OPTIONAL MATCH (canNullG)<-[:IS_MEMBER_OF]-(memberUser WHERE memberUser.username <> $client_username)
+		OPTIONAL MATCH (memberUser)-[:HAS_CHAT]->(memberChat)-[:WITH_GROUP]->(canNullG)
 
-			OPTIONAL MATCH (group)<-[:IS_MEMBER_OF]-(memberUser WHERE memberUser.username <> $client_username)
+		LET memberUsernames = collect(memberUser.username),
+			memberUsersCHE = reduce(m = {}, mu IN memberUsernames | m + [mu]: { che_id: randomUUID(), che_type: "group activity", info: $client_username + " added " + $new_users_str })
 
-			RETURN cligact.info AS client_resp, collect(memberUser.username) AS member_usernames
-			`,
-			map[string]any{
-				"client_username": clientUsername,
-				"group_id":        groupId,
-				"new_pic_url":     newPictureUrl,
-				"at":              at,
-			},
-		)
-		if err != nil {
-			return nil, err
-		}
+		FOREACH (mc IN collect(memberChat) | CREATE (:GroupChatEntry{ che_id: memberUsersCHE[mc.owner_username].che_id, che_type: memberUsersCHE[mc.owner_username].che_type, info: memberUsersCHE[mc.owner_username].info })-[:IN_GROUP_CHAT]->(mc))
 
-		if !res.Next(ctx) {
-			return nil, nil
-		}
+		WITH group, nuRows, clientUserCHE, memberUsersCHE, memberUsernames
+		UNWIND nuRows AS newUser
 
-		maps.Copy(resMap, res.Record().AsMap())
+		LET canNullG = group, canNullNU = newUser
 
-		memberUsernames := resMap["member_usernames"].([]any)
+		OPTIONAL MATCH(canNullG)-[rur:REMOVED_USER]->(canNullNU)
 
-		if len(memberUsernames) > 0 {
-			res, err := tx.Run(
-				ctx,
-				`/*cypher*/
-				MATCH (group:Group{ id: $group_id })<-[:IS_MEMBER_OF]-(memberUser WHERE memberUser.username IN $member_usernames),
-					(memberChat:GroupChat{ owner_username: memberUser.username, group_id: $group_id })
-				
-				CREATE (memberUser)-[:RECEIVES_ACTIVITY]->(memgact:GroupChatEntry{ chat_hist_entry_type: "group activity", info: $client_username + " changed group picture", created_at: $at })-[:IN_GROUP_CHAT]->(memberChat)
+		DELETE rur
 
-				RETURN memgact.info AS member_resp
-				`,
-				map[string]any{
-					"group_id":         groupId,
-					"client_username":  clientUsername,
-					"member_usernames": memberUsernames,
-					"at":               at,
-				},
-			)
-			if err != nil {
-				return nil, err
-			}
+		WITH group, newUser, nuRows, clientUserCHE, memberUsersCHE, memberUsernames
+		CREATE (newUser)-[:IS_MEMBER_OF { role: "member" }]->(group)
+		MERGE (newUser)-[:HAS_CHAT]->(newUserChat:GroupChat{ owner_username: newUser.username, group_id: $group_id })-[:WITH_GROUP]->(group)
 
-			if !res.Next(ctx) {
-				return nil, fmt.Errorf("crosscheck possible logical error")
-			}
+		CREATE (nugact:GroupChatEntry{ che_id: randomUUID(), che_type: "group activity",  info: "You were added" })-[:IN_GROUP_CHAT]->(newUserChat)
 
-			maps.Copy(resMap, res.Record().AsMap())
-		}
+		LET newUsernames = [nu IN nuRows | nu.username],
+			newUsersGactColl = collect({ newuser: newUser.username, gact: nugact}),
+			newUsersCHE = reduce(m = {}, x IN newUsersGactColl | m + [x.newuser]: x.gact {.che_id, .che_type, .info})
 
-		return resMap, nil
-	})
+		WITH DISTINCT group { .id, .name, .description, .picture_url, .created_at } AS groupInfo, clientUserCHE, newUsersCHE, memberUsersCHE, newUsernames, memberUsernames
+
+		RETURN { group_info: groupInfo, client_user_che: clientUserCHE, new_users_che: newUsersCHE, member_users_che: memberUsersCHE, new_usernames: newUsernames, member_usernames: memberUsernames } AS new_group_activity
+		`,
+		map[string]any{
+			"client_username": clientUsername,
+			"group_id":        groupId,
+			"new_users":       newUsers,
+			"new_users_str":   helpers.JoinWithCommaAnd(newUsers...),
+		},
+	)
 	if err != nil {
-		log.Println("groupChatModel.go: ChangePicture:", err)
-		return newActivity, fiber.ErrInternalServerError
+		helpers.LogError(err)
+		return AddUsersActivity{}, fiber.ErrInternalServerError
 	}
 
-	helpers.ToStruct(res, &newActivity)
+	newGact := modelHelpers.RKeyGet[AddUsersActivity](res.Records, "new_group_activity")
 
-	return newActivity, nil
+	return newGact, nil
 }
 
-func AddUsers(ctx context.Context, groupId, clientUsername string, newUsers []string) (NewActivity, any, error) {
-	var newActivity NewActivity
+type RemoveUserActivity struct {
+	ClientUserCHE   map[string]any `json:"-" db:"client_user_che"`
+	TargetUserCHE   map[string]any `json:"-" db:"target_user_che"`
+	MemberUsersCHE  map[string]any `json:"-" db:"member_users_che"`
+	MemberUsernames []any          `json:"-" db:"member_usernames"`
+}
 
-	res, err := db.MultiQuery(ctx, func(tx neo4j.ManagedTransaction) (any, error) {
-		resMap := make(map[string]any, 4)
+func RemoveUser(ctx context.Context, groupId, clientUsername, targetUser string) (RemoveUserActivity, error) {
+	res, err := db.Query(
+		ctx,
+		`/*cypher*/
+		MATCH (group)<-[:WITH_GROUP]-(clientChat:GroupChat{ owner_username: $client_username, group_id: $group_id })<-[:HAS_CHAT]-(clientUser),
+			(clientUser)-[:IS_MEMBER_OF { role: "admin" }]->(group),
+			(group)<-[mem:IS_MEMBER_OF]-(targetUser:User{ username: $target_user })
 
-		at := time.Now().UTC()
+		DELETE mem
 
-		res, err := tx.Run(
-			ctx,
-			`/*cypher*/
-			MATCH (group)<-[:WITH_GROUP]-(clientChat:GroupChat{ owner_username: $client_username, group_id: $group_id })<-[:HAS_CHAT]-(clientUser),
-				(clientUser)-[:IS_MEMBER_OF { role: "admin" }]->(group),
-				(newUser:User WHERE newUser.username IN $new_users AND NOT EXISTS { (newUser)-[:LEFT_GROUP]->(group) }
-					AND NOT EXISTS { (newUser)-[:IS_MEMBER_OF]->(group) })
-				
+		CREATE (cligact:GroupChatEntry{ che_id: randomUUID(), che_type: "group activity", info: "You removed " + $target_user })-[:IN_GROUP_CHAT]->(clientChat)
 
-			WITH collect({ group: group, newUser: newUser }) AS rows,
-		    head(collect(clientUser)) AS clientUser,
-		    head(collect(clientChat)) AS clientChat
+		WITH group, targetUser, cligact { .che_id, .che_type, .info } AS clientUserCHE
+		MATCH (targetUserChat:GroupChat{ owner_username: targetUser.username, group_id: $group_id })
 
-			CREATE (clientUser)-[:RECEIVES_ACTIVITY]->(:GroupChatEntry{ chat_hist_entry_type: "group activity", info: "You added " + $new_users_str, created_at: $at })-[:IN_GROUP_CHAT]->(clientChat)
-			
-			WITH rows
-			UNWIND rows AS row
-			WITH row.group AS group, row.newUser AS newUser
+		CREATE (group)-[:REMOVED_USER]->(targetUser),
+			(tugact:GroupChatEntry{ che_id: randomUUID(), che_type: "group activity", info: $client_username + " removed you" })-[:IN_GROUP_CHAT]->(targetUserChat)
 
-			OPTIONAL MATCH (group)<-[:IS_MEMBER_OF]-(memberUser WHERE memberUser.username <> $client_username)
-			OPTIONAL MATCH(group)-[rur:REMOVED_USER]->(newUser) 
+		WITH clientUserCHE, tugact { .che_id, .che_type, .info } AS targetUserCHE, group
 
-			DELETE rur
+		OPTIONAL MATCH (group)<-[:IS_MEMBER_OF]-(memberUser WHERE memberUser.username <> $client_username)
+		OPTIONAL MATCH (memberUser)-[:HAS_CHAT]->(memberChat)-[:WITH_GROUP]->(group)
 
-			WITH group, newUser, collect(memberUser.username) AS member_usernames
-			CREATE (newUser)-[:IS_MEMBER_OF { role: "member" }]->(group)
-			MERGE (newUser)-[:HAS_CHAT]->(newUserChat:GroupChat{ owner_username: newUser.username, group_id: $group_id })-[:WITH_GROUP]->(group)
-			
-			CREATE (newUser)-[:RECEIVES_ACTIVITY]->(:GroupChatEntry{ chat_hist_entry_type: "group activity",  info: "You were added", created_at: $at })-[:IN_GROUP_CHAT]->(newUserChat)
+		LET memberUsernames = collect(memberUser.username),
+			memberUsersCHE = reduce(m = {}, mu IN memberUsernames | m + [mu]: { che_id: randomUUID(), che_type: "group activity", info: $client_username + " removed " + $target_user })
 
-			RETURN "You added " + $new_users_str AS client_resp, 
-				group { .id, .name, .description, .picture_url, history: [{ chat_hist_entry_type: "group activity", info: "You were added", created_at: $at }] } AS new_user_resp,
-				member_usernames
-			`,
-			map[string]any{
-				"client_username": clientUsername,
-				"group_id":        groupId,
-				"new_users":       newUsers,
-				"new_users_str":   helpers.JoinWithCommaAnd(newUsers...),
-				"at":              at,
-			},
-		)
-		if err != nil {
-			return nil, err
-		}
+		FOREACH (mc IN collect(memberChat) | CREATE (:GroupChatEntry{ che_id: memberUsersCHE[mc.owner_username].che_id, che_type: memberUsersCHE[mc.owner_username].che_type, info: memberUsersCHE[mc.owner_username].info })-[:IN_GROUP_CHAT]->(mc))
 
-		if !res.Next(ctx) {
-			return nil, nil
-		}
+		WITH DISTINCT clientUserCHE, targetUserCHE, memberUsersCHE, memberUsernames
 
-		maps.Copy(resMap, res.Record().AsMap())
-
-		memberUsernames := resMap["member_usernames"].([]any)
-
-		if len(memberUsernames) > 0 {
-			res, err := tx.Run(
-				ctx,
-				`/*cypher*/
-				MATCH (group:Group{ id: $group_id })<-[:IS_MEMBER_OF]-(memberUser WHERE memberUser.username IN $member_usernames),
-					(memberChat:GroupChat{ owner_username: memberUser.username, group_id: $group_id })
-				
-				CREATE (memberUser)-[:RECEIVES_ACTIVITY]->(memgact:GroupChatEntry{ chat_hist_entry_type: "group activity", info: $client_username + " added " + $new_users_str, created_at: $at })-[:IN_GROUP_CHAT]->(memberChat)
-
-				RETURN memgact.info AS member_resp
-				`,
-				map[string]any{
-					"group_id":         groupId,
-					"client_username":  clientUsername,
-					"new_users_str":    helpers.JoinWithCommaAnd(newUsers...),
-					"member_usernames": memberUsernames,
-					"at":               at,
-				},
-			)
-			if err != nil {
-				return nil, err
-			}
-
-			if !res.Next(ctx) {
-				return nil, fmt.Errorf("crosscheck possible logical error")
-			}
-
-			maps.Copy(resMap, res.Record().AsMap())
-		}
-
-		return resMap, nil
-	})
+		RETURN { client_user_che: clientUserCHE, target_user_che: targetUserCHE, member_users_che: memberUsersCHE, member_usernames: memberUsernames } AS new_group_activity
+		`,
+		map[string]any{
+			"client_username": clientUsername,
+			"group_id":        groupId,
+			"target_user":     targetUser,
+		},
+	)
 	if err != nil {
-		log.Println("groupChatModel.go: AddUsers:", err)
-		return newActivity, nil, fiber.ErrInternalServerError
+		helpers.LogError(err)
+		return RemoveUserActivity{}, fiber.ErrInternalServerError
 	}
 
-	resMap := res.(map[string]any)
+	newGact := modelHelpers.RKeyGet[RemoveUserActivity](res.Records, "new_group_activity")
 
-	helpers.ToStruct(res, &newActivity)
-
-	return newActivity, resMap["new_user_resp"], nil
+	return newGact, nil
 }
 
-func RemoveUser(ctx context.Context, groupId, clientUsername, targetUser string) (NewActivity, any, error) {
-	var newActivity NewActivity
+type UserJoinedActivity struct {
+	GroupInfo       map[string]any `json:"-" db:"group_info"`
+	ClientUserCHE   map[string]any `json:"-" db:"client_user_che"`
+	MemberUsersCHE  map[string]any `json:"-" db:"member_users_che"`
+	MemberUsernames []any          `json:"-" db:"member_usernames"`
+}
 
-	res, err := db.MultiQuery(ctx, func(tx neo4j.ManagedTransaction) (any, error) {
-		resMap := make(map[string]any, 4)
+func Join(ctx context.Context, groupId, clientUsername string) (UserJoinedActivity, error) {
+	res, err := db.Query(
+		ctx,
+		`/*cypher*/
+		MATCH (clientUser:User{ username: $client_username }), (group:Group{ id: $group_id })
+		WHERE NOT EXISTS { (clientUser)-[:IS_MEMBER_OF]->(group) }
+			AND NOT EXISTS { (group)-[:REMOVED_USER]->(clientUser) }
 
-		at := time.Now().UTC()
+		CREATE (cligact:GroupChatEntry{ che_id: randomUUID(), che_type: "group activity", info: "You joined" })-[:IN_GROUP_CHAT]->(clientChat)
 
-		res, err := tx.Run(
-			ctx,
-			`/*cypher*/
-			MATCH (group)<-[:WITH_GROUP]-(clientChat:GroupChat{ owner_username: $client_username, group_id: $group_id })<-[:HAS_CHAT]-(clientUser),
-				(clientUser)-[:IS_MEMBER_OF { role: "admin" }]->(group),
-				(group)<-[mem:IS_MEMBER_OF]-(targetUser:User{ username: $target_user })
+		WITH group, clientUser, group AS canNullG, cligact { .che_id, .che_type, .info } AS clientUserCHE
+		OPTIONAL MATCH (canNullG)<-[:IS_MEMBER_OF]-(memberUser)
+		OPTIONAL MATCH (memberUser)-[:HAS_CHAT]->(memberChat)-[:WITH_GROUP]->(canNullG)
 
-			DELETE mem
+		LET memberUsernames = collect(memberUser.username),
+			memberUsersCHE = reduce(m = {}, mu IN memberUsernames | m + [mu]: { che_id: randomUUID(), che_type: "group activity", info: $client_username + " joined" })
 
-			CREATE (clientUser)-[:RECEIVES_ACTIVITY]->(cligact:GroupChatEntry{ chat_hist_entry_type: "group activity", info: "You removed " + $target_user, created_at: $at })-[:IN_GROUP_CHAT]->(clientChat)
+		FOREACH (mc IN collect(memberChat) | CREATE (:GroupChatEntry{ che_id: memberUsersCHE[mc.owner_username].che_id, che_type: memberUsersCHE[mc.owner_username].che_type, info: memberUsersCHE[mc.owner_username].info })-[:IN_GROUP_CHAT]->(mc))
 
-			WITH group, targetUser, cligact
-			MATCH (targetUserChat:GroupChat{ owner_username: targetUser.username, group_id: $group_id })
+		WITH group, clientUser, group AS canNullG, clientUser AS canNullCU, 
+			clientUserCHE, memberUsersCHE, memberUsernames
+		
+		OPTIONAL MATCH (canNullCU)-[lgr:LEFT_GROUP]->(canNullG)
 
-			CREATE (group)-[:REMOVED_USER]->(targetUser),
-				(targetUser)-[:RECEIVES_ACTIVITY]->(tugact:GroupChatEntry{ chat_hist_entry_type: "group activity", info: $client_username + " removed you", created_at: $at })-[:IN_GROUP_CHAT]->(targetUserChat)
+		DELETE lgr
 
-			WITH group, cligact, tugact
+		WITH group, clientUser, clientUserCHE, memberUsersCHE, memberUsernames
+		CREATE (clientUser)-[:IS_MEMBER_OF { role: "member" }]->(group)
+		MERGE (clientUser)-[:HAS_CHAT]->(clientChat:GroupChat{ owner_username: clientUser.username, group_id: $group_id })-[:WITH_GROUP]->(group)
 
-			OPTIONAL MATCH (group)<-[:IS_MEMBER_OF]-(memberUser WHERE memberUser.username <> $client_username)
+		WITH DISTINCT group { .id, .name, .description, .picture_url, .created_at } AS groupInfo,
+			clientUserCHE, memberUsersCHE, memberUsernames
 
-			RETURN cligact.info AS client_resp, 
-				tugact.info AS target_user_resp,
-				collect(memberUser.username) AS member_usernames
-			`,
-			map[string]any{
-				"client_username": clientUsername,
-				"group_id":        groupId,
-				"target_user":     targetUser,
-				"at":              at,
-			},
-		)
-		if err != nil {
-			return nil, err
-		}
-
-		if !res.Next(ctx) {
-			return nil, nil
-		}
-
-		maps.Copy(resMap, res.Record().AsMap())
-
-		memberUsernames := resMap["member_usernames"].([]any)
-
-		if len(memberUsernames) > 0 {
-			res, err := tx.Run(
-				ctx,
-				`/*cypher*/
-				MATCH (group:Group{ id: $group_id })<-[:IS_MEMBER_OF]-(memberUser WHERE memberUser.username IN $member_usernames),
-					(memberChat:GroupChat{ owner_username: memberUser.username, group_id: $group_id })
-				
-				CREATE (memberUser)-[:RECEIVES_ACTIVITY]->(memgact:GroupChatEntry{ chat_hist_entry_type: "group activity", info: $client_username + " removed " + $target_user, created_at: $at })-[:IN_GROUP_CHAT]->(memberChat)
-
-				RETURN memgact.info AS member_resp
-				`,
-				map[string]any{
-					"group_id":         groupId,
-					"client_username":  clientUsername,
-					"target_user":      targetUser,
-					"member_usernames": memberUsernames,
-					"at":               at,
-				},
-			)
-			if err != nil {
-				return nil, err
-			}
-
-			if !res.Next(ctx) {
-				return nil, fmt.Errorf("crosscheck possible logical error")
-			}
-
-			maps.Copy(resMap, res.Record().AsMap())
-		}
-
-		return resMap, nil
-	})
+		RETURN { group_info: groupInfo, client_user_che: clientUserCHE, member_users_che: memberUsersCHE, member_usernames: memberUsernames } AS new_group_activity
+		`,
+		map[string]any{
+			"client_username": clientUsername,
+			"group_id":        groupId,
+		},
+	)
 	if err != nil {
-		log.Println("groupChatModel.go: RemoveUser:", err)
-		return newActivity, nil, fiber.ErrInternalServerError
+		helpers.LogError(err)
+		return UserJoinedActivity{}, fiber.ErrInternalServerError
 	}
 
-	resMap := res.(map[string]any)
+	newGact := modelHelpers.RKeyGet[UserJoinedActivity](res.Records, "new_group_activity")
 
-	helpers.ToStruct(res, &newActivity)
-
-	return newActivity, resMap["target_user_resp"], nil
+	return newGact, nil
 }
 
-func Join(ctx context.Context, groupId, clientUsername string) (NewActivity, error) {
-	var newActivity NewActivity
+type UserLeftActivity struct {
+	ClientUserCHE   map[string]any `json:"-" db:"client_user_che"`
+	MemberUsersCHE  map[string]any `json:"-" db:"member_users_che"`
+	MemberUsernames []any          `json:"-" db:"member_usernames"`
+}
 
-	res, err := db.MultiQuery(ctx, func(tx neo4j.ManagedTransaction) (any, error) {
-		resMap := make(map[string]any, 3)
+func Leave(ctx context.Context, groupId, clientUsername string) (UserLeftActivity, error) {
+	res, err := db.Query(
+		ctx,
+		`/*cypher*/
+		MATCH (group:Group{ id: $group_id })<-[mem:IS_MEMBER_OF]-(clientUser:User{ username: $client_username }),
+			(clientUser)-[:HAS_CHAT]->(clientChat)-[:WITH_GROUP]->(group)
 
-		at := time.Now().UTC()
+		DELETE mem
 
-		res, err := tx.Run(
-			ctx,
-			`/*cypher*/
-			MATCH (clientUser:User{ username: $client_username }), (group:Group{ id: $group_id })
-			WHERE NOT EXISTS { (clientUser)-[:IS_MEMBER_OF]->(group) }
-				AND NOT EXISTS { (group)-[:REMOVED_USER]->(clientUser) }
+		WITH group, clientUser, clientChat
+		CREATE (clientUser)-[:LEFT_GROUP]->(group),
+			(cligact:GroupChatEntry{ che_id: randomUUID(), che_type: "group activity", info: "You left" })-[:IN_GROUP_CHAT]->(clientChat)
 
-			OPTIONAL MATCH (group)<-[:IS_MEMBER_OF]-(memberUser)
-			OPTIONAL MATCH (clientUser)-[lgr:LEFT_GROUP]->(group)
+		WITH group, cligact { .che_id, .che_type, .info } AS clientUserCHE
 
-			DELETE lgr
+		OPTIONAL MATCH (group)<-[:IS_MEMBER_OF]-(memberUser)
+		OPTIONAL MATCH (memberUser)-[:HAS_CHAT]->(memberChat)-[:WITH_GROUP]->(group)
 
-			WITH group, clientUser, collect(memberUser.username) AS member_usernames
-			CREATE (clientUser)-[:IS_MEMBER_OF { role: "member" }]->(group)
-			MERGE (clientUser)-[:HAS_CHAT]->(clientChat:GroupChat{ owner_username: clientUser.username, group_id: group.id })-[:WITH_GROUP]->(group)
-			
-			CREATE (clientUser)-[:RECEIVES_ACTIVITY]->(:GroupChatEntry{ chat_hist_entry_type: "group activity", info: "You joined", created_at: $at })-[:IN_GROUP_CHAT]->(clientChat)
+		LET memberUsernames = collect(memberUser.username),
+			memberUsersCHE = reduce(m = {}, mu IN memberUsernames | m + [mu]: { che_id: randomUUID(), che_type: "group activity", info: $client_username + " left" })
 
-			RETURN group { .id, .name, .description, .picture_url, history: [{ chat_hist_entry_type: "group activity", info: "You joined", created_at: $at }] } AS client_resp,
-				member_usernames
-			`,
-			map[string]any{
-				"client_username": clientUsername,
-				"group_id":        groupId,
-				"at":              at,
-			},
-		)
-		if err != nil {
-			return nil, err
-		}
+		FOREACH (mc IN collect(memberChat) | CREATE (:GroupChatEntry{ che_id: memberUsersCHE[mc.owner_username].che_id, che_type: memberUsersCHE[mc.owner_username].che_type, info: memberUsersCHE[mc.owner_username].info })-[:IN_GROUP_CHAT]->(mc))
 
-		if !res.Next(ctx) {
-			return nil, nil
-		}
+		WITH DISTINCT clientUserCHE, memberUsersCHE, memberUsernames
 
-		maps.Copy(resMap, res.Record().AsMap())
-
-		memberUsernames := resMap["member_usernames"].([]any)
-
-		if len(memberUsernames) > 0 {
-			res, err := tx.Run(
-				ctx,
-				`/*cypher*/
-				MATCH (group:Group{ id: $group_id })<-[:IS_MEMBER_OF]-(memberUser WHERE memberUser.username IN $member_usernames),
-					(memberChat:GroupChat{ owner_username: memberUser.username, group_id: $group_id })
-				
-				CREATE (memberUser)-[:RECEIVES_ACTIVITY]->(memgact:GroupChatEntry{ chat_hist_entry_type: "group activity", info: $client_username + " joined", created_at: $at })-[:IN_GROUP_CHAT]->(memberChat)
-
-				RETURN memgact.info AS member_resp
-				`,
-				map[string]any{
-					"group_id":         groupId,
-					"client_username":  clientUsername,
-					"member_usernames": memberUsernames,
-					"at":               at,
-				},
-			)
-			if err != nil {
-				return nil, err
-			}
-
-			if !res.Next(ctx) {
-				return nil, nil
-			}
-
-			maps.Copy(resMap, res.Record().AsMap())
-		}
-
-		return resMap, nil
-	})
+		RETURN { client_user_che: clientUserCHE, member_users_che: memberUsersCHE, member_usernames: memberUsernames } AS new_group_activity
+		`,
+		map[string]any{
+			"client_username": clientUsername,
+			"group_id":        groupId,
+		},
+	)
 	if err != nil {
-		log.Println("groupChatModel.go: Join:", err)
-		return newActivity, fiber.ErrInternalServerError
+		helpers.LogError(err)
+		return UserLeftActivity{}, fiber.ErrInternalServerError
 	}
 
-	helpers.ToStruct(res, &newActivity)
+	newGact := modelHelpers.RKeyGet[UserLeftActivity](res.Records, "new_group_activity")
 
-	return newActivity, nil
+	return newGact, nil
 }
 
-func Leave(ctx context.Context, groupId, clientUsername string) (NewActivity, error) {
-	var newActivity NewActivity
+type MakeUserAdminActivity struct {
+	ClientUserCHE   map[string]any `json:"-" db:"client_user_che"`
+	TargetUserCHE   map[string]any `json:"-" db:"target_user_che"`
+	MemberUsersCHE  map[string]any `json:"-" db:"member_users_che"`
+	MemberUsernames []any          `json:"-" db:"member_usernames"`
+}
 
-	res, err := db.MultiQuery(ctx, func(tx neo4j.ManagedTransaction) (any, error) {
-		resMap := make(map[string]any, 3)
+func MakeUserAdmin(ctx context.Context, groupId, clientUsername, targetUser string) (MakeUserAdminActivity, error) {
+	res, err := db.Query(
+		ctx,
+		`/*cypher*/
+		MATCH (group)<-[:WITH_GROUP]-(clientChat:GroupChat{ owner_username: $client_username, group_id: $group_id })<-[:HAS_CHAT]-(clientUser),
+			(clientUser)-[:IS_MEMBER_OF { role: "admin" }]->(group),
+			(group)<-[mem:IS_MEMBER_OF { role: "member" }]-(targetUser:User{ username: $target_user })
 
-		at := time.Now().UTC()
+		SET mem.role = "admin"
 
-		res, err := tx.Run(
-			ctx,
-			`/*cypher*/
-			MATCH (group:Group{ id: $group_id })<-[mem:IS_MEMBER_OF]-(clientUser:User{ username: $client_username }),
-				(clientChat:GroupChat{ owner_username: clientUser.username, group_id: $group_id })
+		CREATE (cligact:GroupChatEntry{ che_id: randomUUID(), che_type: "group activity", info: "You made " + $target_user + " group admin" })-[:IN_GROUP_CHAT]->(clientChat)
 
-			DELETE mem
+		WITH group, targetUser, cligact { .che_id, .che_type, .info } AS clientUserCHE
+		MATCH (targetUser)-[:HAS_CHAT]->(targetUserChat)-[:WITH_GROUP]->(group)
 
-			WITH group, clientUser, clientChat
-			CREATE (clientUser)-[:LEFT_GROUP]->(group),
-				(clientUser)-[:RECEIVES_ACTIVITY]->(cligact:GroupChatEntry{ chat_hist_entry_type: "group activity", info: "You left", created_at: $at })-[:IN_GROUP_CHAT]->(clientChat)
+		CREATE (tugact:GroupChatEntry{ che_id: randomUUID(), che_type: "group activity", info: $client_username + " made you group admin" })-[:IN_GROUP_CHAT]->(targetUserChat)
 
-			WITH group, cligact
+		WITH group, clientUserCHE, tugact { .che_id, .che_type, .info } AS targetUserCHE
+		OPTIONAL MATCH (group)<-[:IS_MEMBER_OF]-(memberUser WHERE NOT memberUser.username IN [$client_username, $target_user])
+		OPTIONAL MATCH (memberUser)-[:HAS_CHAT]->(memberChat)-[:WITH_GROUP]->(group)
 
-			OPTIONAL MATCH (group)<-[:IS_MEMBER_OF]-(memberUser)
+		LET memberUsernames = collect(memberUser.username),
+			memberUsersCHE = reduce(m = {}, mu IN memberUsernames | m + [mu]: { che_id: randomUUID(), che_type: "group activity", info: $client_username + " made " + $target_user + " group admin" })
 
-			RETURN cligact.info AS client_resp,
-				collect(memberUser.username) AS member_usernames
-			`,
-			map[string]any{
-				"client_username": clientUsername,
-				"group_id":        groupId,
-				"at":              at,
-			},
-		)
-		if err != nil {
-			return nil, err
-		}
+		FOREACH (mc IN collect(memberChat) | CREATE (:GroupChatEntry{ che_id: memberUsersCHE[mc.owner_username].che_id, che_type: memberUsersCHE[mc.owner_username].che_type, info: memberUsersCHE[mc.owner_username].info })-[:IN_GROUP_CHAT]->(mc))
 
-		if !res.Next(ctx) {
-			return nil, nil
-		}
+		WITH DISTINCT clientUserCHE, targetUserCHE, memberUsersCHE, memberUsernames
 
-		maps.Copy(resMap, res.Record().AsMap())
-
-		memberUsernames := resMap["member_usernames"].([]any)
-
-		if len(memberUsernames) > 0 {
-			res, err := tx.Run(
-				ctx,
-				`/*cypher*/
-				MATCH (group:Group{ id: $group_id })<-[:IS_MEMBER_OF]-(memberUser WHERE memberUser.username IN $member_usernames),
-					(memberChat:GroupChat{ owner_username: memberUser.username, group_id: $group_id })
-				
-				CREATE (memberUser)-[:RECEIVES_ACTIVITY]->(memgact:GroupChatEntry{ chat_hist_entry_type: "group activity", info: $client_username + " left", created_at: $at })-[:IN_GROUP_CHAT]->(memberChat)
-
-				RETURN memgact.info AS member_resp
-				`,
-				map[string]any{
-					"group_id":         groupId,
-					"client_username":  clientUsername,
-					"member_usernames": memberUsernames,
-					"at":               at,
-				},
-			)
-			if err != nil {
-				return nil, err
-			}
-
-			if !res.Next(ctx) {
-				return nil, fmt.Errorf("crosscheck possible logical error")
-			}
-
-			maps.Copy(resMap, res.Record().AsMap())
-		}
-
-		return resMap, nil
-	})
+		RETURN { client_user_che: clientUserCHE, target_user_che: targetUserCHE, member_users_che: memberUsersCHE, member_usernames: memberUsernames } AS new_group_activity
+		`,
+		map[string]any{
+			"client_username": clientUsername,
+			"group_id":        groupId,
+			"target_user":     targetUser,
+		},
+	)
 	if err != nil {
-		log.Println("groupChatModel.go: Leave:", err)
-		return newActivity, fiber.ErrInternalServerError
+		helpers.LogError(err)
+		return MakeUserAdminActivity{}, fiber.ErrInternalServerError
 	}
 
-	helpers.ToStruct(res, &newActivity)
+	newGact := modelHelpers.RKeyGet[MakeUserAdminActivity](res.Records, "new_group_activity")
 
-	return newActivity, nil
+	return newGact, nil
 }
 
-func MakeUserAdmin(ctx context.Context, groupId, clientUsername, targetUser string) (NewActivity, any, error) {
-	var newActivity NewActivity
-
-	res, err := db.MultiQuery(ctx, func(tx neo4j.ManagedTransaction) (any, error) {
-		resMap := make(map[string]any, 4)
-
-		at := time.Now().UTC()
-
-		res, err := tx.Run(
-			ctx,
-			`/*cypher*/
-			MATCH (group)<-[:WITH_GROUP]-(clientChat:GroupChat{ owner_username: $client_username, group_id: $group_id })<-[:HAS_CHAT]-(clientUser),
-				(clientUser)-[:IS_MEMBER_OF { role: "admin" }]->(group),
-				(group)<-[mem:IS_MEMBER_OF { role: "member" }]-(targetUser:User{ username: $target_user })
-
-			SET mem.role = "admin"
-
-			CREATE (clientUser)-[:RECEIVES_ACTIVITY]->(cligact:GroupChatEntry{ chat_hist_entry_type: "group activity", info: "You made " + $target_user + " group admin", created_at: $at })-[:IN_GROUP_CHAT]->(clientChat)
-
-			WITH group, targetUser, cligact
-			MATCH (targetUserChat:GroupChat{ owner_username: targetUser.username, group_id: $group_id })
-
-			CREATE (targetUser)-[:RECEIVES_ACTIVITY]->(tugact:GroupChatEntry{ chat_hist_entry_type: "group activity", info: $client_username + " made you group admin", created_at: $at })-[:IN_GROUP_CHAT]->(targetUserChat)
-
-			WITH group, cligact, tugact
-			OPTIONAL MATCH (group)<-[:IS_MEMBER_OF]-(memberUser WHERE NOT memberUser.username IN [$client_username, $target_user])
-
-			RETURN cligact.info AS client_resp, 
-				tugact.info AS target_user_resp,
-				collect(memberUser.username) AS member_usernames
-			`,
-			map[string]any{
-				"client_username": clientUsername,
-				"group_id":        groupId,
-				"target_user":     targetUser,
-				"at":              at,
-			},
-		)
-		if err != nil {
-			return nil, err
-		}
-
-		if !res.Next(ctx) {
-			return nil, nil
-		}
-
-		maps.Copy(resMap, res.Record().AsMap())
-
-		memberUsernames := resMap["member_usernames"].([]any)
-
-		if len(memberUsernames) > 0 {
-			res, err := tx.Run(
-				ctx,
-				`/*cypher*/
-				MATCH (group:Group{ id: $group_id })<-[:IS_MEMBER_OF]-(memberUser WHERE memberUser.username IN $member_usernames),
-					(memberChat:GroupChat{ owner_username: memberUser.username, group_id: $group_id })
-				
-				CREATE (memberUser)-[:RECEIVES_ACTIVITY]->(memgact:GroupChatEntry{ chat_hist_entry_type: "group activity", info: $client_username + " made " + $target_user + " group admin", created_at: $at })-[:IN_GROUP_CHAT]->(memberChat)
-
-				RETURN memgact.info AS member_resp
-				`,
-				map[string]any{
-					"group_id":         groupId,
-					"client_username":  clientUsername,
-					"target_user":      targetUser,
-					"member_usernames": memberUsernames,
-					"at":               at,
-				},
-			)
-			if err != nil {
-				return nil, err
-			}
-
-			if !res.Next(ctx) {
-				return nil, nil
-			}
-
-			maps.Copy(resMap, res.Record().AsMap())
-		}
-
-		return resMap, nil
-	})
-	if err != nil {
-		log.Println("groupChatModel.go: MakeUserAdmin:", err)
-		return newActivity, nil, fiber.ErrInternalServerError
-	}
-
-	resMap := res.(map[string]any)
-
-	helpers.ToStruct(res, &newActivity)
-
-	return newActivity, resMap["target_user_resp"], nil
+type RemoveUserFromAdminsActivity struct {
+	ClientUserCHE   map[string]any `json:"-" db:"client_user_che"`
+	TargetUserCHE   map[string]any `json:"-" db:"target_user_che"`
+	MemberUsersCHE  map[string]any `json:"-" db:"member_users_che"`
+	MemberUsernames []any          `json:"-" db:"member_usernames"`
 }
 
-func RemoveUserFromAdmins(ctx context.Context, groupId, clientUsername, targetUser string) (NewActivity, any, error) {
-	var newActivity NewActivity
-
-	res, err := db.MultiQuery(ctx, func(tx neo4j.ManagedTransaction) (any, error) {
-		resMap := make(map[string]any, 4)
-
-		at := time.Now().UTC()
-
-		res, err := tx.Run(
-			ctx,
-			`/*cypher*/
+func RemoveUserFromAdmins(ctx context.Context, groupId, clientUsername, targetUser string) (RemoveUserFromAdminsActivity, error) {
+	res, err := db.Query(
+		ctx,
+		`/*cypher*/
 			MATCH (group)<-[:WITH_GROUP]-(clientChat:GroupChat{ owner_username: $client_username, group_id: $group_id })<-[:HAS_CHAT]-(clientUser),
 				(clientUser)-[:IS_MEMBER_OF { role: "admin" }]->(group),
 				(group)<-[mem:IS_MEMBER_OF { role: "admin" }]-(targetUser:User{ username: $target_user })
 
 			SET mem.role = "member"
 				
-			CREATE (clientUser)-[:RECEIVES_ACTIVITY]->(cligact:GroupChatEntry{ chat_hist_entry_type: "group activity", info: "You removed " + $target_user + " from group admins", created_at: $at })-[:IN_GROUP_CHAT]->(clientChat)
+			CREATE (cligact:GroupChatEntry{ che_id: randomUUID(), che_type: "group activity", info: "You removed " + $target_user + " from group admins" })-[:IN_GROUP_CHAT]->(clientChat)
 
-			WITH group, targetUser, cligact
-			MATCH (targetUserChat:GroupChat{ owner_username: targetUser.username, group_id: $group_id })
+			WITH group, targetUser, cligact { .che_id, .che_type, .info } AS clientUserCHE
+			MATCH (targetUser)-[:HAS_CHAT]->(targetUserChat)-[:WITH_GROUP]->(group)
 			
-			CREATE (targetUser)-[:RECEIVES_ACTIVITY]->(tugact:GroupChatEntry{ chat_hist_entry_type: "group activity", info: $client_username + " removed you from group admins", created_at: $at })-[:IN_GROUP_CHAT]->(targetUserChat)
+			CREATE (tugact:GroupChatEntry{ che_id: randomUUID(), che_type: "group activity", info: $client_username + " removed you from group admins" })-[:IN_GROUP_CHAT]->(targetUserChat)
 
-			WITH group, cligact, tugact
+			WITH group, clientUserCHE, tugact { .che_id, .che_type, .info } AS targetUserCHE
 			OPTIONAL MATCH (group)<-[:IS_MEMBER_OF]-(memberUser WHERE NOT memberUser.username IN [$client_username, $target_user])
+			OPTIONAL MATCH (memberUser)-[:HAS_CHAT]->(memberChat)-[:WITH_GROUP]->(group)
 
-			RETURN cligact.info AS client_resp, 
-				tugact.info AS target_user_resp,
-				collect(memberUser.username) AS member_usernames
+			LET memberUsernames = collect(memberUser.username),
+				memberUsersCHE = reduce(m = {}, mu IN memberUsernames | m + [mu]: { che_id: randomUUID(), che_type: "group activity", info: $client_username + " removed " + $target_user + " from group admins" })
+
+			FOREACH (mc IN collect(memberChat) | CREATE (:GroupChatEntry{ che_id: memberUsersCHE[mc.owner_username].che_id, che_type: memberUsersCHE[mc.owner_username].che_type, info: memberUsersCHE[mc.owner_username].info })-[:IN_GROUP_CHAT]->(mc))
+
+			WITH DISTINCT clientUserCHE, targetUserCHE, memberUsersCHE, memberUsernames
+
+			RETURN { client_user_che: clientUserCHE, target_user_che: targetUserCHE, member_users_che: memberUsersCHE, member_usernames: memberUsernames } AS new_group_activity
 			`,
-			map[string]any{
-				"client_username": clientUsername,
-				"group_id":        groupId,
-				"target_user":     targetUser,
-				"at":              at,
-			},
-		)
-		if err != nil {
-			return nil, err
-		}
-
-		if !res.Next(ctx) {
-			return nil, nil
-		}
-
-		maps.Copy(resMap, res.Record().AsMap())
-
-		memberUsernames := resMap["member_usernames"].([]any)
-
-		if len(memberUsernames) > 0 {
-			res, err = tx.Run(
-				ctx,
-				`/*cypher*/
-				MATCH (group:Group{ id: $group_id })<-[:IS_MEMBER_OF]-(memberUser WHERE memberUser.username IN $member_usernames),
-					(memberChat:GroupChat{ owner_username: memberUser.username, group_id: $group_id })
-				
-				CREATE (memberUser)-[:RECEIVES_ACTIVITY]->(memgact:GroupChatEntry{ chat_hist_entry_type: "group activity", info: $client_username + " removed " + $target_user + " from group admins", created_at: $at })-[:IN_GROUP_CHAT]->(memberChat)
-
-				RETURN memgact.info AS member_resp
-				`,
-				map[string]any{
-					"group_id":         groupId,
-					"client_username":  clientUsername,
-					"target_user":      targetUser,
-					"member_usernames": memberUsernames,
-					"at":               at,
-				},
-			)
-			if err != nil {
-				return nil, err
-			}
-
-			if !res.Next(ctx) {
-				return nil, fmt.Errorf("crosscheck possible logical error")
-			}
-
-			maps.Copy(resMap, res.Record().AsMap())
-		}
-
-		return resMap, nil
-	})
+		map[string]any{
+			"client_username": clientUsername,
+			"group_id":        groupId,
+			"target_user":     targetUser,
+		},
+	)
 	if err != nil {
-		log.Println("groupChatModel.go: RemoveUserFromAdmins:", err)
-		return newActivity, nil, fiber.ErrInternalServerError
+		helpers.LogError(err)
+		return RemoveUserFromAdminsActivity{}, fiber.ErrInternalServerError
 	}
 
-	resMap := res.(map[string]any)
+	newGact := modelHelpers.RKeyGet[RemoveUserFromAdminsActivity](res.Records, "new_group_activity")
 
-	helpers.ToStruct(res, &newActivity)
-
-	return newActivity, resMap["target_user_resp"], nil
+	return newGact, nil
 }
 
 type NewMessage struct {
-	ClientData      map[string]any `json:"client_resp"`
-	MemberData      map[string]any `json:"member_resp"`
-	MemberUsernames []string       `json:"member_usernames"`
+	Id                   string         `json:"id" db:"id"`
+	ChatHistoryEntryType string         `json:"che_type" db:"che_type"`
+	Content              map[string]any `json:"content" db:"content"`
+	DeliveryStatus       string         `json:"delivery_status" db:"delivery_status"`
+	CreatedAt            int64          `json:"created_at" db:"created_at"`
+	Sender               any            `json:"sender" db:"sender"`
+	ReplyTargetMsg       map[string]any `json:"reply_target_msg,omitempty" db:"reply_target_msg"`
+	MemberUsernames      []any          `json:"-" db:"member_usernames"`
 }
 
-func SendMessage(ctx context.Context, clientUsername, groupId, msgContent string, at time.Time) (NewMessage, error) {
-	var newMessage NewMessage
+func SendMessage(ctx context.Context, clientUsername, groupId, msgContent string, at int64) (NewMessage, error) {
+	res, err := db.Query(
+		ctx,
+		`/*cypher*/
+		MATCH (group)<-[:WITH_GROUP]-(clientChat:GroupChat{ owner_username: $client_username, group_id: $group_id })<-[:HAS_CHAT]-(clientUser)
+		WHERE EXISTS { (clientUser)-[:IS_MEMBER_OF]->(group) }
 
-	res, err := db.MultiQuery(ctx, func(tx neo4j.ManagedTransaction) (any, error) {
-		resMap := make(map[string]any, 4)
+		CREATE (message:GroupMessage:GroupChatEntry{ id: randomUUID(), che_type: "message", content: $message_content, delivery_status: "sent", created_at: $at }),
+			(clientUser)-[:SENDS_MESSAGE]->(message)-[:IN_GROUP_CHAT]->(clientChat)
+		
+		WITH group, message
 
-		res, err := tx.Run(
-			ctx,
-			`/*cypher*/
-			MATCH (group)<-[:WITH_GROUP]-(clientChat:GroupChat{ owner_username: $client_username, group_id: $group_id })<-[:HAS_CHAT]-(clientUser)
-			WHERE EXISTS { (clientUser)-[:IS_MEMBER_OF]->(group) }
+		OPTIONAL MATCH (group)<-[:IS_MEMBER_OF]-(memberUser WHERE memberUser.username <> $client_username)
+		OPTIONAL MATCH (memberUser)-[:HAS_CHAT]->(memberChat)-[:WITH_GROUP]->(group)
 
-			CREATE (message:GroupMessage:GroupChatEntry{ id: randomUUID(), chat_hist_entry_type: "message", content: $message_content, delivery_status: "sent", created_at: $at })
+		FOREACH (memb IN collect({chat: memberChat, user: memberUser}) | CREATE (memb.user)-[:RECEIVES_MESSAGE]->(message)-[:IN_GROUP_CHAT]->(memb.chat))
 
-			WITH group, clientChat, clientUser, message
-
-			CREATE (clientUser)-[:SENDS_MESSAGE]->(message)-[:IN_GROUP_CHAT]->(clientChat)
-			
-			WITH group, message.id AS msgId
-
-			OPTIONAL MATCH (group)<-[:IS_MEMBER_OF]-(memberUser WHERE memberUser.username <> $client_username)
-
-			RETURN { new_msg_id: msgId } AS client_resp,
-				collect(memberUser.username) AS member_usernames, msgId AS new_msg_id
-			`,
-			map[string]any{
-				"client_username": clientUsername,
-				"group_id":        groupId,
-				"message_content": msgContent,
-				"at":              at,
-			},
-		)
-		if err != nil {
-			return nil, err
-		}
-
-		if !res.Next(ctx) {
-			return nil, nil
-		}
-
-		maps.Copy(resMap, res.Record().AsMap())
-
-		memberUsernames := resMap["member_usernames"].([]any)
-
-		if len(memberUsernames) > 0 {
-			res, err := tx.Run(
-				ctx,
-				`/*cypher*/
-				MATCH (message:GroupMessage{ id: $new_msg_id })<-[:SENDS_MESSAGE]-(clientUser)
-
-				MATCH (group:Group{ id: $group_id })<-[:IS_MEMBER_OF]-(memberUser WHERE memberUser.username IN $member_usernames),
-					(memberChat:GroupChat{ owner_username: memberUser.username, group_id: $group_id })
-				
-				CREATE (memberUser)-[:RECEIVES_MESSAGE]->(message)-[:IN_GROUP_CHAT]->(memberChat)
-
-				WITH message, message.created_at.epochMillis AS created_at, clientUser { .username, .profile_pic_url } AS sender
-
-				RETURN message { .*, is_own: false, content: apoc.convert.fromJsonMap(message.content), created_at, sender } AS member_resp
-				`,
-				map[string]any{
-					"group_id":         groupId,
-					"client_username":  clientUsername,
-					"member_usernames": memberUsernames,
-					"new_msg_id":       resMap["new_msg_id"],
-					"at":               at,
-				},
-			)
-			if err != nil {
-				return nil, err
-			}
-
-			if !res.Next(ctx) {
-				return nil, fmt.Errorf("crosscheck possible logical error")
-			}
-
-			maps.Copy(resMap, res.Record().AsMap())
-		}
-
-		return resMap, nil
-	})
+		WITH DISTINCT message, collect(memberUser.username) AS member_usernames
+		RETURN message { .*, content: apoc.convert.fromJsonMap(message.content), sender: $client_username, member_usernames } AS new_message
+		`,
+		map[string]any{
+			"client_username": clientUsername,
+			"group_id":        groupId,
+			"message_content": msgContent,
+			"at":              at,
+		},
+	)
 	if err != nil {
-		log.Println("groupChatModel.go: SendMessage:", err)
-		return newMessage, fiber.ErrInternalServerError
+		helpers.LogError(err)
+		return NewMessage{}, fiber.ErrInternalServerError
 	}
 
-	helpers.ToStruct(res, &newMessage)
+	newMessage := modelHelpers.RKeyGet[NewMessage](res.Records, "new_message")
 
 	return newMessage, nil
 }
 
-type MsgAck struct {
-	All             bool     `json:"all"`
-	MemberUsernames []string `json:"member_usernames"`
-}
+func AckMessageDelivered(ctx context.Context, clientUsername, groupId, msgId string, deliveredAt int64) (bool, error) {
+	res, err := db.Query(
+		ctx,
+		`/*cypher*/
+		MATCH (group)<-[:WITH_GROUP]-(clientChat:GroupChat{ owner_username: $client_username, group_id: $group_id })<-[:HAS_CHAT]-(clientUser),
+			(clientChat)<-[:IN_GROUP_CHAT]-(message:GroupMessage{ id: $message_id, delivery_status: "sent" })<-[:RECEIVES_MESSAGE]-(clientUser),
 
-func AckMessageDelivered(ctx context.Context, clientUsername, groupId, msgId string, deliveredAt time.Time) (MsgAck, error) {
-	var msgAck MsgAck
+		CREATE (message)-[:DELIVERED_TO { at: $delivered_at }]->(clientUser)
 
-	res, err := db.MultiQuery(ctx, func(tx neo4j.ManagedTransaction) (any, error) {
-		resMap := make(map[string]any, 3)
-
-		at := time.Now().UTC()
-
-		res, err := tx.Run(
-			ctx,
-			`/*cypher*/
-			MATCH (group)<-[:WITH_GROUP]-(clientChat:GroupChat{ owner_username: $client_username, group_id: $group_id })<-[:HAS_CHAT]-(clientUser),
-				(clientChat)<-[:IN_GROUP_CHAT]-(message:GroupMessage{ id: $message_id, delivery_status: "sent" })<-[:RECEIVES_MESSAGE]-(clientUser),
-				(msgSender)-[:SENDS_MESSAGE]->(message)
-
-			SET clientChat.unread_messages_count = coalesce(clientChat.unread_messages_count, 0) + 1
-			CREATE (message)-[:DELIVERED_TO { at: $delivered_at }]->(clientUser)
-
-			WITH group, message, msgSender
-			OPTIONAL MATCH (message)-[:DELIVERED_TO]->(delUser)
-			OPTIONAL MATCH (group)<-[:IS_MEMBER_OF]-(memberUser WHERE NOT memberUser.username IN [msgSender.username, $client_username])
-
-			RETURN collect(DISTINCT delUser.username) AS delv_to_usernames,
-				collect(DISTINCT memberUser.username) AS member_usernames
-			`,
-			map[string]any{
-				"client_username": clientUsername,
-				"group_id":        groupId,
-				"message_id":      msgId,
-				"delivered_at":    at,
-			},
-		)
-		if err != nil {
-			return nil, err
-		}
-
-		if !res.Next(ctx) {
-			return nil, nil
-		}
-
-		maps.Copy(resMap, res.Record().AsMap())
-
-		// checking if the message has delivered to all members
-		memberUsernames := resMap["member_usernames"].([]any)
-		delvtoUsernames := resMap["delv_to_usernames"].([]any)
-
-		delvToAll := helpers.AsubsetB(memberUsernames, delvtoUsernames)
-
-		resMap["all"] = delvToAll
-
-		if delvToAll {
-			_, err := tx.Run(
-				ctx,
-				`/*cypher*/
-				MATCH (message:GroupMessage{ id: $msg_id })
-				SET message.delivery_status = "delivered"
-				`,
-				map[string]any{
-					"msg_id": msgId,
-				},
-			)
-			if err != nil {
-				return nil, err
-			}
-		}
-
-		return resMap, nil
-	})
+		RETURN true AS done
+		`,
+		map[string]any{
+			"client_username": clientUsername,
+			"group_id":        groupId,
+			"message_id":      msgId,
+			"delivered_at":    deliveredAt,
+		},
+	)
 	if err != nil {
-		log.Println("groupChatModel.go: AckMessageDelivered:", err)
-		return msgAck, fiber.ErrInternalServerError
+		helpers.LogError(err)
+		return false, fiber.ErrInternalServerError
 	}
 
-	helpers.ToStruct(res, &msgAck)
-
-	return msgAck, nil
-}
-
-func AckMessageRead(ctx context.Context, clientUsername, groupId, msgId string, readAt time.Time) (MsgAck, error) {
-	var msgAck MsgAck
-
-	res, err := db.MultiQuery(ctx, func(tx neo4j.ManagedTransaction) (any, error) {
-		resMap := make(map[string]any, 3)
-
-		at := time.Now().UTC()
-
-		res, err := tx.Run(
-			ctx,
-			`/*cypher*/
-			MATCH (group)<-[:WITH_GROUP]-(clientChat:GroupChat{ owner_username: $client_username, group_id: $group_id })<-[:HAS_CHAT]-(clientUser),
-				(clientChat)<-[:IN_GROUP_CHAT]-(message:GroupMessage{ id: $message_id } WHERE message.delivery_status <> "read")<-[:RECEIVES_MESSAGE]-(clientUser),
-				(msgSender)-[:SENDS_MESSAGE]->(message)
-
-			WITH group, clientUser, clientChat, message, msgSender, CASE coalesce(clientChat.unread_messages_count, 0) WHEN <> 0 THEN clientChat.unread_messages_count - 1 ELSE 0 END AS unread_messages_count
-			SET clientChat.unread_messages_count = unread_messages_count
-			CREATE (message)-[:READ_BY { at: $read_at } ]->(clientUser)
-
-			WITH group, message, msgSender
-			OPTIONAL MATCH (message)-[:READ_BY]->(readUser)
-			OPTIONAL MATCH (group)<-[:IS_MEMBER_OF]-(memberUser WHERE NOT memberUser.username IN [msgSender.username, $client_username])
-
-			RETURN collect(DISTINCT readUser.username) AS read_by_usernames,
-				collect(DISTINCT memberUser.username) AS member_usernames
-			`,
-			map[string]any{
-				"client_username": clientUsername,
-				"group_id":        groupId,
-				"message_id":      msgId,
-				"read_at":         at,
-			},
-		)
-		if err != nil {
-			return nil, err
-		}
-
-		if !res.Next(ctx) {
-			return nil, nil
-		}
-
-		maps.Copy(resMap, res.Record().AsMap())
-
-		// checking if the message has delivered to all members
-		memberUsernames := resMap["member_usernames"].([]any)
-		readbyUsernames := resMap["read_by_usernames"].([]any)
-
-		readByAll := helpers.AsubsetB(memberUsernames, readbyUsernames)
-
-		resMap["all"] = readByAll
-
-		if readByAll {
-			_, err := tx.Run(
-				ctx,
-				`/*cypher*/
-				MATCH (message:GroupMessage{ id: $msg_id })
-				SET message.delivery_status = "read"
-				`,
-				map[string]any{
-					"msg_id": msgId,
-				},
-			)
-			if err != nil {
-				return nil, err
-			}
-		}
-
-		return resMap, nil
-	})
-	if err != nil {
-		log.Println("groupChatModel.go: AckMessageRead:", err)
-		return msgAck, fiber.ErrInternalServerError
+	if len(res.Records) == 0 {
+		return false, nil
 	}
 
-	helpers.ToStruct(res, &msgAck)
-
-	return msgAck, nil
+	return true, nil
 }
 
-func ReplyToMessage(ctx context.Context, clientUsername, groupId, targetMsgId, msgContent string, at time.Time) (NewMessage, error) {
-	var newMessage NewMessage
+func AckMessageRead(ctx context.Context, clientUsername, groupId, msgId string, readAt int64) (bool, error) {
+	res, err := db.Query(
+		ctx,
+		`/*cypher*/
+		MATCH (group)<-[:WITH_GROUP]-(clientChat:GroupChat{ owner_username: $client_username, group_id: $group_id })<-[:HAS_CHAT]-(clientUser),
+			(clientChat)<-[:IN_GROUP_CHAT]-(message:GroupMessage{ id: $message_id } WHERE message.delivery_status <> "read")<-[:RECEIVES_MESSAGE]-(clientUser),
 
-	res, err := db.MultiQuery(ctx, func(tx neo4j.ManagedTransaction) (any, error) {
-		resMap := make(map[string]any, 4)
+		CREATE (message)-[:READ_BY { at: $read_at }]->(clientUser)
 
-		res, err := tx.Run(
-			ctx,
-			`/*cypher*/
-			MATCH (group)<-[:WITH_GROUP]-(clientChat:GroupChat{ owner_username: $client_username, group_id: $group_id })<-[:HAS_CHAT]-(clientUser)
-			WHERE EXISTS { (clientUser)-[:IS_MEMBER_OF]->(group) }
-
-			MATCH (targetMsg:GroupMessage { id: $target_msg_id })
-
-			CREATE (replyMsg:GroupMessage:GroupChatEntry{ id: randomUUID(), chat_hist_entry_type: "message", content: $message_content, delivery_status: "sent", created_at: $at }),
-				(clientUser)-[:SENDS_MESSAGE]->(replyMsg)-[:IN_GROUP_CHAT]->(clientChat),
-				(replyMsg)-[:REPLIES_TO]->(targetMsg)
-			
-			WITH group, replyMsg.id AS replyMsgId
-
-			OPTIONAL MATCH (group)<-[:IS_MEMBER_OF]-(memberUser WHERE memberUser.username <> $client_username)
-
-			RETURN { new_msg_id: replyMsgId } AS client_resp,
-				collect(memberUser.username) AS member_usernames, replyMsgId AS new_reply_msg_id
-			`,
-			map[string]any{
-				"client_username": clientUsername,
-				"group_id":        groupId,
-				"message_content": msgContent,
-				"target_msg_id":   targetMsgId,
-				"at":              at,
-			},
-		)
-		if err != nil {
-			return nil, err
-		}
-
-		if !res.Next(ctx) {
-			return nil, nil
-		}
-
-		maps.Copy(resMap, res.Record().AsMap())
-
-		memberUsernames := resMap["member_usernames"].([]any)
-
-		if len(memberUsernames) > 0 {
-			res, err := tx.Run(
-				ctx,
-				`/*cypher*/
-				MATCH (replyMsg:GroupMessage{ id: $new_reply_msg_id })<-[:SENDS_MESSAGE]-(clientUser),
-					(targetMsg:GroupMessage { id: $target_msg_id })<-[:SENDS_MESSAGE]-(targetMsgSender)
-
-				MATCH (group:Group{ id: $group_id })<-[:IS_MEMBER_OF]-(memberUser WHERE memberUser.username IN $member_usernames),
-					(memberChat:GroupChat{ owner_username: memberUser.username, group_id: $group_id })
-				
-				CREATE (memberUser)-[:RECEIVES_MESSAGE]->(replyMsg)-[:IN_GROUP_CHAT]->(memberChat)
-
-				WITH replyMsg, targetMsgSender, replyMsg.created_at.epochMillis AS created_at, 
-					clientUser { .username, .profile_pic_url } AS sender,
-					targetMsg { .id, content: apoc.convert.fromJsonMap(targetMsg.content), sender_username: targetMsgSender.username, is_own: targetMsgSender.username = $client_username } AS reply_target_msg
-
-				RETURN replyMsg { .*, is_own: false, content: apoc.convert.fromJsonMap(replyMsg.content) created_at, sender, reply_target_msg } AS member_resp
-				`,
-				map[string]any{
-					"group_id":         groupId,
-					"client_username":  clientUsername,
-					"member_usernames": memberUsernames,
-					"new_reply_msg_id": resMap["new_reply_msg_id"],
-					"target_msg_id":    targetMsgId,
-					"at":               at,
-				},
-			)
-			if err != nil {
-				return nil, err
-			}
-
-			if !res.Next(ctx) {
-				return nil, fmt.Errorf("crosscheck possible logical error")
-			}
-
-			maps.Copy(resMap, res.Record().AsMap())
-		}
-
-		return resMap, nil
-	})
+		RETURN true AS done
+		`,
+		map[string]any{
+			"client_username": clientUsername,
+			"group_id":        groupId,
+			"message_id":      msgId,
+			"read_at":         readAt,
+		},
+	)
 	if err != nil {
-		log.Println("groupChatModel.go: ReplyToMessage:", err)
-		return newMessage, fiber.ErrInternalServerError
+		helpers.LogError(err)
+		return false, fiber.ErrInternalServerError
 	}
 
-	helpers.ToStruct(res, &newMessage)
+	if len(res.Records) == 0 {
+		return false, nil
+	}
+
+	return true, nil
+}
+
+func ReplyToMessage(ctx context.Context, clientUsername, groupId, targetMsgId, msgContent string, at int64) (NewMessage, error) {
+	res, err := db.Query(
+		ctx,
+		`/*cypher*/
+		MATCH (group)<-[:WITH_GROUP]-(clientChat:GroupChat{ owner_username: $client_username, group_id: $group_id })<-[:HAS_CHAT]-(clientUser)
+		WHERE EXISTS { (clientUser)-[:IS_MEMBER_OF]->(group) }
+
+		MATCH (targetMsg:GroupMessage { id: $target_msg_id })
+
+		CREATE (replyMsg:GroupMessage:GroupChatEntry{ id: randomUUID(), che_type: "message", content: $message_content, delivery_status: "sent", created_at: $at }),
+			(clientUser)-[:SENDS_MESSAGE]->(replyMsg)-[:IN_GROUP_CHAT]->(clientChat),
+			(replyMsg)-[:REPLIES_TO]->(targetMsg)
+		
+		WITH group, replyMsg, targetMsg
+
+		MATCH (targetMsg)<-[:SENDS_MESSAGE]-(targetMsgSender)
+
+		OPTIONAL MATCH (group)<-[:IS_MEMBER_OF]-(memberUser WHERE memberUser.username <> $client_username)
+		OPTIONAL MATCH (memberUser)-[:HAS_CHAT]->(memberChat)-[:WITH_GROUP]->(group)
+
+		FOREACH (memb IN collect({chat: memberChat, user: memberUser}) | CREATE (memb.user)-[:RECEIVES_MESSAGE]->(replyMsg)-[:IN_GROUP_CHAT]->(memb.chat))
+
+		WITH DISTINCT replyMsg, collect(memberUser.username) AS member_usernames,
+			targetMsg { .id, content: apoc.convert.fromJsonMap(targetMsg.content), sender_user: targetMsgSender.username } AS reply_target_msg
+
+		RETURN replyMsg { .*, content: apoc.convert.fromJsonMap(replyMsg.content), sender: $client_username, reply_target_msg, member_usernames } AS new_message
+		`,
+		map[string]any{
+			"client_username": clientUsername,
+			"group_id":        groupId,
+			"message_content": msgContent,
+			"target_msg_id":   targetMsgId,
+			"at":              at,
+		},
+	)
+	if err != nil {
+		helpers.LogError(err)
+		return NewMessage{}, fiber.ErrInternalServerError
+	}
+
+	newMessage := modelHelpers.RKeyGet[NewMessage](res.Records, "new_message")
 
 	return newMessage, nil
 }
 
 type RxnToMessage struct {
-	ClientData      map[string]any `json:"client_resp"`
-	MemberData      map[string]any `json:"member_resp"`
-	MemberUsernames []string       `json:"member_usernames"`
+	CHEId                string `json:"-" db:"che_id"`
+	ChatHistoryEntryType string `json:"che_type" db:"che_type"`
+	Emoji                string `json:"emoji" db:"emoji"`
+	Reactor              any    `json:"reactor" db:"reactor"`
+	MemberUsernames      []any  `json:"-" db:"member_usernames"`
 }
 
-func ReactToMessage(ctx context.Context, clientUsername, groupId, msgId, reaction string, at time.Time) (RxnToMessage, error) {
-	var rxnToMessage RxnToMessage
+func ReactToMessage(ctx context.Context, clientUsername, groupId, msgId, emoji string, at int64) (RxnToMessage, error) {
+	res, err := db.Query(
+		ctx,
+		`/*cypher*/
+		MATCH (group)<-[:WITH_GROUP]-(clientChat:GroupChat{ owner_username: $client_username, group_id: $group_id })<-[:HAS_CHAT]-(clientUser)
+		WHERE EXISTS { (clientUser)-[:IS_MEMBER_OF]->(group) }
 
-	res, err := db.MultiQuery(ctx, func(tx neo4j.ManagedTransaction) (any, error) {
-		resMap := make(map[string]any, 4)
+		MATCH (clientChat)<-[IN_GROUP_CHAT]-(message:GroupMessage{ id: $message_id })
 
-		res, err := tx.Run(
-			ctx,
-			`/*cypher*/
-			MATCH (group)<-[:WITH_GROUP]-(clientChat:GroupChat{ owner_username: $client_username, group_id: $group_id })<-[:HAS_CHAT]-(clientUser)
-			WHERE EXISTS { (clientUser)-[:IS_MEMBER_OF]->(group) }
+		WITH group, clientUser, message, clientChat
+		MERGE (msgrxn:GroupMessageReaction:GroupChatEntry{ reactor_username: clientUser.username, message_id: $message_id })
+		ON CREATE
+			SET msgrxn.che_id = randomUUID(),
+				msgrxn.che_type = "reaction"
 
-			MATCH (clientChat)<-[IN_GROUP_CHAT]-(message:GroupMessage{ id: $message_id })
+		SET msgrxn.emoji = $emoji, msgrxn.at = $at
 
-			WITH clientUser, message, clientChat
-			MERGE (msgrxn:GroupMessageReaction:GroupChatEntry{ reactor_username: clientUser.username, message_id: message.id })-[:REACTION_TO_MESSAGE]->(message)
-			SET msgrxn.reaction = $reaction, msgrxn.chat_hist_entry_type = "reaction", msgrxn.created_at = $at
+		MERGE (clientUser)-[crxn:REACTS_TO_MESSAGE]->(message)
+		SET crxn.emoji = $emoji, crxn.at = $at
 
-			MERGE (clientUser)-[crxn:REACTS_TO_MESSAGE]->(message)
-			SET crxn.reaction = $reaction, crxn.created_at = $at
+		MERGE (msgrxn)-[:IN_GROUP_CHAT]->(clientChat)
 
-			MERGE (clientUser)-[:SENDS_REACTION]->(msgrxn)-[:IN_GROUP_CHAT]->(clientChat)
+		WITH group, msgrxn
 
-			WITH group
+		OPTIONAL MATCH (group)<-[:IS_MEMBER_OF]-(memberUser WHERE memberUser.username <> $client_username)
+		OPTIONAL MATCH (memberUser)-[:HAS_CHAT]->(memberChat)-[:WITH_GROUP]->(group)
 
-			OPTIONAL MATCH (group)<-[:IS_MEMBER_OF]-(memberUser WHERE memberUser.username <> $client_username)
+		FOREACH (mc IN collect(memberChat) | CREATE (msgrxn)-[:IN_GROUP_CHAT]->(mc))
 
-			RETURN true AS client_resp, collect(memberUser.username) AS member_usernames
-			`,
-			map[string]any{
-				"client_username": clientUsername,
-				"group_id":        groupId,
-				"message_id":      msgId,
-				"reaction":        reaction,
-				"at":              at,
-			},
-		)
-		if err != nil {
-			return nil, err
-		}
+		LET member_usernames = collect(memberUser.username)
 
-		if !res.Next(ctx) {
-			return nil, nil
-		}
-
-		maps.Copy(resMap, res.Record().AsMap())
-
-		memberUsernames := resMap["member_usernames"].([]any)
-
-		if len(memberUsernames) > 0 {
-			res, err := tx.Run(
-				ctx,
-				`/*cypher*/
-				MATCH (clientUser)-[:SENDS_REACTION]->(msgrxn:GroupMessageReaction:GroupChatEntry{ reactor_username: $client_username, message_id: $message_id })-[:REACTION_TO_MESSAGE]->(message)
-
-				MATCH (group:Group{ id: $group_id })<-[:IS_MEMBER_OF]-(memberUser WHERE memberUser.username IN $member_usernames),
-					(memberChat:GroupChat{ owner_username: memberUser.username, group_id: $group_id })
-				
-				MERGE (memberUser)-[:RECEIVES_REACTION]->(msgrxn)-[:IN_GROUP_CHAT]->(memberChat)
-
-				WITH group, message, msgrxn, clientUser { .username, .profile_pic_url } AS reactor
-
-				RETURN { group_id: group.id, msg_id: message.id, reactor, reaction: msgrxn.reaction, at: msgrxn.created_at.epochMillis } AS member_resp
-				`,
-				map[string]any{
-					"group_id":         groupId,
-					"client_username":  clientUsername,
-					"member_usernames": memberUsernames,
-					"at":               at,
-				},
-			)
-			if err != nil {
-				return nil, err
-			}
-
-			if !res.Next(ctx) {
-				return nil, fmt.Errorf("crosscheck possible logical error")
-			}
-
-			maps.Copy(resMap, res.Record().AsMap())
-		}
-
-		return resMap, nil
-	})
+		RETURN msgrxn { .che_id, .che_type, .emoji, to_msg_id: $message_id, reactor: $client_username, member_usernames } rxn_to_msg
+		`,
+		map[string]any{
+			"client_username": clientUsername,
+			"group_id":        groupId,
+			"message_id":      msgId,
+			"emoji":           emoji,
+			"at":              at,
+		},
+	)
 	if err != nil {
-		log.Println("groupChatModel.go: ReactToMessage:", err)
-		return rxnToMessage, fiber.ErrInternalServerError
+		helpers.LogError(err)
+		return RxnToMessage{}, fiber.ErrInternalServerError
 	}
 
-	helpers.ToStruct(res, &rxnToMessage)
+	rxnToMessage := modelHelpers.RKeyGet[RxnToMessage](res.Records, "rxn_to_msg")
 
 	return rxnToMessage, nil
 }
 
-func RemoveReactionToMessage(ctx context.Context, clientUsername, groupId, msgId string) (member_usernames []any, done bool, err error) {
+type RemovedRxnToMessage struct {
+	CHEId           string `json:"-" db:"msgrxn_che_id"`
+	MemberUsernames []any  `json:"-" db:"member_usernames"`
+}
+
+func RemoveReactionToMessage(ctx context.Context, clientUsername, groupId, msgId string) (RemovedRxnToMessage, error) {
 	res, err := db.Query(
 		ctx,
 		`/*cypher*/
@@ -1367,13 +773,17 @@ func RemoveReactionToMessage(ctx context.Context, clientUsername, groupId, msgId
 			(msgrxn:GroupMessageReaction:GroupChatEntry{ reactor_username: clientUser.username, message_id: message.id }),
 			(clientUser)-[crxn:REACTS_TO_MESSAGE]->(message)
 		
+		LET msgrxn_che_id = msgrxn.che_id
+
 		DETACH DELETE msgrxn, crxn
 		
-		WITH group
+		WITH group, msgrxn_che_id
 
 		OPTIONAL MATCH (group)<-[:IS_MEMBER_OF]-(memberUser WHERE memberUser.username <> $client_username)
 
-		RETURN collect(memberUser.username) AS member_usernames, true AS done
+		LET member_usernames = collect(memberUser.username)
+
+		RETURN DISTINCT { msgrxn_che_id, member_usernames } AS rmvd_rxn_to_msg
 		`,
 		map[string]any{
 			"client_username": clientUsername,
@@ -1382,185 +792,23 @@ func RemoveReactionToMessage(ctx context.Context, clientUsername, groupId, msgId
 		},
 	)
 	if err != nil {
-		log.Println("groupChatModel.go: RemoveReactionToMessage:", err)
-		return nil, false, fiber.ErrInternalServerError
+		helpers.LogError(err)
+		return RemovedRxnToMessage{}, fiber.ErrInternalServerError
 	}
 
-	if len(res.Records) == 0 {
-		return nil, false, nil
-	}
+	rmvdRxnToMessage := modelHelpers.RKeyGet[RemovedRxnToMessage](res.Records, "rmvd_rxn_to_msg")
 
-	recMap := res.Records[0].AsMap()
-
-	return recMap["member_usernames"].([]any), recMap["done"].(bool), nil
+	return rmvdRxnToMessage, nil
 }
 
-type ChatHistoryEntry struct {
-	EntryType string `json:"chat_hist_entry_type"`
-	CreatedAt int64  `json:"created_at"`
-
-	// for message
-	Id             string           `json:"id,omitempty"`
-	Content        map[string]any   `json:"content,omitempty"`
-	DeliveryStatus string           `json:"delivery_status,omitempty"`
-	Sender         map[string]any   `json:"sender,omitempty"`
-	IsOwn          bool             `json:"is_own"`
-	Reactions      []map[string]any `json:"reactions,omitempty"`
-
-	// for reply message entry
-	ReplyTargetMsg map[string]any `json:"reply_target_msg,omitempty"`
-
-	// for reaction entry
-	Reaction string `json:"reaction,omitempty"`
-
-	// for group activity entry
-	Info string `json:"info,omitempty"`
-}
-
-func ChatHistory(ctx context.Context, clientUsername, groupId string, limit int, offset time.Time) ([]ChatHistoryEntry, error) {
-	var chatHistory []ChatHistoryEntry
-
-	res, err := db.Query(
-		ctx,
-		`/*cypher*/
-		MATCH (clientChat:GroupChat{ owner_username: $client_username, group_id: $group_id })
-
-		OPTIONAL MATCH (clientChat)<-[:IN_GROUP_CHAT]-(entry:GroupChatEntry WHERE entry.created_at < $offset)
-		OPTIONAL MATCH (entry)<-[:SENDS_MESSAGE]-(senderUser)
-		OPTIONAL MATCH (entry)<-[rxn:REACTS_TO_MESSAGE]-(reactorUser)
-		OPTIONAL MATCH (entry)-[:REPLIES_TO]->(replyTargetMsg:GroupMessage)
-		OPTIONAL MATCH (replyTargetMsg)<-[:SENDS_MESSAGE]-(replyTargetMsgSender)
-		
-		WITH entry, senderUser, replyTargetMsg, replyTargetMsgSender,
-     collect(CASE WHEN rxn IS NOT NULL 
-             THEN { reactor: reactorUser { .username, .profile_pic_url }, reaction: rxn.reaction, at: rxn.created_at.epochMillis }
-             ELSE NULL 
-             END) AS reaction_list
-
-		WITH entry, entry.created_at.epochMillis AS created_at,
-			CASE WHEN senderUser IS NOT NULL
-				THEN senderUser { .username, .profile_pic_url } 
-				ELSE NULL
-			END AS sender,
-			CASE WHEN senderUser IS NOT NULL AND senderUser.username = $client_username
-				THEN true 
-				ELSE false
-			END AS is_own,
-			CASE WHEN size([r IN reaction_list WHERE r IS NOT NULL]) > 0
-         THEN [r IN reaction_list WHERE r IS NOT NULL]
-         ELSE NULL
-			END AS reactions,
-			CASE WHEN replyTargetMsg IS NOT NULL
-				THEN replyTargetMsg { .id, content: apoc.convert.fromJsonMap(replyTargetMsg.content), sender_username: replyTargetMsgSender.username, is_own: replyTargetMsgSender.username = $client_username }
-				ELSE NULL
-			END AS reply_target_msg,
-			CASE WHEN entry.chat_hist_entry_type = "message" OR entry.chat_hist_entry_type = "reply"
-				THEN apoc.convert.fromJsonMap(entry.content)
-				ELSE NULL
-			END AS content
-		ORDER BY entry.created_at
-		LIMIT $limit
-		
-		RETURN collect(entry { .*, content, created_at, sender, is_own, reactions, reply_target_msg }) AS chat_history
-		`,
-		map[string]any{
-			"group_id":        groupId,
-			"client_username": clientUsername,
-			"limit":           limit,
-			"offset":          offset,
-		},
-	)
-	if err != nil {
-		log.Println("groupChatModel.go: GetChatHistory", err)
-		return chatHistory, fiber.ErrInternalServerError
-	}
-
-	if len(res.Records) == 0 {
-		return chatHistory, nil
-	}
-
-	ch, _, _ := neo4j.GetRecordValue[[]any](res.Records[0], "chat_history")
-
-	helpers.ToStruct(ch, &chatHistory)
-
-	return chatHistory, nil
+func ChatHistory(ctx context.Context, clientUsername, groupId string, limit int, cursor float64) ([]UITypes.ChatHistoryEntry, error) {
+	return nil, nil
 }
 
 func GroupInfo(ctx context.Context, groupId string) (map[string]any, error) {
-	res, err := db.Query(
-		ctx,
-		`/*cypher*/
-		MATCH (group:Group{ id: $group_id })
-
-		OPTIONAL MATCH (group)<-[:IS_MEMBER_OF]-(memberUser)
-		OPTIONAL MATCH (group)<-[:IS_MEMBER_OF]-(memberUserOnline:User{ presence: "online" })
-
-		WITH group, count(DISTINCT memberUser) AS members_count, count(DISTINCT memberUserOnline) AS members_online_count
-		RETURN group { .name, .description, .picture_url, members_count, members_online_count } AS group_info
-		`,
-		map[string]any{
-			"group_id": groupId,
-		},
-	)
-	if err != nil {
-		log.Println("groupChatModel.go: GroupInfo", err)
-		return nil, fiber.ErrInternalServerError
-	}
-
-	if len(res.Records) == 0 {
-		return nil, nil
-	}
-
-	gi, _, _ := neo4j.GetRecordValue[map[string]any](res.Records[0], "group_info")
-
-	return gi, nil
+	return nil, nil
 }
 
 func GroupMemInfo(ctx context.Context, clientUsername, groupId string) (map[string]any, error) {
-	res, err := db.Query(
-		ctx,
-		`/*cypher*/
-		MATCH (group:Group{ id: $group_id }), (clientUser:User { username: $client_username })
-
-		OPTIONAL MATCH (group)<-[member:IS_MEMBER_OF]-(clientUser)
-		OPTIONAL MATCH (group)-[userRemoved:REMOVED_USER]->(clientUser)
-		OPTIONAL MATCH (group)<-[userLeft:LEFT_GROUP]-(clientUser)
-
-		WITH group,
-			CASE member 
-				WHEN IS NULL THEN false 
-				ELSE true 
-			END AS is_member,
-			CASE member 
-				WHEN IS NULL THEN null 
-				ELSE member.role 
-			END AS user_role,
-			CASE userRemoved 
-				WHEN IS NULL THEN false 
-				ELSE true 
-			END AS user_removed,
-			CASE userLeft 
-				WHEN IS NULL THEN false 
-				ELSE true 
-			END AS user_left
-
-		RETURN group { is_member, user_role, user_removed, user_left } AS group_mem_info
-		`,
-		map[string]any{
-			"client_username": clientUsername,
-			"group_id":        groupId,
-		},
-	)
-	if err != nil {
-		log.Println("groupChatModel.go: GroupMemInfo", err)
-		return nil, fiber.ErrInternalServerError
-	}
-
-	if len(res.Records) == 0 {
-		return nil, nil
-	}
-
-	gmi, _, _ := neo4j.GetRecordValue[map[string]any](res.Records[0], "group_mem_info")
-
-	return gmi, nil
+	return nil, nil
 }

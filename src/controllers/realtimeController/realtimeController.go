@@ -81,7 +81,7 @@ var WSStream = websocket.New(func(c *websocket.Conn) {
 				delete(cancelUserPresenceSub, tu)
 			}
 		case "direct chat: send message":
-			respData, err := sendDirectChatMsgHndl(ctx, clientUser.Username, body.Data)
+			respData, err := sendDirectChatMsgHndl(ctx, clientUser, body.Data)
 			if err != nil {
 				w_err = c.WriteJSON(helpers.WSErrReply(err, body.Action))
 				continue

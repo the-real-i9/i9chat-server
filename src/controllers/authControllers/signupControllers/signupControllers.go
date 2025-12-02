@@ -1,7 +1,6 @@
 package signupControllers
 
 import (
-	"encoding/json"
 	"i9chat/src/helpers"
 	"i9chat/src/services/auth/signupService"
 	"log"
@@ -29,13 +28,7 @@ func RequestNewAccount(c *fiber.Ctx) error {
 		return app_err
 	}
 
-	sd, err := json.Marshal(sessionData)
-	if err != nil {
-		log.Println("signupControllers.go: RequestNewAccount: json.Marshal:", err)
-		return fiber.ErrInternalServerError
-	}
-
-	c.Cookie(helpers.Cookie("signup", string(sd), int(time.Hour/time.Second)))
+	c.Cookie(helpers.Cookie("signup", helpers.ToJson(sessionData), int(time.Hour/time.Second)))
 	c.Cookie(helpers.Cookie("passwordReset", "", 0))
 
 	return c.JSON(respData)
@@ -62,13 +55,7 @@ func VerifyEmail(c *fiber.Ctx) error {
 		return app_err
 	}
 
-	nsd, err := json.Marshal(newSessionData)
-	if err != nil {
-		log.Println("signupControllers.go: VerifyEmail: json.Marshal:", err)
-		return fiber.ErrInternalServerError
-	}
-
-	c.Cookie(helpers.Cookie("signup", string(nsd), int(time.Hour/time.Second)))
+	c.Cookie(helpers.Cookie("signup", helpers.ToJson(newSessionData), int(time.Hour/time.Second)))
 
 	return c.JSON(respData)
 }
@@ -95,13 +82,7 @@ func RegisterUser(c *fiber.Ctx) error {
 		return app_err
 	}
 
-	usd, err := json.Marshal(map[string]any{"authJwt": authJwt})
-	if err != nil {
-		log.Println("signupControllers.go: RegisterUser: json.Marshal:", err)
-		return fiber.ErrInternalServerError
-	}
-
-	c.Cookie(helpers.Cookie("user", string(usd), int(10*24*time.Hour/time.Second)))
+	c.Cookie(helpers.Cookie("user", helpers.ToJson(map[string]any{"authJwt": authJwt}), int(10*24*time.Hour/time.Second)))
 	c.Cookie(helpers.Cookie("signup", "", 0))
 
 	return c.JSON(respData)

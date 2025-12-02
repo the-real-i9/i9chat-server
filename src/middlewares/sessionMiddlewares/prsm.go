@@ -1,8 +1,9 @@
 package sessionMiddlewares
 
 import (
-	"encoding/json"
 	"log"
+
+	"github.com/goccy/go-json"
 
 	"github.com/gofiber/fiber/v2"
 )

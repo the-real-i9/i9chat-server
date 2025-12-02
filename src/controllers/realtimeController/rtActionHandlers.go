@@ -2,12 +2,13 @@ package realtimeController
 
 import (
 	"context"
+	"i9chat/src/appTypes"
 	"i9chat/src/helpers"
 	"i9chat/src/services/chatServices/directChatService"
 	"i9chat/src/services/chatServices/groupChatService"
 )
 
-func sendDirectChatMsgHndl(ctx context.Context, clientUsername string, actionData map[string]any) (map[string]any, error) {
+func sendDirectChatMsgHndl(ctx context.Context, clientUser appTypes.ClientUser, actionData map[string]any) (map[string]any, error) {
 	var acd sendDirectChatMsg
 
 	helpers.ToStruct(actionData, &acd)
@@ -16,7 +17,7 @@ func sendDirectChatMsgHndl(ctx context.Context, clientUsername string, actionDat
 		return nil, val_err
 	}
 
-	return directChatService.SendMessage(ctx, clientUsername, acd.PartnerUsername, acd.ReplyTargetMsgId, acd.IsReply, acd.Msg, acd.At)
+	return directChatService.SendMessage(ctx, clientUser, acd.PartnerUsername, acd.ReplyTargetMsgId, acd.IsReply, acd.Msg, acd.At)
 }
 
 func ackDirectChatMsgDeliveredHndl(ctx context.Context, clientUsername string, actionData map[string]any) (any, error) {

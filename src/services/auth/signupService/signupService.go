@@ -7,6 +7,8 @@ import (
 	"i9chat/src/appTypes"
 	"i9chat/src/helpers"
 	user "i9chat/src/models/userModel"
+	"i9chat/src/services/eventStreamService"
+	"i9chat/src/services/eventStreamService/eventTypes"
 	"i9chat/src/services/mailService"
 	"i9chat/src/services/securityServices"
 	"os"
@@ -107,8 +109,14 @@ func RegisterUser(ctx context.Context, sessionData map[string]any, username, pas
 		return resp, "", err
 	}
 
+	go eventStreamService.QueueNewUserEvent(eventTypes.NewUserEvent{
+		Username: newUser.Username,
+		UserData: helpers.ToJson(newUser),
+	})
+
 	authJwt, err := securityServices.JwtSign(appTypes.ClientUser{
-		Username: username,
+		Username:      newUser.Username,
+		ProfilePicUrl: newUser.ProfilePicUrl,
 	}, os.Getenv("AUTH_JWT_SECRET"), time.Now().UTC().Add(10*24*time.Hour)) // 10 days
 	if err != nil {
 		return resp, "", err

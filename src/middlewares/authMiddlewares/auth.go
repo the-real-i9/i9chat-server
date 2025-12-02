@@ -1,11 +1,12 @@
 package authMiddlewares
 
 import (
-	"encoding/json"
 	"i9chat/src/appTypes"
 	"i9chat/src/services/securityServices"
 	"log"
 	"os"
+
+	"github.com/goccy/go-json"
 
 	"github.com/gofiber/fiber/v2"
 )

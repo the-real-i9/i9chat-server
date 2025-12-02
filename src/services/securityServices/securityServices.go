@@ -3,7 +3,6 @@ package securityServices
 import (
 	"errors"
 	"fmt"
-	"log"
 	"math/rand"
 	"os"
 	"time"
@@ -19,7 +18,7 @@ import (
 func HashPassword(password string) (string, error) {
 	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
-		log.Println("securityServices.go: HashPassword:", err)
+		helpers.LogError(err)
 		return "", fiber.ErrInternalServerError
 	}
 
@@ -32,7 +31,7 @@ func PasswordMatchesHash(hash string, password string) (bool, error) {
 		if errors.Is(err, bcrypt.ErrMismatchedHashAndPassword) {
 			return false, nil
 		} else {
-			log.Println("securityServices.go: HashPassword:", err)
+			helpers.LogError(err)
 			return false, fiber.ErrInternalServerError
 		}
 	}
@@ -64,7 +63,7 @@ func JwtSign(data any, secret string, expires time.Time) (string, error) {
 	jwt, err := token.SignedString([]byte(secret))
 
 	if err != nil {
-		log.Println("securityServices.go: JwtSign:", err)
+		helpers.LogError(err)
 		return "", fiber.ErrInternalServerError
 	}
 
@@ -75,7 +74,7 @@ func JwtVerify[T any](tokenString, secret string) (T, error) {
 	var data T
 
 	parser := jwt.NewParser()
-	token, err := parser.Parse(tokenString, func(t *jwt.Token) (interface{}, error) {
+	token, err := parser.Parse(tokenString, func(t *jwt.Token) (any, error) {
 
 		if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, fmt.Errorf("unexpected signing method: %v", t.Header["alg"])
@@ -94,7 +93,7 @@ func JwtVerify[T any](tokenString, secret string) (T, error) {
 			return data, fiber.NewError(fiber.StatusUnauthorized, "jwt error:", err.Error())
 		}
 
-		log.Println("securityServices.go: JwtVerify:", err)
+		helpers.LogError(err)
 		return data, fiber.ErrInternalServerError
 	}
 
