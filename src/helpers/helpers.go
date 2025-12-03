@@ -36,25 +36,6 @@ func ToStruct(val any, dest any) {
 	}
 }
 
-func ToMap(val any) (dest map[string]any) {
-	valType := reflect.TypeOf(val)
-
-	if valType.Kind() != reflect.Struct && !(valType.Kind() == reflect.Slice && valType.Elem().Kind() == reflect.Struct) {
-		panic("expected 'val' to be a struct or slice of structs")
-	}
-
-	bt, err := json.Marshal(val)
-	if err != nil {
-		LogError(err)
-	}
-
-	if err := json.Unmarshal(bt, dest); err != nil {
-		LogError(err)
-	}
-
-	return
-}
-
 func JoinWithCommaAnd(items ...string) string {
 	n := len(items)
 	if n == 0 {
@@ -115,30 +96,6 @@ func Cookie(name, value string, maxAge int) *fiber.Cookie {
 	c.MaxAge = maxAge
 
 	return c
-}
-
-func AsubsetB[T comparable](sA []T, sB []T) bool {
-	if len(sB) == 0 {
-		return false
-	}
-
-	if len(sA) == 0 {
-		return true
-	}
-
-	trk := make(map[T]bool, len(sB))
-
-	for _, el := range sB {
-		trk[el] = true
-	}
-
-	for _, el := range sA {
-		if !trk[el] {
-			return false
-		}
-	}
-
-	return true
 }
 
 func LogError(err error) {

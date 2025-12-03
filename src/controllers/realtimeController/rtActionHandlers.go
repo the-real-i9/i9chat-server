@@ -44,7 +44,7 @@ func ackDirectChatMsgReadHndl(ctx context.Context, clientUsername string, action
 	return directChatService.AckMessageRead(ctx, clientUsername, acd.PartnerUsername, acd.MsgId, acd.At)
 }
 
-func sendGroupChatMsgHndl(ctx context.Context, clientUsername string, actionData map[string]any) (map[string]any, error) {
+func sendGroupChatMsgHndl(ctx context.Context, clientUsername appTypes.ClientUser, actionData map[string]any) (map[string]any, error) {
 	var acd sendGroupChatMsg
 
 	helpers.ToStruct(actionData, &acd)

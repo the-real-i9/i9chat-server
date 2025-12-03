@@ -2,13 +2,14 @@ package groupChatService
 
 import (
 	"context"
+	"fmt"
 	"i9chat/src/appTypes"
+	"i9chat/src/appTypes/UITypes"
 	"i9chat/src/helpers"
 	groupChat "i9chat/src/models/chatModel/groupChatModel"
 	"i9chat/src/services/appServices"
 	"i9chat/src/services/eventStreamService"
 	"i9chat/src/services/eventStreamService/eventTypes"
-	"time"
 )
 
 func NewGroup(ctx context.Context, clientUsername, name, description string, pictureData []byte, initUsers []string, createdAt int64) (map[string]any, error) {
@@ -177,10 +178,10 @@ func AddUsersToGroup(ctx context.Context, groupId, clientUsername string, newUse
 
 	go eventStreamService.QueueGroupUsersAddedEvent(eventTypes.GroupUsersAddedEvent{
 		GroupId:        groupId,
-		AdminUser:      clientUsername,
+		Admin:          clientUsername,
 		NewMembers:     newActivity.NewUsernames,
 		MemberUsers:    newActivity.MemberUsernames,
-		AdminUserCHE:   newActivity.ClientUserCHE,
+		AdminCHE:       newActivity.ClientUserCHE,
 		NewMembersCHE:  newActivity.NewUsersCHE,
 		MemberUsersCHE: newActivity.MemberUsersCHE,
 	})
@@ -196,12 +197,12 @@ func AddUsersToGroup(ctx context.Context, groupId, clientUsername string, newUse
 
 		delete(che, "che_id")
 
-		newUserData := map[string]any{
+		newMemData := map[string]any{
 			"group":   newActivity.GroupInfo,
 			"history": []map[string]any{che},
 		}
 
-		broadcastNewGroup(newActivity.NewUsernames, newUserData)
+		broadcastNewGroup(newActivity.NewUsernames, newMemData)
 	}(newActivity)
 
 	if memus := newActivity.MemberUsernames; len(memus) != 0 {
@@ -219,15 +220,30 @@ func RemoveUserFromGroup(ctx context.Context, groupId, clientUsername, targetUse
 		return nil, err
 	}
 
-	if newActivity.MemberData != nil {
-		go func() {
-			broadcastActivity([]string{targetUser}, targetUserData, groupId)
-
-			broadcastActivity(newActivity.MemberUsernames, newActivity.MemberData, groupId)
-		}()
+	done := newActivity.ClientUserCHE != nil
+	if !done {
+		return nil, nil
 	}
 
-	return newActivity.ClientData, nil
+	go eventStreamService.QueueGroupUserRemovedEvent(eventTypes.GroupUserRemovedEvent{
+		GroupId:        groupId,
+		Admin:          clientUsername,
+		OldMember:      targetUser,
+		MemberUsers:    newActivity.MemberUsernames,
+		AdminCHE:       newActivity.ClientUserCHE,
+		OldMemberCHE:   newActivity.TargetUserCHE,
+		MemberUsersCHE: newActivity.MemberUsersCHE,
+	})
+
+	go broadcastActivity([]any{targetUser}, newActivity.TargetUserCHE["info"], groupId)
+
+	if memus := newActivity.MemberUsernames; len(memus) != 0 {
+		activInfo := newActivity.MemberUsersCHE[memus[0].(string)].(map[string]any)["info"]
+
+		go broadcastActivity(memus, activInfo, groupId)
+	}
+
+	return newActivity.ClientUserCHE["info"], nil
 }
 
 func JoinGroup(ctx context.Context, groupId, clientUsername string) (any, error) {
@@ -236,11 +252,35 @@ func JoinGroup(ctx context.Context, groupId, clientUsername string) (any, error)
 		return nil, err
 	}
 
-	if newActivity.MemberData != nil {
-		go broadcastActivity(newActivity.MemberUsernames, newActivity.MemberData, groupId)
+	done := newActivity.GroupInfo != nil
+	if !done {
+		return nil, nil
 	}
 
-	return newActivity.ClientData, nil
+	go eventStreamService.QueueGroupUserJoinedEvent(eventTypes.GroupUserJoinedEvent{
+		GroupId:        groupId,
+		NewMember:      clientUsername,
+		MemberUsers:    newActivity.MemberUsernames,
+		NewMemberCHE:   newActivity.ClientUserCHE,
+		MemberUsersCHE: newActivity.MemberUsersCHE,
+	})
+
+	if memus := newActivity.MemberUsernames; len(memus) != 0 {
+		activInfo := newActivity.MemberUsersCHE[memus[0].(string)].(map[string]any)["info"]
+
+		go broadcastActivity(memus, activInfo, groupId)
+	}
+
+	che := newActivity.ClientUserCHE
+
+	delete(che, "che_id")
+
+	newMemData := map[string]any{
+		"group":   newActivity.GroupInfo,
+		"history": []map[string]any{che},
+	}
+
+	return newMemData, nil
 }
 
 func LeaveGroup(ctx context.Context, groupId, clientUsername string) (any, error) {
@@ -249,11 +289,26 @@ func LeaveGroup(ctx context.Context, groupId, clientUsername string) (any, error
 		return nil, err
 	}
 
-	if newActivity.MemberData != nil {
-		go broadcastActivity(newActivity.MemberUsernames, newActivity.MemberData, groupId)
+	done := newActivity.ClientUserCHE != nil
+	if !done {
+		return nil, nil
 	}
 
-	return newActivity.ClientData, nil
+	go eventStreamService.QueueGroupUserLeftEvent(eventTypes.GroupUserLeftEvent{
+		GroupId:        groupId,
+		OldMember:      clientUsername,
+		MemberUsers:    newActivity.MemberUsernames,
+		OldMemberCHE:   newActivity.ClientUserCHE,
+		MemberUsersCHE: newActivity.MemberUsersCHE,
+	})
+
+	if memus := newActivity.MemberUsernames; len(memus) != 0 {
+		activInfo := newActivity.MemberUsersCHE[memus[0].(string)].(map[string]any)["info"]
+
+		go broadcastActivity(memus, activInfo, groupId)
+	}
+
+	return newActivity.ClientUserCHE["info"], nil
 }
 
 func MakeUserGroupAdmin(ctx context.Context, groupId, clientUsername, targetUser string) (any, error) {
@@ -262,45 +317,67 @@ func MakeUserGroupAdmin(ctx context.Context, groupId, clientUsername, targetUser
 		return nil, err
 	}
 
-	if newActivity.MemberData != nil {
-		go func() {
-			broadcastActivity([]string{targetUser}, newAdminData, groupId)
-
-			broadcastActivity(newActivity.MemberUsernames, newActivity.MemberData, groupId)
-		}()
+	done := newActivity.ClientUserCHE != nil
+	if !done {
+		return nil, nil
 	}
 
-	return newActivity.ClientData, nil
+	go eventStreamService.QueueGroupMakeUserAdminEvent(eventTypes.GroupMakeUserAdminEvent{
+		GroupId:        groupId,
+		Admin:          clientUsername,
+		NewAdmin:       targetUser,
+		MemberUsers:    newActivity.MemberUsernames,
+		AdminCHE:       newActivity.ClientUserCHE,
+		NewAdminCHE:    newActivity.TargetUserCHE,
+		MemberUsersCHE: newActivity.MemberUsersCHE,
+	})
+
+	go broadcastActivity([]any{targetUser}, newActivity.TargetUserCHE["info"], groupId)
+
+	if memus := newActivity.MemberUsernames; len(memus) != 0 {
+		activInfo := newActivity.MemberUsersCHE[memus[0].(string)].(map[string]any)["info"]
+
+		go broadcastActivity(memus, activInfo, groupId)
+	}
+
+	return newActivity.ClientUserCHE["info"], nil
 }
 
 func RemoveUserFromGroupAdmins(ctx context.Context, groupId, clientUsername, targetUser string) (any, error) {
-	newActivity, oldAdminData, err := groupChat.RemoveUserFromAdmins(ctx, groupId, clientUsername, targetUser)
+	newActivity, err := groupChat.RemoveUserFromAdmins(ctx, groupId, clientUsername, targetUser)
 	if err != nil {
 		return nil, err
 	}
 
-	if newActivity.MemberData != nil {
-		go func() {
-			broadcastActivity([]string{targetUser}, oldAdminData, groupId)
-
-			broadcastActivity(newActivity.MemberUsernames, newActivity.MemberData, groupId)
-		}()
+	done := newActivity.ClientUserCHE != nil
+	if !done {
+		return nil, nil
 	}
 
-	return newActivity.ClientData, nil
+	go eventStreamService.QueueGroupRemoveUserFromAdminsEvent(eventTypes.GroupRemoveUserFromAdminsEvent{
+		GroupId:        groupId,
+		Admin:          clientUsername,
+		OldAdmin:       targetUser,
+		MemberUsers:    newActivity.MemberUsernames,
+		AdminCHE:       newActivity.ClientUserCHE,
+		OldAdminCHE:    newActivity.TargetUserCHE,
+		MemberUsersCHE: newActivity.MemberUsersCHE,
+	})
+
+	go broadcastActivity([]any{targetUser}, newActivity.TargetUserCHE["info"], groupId)
+
+	if memus := newActivity.MemberUsernames; len(memus) != 0 {
+		activInfo := newActivity.MemberUsersCHE[memus[0].(string)].(map[string]any)["info"]
+
+		go broadcastActivity(memus, activInfo, groupId)
+	}
+
+	return newActivity.ClientUserCHE["info"], nil
 }
 
-func GetGroupInfo(ctx context.Context, groupId string) (map[string]any, error) {
-	return groupChat.GroupInfo(ctx, groupId)
-}
+func SendMessage(ctx context.Context, clientUser appTypes.ClientUser, groupId, replyTargetMsgId string, isReply bool, msgContent *appTypes.MsgContent, at int64) (map[string]any, error) {
 
-func GetGroupMemInfo(ctx context.Context, clientUsername, groupId string) (map[string]any, error) {
-	return groupChat.GroupMemInfo(ctx, clientUsername, groupId)
-}
-
-func SendMessage(ctx context.Context, clientUsername, groupId, replyTargetMsgId string, isReply bool, msgContent *appTypes.MsgContent, at int64) (map[string]any, error) {
-
-	err := appServices.UploadMessageMedia(ctx, clientUsername, msgContent)
+	err := appServices.UploadMessageMedia(ctx, clientUser.Username, msgContent)
 	if err != nil {
 		return nil, err
 	}
@@ -310,22 +387,36 @@ func SendMessage(ctx context.Context, clientUsername, groupId, replyTargetMsgId 
 	var newMessage groupChat.NewMessage
 
 	if !isReply {
-		newMessage, err = groupChat.SendMessage(ctx, clientUsername, groupId, string(msgContentJson), at)
+		newMessage, err = groupChat.SendMessage(ctx, clientUser.Username, groupId, msgContentJson, at)
 		if err != nil {
 			return nil, err
 		}
 	} else {
-		newMessage, err = groupChat.ReplyToMessage(ctx, clientUsername, groupId, replyTargetMsgId, string(msgContentJson), at)
+		newMessage, err = groupChat.ReplyToMessage(ctx, clientUser.Username, groupId, replyTargetMsgId, msgContentJson, at)
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	if newMessage.MemberData != nil {
-		go broadcastNewMessage(newMessage.MemberUsernames, newMessage.MemberData, groupId)
+	if newMessage.Id == "" {
+		return nil, nil
 	}
 
-	return newMessage.ClientData, nil
+	// queue new message event
+	go eventStreamService.QueueNewGroupMessageEvent(eventTypes.NewGroupMessageEvent{
+		FromUser: clientUser.Username,
+		ToGroup:  groupId,
+		CHEId:    newMessage.Id,
+		MsgData:  helpers.ToJson(newMessage),
+	})
+
+	go func(msgData groupChat.NewMessage) {
+		msgData.Sender = clientUser
+
+		broadcastNewMessage(newMessage.MemberUsernames, msgData, groupId)
+	}(newMessage)
+
+	return map[string]any{"new_msg_id": newMessage.Id}, nil
 }
 
 func AckMessageDelivered(ctx context.Context, clientUsername, groupId, msgId string, deliveredAt int64) (bool, error) {
@@ -334,15 +425,16 @@ func AckMessageDelivered(ctx context.Context, clientUsername, groupId, msgId str
 		return done, err
 	}
 
-	/*
-		** in bg worker,
-		** in a group:id:message:id cache key, ZAdd the user acknowledging delivery, using deliveredAt as score,
-		** after which you check if all groupMembers are present in this key (x in SScan: Zscore(x) != nil)
-		** if no nil result is retured, then the message is now delivered to all users
-		go broadcastMsgDelivered(msgAck.MemberUsernames, map[string]any{
-			"group_id": groupId,
-			"msg_id":   msgId,
-		}) */
+	if done {
+		// queue msg ack event
+		go eventStreamService.QueueGroupMsgAckEvent(eventTypes.GroupMsgAckEvent{
+			FromUser: clientUsername,
+			ToGroup:  groupId,
+			CHEId:    msgId,
+			Ack:      "delivered",
+			At:       fmt.Sprintf("%d", deliveredAt),
+		})
+	}
 
 	return done, nil
 }
@@ -353,46 +445,91 @@ func AckMessageRead(ctx context.Context, clientUsername, groupId, msgId string, 
 		return nil, err
 	}
 
-	/*
-		// broadcast in bg worker when read by all
-		go broadcastMsgRead(msgAck.MemberUsernames, map[string]any{
-			"group_id": groupId,
-			"msg_id":   msgId,
-		}) */
-
-	return done, nil
-}
-
-func ReactToMessage(ctx context.Context, clientUsername, groupId, msgId, reaction string, at int64) (any, error) {
-	rxnToMessage, err := groupChat.ReactToMessage(ctx, clientUsername, groupId, msgId, reaction, time.UnixMilli(at).UTC())
-	if err != nil {
-		return nil, err
-	}
-
-	if rxnToMessage.MemberData != nil {
-		go broadcastMsgReaction(rxnToMessage.MemberUsernames, rxnToMessage.MemberData)
-	}
-
-	return rxnToMessage.ClientData, nil
-}
-
-func RemoveReactionToMessage(ctx context.Context, clientUsername, groupId, msgId string, at int64) (any, error) {
-	memberUsernames, done, err := groupChat.RemoveReactionToMessage(ctx, clientUsername, groupId, msgId)
-	if err != nil {
-		return nil, err
-	}
-
 	if done {
-		go broadcastMsgReactionRemoved(memberUsernames, map[string]any{
-			"group_id":         groupId,
-			"msg_id":           msgId,
-			"reactor_username": clientUsername,
+		// queue msg ack event
+		go eventStreamService.QueueGroupMsgAckEvent(eventTypes.GroupMsgAckEvent{
+			FromUser: clientUsername,
+			ToGroup:  groupId,
+			CHEId:    msgId,
+			Ack:      "read",
+			At:       fmt.Sprintf("%d", readAt),
 		})
 	}
 
 	return done, nil
 }
 
-func GetChatHistory(ctx context.Context, clientUsername, groupId string, limit int, offset int64) (any, error) {
-	return groupChat.ChatHistory(ctx, clientUsername, groupId, limit, time.UnixMilli(offset).UTC())
+func ReactToMessage(ctx context.Context, clientUser appTypes.ClientUser, groupId, msgId, emoji string, at int64) (any, error) {
+	rxnToMessage, err := groupChat.ReactToMessage(ctx, clientUser.Username, groupId, msgId, emoji, at)
+	if err != nil {
+		return nil, err
+	}
+
+	done := rxnToMessage.CHEId != ""
+
+	if !done {
+		return done, nil
+	}
+
+	// queue msg reaction event
+	go eventStreamService.QueueNewGroupMsgReactionEvent(eventTypes.NewGroupMsgReactionEvent{
+		FromUser: clientUser.Username,
+		ToGroup:  groupId,
+		CHEId:    rxnToMessage.CHEId,
+		RxnData:  helpers.ToJson(rxnToMessage),
+		ToMsgId:  msgId,
+		Emoji:    emoji,
+	})
+
+	go broadcastMsgReaction(rxnToMessage.MemberUsernames, map[string]any{
+		"in_group":  groupId,
+		"to_msg_id": msgId,
+		"reaction": UITypes.MsgReaction{
+			Emoji:   emoji,
+			Reactor: clientUser,
+		},
+	})
+
+	return done, nil
+}
+
+func RemoveReactionToMessage(ctx context.Context, clientUsername, groupId, msgId string, at int64) (any, error) {
+	rrtm, err := groupChat.RemoveReactionToMessage(ctx, clientUsername, groupId, msgId)
+	if err != nil {
+		return nil, err
+	}
+
+	done := rrtm.CHEId != ""
+
+	if !done {
+		return done, nil
+	}
+
+	// queue reaction removed event
+	go eventStreamService.QueueGroupMsgReactionRemovedEvent(eventTypes.GroupMsgReactionRemovedEvent{
+		FromUser: clientUsername,
+		ToGroup:  groupId,
+		ToMsgId:  msgId,
+		CHEId:    rrtm.CHEId,
+	})
+
+	go broadcastMsgReactionRemoved(rrtm.MemberUsernames, map[string]any{
+		"in_group":     groupId,
+		"msg_id":       msgId,
+		"reactor_user": clientUsername,
+	})
+
+	return done, nil
+}
+
+func GetChatHistory(ctx context.Context, clientUsername, groupId string, limit int, cursor float64) (any, error) {
+	return groupChat.ChatHistory(ctx, clientUsername, groupId, limit, cursor)
+}
+
+func GetGroupInfo(ctx context.Context, groupId string) (map[string]any, error) {
+	return groupChat.GroupInfo(ctx, groupId)
+}
+
+func GetGroupMemInfo(ctx context.Context, clientUsername, groupId string) (map[string]any, error) {
+	return groupChat.GroupMemInfo(ctx, clientUsername, groupId)
 }

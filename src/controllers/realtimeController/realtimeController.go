@@ -108,7 +108,7 @@ var WSStream = websocket.New(func(c *websocket.Conn) {
 			w_err = c.WriteJSON(helpers.WSReply(respData, body.Action))
 		case "group chat: send message":
 
-			respData, err := sendGroupChatMsgHndl(ctx, clientUser.Username, body.Data)
+			respData, err := sendGroupChatMsgHndl(ctx, clientUser, body.Data)
 			if err != nil {
 				w_err = c.WriteJSON(helpers.WSErrReply(err, body.Action))
 				continue

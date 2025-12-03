@@ -155,7 +155,7 @@ func newGroupsStreamBgWorker(rdb *redis.Client) {
 				eg.Go(func() error {
 					ownerUser, groupIdWithChatInfoPairs := ownerUser, groupIdWithChatInfoPairs
 
-					return cache.StoreUserChats(sharedCtx, ownerUser, groupIdWithChatInfoPairs)
+					return cache.StoreNewUserChats(sharedCtx, ownerUser, groupIdWithChatInfoPairs)
 				})
 			}
 
@@ -163,7 +163,7 @@ func newGroupsStreamBgWorker(rdb *redis.Client) {
 				eg.Go(func() error {
 					ownerUser, groupId_stmsgId_Pairs := ownerUser, groupId_stmsgId_Pairs
 
-					return cache.StoreUserChatsSorted(sharedCtx, ownerUser, groupId_stmsgId_Pairs)
+					return cache.StoreUserChatIdents(sharedCtx, ownerUser, groupId_stmsgId_Pairs)
 				})
 			}
 

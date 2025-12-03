@@ -50,6 +50,8 @@ func newDirectMessagesStreamBgWorker(rdb *redis.Client) {
 
 				var msg eventTypes.NewDirectMessageEvent
 
+				msg.FirstFromUser = helpers.FromJson[bool](stmsg.Values["ffu"].(string))
+				msg.FirstToUser = helpers.FromJson[bool](stmsg.Values["ftu"].(string))
 				msg.FromUser = stmsg.Values["fromUser"].(string)
 				msg.ToUser = stmsg.Values["toUser"].(string)
 				msg.CHEId = stmsg.Values["CHEId"].(string)
@@ -113,7 +115,7 @@ func newDirectMessagesStreamBgWorker(rdb *redis.Client) {
 				eg.Go(func() error {
 					ownerUser, partnerUserWithChatInfoPairs := ownerUser, partnerUserWithChatInfoPairs
 
-					return cache.StoreUserChats(sharedCtx, ownerUser, partnerUserWithChatInfoPairs)
+					return cache.StoreNewUserChats(sharedCtx, ownerUser, partnerUserWithChatInfoPairs)
 				})
 			}
 
@@ -121,7 +123,7 @@ func newDirectMessagesStreamBgWorker(rdb *redis.Client) {
 				eg.Go(func() error {
 					ownerUser, partnerUser_stmsgId_Pairs := ownerUser, partnerUser_stmsgId_Pairs
 
-					return cache.StoreUserChatsSorted(sharedCtx, ownerUser, partnerUser_stmsgId_Pairs)
+					return cache.StoreUserChatIdents(sharedCtx, ownerUser, partnerUser_stmsgId_Pairs)
 				})
 			}
 
@@ -129,7 +131,7 @@ func newDirectMessagesStreamBgWorker(rdb *redis.Client) {
 				eg.Go(func() error {
 					ownerUser, partnerUser_stmsgId_Pairs := ownerUser, partnerUser_stmsgId_Pairs
 
-					return cache.StoreUserChatsSorted(sharedCtx, ownerUser, partnerUser_stmsgId_Pairs)
+					return cache.StoreUserChatIdents(sharedCtx, ownerUser, partnerUser_stmsgId_Pairs)
 				})
 			}
 

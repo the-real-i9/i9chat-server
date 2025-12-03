@@ -13,10 +13,10 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-func groupUsersAddedStreamBgWorker(rdb *redis.Client) {
+func groupUsersRemovedStreamBgWorker(rdb *redis.Client) {
 	var (
-		streamName   = "group_users_added"
-		groupName    = "group_user_added_listeners"
+		streamName   = "group_users_removed"
+		groupName    = "group_user_removed_listeners"
 		consumerName = "worker-1"
 	)
 
@@ -44,19 +44,19 @@ func groupUsersAddedStreamBgWorker(rdb *redis.Client) {
 			}
 
 			var stmsgIds []string
-			var msgs []eventTypes.GroupUsersAddedEvent
+			var msgs []eventTypes.GroupUserRemovedEvent
 
 			for _, stmsg := range streams[0].Messages {
 				stmsgIds = append(stmsgIds, stmsg.ID)
 
-				var msg eventTypes.GroupUsersAddedEvent
+				var msg eventTypes.GroupUserRemovedEvent
 
 				msg.GroupId = stmsg.Values["groupId"].(string)
 				msg.Admin = stmsg.Values["admin"].(string)
-				msg.NewMembers = helpers.FromJson[appTypes.BinableSlice](stmsg.Values["newMembers"].(string))
+				msg.OldMember = stmsg.Values["oldMember"].(string)
 				msg.MemberUsers = helpers.FromJson[appTypes.BinableSlice](stmsg.Values["memberUsers"].(string))
 				msg.AdminCHE = helpers.FromJson[appTypes.BinableMap](stmsg.Values["adminCHE"].(string))
-				msg.NewMembersCHE = helpers.FromJson[appTypes.BinableMap](stmsg.Values["newMembersCHE"].(string))
+				msg.OldMemberCHE = helpers.FromJson[appTypes.BinableMap](stmsg.Values["oldMemberCHE"].(string))
 				msg.MemberUsersCHE = helpers.FromJson[appTypes.BinableMap](stmsg.Values["memberUsersCHE"].(string))
 
 				msgs = append(msgs, msg)
@@ -65,11 +65,7 @@ func groupUsersAddedStreamBgWorker(rdb *redis.Client) {
 
 			msgsLen := len(msgs)
 
-			groupNewMembers := make(map[string][]any, msgsLen)
-
-			newUserChats := make(map[string][]string)
-
-			userChats := make(map[string]map[string]string)
+			groupRemovedMembers := make(map[string][]any, msgsLen)
 
 			newGroupActivityEntries := []string{}
 
@@ -77,7 +73,7 @@ func groupUsersAddedStreamBgWorker(rdb *redis.Client) {
 
 			// batch data for batch processing
 			for i, msg := range msgs {
-				groupNewMembers[msg.GroupId] = append(groupNewMembers[msg.GroupId], msg.NewMembers...)
+				groupRemovedMembers[msg.GroupId] = append(groupRemovedMembers[msg.GroupId], msg.OldMember)
 
 				gactData := msg.AdminCHE
 
@@ -87,24 +83,14 @@ func groupUsersAddedStreamBgWorker(rdb *redis.Client) {
 
 				chatGroupActivities[msg.Admin+" "+msg.GroupId] = append(chatGroupActivities[msg.Admin+" "+msg.GroupId], [2]string{CHEId, stmsgIds[i]})
 
-				for nmemi, newMem := range msg.NewMembers {
-					newMem := newMem.(string)
-
-					newUserChats[newMem] = append(newUserChats[newMem], msg.GroupId, helpers.ToJson(map[string]any{"type": "group", "group": msg.GroupId}))
-
-					if userChats[newMem] == nil {
-						userChats[newMem] = make(map[string]string)
-					}
-
-					userChats[newMem][msg.GroupId] = fmt.Sprintf("%s-%d", stmsgIds[i], nmemi)
-
-					gactData := msg.NewMembersCHE[newMem].(map[string]any)
+				{
+					gactData := msg.OldMemberCHE
 
 					CHEId := gactData["che_id"].(string)
 
 					newGroupActivityEntries = append(newGroupActivityEntries, CHEId, helpers.ToJson(gactData))
 
-					chatGroupActivities[newMem+" "+msg.GroupId] = append(chatGroupActivities[newMem+" "+msg.GroupId], [2]string{CHEId, fmt.Sprintf("%s-%d", stmsgIds[i], nmemi)})
+					chatGroupActivities[msg.OldMember+" "+msg.GroupId] = append(chatGroupActivities[msg.OldMember+" "+msg.GroupId], [2]string{CHEId, stmsgIds[i]})
 				}
 
 				for memui, memUser := range msg.MemberUsers {
@@ -127,27 +113,11 @@ func groupUsersAddedStreamBgWorker(rdb *redis.Client) {
 				return
 			}
 
-			for groupId, newMembers := range groupNewMembers {
+			for groupId, remMembers := range groupRemovedMembers {
 				eg.Go(func() error {
-					groupId, newMembers := groupId, newMembers
+					groupId, remMembers := groupId, remMembers
 
-					return cache.StoreGroupMembers(sharedCtx, groupId, newMembers)
-				})
-			}
-
-			for ownerUser, groupIdWithChatInfoPairs := range newUserChats {
-				eg.Go(func() error {
-					ownerUser, groupIdWithChatInfoPairs := ownerUser, groupIdWithChatInfoPairs
-
-					return cache.StoreNewUserChats(sharedCtx, ownerUser, groupIdWithChatInfoPairs)
-				})
-			}
-
-			for ownerUser, groupId_stmsgId_Pairs := range userChats {
-				eg.Go(func() error {
-					ownerUser, groupId_stmsgId_Pairs := ownerUser, groupId_stmsgId_Pairs
-
-					return cache.StoreUserChatIdents(sharedCtx, ownerUser, groupId_stmsgId_Pairs)
+					return cache.RemoveGroupMembers(sharedCtx, groupId, remMembers)
 				})
 			}
 

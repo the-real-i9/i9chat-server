@@ -13,10 +13,10 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-func groupUsersAddedStreamBgWorker(rdb *redis.Client) {
+func groupUsersJoinedStreamBgWorker(rdb *redis.Client) {
 	var (
-		streamName   = "group_users_added"
-		groupName    = "group_user_added_listeners"
+		streamName   = "group_users_joined"
+		groupName    = "group_user_joined_listeners"
 		consumerName = "worker-1"
 	)
 
@@ -44,19 +44,17 @@ func groupUsersAddedStreamBgWorker(rdb *redis.Client) {
 			}
 
 			var stmsgIds []string
-			var msgs []eventTypes.GroupUsersAddedEvent
+			var msgs []eventTypes.GroupUserJoinedEvent
 
 			for _, stmsg := range streams[0].Messages {
 				stmsgIds = append(stmsgIds, stmsg.ID)
 
-				var msg eventTypes.GroupUsersAddedEvent
+				var msg eventTypes.GroupUserJoinedEvent
 
 				msg.GroupId = stmsg.Values["groupId"].(string)
-				msg.Admin = stmsg.Values["admin"].(string)
-				msg.NewMembers = helpers.FromJson[appTypes.BinableSlice](stmsg.Values["newMembers"].(string))
+				msg.NewMember = stmsg.Values["newMember"].(string)
 				msg.MemberUsers = helpers.FromJson[appTypes.BinableSlice](stmsg.Values["memberUsers"].(string))
-				msg.AdminCHE = helpers.FromJson[appTypes.BinableMap](stmsg.Values["adminCHE"].(string))
-				msg.NewMembersCHE = helpers.FromJson[appTypes.BinableMap](stmsg.Values["newMembersCHE"].(string))
+				msg.NewMemberCHE = helpers.FromJson[appTypes.BinableMap](stmsg.Values["newMemberCHE"].(string))
 				msg.MemberUsersCHE = helpers.FromJson[appTypes.BinableMap](stmsg.Values["memberUsersCHE"].(string))
 
 				msgs = append(msgs, msg)
@@ -77,35 +75,25 @@ func groupUsersAddedStreamBgWorker(rdb *redis.Client) {
 
 			// batch data for batch processing
 			for i, msg := range msgs {
-				groupNewMembers[msg.GroupId] = append(groupNewMembers[msg.GroupId], msg.NewMembers...)
+				groupNewMembers[msg.GroupId] = append(groupNewMembers[msg.GroupId], msg.NewMember)
 
-				gactData := msg.AdminCHE
+				newMem := msg.NewMember
+
+				newUserChats[newMem] = append(newUserChats[newMem], msg.GroupId, helpers.ToJson(map[string]any{"type": "group", "group": msg.GroupId}))
+
+				if userChats[newMem] == nil {
+					userChats[newMem] = make(map[string]string)
+				}
+
+				userChats[newMem][msg.GroupId] = stmsgIds[i]
+
+				gactData := msg.NewMemberCHE
 
 				CHEId := gactData["che_id"].(string)
 
 				newGroupActivityEntries = append(newGroupActivityEntries, CHEId, helpers.ToJson(gactData))
 
-				chatGroupActivities[msg.Admin+" "+msg.GroupId] = append(chatGroupActivities[msg.Admin+" "+msg.GroupId], [2]string{CHEId, stmsgIds[i]})
-
-				for nmemi, newMem := range msg.NewMembers {
-					newMem := newMem.(string)
-
-					newUserChats[newMem] = append(newUserChats[newMem], msg.GroupId, helpers.ToJson(map[string]any{"type": "group", "group": msg.GroupId}))
-
-					if userChats[newMem] == nil {
-						userChats[newMem] = make(map[string]string)
-					}
-
-					userChats[newMem][msg.GroupId] = fmt.Sprintf("%s-%d", stmsgIds[i], nmemi)
-
-					gactData := msg.NewMembersCHE[newMem].(map[string]any)
-
-					CHEId := gactData["che_id"].(string)
-
-					newGroupActivityEntries = append(newGroupActivityEntries, CHEId, helpers.ToJson(gactData))
-
-					chatGroupActivities[newMem+" "+msg.GroupId] = append(chatGroupActivities[newMem+" "+msg.GroupId], [2]string{CHEId, fmt.Sprintf("%s-%d", stmsgIds[i], nmemi)})
-				}
+				chatGroupActivities[newMem+" "+msg.GroupId] = append(chatGroupActivities[newMem+" "+msg.GroupId], [2]string{CHEId, stmsgIds[i]})
 
 				for memui, memUser := range msg.MemberUsers {
 					memUser := memUser.(string)

@@ -114,7 +114,7 @@ func directMsgAcksStreamBgWorker(rdb *redis.Client) {
 				eg.Go(func() error {
 					ownerUser, partnerUser_stmsgId_Pairs := ownerUser, partnerUser_stmsgId_Pairs
 
-					return cache.StoreUserChatsSorted(sharedCtx, ownerUser, partnerUser_stmsgId_Pairs)
+					return cache.StoreUserChatIdents(sharedCtx, ownerUser, partnerUser_stmsgId_Pairs)
 				})
 			}
 

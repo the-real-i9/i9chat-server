@@ -81,7 +81,7 @@ func StoreGroupAdmins(ctx context.Context, groupId string, admins []any) error {
 	return nil
 }
 
-func StoreUserChats(ctx context.Context, ownerUser string, chatIdentWithInfoPairs []string) error {
+func StoreNewUserChats(ctx context.Context, ownerUser string, chatIdentWithInfoPairs []string) error {
 	if err := rdb().HSet(ctx, fmt.Sprintf("user:%s:chats", ownerUser), chatIdentWithInfoPairs).Err(); err != nil {
 		helpers.LogError(err)
 
@@ -101,7 +101,7 @@ func StoreUserChatUnreadMsgs(ctx context.Context, ownerUser, chatIdent string, u
 	return nil
 }
 
-func StoreUserChatsSorted(ctx context.Context, ownerUser string, chatIdent_stmsgId_Pairs map[string]string) error {
+func StoreUserChatIdents(ctx context.Context, ownerUser string, chatIdent_stmsgId_Pairs map[string]string) error {
 	members := []redis.Z{}
 	for partnerUser, stmsgId := range chatIdent_stmsgId_Pairs {
 
@@ -178,6 +178,46 @@ func StoreGroupChatHistory(ctx context.Context, ownerUser, groupId string, CHEId
 	}
 
 	if err := rdb().ZAdd(ctx, fmt.Sprintf("group_chat:owner:%s:group_id:%s:history", ownerUser, groupId), members...).Err(); err != nil {
+		helpers.LogError(err)
+
+		return err
+	}
+
+	return nil
+}
+
+func StoreGroupMsgDeliveredToUsers(ctx context.Context, groupId, msgId string, user_deliveredAt_Pairs [][2]string) error {
+	members := []redis.Z{}
+	for _, pair := range user_deliveredAt_Pairs {
+		user := pair[0]
+
+		members = append(members, redis.Z{
+			Score:  stmsgIdToScore(pair[1]),
+			Member: user,
+		})
+	}
+
+	if err := rdb().ZAdd(ctx, fmt.Sprintf("group:%s:msg:%s:delivered_to_users", groupId, msgId), members...).Err(); err != nil {
+		helpers.LogError(err)
+
+		return err
+	}
+
+	return nil
+}
+
+func StoreGroupMsgReadByUsers(ctx context.Context, groupId, msgId string, user_deliveredAt_Pairs [][2]string) error {
+	members := []redis.Z{}
+	for _, pair := range user_deliveredAt_Pairs {
+		user := pair[0]
+
+		members = append(members, redis.Z{
+			Score:  stmsgIdToScore(pair[1]),
+			Member: user,
+		})
+	}
+
+	if err := rdb().ZAdd(ctx, fmt.Sprintf("group:%s:msg:%s:read_by_users", groupId, msgId), members...).Err(); err != nil {
 		helpers.LogError(err)
 
 		return err

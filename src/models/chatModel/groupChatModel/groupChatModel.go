@@ -805,10 +805,10 @@ func ChatHistory(ctx context.Context, clientUsername, groupId string, limit int,
 	return nil, nil
 }
 
-func GroupInfo(ctx context.Context, groupId string) (map[string]any, error) {
-	return nil, nil
+func GroupInfo(ctx context.Context, groupId string) (UITypes.GroupInfo, error) {
+	return UITypes.GroupInfo{}, nil
 }
 
-func GroupMemInfo(ctx context.Context, clientUsername, groupId string) (map[string]any, error) {
+func GroupMembers(ctx context.Context, clientUsername, groupId string) ([]UITypes.GroupMemberSnippet, error) {
 	return nil, nil
 }

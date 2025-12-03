@@ -15,11 +15,11 @@ func broadcastNewGroup(targetUsers []any, data any) {
 	}
 }
 
-func broadcastNewMessage(memberUsernames []string, data any, groupId string) {
+func broadcastNewMessage(memberUsernames []any, data any, groupId string) {
 	for _, mu := range memberUsernames {
 
-		realtimeService.SendEventMsg(mu, appTypes.ServerEventMsg{
-			Event: "new group chat message",
+		realtimeService.SendEventMsg(mu.(string), appTypes.ServerEventMsg{
+			Event: "group chat: new message",
 			Data: map[string]any{
 				"message":  data,
 				"group_id": groupId,
@@ -32,7 +32,7 @@ func broadcastActivity(memberUsernames []any, data any, groupId string) {
 	for _, mu := range memberUsernames {
 
 		realtimeService.SendEventMsg(mu.(string), appTypes.ServerEventMsg{
-			Event: "new group chat activity",
+			Event: "group chat: new activity",
 			Data: map[string]any{
 				"info":     data,
 				"group_id": groupId,
@@ -41,28 +41,10 @@ func broadcastActivity(memberUsernames []any, data any, groupId string) {
 	}
 }
 
-func broadcastMsgDelivered(memberUsernames []string, data any) {
+func broadcastMsgReaction(memberUsernames []any, data any) {
 	for _, mu := range memberUsernames {
-		realtimeService.SendEventMsg(mu, appTypes.ServerEventMsg{
-			Event: "group chat message delivered",
-			Data:  data,
-		})
-	}
-}
-
-func broadcastMsgRead(memberUsernames []string, data any) {
-	for _, mu := range memberUsernames {
-		realtimeService.SendEventMsg(mu, appTypes.ServerEventMsg{
-			Event: "group chat message read",
-			Data:  data,
-		})
-	}
-}
-
-func broadcastMsgReaction(memberUsernames []string, data any) {
-	for _, mu := range memberUsernames {
-		realtimeService.SendEventMsg(mu, appTypes.ServerEventMsg{
-			Event: "group chat message reaction",
+		realtimeService.SendEventMsg(mu.(string), appTypes.ServerEventMsg{
+			Event: "group chat: message reaction",
 			Data:  data,
 		})
 	}
@@ -70,9 +52,8 @@ func broadcastMsgReaction(memberUsernames []string, data any) {
 
 func broadcastMsgReactionRemoved(memberUsernames []any, data any) {
 	for _, mu := range memberUsernames {
-		mu := mu.(string)
-		realtimeService.SendEventMsg(mu, appTypes.ServerEventMsg{
-			Event: "group chat message reaction removed",
+		realtimeService.SendEventMsg(mu.(string), appTypes.ServerEventMsg{
+			Event: "group chat: message reaction removed",
 			Data:  data,
 		})
 	}

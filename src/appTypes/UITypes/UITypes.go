@@ -16,16 +16,28 @@ type UserProfile struct {
 	Geolocation   map[string]any `json:"geolocation"`
 }
 
+type GroupInfo struct {
+	Id          string `json:"id"`
+	Name        string `json:"name"`
+	PictureUrl  string `json:"picture_url"`
+	Description string `json:"description"`
+}
+
+type GroupMemberSnippet struct {
+	Username      string `json:"username"`
+	ProfilePicUrl string `json:"profile_pic_url"`
+	Bio           string `json:"bio"`
+}
+
 type ChatPartnerUser struct {
 	Username      string `json:"username"`
 	ProfilePicUrl string `json:"profile_pic_url"`
 }
 
 type ChatGroup struct {
-	Id          string `json:"id"`
-	Name        string `json:"name"`
-	PictureUrl  string `json:"picture_url"`
-	Description string `json:"description"`
+	Id         string `json:"id"`
+	Name       string `json:"name"`
+	PictureUrl string `json:"picture_url"`
 }
 
 type ChatSnippet struct {

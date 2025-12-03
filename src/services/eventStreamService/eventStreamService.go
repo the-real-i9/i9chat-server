@@ -133,6 +133,66 @@ func QueueGroupUsersAddedEvent(ege eventTypes.GroupUsersAddedEvent) {
 	}
 }
 
+func QueueGroupUserRemovedEvent(ege eventTypes.GroupUserRemovedEvent) {
+	ctx := context.Background()
+
+	err := rdb().XAdd(ctx, &redis.XAddArgs{
+		Stream: "group_users_removed",
+		Values: ege,
+	}).Err()
+	if err != nil {
+		helpers.LogError(err)
+	}
+}
+
+func QueueGroupUserJoinedEvent(ege eventTypes.GroupUserJoinedEvent) {
+	ctx := context.Background()
+
+	err := rdb().XAdd(ctx, &redis.XAddArgs{
+		Stream: "group_users_joined",
+		Values: ege,
+	}).Err()
+	if err != nil {
+		helpers.LogError(err)
+	}
+}
+
+func QueueGroupUserLeftEvent(ege eventTypes.GroupUserLeftEvent) {
+	ctx := context.Background()
+
+	err := rdb().XAdd(ctx, &redis.XAddArgs{
+		Stream: "group_users_left",
+		Values: ege,
+	}).Err()
+	if err != nil {
+		helpers.LogError(err)
+	}
+}
+
+func QueueGroupMakeUserAdminEvent(ege eventTypes.GroupMakeUserAdminEvent) {
+	ctx := context.Background()
+
+	err := rdb().XAdd(ctx, &redis.XAddArgs{
+		Stream: "group_new_admins",
+		Values: ege,
+	}).Err()
+	if err != nil {
+		helpers.LogError(err)
+	}
+}
+
+func QueueGroupRemoveUserFromAdminsEvent(ege eventTypes.GroupRemoveUserFromAdminsEvent) {
+	ctx := context.Background()
+
+	err := rdb().XAdd(ctx, &redis.XAddArgs{
+		Stream: "group_removed_admins",
+		Values: ege,
+	}).Err()
+	if err != nil {
+		helpers.LogError(err)
+	}
+}
+
 func QueueNewGroupMessageEvent(ndme eventTypes.NewGroupMessageEvent) {
 	ctx := context.Background()
 

@@ -18,15 +18,6 @@ type UserPresenceChangeEvent struct {
 	LastSeen int64  `redis:"lastSeen" json:"lastSeen"`
 }
 
-type NewDirectMessageEvent struct {
-	FirstFromUser bool   `redis:"ffu" json:"ffu"`
-	FirstToUser   bool   `redis:"ftu" json:"ftu"`
-	FromUser      string `redis:"fromUser" json:"fromUser"`
-	ToUser        string `redis:"toUser" json:"toUser"`
-	CHEId         string `redis:"CHEId" json:"CHEId"`
-	MsgData       string `redis:"msgData" json:"msgData"`
-}
-
 type NewGroupEvent struct {
 	CreatorUser     string                `redis:"creatorUser" json:"creatorUser"`
 	GroupId         string                `redis:"groupId" json:"groupId"`
@@ -47,37 +38,67 @@ type GroupEditEvent struct {
 
 type GroupUsersAddedEvent struct {
 	GroupId        string                `redis:"groupId" json:"groupId"`
-	AdminUser      string                `redis:"adminUser" json:"adminUser"`
+	Admin          string                `redis:"admin" json:"admin"`
 	NewMembers     appTypes.BinableSlice `redis:"newMembers" json:"newMembers"`
 	MemberUsers    appTypes.BinableSlice `redis:"memberUsers" json:"memberUsers"`
-	AdminUserCHE   appTypes.BinableMap   `redis:"adminUserCHE" json:"adminUserCHE"`
+	AdminCHE       appTypes.BinableMap   `redis:"adminCHE" json:"adminCHE"`
 	NewMembersCHE  appTypes.BinableMap   `redis:"newMembersCHE" json:"newMembersCHE"`
 	MemberUsersCHE appTypes.BinableMap   `redis:"memberUsersCHE" json:"memberUsersCHE"`
 }
 
-type GroupUserJoinedEvent struct {
-	GroupId string `redis:"groupId" json:"groupId"`
-	User    string `redis:"user" json:"user"`
+type GroupUserRemovedEvent struct {
+	GroupId        string                `redis:"groupId" json:"groupId"`
+	Admin          string                `redis:"admin" json:"admin"`
+	OldMember      string                `redis:"oldMember" json:"oldMember"`
+	MemberUsers    appTypes.BinableSlice `redis:"memberUsers" json:"memberUsers"`
+	AdminCHE       appTypes.BinableMap   `redis:"adminCHE" json:"adminCHE"`
+	OldMemberCHE   appTypes.BinableMap   `redis:"oldMemberCHE" json:"oldMemberCHE"`
+	MemberUsersCHE appTypes.BinableMap   `redis:"memberUsersCHE" json:"memberUsersCHE"`
 }
 
-type GroupUserRemovedEvent struct {
-	GroupId string `redis:"groupId" json:"groupId"`
-	User    string `redis:"user" json:"user"`
+type GroupUserJoinedEvent struct {
+	GroupId        string                `redis:"groupId" json:"groupId"`
+	NewMember      string                `redis:"newMember" json:"newMember"`
+	MemberUsers    appTypes.BinableSlice `redis:"memberUsers" json:"memberUsers"`
+	NewMemberCHE   appTypes.BinableMap   `redis:"newMemberCHE" json:"newMemberCHE"`
+	MemberUsersCHE appTypes.BinableMap   `redis:"memberUsersCHE" json:"memberUsersCHE"`
 }
 
 type GroupUserLeftEvent struct {
-	GroupId string `redis:"groupId" json:"groupId"`
-	User    string `redis:"user" json:"user"`
+	GroupId        string                `redis:"groupId" json:"groupId"`
+	OldMember      string                `redis:"oldMember" json:"oldMember"`
+	MemberUsers    appTypes.BinableSlice `redis:"memberUsers" json:"memberUsers"`
+	OldMemberCHE   appTypes.BinableMap   `redis:"oldMemberCHE" json:"oldMemberCHE"`
+	MemberUsersCHE appTypes.BinableMap   `redis:"memberUsersCHE" json:"memberUsersCHE"`
 }
 
 type GroupMakeUserAdminEvent struct {
-	GroupId string `redis:"groupId" json:"groupId"`
-	User    string `redis:"user" json:"user"`
+	GroupId        string                `redis:"groupId" json:"groupId"`
+	Admin          string                `redis:"admin" json:"admin"`
+	NewAdmin       string                `redis:"newAdmin" json:"newAdmin"`
+	MemberUsers    appTypes.BinableSlice `redis:"memberUsers" json:"memberUsers"`
+	AdminCHE       appTypes.BinableMap   `redis:"adminCHE" json:"adminCHE"`
+	NewAdminCHE    appTypes.BinableMap   `redis:"newAdminCHE" json:"newAdminCHE"`
+	MemberUsersCHE appTypes.BinableMap   `redis:"memberUsersCHE" json:"memberUsersCHE"`
 }
 
 type GroupRemoveUserFromAdminsEvent struct {
-	GroupId string `redis:"groupId" json:"groupId"`
-	User    string `redis:"user" json:"user"`
+	GroupId        string                `redis:"groupId" json:"groupId"`
+	Admin          string                `redis:"admin" json:"admin"`
+	OldAdmin       string                `redis:"oldAdmin" json:"oldAdmin"`
+	MemberUsers    appTypes.BinableSlice `redis:"memberUsers" json:"memberUsers"`
+	AdminCHE       appTypes.BinableMap   `redis:"adminCHE" json:"adminCHE"`
+	OldAdminCHE    appTypes.BinableMap   `redis:"oldAdminCHE" json:"oldAdminCHE"`
+	MemberUsersCHE appTypes.BinableMap   `redis:"memberUsersCHE" json:"memberUsersCHE"`
+}
+
+type NewDirectMessageEvent struct {
+	FirstFromUser bool   `redis:"ffu" json:"ffu"`
+	FirstToUser   bool   `redis:"ftu" json:"ftu"`
+	FromUser      string `redis:"fromUser" json:"fromUser"`
+	ToUser        string `redis:"toUser" json:"toUser"`
+	CHEId         string `redis:"CHEId" json:"CHEId"`
+	MsgData       string `redis:"msgData" json:"msgData"`
 }
 
 type NewGroupMessageEvent struct {
@@ -118,7 +139,7 @@ type GroupMsgAckEvent struct {
 	ToGroup  string `redis:"toGroup" json:"toGroup"`
 	CHEId    string `redis:"CHEId" json:"CHEId"`
 	Ack      string `redis:"ack" json:"ack"`
-	At       int64  `redis:"at" json:"at"`
+	At       string `redis:"at" json:"at"`
 }
 
 type DirectMsgReactionRemovedEvent struct {

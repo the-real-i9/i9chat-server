@@ -71,15 +71,6 @@ func AckMessageDelivered(ctx context.Context, clientUsername, partnerUsername, m
 	}
 
 	if done {
-		go realtimeService.SendEventMsg(partnerUsername, appTypes.ServerEventMsg{
-			Event: "direct chat: message delivered",
-			Data: map[string]any{
-				"partner_username": clientUsername,
-				"msg_id":           msgId,
-				"delivered_at":     deliveredAt,
-			},
-		})
-
 		// queue msg ack event
 		go eventStreamService.QueueDirectMsgAckEvent(eventTypes.DirectMsgAckEvent{
 			FromUser: clientUsername,
@@ -87,6 +78,14 @@ func AckMessageDelivered(ctx context.Context, clientUsername, partnerUsername, m
 			CHEId:    msgId,
 			Ack:      "delivered",
 			At:       deliveredAt,
+		})
+
+		go realtimeService.SendEventMsg(partnerUsername, appTypes.ServerEventMsg{
+			Event: "direct chat: message delivered",
+			Data: map[string]any{
+				"chat_partner": clientUsername,
+				"msg_id":       msgId,
+			},
 		})
 	}
 
@@ -100,15 +99,6 @@ func AckMessageRead(ctx context.Context, clientUsername, partnerUsername, msgId 
 	}
 
 	if done {
-		go realtimeService.SendEventMsg(partnerUsername, appTypes.ServerEventMsg{
-			Event: "direct chat: message read",
-			Data: map[string]any{
-				"partner_username": clientUsername,
-				"msg_id":           msgId,
-				"read_at":          readAt,
-			},
-		})
-
 		// queue msg ack event
 		go eventStreamService.QueueDirectMsgAckEvent(eventTypes.DirectMsgAckEvent{
 			FromUser: clientUsername,
@@ -116,6 +106,14 @@ func AckMessageRead(ctx context.Context, clientUsername, partnerUsername, msgId 
 			CHEId:    msgId,
 			Ack:      "read",
 			At:       readAt,
+		})
+
+		go realtimeService.SendEventMsg(partnerUsername, appTypes.ServerEventMsg{
+			Event: "direct chat: message read",
+			Data: map[string]any{
+				"chat_partner": clientUsername,
+				"msg_id":       msgId,
+			},
 		})
 	}
 
@@ -137,8 +135,8 @@ func ReactToMessage(ctx context.Context, clientUser appTypes.ClientUser, partner
 	go realtimeService.SendEventMsg(partnerUsername, appTypes.ServerEventMsg{
 		Event: "direct chat: message reaction",
 		Data: map[string]any{
-			"partner_username": clientUser.Username,
-			"to_msg_id":        msgId,
+			"chat_partner": clientUser.Username,
+			"to_msg_id":    msgId,
 			"reaction": UITypes.MsgReaction{
 				Emoji:   emoji,
 				Reactor: clientUser,
@@ -166,24 +164,25 @@ func RemoveReactionToMessage(ctx context.Context, clientUsername, partnerUsernam
 	}
 
 	done := CHEId != ""
-
-	if done {
-		go realtimeService.SendEventMsg(partnerUsername, appTypes.ServerEventMsg{
-			Event: "direct chat: message reaction removed",
-			Data: map[string]any{
-				"partner_username": clientUsername,
-				"msg_id":           msgId,
-			},
-		})
-
-		// queue reaction removed event
-		go eventStreamService.QueueDirectMsgReactionRemovedEvent(eventTypes.DirectMsgReactionRemovedEvent{
-			FromUser: clientUsername,
-			ToUser:   partnerUsername,
-			ToMsgId:  msgId,
-			CHEId:    CHEId,
-		})
+	if !done {
+		return done, nil
 	}
+
+	go realtimeService.SendEventMsg(partnerUsername, appTypes.ServerEventMsg{
+		Event: "direct chat: message reaction removed",
+		Data: map[string]any{
+			"chat_partner": clientUsername,
+			"msg_id":       msgId,
+		},
+	})
+
+	// queue reaction removed event
+	go eventStreamService.QueueDirectMsgReactionRemovedEvent(eventTypes.DirectMsgReactionRemovedEvent{
+		FromUser: clientUsername,
+		ToUser:   partnerUsername,
+		ToMsgId:  msgId,
+		CHEId:    CHEId,
+	})
 
 	return done, nil
 }
