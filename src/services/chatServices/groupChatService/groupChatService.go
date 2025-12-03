@@ -522,14 +522,14 @@ func RemoveReactionToMessage(ctx context.Context, clientUsername, groupId, msgId
 	return done, nil
 }
 
-func GetChatHistory(ctx context.Context, clientUsername, groupId string, limit int, cursor float64) (any, error) {
+func GetChatHistory(ctx context.Context, clientUsername, groupId string, limit int, cursor float64) ([]UITypes.ChatHistoryEntry, error) {
 	return groupChat.ChatHistory(ctx, clientUsername, groupId, limit, cursor)
 }
 
-func GetGroupInfo(ctx context.Context, groupId string) (map[string]any, error) {
+func GetGroupInfo(ctx context.Context, groupId string) (UITypes.GroupInfo, error) {
 	return groupChat.GroupInfo(ctx, groupId)
 }
 
-func GetGroupMemInfo(ctx context.Context, clientUsername, groupId string) (map[string]any, error) {
-	return groupChat.GroupMemInfo(ctx, clientUsername, groupId)
+func GetGroupMembers(ctx context.Context, clientUsername, groupId string, limit int, cursor float64) ([]UITypes.GroupMemberSnippet, error) {
+	return groupChat.GroupMembers(ctx, clientUsername, groupId, limit, cursor)
 }

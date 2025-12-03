@@ -24,9 +24,10 @@ type GroupInfo struct {
 }
 
 type GroupMemberSnippet struct {
-	Username      string `json:"username"`
-	ProfilePicUrl string `json:"profile_pic_url"`
-	Bio           string `json:"bio"`
+	Username      string  `json:"username"`
+	ProfilePicUrl string  `json:"profile_pic_url"`
+	Bio           string  `json:"bio"`
+	Cursor        float64 `json:"cursor"`
 }
 
 type ChatPartnerUser struct {

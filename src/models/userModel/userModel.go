@@ -3,16 +3,20 @@ package user
 import (
 	"context"
 	"fmt"
+	"i9chat/src/appGlobals"
 	"i9chat/src/appTypes"
 	"i9chat/src/appTypes/UITypes"
 	"i9chat/src/helpers"
 	"i9chat/src/models/db"
 	"i9chat/src/models/modelHelpers"
-	"log"
 
 	"github.com/gofiber/fiber/v2"
-	"github.com/neo4j/neo4j-go-driver/v5/neo4j"
+	"github.com/redis/go-redis/v9"
 )
+
+func redisDB() *redis.Client {
+	return appGlobals.RedisClient
+}
 
 func Exists(ctx context.Context, emailOrUsername string) (bool, error) {
 	res, err := db.Query(
@@ -290,62 +294,22 @@ func GetMyProfile(ctx context.Context, clientUsername string) (UITypes.UserProfi
 	return profile, nil
 }
 
-type Chat struct {
-	ChatType  string `json:"chat_type"`
-	ChatIdent string `json:"chat_ident"`
-	UnreadMC  int    `json:"unread_messages_count"`
-
-	// for direct chat
-	PartnerUser map[string]any `json:"partner_user,omitempty"`
-
-	// for group chat
-	GroupInfo map[string]any `json:"group_info,omitempty"`
-}
-
-func GetMyChats(ctx context.Context, clientUsername string) ([]Chat, error) {
-	// serve from cache
-	var myChats []Chat
-
-	res, err := db.Query(
-		ctx,
-		`/*cypher*/
-		CALL () {
-			MATCH (clientChat:DirectChat{ owner_username: $client_username })-[:WITH_USER]->(partnerUser)
-
-			WITH clientChat, 
-				partnerUser { .username, .profile_pic_url, .presence, .last_seen } AS partner, 
-				partnerUser.username AS chat_ident
-				
-			RETURN clientChat { chat_ident, partner, .unread_messages_count, chat_type: "direct" } AS chat
-		UNION
-			MATCH (clientChat:GroupChat{ owner_username: $client_username })-[:WITH_GROUP]->(group)
-
-			WITH clientChat, 
-				group { .id, .name, .description, .picture_url } AS group_info, 
-				group.id AS chat_ident
-
-			RETURN clientChat { chat_ident, group_info, .unread_messages_count, chat_type: "group" } AS chat
-		}
-		WITH chat
-
-		RETURN collect(chat) AS my_chats
-		`,
-		map[string]any{
-			"client_username": clientUsername,
-		},
-	)
+func GetMyChats(ctx context.Context, clientUsername string, limit int, cursor float64) ([]UITypes.ChatSnippet, error) {
+	chatIdentMembers, err := redisDB().ZRevRangeByScoreWithScores(ctx, fmt.Sprintf("user:%s:chats_sorted", clientUsername), &redis.ZRangeBy{
+		Max:   helpers.MaxCursor(cursor),
+		Min:   "-inf",
+		Count: int64(limit),
+	}).Result()
 	if err != nil {
-		log.Println("userModel.go: GetChats:", err)
-		return myChats, fiber.ErrInternalServerError
+		helpers.LogError(err)
+		return nil, fiber.ErrInternalServerError
 	}
 
-	if len(res.Records) == 0 {
-		return myChats, nil
+	myChats, err := modelHelpers.ChatIdentMembersForUIChatSnippets(ctx, chatIdentMembers, clientUsername)
+	if err != nil {
+		helpers.LogError(err)
+		return nil, fiber.ErrInternalServerError
 	}
-
-	mc, _, _ := neo4j.GetRecordValue[[]any](res.Records[0], "my_chats")
-
-	helpers.ToStruct(mc, &myChats)
 
 	return myChats, nil
 }

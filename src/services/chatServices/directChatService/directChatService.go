@@ -12,10 +12,6 @@ import (
 	"i9chat/src/services/realtimeService"
 )
 
-func GetChatHistory(ctx context.Context, clientUsername, partnerUsername string, limit int, offset int64) (any, error) {
-	return directChat.ChatHistory(ctx, clientUsername, partnerUsername, limit, offset)
-}
-
 func SendMessage(ctx context.Context, clientUser appTypes.ClientUser, partnerUsername, replyTargetMsgId string, isReply bool, msgContent *appTypes.MsgContent, at int64) (map[string]any, error) {
 
 	err := appServices.UploadMessageMedia(ctx, clientUser.Username, msgContent)
@@ -185,4 +181,8 @@ func RemoveReactionToMessage(ctx context.Context, clientUsername, partnerUsernam
 	})
 
 	return done, nil
+}
+
+func GetChatHistory(ctx context.Context, clientUsername, partnerUsername string, limit int, cursor float64) (any, error) {
+	return directChat.ChatHistory(ctx, clientUsername, partnerUsername, limit, cursor)
 }

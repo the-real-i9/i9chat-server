@@ -133,8 +133,8 @@ func FindNearbyUsers(ctx context.Context, clientUsername string, x, y, radius fl
 	return user.FindNearby(ctx, clientUsername, x, y, radius)
 }
 
-func GetMyChats(ctx context.Context, clientUsername string) (any, error) {
-	return user.GetMyChats(ctx, clientUsername)
+func GetMyChats(ctx context.Context, clientUsername string, limit int, cursor float64) ([]UITypes.ChatSnippet, error) {
+	return user.GetMyChats(ctx, clientUsername, limit, cursor)
 }
 
 func GetMyProfile(ctx context.Context, clientUsername string) (UITypes.UserProfile, error) {

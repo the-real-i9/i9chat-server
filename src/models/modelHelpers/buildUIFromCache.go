@@ -29,6 +29,28 @@ func BuildUserProfileUIFromCache(ctx context.Context, username string) (userProf
 	return userProfileUI, nil
 }
 
+func BuildGroupInfoUIFromCache(ctx context.Context, groupId string) (groupInfoUI UITypes.GroupInfo, err error) {
+	nilVal := UITypes.GroupInfo{}
+
+	groupInfoUI, err = cache.GetGroup[UITypes.GroupInfo](ctx, groupId)
+	if err != nil {
+		return nilVal, err
+	}
+
+	return groupInfoUI, nil
+}
+
+func buildGroupMemberSnippetUIFromCache(ctx context.Context, muser string) (gmemSnippetUI UITypes.GroupMemberSnippet, err error) {
+	nilVal := UITypes.GroupMemberSnippet{}
+
+	gmemSnippetUI, err = cache.GetUser[UITypes.GroupMemberSnippet](ctx, muser)
+	if err != nil {
+		return nilVal, err
+	}
+
+	return gmemSnippetUI, nil
+}
+
 func buildChatSnippetUIFromCache(ctx context.Context, clientUsername, chatIdent string) (chatSnippetUI UITypes.ChatSnippet, err error) {
 	nilVal := UITypes.ChatSnippet{}
 

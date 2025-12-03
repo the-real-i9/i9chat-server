@@ -133,3 +133,42 @@ func CHEMembersForUICHEs(ctx context.Context, CHEMembers []redis.Z, chatType str
 
 	return CHEsAcc, nil
 }
+
+func GroupMembersForUIGroupMemSnippets(ctx context.Context, groupMembers []redis.Z) ([]UITypes.GroupMemberSnippet, error) {
+	gmemsLen := len(groupMembers)
+
+	memSnippetsAcc := make([]UITypes.GroupMemberSnippet, gmemsLen)
+
+	threadNums := min(gmemsLen, runtime.NumCPU())
+
+	eg, sharedCtx := errgroup.WithContext(ctx)
+
+	for i := range threadNums {
+		eg.Go(func() error {
+			j := i
+			start, end := (gmemsLen*j)/threadNums, gmemsLen*(j+1)/threadNums
+
+			for pIndx := start; pIndx < end; pIndx++ {
+				memberUser := groupMembers[pIndx].Member.(string)
+				cursor := groupMembers[pIndx].Score
+
+				memSnippet, err := buildGroupMemberSnippetUIFromCache(sharedCtx, memberUser)
+				if err != nil {
+					return err
+				}
+
+				memSnippet.Cursor = cursor
+
+				memSnippetsAcc[pIndx] = memSnippet
+			}
+
+			return nil
+		})
+	}
+
+	if err := eg.Wait(); err != nil {
+		return nil, err
+	}
+
+	return memSnippetsAcc, nil
+}

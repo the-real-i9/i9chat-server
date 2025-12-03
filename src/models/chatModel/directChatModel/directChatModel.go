@@ -2,13 +2,20 @@ package directChat
 
 import (
 	"context"
+	"fmt"
+	"i9chat/src/appGlobals"
 	"i9chat/src/appTypes/UITypes"
 	"i9chat/src/helpers"
 	"i9chat/src/models/db"
 	"i9chat/src/models/modelHelpers"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/redis/go-redis/v9"
 )
+
+func redisDB() *redis.Client {
+	return appGlobals.RedisClient
+}
 
 type NewMessage struct {
 	Id                   string         `json:"id" db:"id"`
@@ -241,8 +248,22 @@ func RemoveReactionToMessage(ctx context.Context, clientUsername, partnerUsernam
 	return CHEId, nil
 }
 
-func ChatHistory(ctx context.Context, clientUsername, partnerUsername string, limit int, offset int64) ([]UITypes.ChatHistoryEntry, error) {
+func ChatHistory(ctx context.Context, clientUsername, partnerUsername string, limit int, cursor float64) ([]UITypes.ChatHistoryEntry, error) {
+	cheMembers, err := redisDB().ZRevRangeByScoreWithScores(ctx, fmt.Sprintf("direct_chat:owner:%s:partner:%s:history", clientUsername, partnerUsername), &redis.ZRangeBy{
+		Max:   helpers.MaxCursor(cursor),
+		Min:   "-inf",
+		Count: int64(limit),
+	}).Result()
+	if err != nil {
+		helpers.LogError(err)
+		return nil, fiber.ErrInternalServerError
+	}
 
-	// serve from redis cache
-	return nil, nil
+	history, err := modelHelpers.CHEMembersForUICHEs(ctx, cheMembers, "direct")
+	if err != nil {
+		helpers.LogError(err)
+		return nil, fiber.ErrInternalServerError
+	}
+
+	return history, nil
 }

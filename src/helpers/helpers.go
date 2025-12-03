@@ -131,3 +131,11 @@ func FromJson[T any](jsonStr string) (res T) {
 
 	return
 }
+
+func MaxCursor(cursor float64) string {
+	if cursor == 0 {
+		return "+inf"
+	}
+
+	return fmt.Sprintf("(%f", cursor)
+}

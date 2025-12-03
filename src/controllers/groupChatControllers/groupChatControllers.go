@@ -6,7 +6,6 @@ import (
 	"i9chat/src/appTypes"
 	"i9chat/src/services/chatServices/groupChatService"
 	"net/url"
-	"time"
 
 	"github.com/gofiber/fiber/v2"
 )
@@ -42,12 +41,12 @@ func CreateNewGroup(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusCreated).JSON(respData)
 }
 
-func GetGroupMembershipInfo(c *fiber.Ctx) error {
+func GetGroupMembers(c *fiber.Ctx) error {
 	ctx := c.Context()
 
 	clientUser := c.Locals("user").(appTypes.ClientUser)
 
-	respData, app_err := groupChatService.GetGroupMemInfo(ctx, clientUser.Username, c.Params("group_id"))
+	respData, app_err := groupChatService.GetGroupMembers(ctx, clientUser.Username, c.Params("group_id"), c.QueryInt("limit", 100), c.QueryFloat("cursor"))
 	if app_err != nil {
 		return app_err
 	}
@@ -60,7 +59,7 @@ func GetGroupChatHistory(c *fiber.Ctx) error {
 
 	clientUser := c.Locals("user").(appTypes.ClientUser)
 
-	respData, app_err := groupChatService.GetChatHistory(ctx, clientUser.Username, c.Params("group_id"), c.QueryInt("limit", 50), int64(c.QueryInt("offset", int(time.Now().UTC().UnixMilli()))))
+	respData, app_err := groupChatService.GetChatHistory(ctx, clientUser.Username, c.Params("group_id"), c.QueryInt("limit", 50), c.QueryFloat("cursor"))
 	if app_err != nil {
 		return app_err
 	}

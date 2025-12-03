@@ -124,7 +124,7 @@ func GetMyChats(c *fiber.Ctx) error {
 
 	clientUser := c.Locals("user").(appTypes.ClientUser)
 
-	respData, app_err := userService.GetMyChats(ctx, clientUser.Username)
+	respData, app_err := userService.GetMyChats(ctx, clientUser.Username, c.QueryInt("limit", 20), c.QueryFloat("cursor"))
 	if app_err != nil {
 		return app_err
 	}

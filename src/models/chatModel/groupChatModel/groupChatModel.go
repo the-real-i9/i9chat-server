@@ -2,13 +2,20 @@ package groupChat
 
 import (
 	"context"
+	"fmt"
+	"i9chat/src/appGlobals"
 	"i9chat/src/appTypes/UITypes"
 	"i9chat/src/helpers"
 	"i9chat/src/models/db"
 	"i9chat/src/models/modelHelpers"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/redis/go-redis/v9"
 )
+
+func redisDB() *redis.Client {
+	return appGlobals.RedisClient
+}
 
 type NewGroup struct {
 	Id             string         `json:"id" db:"id"`
@@ -802,13 +809,51 @@ func RemoveReactionToMessage(ctx context.Context, clientUsername, groupId, msgId
 }
 
 func ChatHistory(ctx context.Context, clientUsername, groupId string, limit int, cursor float64) ([]UITypes.ChatHistoryEntry, error) {
-	return nil, nil
+	cheMembers, err := redisDB().ZRevRangeByScoreWithScores(ctx, fmt.Sprintf("group_chat:owner:%s:group_id:%s:history", clientUsername, groupId), &redis.ZRangeBy{
+		Max:   helpers.MaxCursor(cursor),
+		Min:   "-inf",
+		Count: int64(limit),
+	}).Result()
+	if err != nil {
+		helpers.LogError(err)
+		return nil, fiber.ErrInternalServerError
+	}
+
+	history, err := modelHelpers.CHEMembersForUICHEs(ctx, cheMembers, "group")
+	if err != nil {
+		helpers.LogError(err)
+		return nil, fiber.ErrInternalServerError
+	}
+
+	return history, nil
 }
 
 func GroupInfo(ctx context.Context, groupId string) (UITypes.GroupInfo, error) {
-	return UITypes.GroupInfo{}, nil
+	ginfo, err := modelHelpers.BuildGroupInfoUIFromCache(ctx, groupId)
+	if err != nil {
+		helpers.LogError(err)
+		return UITypes.GroupInfo{}, fiber.ErrInternalServerError
+	}
+
+	return ginfo, nil
 }
 
-func GroupMembers(ctx context.Context, clientUsername, groupId string) ([]UITypes.GroupMemberSnippet, error) {
-	return nil, nil
+func GroupMembers(ctx context.Context, clientUsername, groupId string, limit int, cursor float64) ([]UITypes.GroupMemberSnippet, error) {
+	groupMembers, err := redisDB().ZRevRangeByScoreWithScores(ctx, fmt.Sprintf("group:%s:members", groupId), &redis.ZRangeBy{
+		Max:   helpers.MaxCursor(cursor),
+		Min:   "-inf",
+		Count: int64(limit),
+	}).Result()
+	if err != nil {
+		helpers.LogError(err)
+		return nil, fiber.ErrInternalServerError
+	}
+
+	gmems, err := modelHelpers.GroupMembersForUIGroupMemSnippets(ctx, groupMembers)
+	if err != nil {
+		helpers.LogError(err)
+		return nil, fiber.ErrInternalServerError
+	}
+
+	return gmems, nil
 }
