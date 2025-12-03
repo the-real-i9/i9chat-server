@@ -80,7 +80,7 @@ func ackGroupChatMsgReadHndl(ctx context.Context, clientUsername string, actionD
 	return groupChatService.AckMessageRead(ctx, clientUsername, acd.GroupId, acd.MsgId, acd.At)
 }
 
-func getGroupInfoHndl(ctx context.Context, actionData map[string]any) (map[string]any, error) {
+func getGroupInfoHndl(ctx context.Context, actionData map[string]any) (any, error) {
 	var acd groupInfo
 
 	helpers.ToStruct(actionData, &acd)
