@@ -25,7 +25,7 @@ func Signin(ctx context.Context, emailOrUsername, password string) (signinRespT,
 		return resp, "", err
 	}
 
-	if theUser.Username != "" {
+	if theUser.Username == "" {
 		return resp, "", fiber.NewError(fiber.StatusNotFound, userErrors.IncorrectCredentials)
 	}
 

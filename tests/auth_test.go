@@ -75,7 +75,7 @@ func TestUserAuth(t *testing.T) {
 		rb, err := errResBody(res.Body)
 		require.NoError(t, err)
 
-		require.Equal(t, "Incorrect verification code! Check or Re-submit your email.", rb)
+		require.Equal(t, "uERR_4001", rb)
 	}
 
 	{
@@ -189,7 +189,7 @@ func TestUserAuth(t *testing.T) {
 		rb, err := errResBody(res.Body)
 		require.NoError(t, err)
 
-		require.Equal(t, "Incorrect email/username or password", rb)
+		require.Equal(t, "uERR_4007", rb)
 	}
 
 	{
@@ -239,6 +239,6 @@ func TestUserAuth(t *testing.T) {
 		rb, err := errResBody(res.Body)
 		require.NoError(t, err)
 
-		require.Equal(t, fmt.Sprintf("An account with %s already exists", user1.Email), rb)
+		require.Equal(t, "uERR_4000", rb)
 	}
 }

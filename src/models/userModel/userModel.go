@@ -41,10 +41,10 @@ func Exists(ctx context.Context, emailOrUsername string) (bool, error) {
 }
 
 type NewUserT struct {
-	Email         string `json:"email"`
-	Username      string `json:"username"`
+	Email         string `json:"email" db:"email"`
+	Username      string `json:"username" db:"username"`
 	ProfilePicUrl string `json:"profile_pic_url" db:"profile_pic_url"`
-	Bio           string `json:"bio"`
+	Bio           string `json:"bio" db:"bio"`
 }
 
 func New(ctx context.Context, email, username, password string) (newUser NewUserT, err error) {
@@ -71,10 +71,10 @@ func New(ctx context.Context, email, username, password string) (newUser NewUser
 }
 
 type ToAuthUserT struct {
-	Email         string `json:"email"`
-	Username      string `json:"username"`
+	Email         string `json:"email" db:"email"`
+	Username      string `json:"username" db:"username"`
 	ProfilePicUrl string `json:"profile_pic_url" db:"profile_pic_url"`
-	Password      string `json:"-"`
+	Password      string `json:"-" db:"password"`
 }
 
 func AuthFind(ctx context.Context, uniqueIdent string) (user ToAuthUserT, err error) {

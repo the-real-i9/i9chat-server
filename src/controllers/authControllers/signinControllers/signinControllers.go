@@ -8,6 +8,27 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
+// Signin
+//
+//	@Summary		Signin user
+//	@Description	Signin with email/username and password
+//	@Tags			auth
+//	@Accept			json
+//	@Produce		json
+//
+//	@Param			EmailOrUsername	body		string						true	"Email or Username"
+//	@Param			Password		body		string						true	"User Password"
+//
+//	@Success		200				{object}	signinService.signinRespT	"Signin Success!"
+//	@Header			200				{array}		Set-Cookie					"User session response cookie containing auth JWT"
+//
+//	@Failure		400				{object}	appErrors.HTTPError
+//
+//	@Failure		404				{object}	appErrors.HTTPError	"Incorrect credentials"
+//
+//	@Failure		500				{object}	appErrors.HTTPError
+//
+//	@Router			/auth/signin [post]
 func Signin(c *fiber.Ctx) error {
 	ctx := c.Context()
 

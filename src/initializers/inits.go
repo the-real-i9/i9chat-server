@@ -169,4 +169,8 @@ func CleanUp() {
 	if err := appGlobals.Neo4jDriver.Close(context.TODO()); err != nil {
 		helpers.LogError(err)
 	}
+
+	if err := appGlobals.RedisClient.Close(); err != nil {
+		helpers.LogError(err)
+	}
 }

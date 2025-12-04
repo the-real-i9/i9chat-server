@@ -1,0 +1,385 @@
+basePath: /api
+definitions:
+  appErrors.HTTPError:
+    properties:
+      code:
+        type: integer
+      message:
+        type: string
+    type: object
+  passwordResetService.passReset1RespT:
+    properties:
+      msg:
+        type: string
+    type: object
+  passwordResetService.passReset2RespT:
+    properties:
+      msg:
+        type: string
+    type: object
+  passwordResetService.passReset3RespT:
+    properties:
+      msg:
+        type: string
+    type: object
+  signinService.signinRespT:
+    properties:
+      msg:
+        type: string
+      user:
+        $ref: '#/definitions/user.ToAuthUserT'
+    type: object
+  signupService.signup2RespT:
+    properties:
+      msg:
+        type: string
+    type: object
+  signupService.signup3RespT:
+    properties:
+      msg:
+        type: string
+      user:
+        $ref: '#/definitions/user.NewUserT'
+    type: object
+  user.NewUserT:
+    properties:
+      bio:
+        type: string
+      email:
+        type: string
+      profile_pic_url:
+        type: string
+      username:
+        type: string
+    type: object
+  user.ToAuthUserT:
+    properties:
+      email:
+        type: string
+      profile_pic_url:
+        type: string
+      username:
+        type: string
+    type: object
+host: localhost:8000
+info:
+  contact:
+    email: oluwarinolasam@gmail.com
+    name: i9ine
+  description: i9chat Chat App Backend API.
+  title: i9chat Chat App API
+  version: "1.0"
+paths:
+  /auth/forgot_password/confirm_email:
+    post:
+      consumes:
+      - application/json
+      description: Provide the 6-digit token sent to email
+      parameters:
+      - description: 6-digit token
+        in: body
+        name: token
+        required: true
+        schema:
+          type: string
+      - collectionFormat: csv
+        description: Password Reset session request cookie
+        in: header
+        items:
+          type: string
+        name: Cookie
+        required: true
+        type: array
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Email confirmed. You're about to reset your password
+          headers:
+            Set-Cookie:
+              description: Password Reset session request cookie
+              type: array
+          schema:
+            $ref: '#/definitions/passwordResetService.passReset2RespT'
+        "400":
+          description: Incorrect or expired confirmation token
+          headers:
+            Set-Cookie:
+              description: Password Reset session request cookie
+              type: array
+          schema:
+            $ref: '#/definitions/appErrors.HTTPError'
+        "500":
+          description: Internal Server Error
+          headers:
+            Set-Cookie:
+              description: Password Reset session request cookie
+              type: array
+          schema:
+            $ref: '#/definitions/appErrors.HTTPError'
+      summary: Password Reset - Step 2
+      tags:
+      - auth
+  /auth/forgot_password/request_password_reset:
+    post:
+      consumes:
+      - application/json
+      description: Submit your email to request a password reset
+      parameters:
+      - description: Provide your email address
+        in: body
+        name: email
+        required: true
+        schema:
+          type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Proceed to email confirmation
+          headers:
+            Set-Cookie:
+              description: Password Reset session response cookie
+              type: array
+          schema:
+            $ref: '#/definitions/passwordResetService.passReset1RespT'
+        "404":
+          description: No user with this email exists
+          schema:
+            $ref: '#/definitions/appErrors.HTTPError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/appErrors.HTTPError'
+      summary: Password Reset - Step 1
+      tags:
+      - auth
+  /auth/forgot_password/reset_password:
+    post:
+      consumes:
+      - application/json
+      description: Set new password
+      parameters:
+      - description: Choose a new password
+        in: body
+        name: newPassword
+        required: true
+        schema:
+          type: string
+      - description: Conform new password
+        in: body
+        name: confirmNewPassword
+        required: true
+        schema:
+          type: string
+      - collectionFormat: csv
+        description: Password Reset session request cookie
+        in: header
+        items:
+          type: string
+        name: Cookie
+        required: true
+        type: array
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Password changed successfully
+          schema:
+            $ref: '#/definitions/passwordResetService.passReset3RespT'
+        "400":
+          description: Passwords mismatch.
+          headers:
+            Set-Cookie:
+              description: Password Reset session response cookie
+              type: array
+          schema:
+            $ref: '#/definitions/appErrors.HTTPError'
+        "500":
+          description: Internal Server Error
+          headers:
+            Set-Cookie:
+              description: Password Reset session response cookie
+              type: array
+          schema:
+            $ref: '#/definitions/appErrors.HTTPError'
+      summary: Password Reset user - Step 3
+      tags:
+      - auth
+  /auth/signin:
+    post:
+      consumes:
+      - application/json
+      description: Signin with email/username and password
+      parameters:
+      - description: Email or Username
+        in: body
+        name: EmailOrUsername
+        required: true
+        schema:
+          type: string
+      - description: User Password
+        in: body
+        name: Password
+        required: true
+        schema:
+          type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Signin Success!
+          headers:
+            Set-Cookie:
+              description: User session response cookie containing auth JWT
+              type: array
+          schema:
+            $ref: '#/definitions/signinService.signinRespT'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/appErrors.HTTPError'
+        "404":
+          description: Incorrect credentials
+          schema:
+            $ref: '#/definitions/appErrors.HTTPError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/appErrors.HTTPError'
+      summary: Signin user
+      tags:
+      - auth
+  /auth/signup/register_user:
+    post:
+      consumes:
+      - application/json
+      description: Provide remaining user credentials
+      parameters:
+      - description: Choose a username
+        in: body
+        name: username
+        required: true
+        schema:
+          type: string
+      - description: Choose a password
+        in: body
+        name: password
+        required: true
+        schema:
+          type: string
+      - description: User display name
+        in: body
+        name: name
+        required: true
+        schema:
+          type: string
+      - description: User birthday in milliseconds since Unix Epoch
+        in: body
+        name: birthday
+        required: true
+        schema:
+          type: integer
+      - description: User bio (optional)
+        in: body
+        name: bio
+        schema:
+          type: string
+      - collectionFormat: csv
+        description: Signup session request cookie
+        in: header
+        items:
+          type: string
+        name: Cookie
+        required: true
+        type: array
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Signup Success
+          headers:
+            Set-Cookie:
+              description: User session response cookie containing auth JWT
+              type: array
+          schema:
+            $ref: '#/definitions/signupService.signup3RespT'
+        "400":
+          description: Incorrect or expired verification code
+          headers:
+            Set-Cookie:
+              description: Signup session response cookie
+              type: array
+          schema:
+            $ref: '#/definitions/appErrors.HTTPError'
+        "500":
+          description: Internal Server Error
+          headers:
+            Set-Cookie:
+              description: Signup session response cookie
+              type: array
+          schema:
+            $ref: '#/definitions/appErrors.HTTPError'
+      summary: Signup user - Step 3
+      tags:
+      - auth
+  /auth/signup/verify_email:
+    post:
+      consumes:
+      - application/json
+      description: Provide the 6-digit code sent to email
+      parameters:
+      - description: 6-digit code
+        in: body
+        name: code
+        required: true
+        schema:
+          type: string
+      - collectionFormat: csv
+        description: Signup session request cookie
+        in: header
+        items:
+          type: string
+        name: Cookie
+        required: true
+        type: array
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Email verified
+          headers:
+            Set-Cookie:
+              description: Signup session response cookie
+              type: array
+          schema:
+            $ref: '#/definitions/signupService.signup2RespT'
+        "400":
+          description: Incorrect or expired verification code
+          headers:
+            Set-Cookie:
+              description: Signup session response cookie
+              type: array
+          schema:
+            $ref: '#/definitions/appErrors.HTTPError'
+        "500":
+          description: Internal Server Error
+          headers:
+            Set-Cookie:
+              description: Signup session response cookie
+              type: array
+          schema:
+            $ref: '#/definitions/appErrors.HTTPError'
+      summary: Signup user - Step 2
+      tags:
+      - auth
+schemes:
+- http
+- https
+securityDefinitions:
+  ApiKeyAuth:
+    description: JWT API key in encrypted cookie to protect private endpoints
+    in: header
+    name: Cookie
+    type: apiKey
+swagger: "2.0"

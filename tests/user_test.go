@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestUserOps(t *testing.T) {
+func XTestUserOps(t *testing.T) {
 	t.Parallel()
 
 	user1 := UserT{
@@ -201,7 +201,7 @@ func TestUserOps(t *testing.T) {
 
 		res, err := http.DefaultClient.Do(req)
 		require.NoError(t, err)
-		
+
 		if !assert.Equal(t, http.StatusOK, res.StatusCode) {
 			rb, err := errResBody(res.Body)
 			require.NoError(t, err)

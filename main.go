@@ -19,6 +19,25 @@ func init() {
 	}
 }
 
+//	@title			i9chat Chat App API
+//	@version		1.0
+//	@description	i9chat Chat App Backend API.
+
+//	@contact.name	i9ine
+//	@contact.email	oluwarinolasam@gmail.com
+
+//	@host		localhost:8000
+//	@BasePath	/api
+
+//	@securityDefinitions.apikey	ApiKeyAuth
+//	@in							header
+//	@name						Cookie
+//	@description				JWT API key in encrypted cookie to protect private endpoints
+
+//	@accepts	json
+//	@produces	json
+
+// @schemes	http https
 func main() {
 	defer initializers.CleanUp()
 

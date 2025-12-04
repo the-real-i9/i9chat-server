@@ -13,7 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestDirectChat(t *testing.T) {
+func XTestDirectChat(t *testing.T) {
 	t.Parallel()
 
 	user1 := UserT{

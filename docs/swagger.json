@@ -1,0 +1,583 @@
+{
+    "schemes": [
+        "http",
+        "https"
+    ],
+    "swagger": "2.0",
+    "info": {
+        "description": "i9chat Chat App Backend API.",
+        "title": "i9chat Chat App API",
+        "contact": {
+            "name": "i9ine",
+            "email": "oluwarinolasam@gmail.com"
+        },
+        "version": "1.0"
+    },
+    "host": "localhost:8000",
+    "basePath": "/api",
+    "paths": {
+        "/auth/forgot_password/confirm_email": {
+            "post": {
+                "description": "Provide the 6-digit token sent to email",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Password Reset - Step 2",
+                "parameters": [
+                    {
+                        "description": "6-digit token",
+                        "name": "token",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "collectionFormat": "csv",
+                        "description": "Password Reset session request cookie",
+                        "name": "Cookie",
+                        "in": "header",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Email confirmed. You're about to reset your password",
+                        "schema": {
+                            "$ref": "#/definitions/passwordResetService.passReset2RespT"
+                        },
+                        "headers": {
+                            "Set-Cookie": {
+                                "type": "array",
+                                "description": "Password Reset session request cookie"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Incorrect or expired confirmation token",
+                        "schema": {
+                            "$ref": "#/definitions/appErrors.HTTPError"
+                        },
+                        "headers": {
+                            "Set-Cookie": {
+                                "type": "array",
+                                "description": "Password Reset session request cookie"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/appErrors.HTTPError"
+                        },
+                        "headers": {
+                            "Set-Cookie": {
+                                "type": "array",
+                                "description": "Password Reset session request cookie"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/forgot_password/request_password_reset": {
+            "post": {
+                "description": "Submit your email to request a password reset",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Password Reset - Step 1",
+                "parameters": [
+                    {
+                        "description": "Provide your email address",
+                        "name": "email",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Proceed to email confirmation",
+                        "schema": {
+                            "$ref": "#/definitions/passwordResetService.passReset1RespT"
+                        },
+                        "headers": {
+                            "Set-Cookie": {
+                                "type": "array",
+                                "description": "Password Reset session response cookie"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "No user with this email exists",
+                        "schema": {
+                            "$ref": "#/definitions/appErrors.HTTPError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/appErrors.HTTPError"
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/forgot_password/reset_password": {
+            "post": {
+                "description": "Set new password",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Password Reset user - Step 3",
+                "parameters": [
+                    {
+                        "description": "Choose a new password",
+                        "name": "newPassword",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Conform new password",
+                        "name": "confirmNewPassword",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "collectionFormat": "csv",
+                        "description": "Password Reset session request cookie",
+                        "name": "Cookie",
+                        "in": "header",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Password changed successfully",
+                        "schema": {
+                            "$ref": "#/definitions/passwordResetService.passReset3RespT"
+                        }
+                    },
+                    "400": {
+                        "description": "Passwords mismatch.",
+                        "schema": {
+                            "$ref": "#/definitions/appErrors.HTTPError"
+                        },
+                        "headers": {
+                            "Set-Cookie": {
+                                "type": "array",
+                                "description": "Password Reset session response cookie"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/appErrors.HTTPError"
+                        },
+                        "headers": {
+                            "Set-Cookie": {
+                                "type": "array",
+                                "description": "Password Reset session response cookie"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/signin": {
+            "post": {
+                "description": "Signin with email/username and password",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Signin user",
+                "parameters": [
+                    {
+                        "description": "Email or Username",
+                        "name": "EmailOrUsername",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "User Password",
+                        "name": "Password",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Signin Success!",
+                        "schema": {
+                            "$ref": "#/definitions/signinService.signinRespT"
+                        },
+                        "headers": {
+                            "Set-Cookie": {
+                                "type": "array",
+                                "description": "User session response cookie containing auth JWT"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/appErrors.HTTPError"
+                        }
+                    },
+                    "404": {
+                        "description": "Incorrect credentials",
+                        "schema": {
+                            "$ref": "#/definitions/appErrors.HTTPError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/appErrors.HTTPError"
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/signup/register_user": {
+            "post": {
+                "description": "Provide remaining user credentials",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Signup user - Step 3",
+                "parameters": [
+                    {
+                        "description": "Choose a username",
+                        "name": "username",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Choose a password",
+                        "name": "password",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "User display name",
+                        "name": "name",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "User birthday in milliseconds since Unix Epoch",
+                        "name": "birthday",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "description": "User bio (optional)",
+                        "name": "bio",
+                        "in": "body",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "collectionFormat": "csv",
+                        "description": "Signup session request cookie",
+                        "name": "Cookie",
+                        "in": "header",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Signup Success",
+                        "schema": {
+                            "$ref": "#/definitions/signupService.signup3RespT"
+                        },
+                        "headers": {
+                            "Set-Cookie": {
+                                "type": "array",
+                                "description": "User session response cookie containing auth JWT"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Incorrect or expired verification code",
+                        "schema": {
+                            "$ref": "#/definitions/appErrors.HTTPError"
+                        },
+                        "headers": {
+                            "Set-Cookie": {
+                                "type": "array",
+                                "description": "Signup session response cookie"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/appErrors.HTTPError"
+                        },
+                        "headers": {
+                            "Set-Cookie": {
+                                "type": "array",
+                                "description": "Signup session response cookie"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/signup/verify_email": {
+            "post": {
+                "description": "Provide the 6-digit code sent to email",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Signup user - Step 2",
+                "parameters": [
+                    {
+                        "description": "6-digit code",
+                        "name": "code",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "collectionFormat": "csv",
+                        "description": "Signup session request cookie",
+                        "name": "Cookie",
+                        "in": "header",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Email verified",
+                        "schema": {
+                            "$ref": "#/definitions/signupService.signup2RespT"
+                        },
+                        "headers": {
+                            "Set-Cookie": {
+                                "type": "array",
+                                "description": "Signup session response cookie"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Incorrect or expired verification code",
+                        "schema": {
+                            "$ref": "#/definitions/appErrors.HTTPError"
+                        },
+                        "headers": {
+                            "Set-Cookie": {
+                                "type": "array",
+                                "description": "Signup session response cookie"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/appErrors.HTTPError"
+                        },
+                        "headers": {
+                            "Set-Cookie": {
+                                "type": "array",
+                                "description": "Signup session response cookie"
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "appErrors.HTTPError": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "integer"
+                },
+                "message": {
+                    "type": "string"
+                }
+            }
+        },
+        "passwordResetService.passReset1RespT": {
+            "type": "object",
+            "properties": {
+                "msg": {
+                    "type": "string"
+                }
+            }
+        },
+        "passwordResetService.passReset2RespT": {
+            "type": "object",
+            "properties": {
+                "msg": {
+                    "type": "string"
+                }
+            }
+        },
+        "passwordResetService.passReset3RespT": {
+            "type": "object",
+            "properties": {
+                "msg": {
+                    "type": "string"
+                }
+            }
+        },
+        "signinService.signinRespT": {
+            "type": "object",
+            "properties": {
+                "msg": {
+                    "type": "string"
+                },
+                "user": {
+                    "$ref": "#/definitions/user.ToAuthUserT"
+                }
+            }
+        },
+        "signupService.signup2RespT": {
+            "type": "object",
+            "properties": {
+                "msg": {
+                    "type": "string"
+                }
+            }
+        },
+        "signupService.signup3RespT": {
+            "type": "object",
+            "properties": {
+                "msg": {
+                    "type": "string"
+                },
+                "user": {
+                    "$ref": "#/definitions/user.NewUserT"
+                }
+            }
+        },
+        "user.NewUserT": {
+            "type": "object",
+            "properties": {
+                "bio": {
+                    "type": "string"
+                },
+                "email": {
+                    "type": "string"
+                },
+                "profile_pic_url": {
+                    "type": "string"
+                },
+                "username": {
+                    "type": "string"
+                }
+            }
+        },
+        "user.ToAuthUserT": {
+            "type": "object",
+            "properties": {
+                "email": {
+                    "type": "string"
+                },
+                "profile_pic_url": {
+                    "type": "string"
+                },
+                "username": {
+                    "type": "string"
+                }
+            }
+        }
+    },
+    "securityDefinitions": {
+        "ApiKeyAuth": {
+            "description": "JWT API key in encrypted cookie to protect private endpoints",
+            "type": "apiKey",
+            "name": "Cookie",
+            "in": "header"
+        }
+    }
+}
