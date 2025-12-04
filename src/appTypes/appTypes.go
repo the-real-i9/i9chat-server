@@ -9,8 +9,8 @@ import (
 )
 
 type ClientUser struct {
-	Username      string
-	ProfilePicUrl string
+	Username      string `json:"username"`
+	ProfilePicUrl string `json:"profile_pic_url"`
 }
 
 func (c ClientUser) MarshalBinary() ([]byte, error) {

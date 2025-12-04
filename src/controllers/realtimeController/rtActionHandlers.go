@@ -13,8 +13,8 @@ func sendDirectChatMsgHndl(ctx context.Context, clientUser appTypes.ClientUser, 
 
 	helpers.ToStruct(actionData, &acd)
 
-	if val_err := acd.Validate(); val_err != nil {
-		return nil, val_err
+	if err := acd.Validate(); err != nil {
+		return nil, err
 	}
 
 	return directChatService.SendMessage(ctx, clientUser, acd.PartnerUsername, acd.ReplyTargetMsgId, acd.IsReply, acd.Msg, acd.At)
@@ -25,8 +25,8 @@ func ackDirectChatMsgDeliveredHndl(ctx context.Context, clientUsername string, a
 
 	helpers.ToStruct(actionData, &acd)
 
-	if val_err := acd.Validate(); val_err != nil {
-		return nil, val_err
+	if err := acd.Validate(); err != nil {
+		return nil, err
 	}
 
 	return directChatService.AckMessageDelivered(ctx, clientUsername, acd.PartnerUsername, acd.MsgId, acd.At)
@@ -37,8 +37,8 @@ func ackDirectChatMsgReadHndl(ctx context.Context, clientUsername string, action
 
 	helpers.ToStruct(actionData, &acd)
 
-	if val_err := acd.Validate(); val_err != nil {
-		return nil, val_err
+	if err := acd.Validate(); err != nil {
+		return nil, err
 	}
 
 	return directChatService.AckMessageRead(ctx, clientUsername, acd.PartnerUsername, acd.MsgId, acd.At)
@@ -49,8 +49,8 @@ func sendGroupChatMsgHndl(ctx context.Context, clientUsername appTypes.ClientUse
 
 	helpers.ToStruct(actionData, &acd)
 
-	if val_err := acd.Validate(); val_err != nil {
-		return nil, val_err
+	if err := acd.Validate(); err != nil {
+		return nil, err
 	}
 
 	return groupChatService.SendMessage(ctx, clientUsername, acd.GroupId, acd.ReplyTargetMsgId, acd.IsReply, acd.Msg, acd.At)
@@ -61,8 +61,8 @@ func ackGroupChatMsgDeliveredHndl(ctx context.Context, clientUsername string, ac
 
 	helpers.ToStruct(actionData, &acd)
 
-	if val_err := acd.Validate(); val_err != nil {
-		return nil, val_err
+	if err := acd.Validate(); err != nil {
+		return nil, err
 	}
 
 	return groupChatService.AckMessageDelivered(ctx, clientUsername, acd.GroupId, acd.MsgId, acd.At)
@@ -73,8 +73,8 @@ func ackGroupChatMsgReadHndl(ctx context.Context, clientUsername string, actionD
 
 	helpers.ToStruct(actionData, &acd)
 
-	if val_err := acd.Validate(); val_err != nil {
-		return nil, val_err
+	if err := acd.Validate(); err != nil {
+		return nil, err
 	}
 
 	return groupChatService.AckMessageRead(ctx, clientUsername, acd.GroupId, acd.MsgId, acd.At)
@@ -85,8 +85,8 @@ func getGroupInfoHndl(ctx context.Context, actionData map[string]any) (any, erro
 
 	helpers.ToStruct(actionData, &acd)
 
-	if val_err := acd.Validate(); val_err != nil {
-		return nil, val_err
+	if err := acd.Validate(); err != nil {
+		return nil, err
 	}
 
 	return groupChatService.GetGroupInfo(ctx, acd.GroupId)

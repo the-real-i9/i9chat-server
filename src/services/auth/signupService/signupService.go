@@ -85,7 +85,7 @@ type signup3RespT struct {
 	User user.NewUserT `json:"user"`
 }
 
-func RegisterUser(ctx context.Context, sessionData map[string]any, username, password string) (signup3RespT, string, error) {
+func RegisterUser(ctx context.Context, sessionData map[string]any, username, password, bio string) (signup3RespT, string, error) {
 	var resp signup3RespT
 
 	email := sessionData["email"].(string)
@@ -104,7 +104,11 @@ func RegisterUser(ctx context.Context, sessionData map[string]any, username, pas
 		return resp, "", err
 	}
 
-	newUser, err := user.New(ctx, email, username, hashedPassword)
+	if bio == "" {
+		bio = "I love i9chat!"
+	}
+
+	newUser, err := user.New(ctx, email, username, hashedPassword, bio)
 	if err != nil {
 		return resp, "", err
 	}

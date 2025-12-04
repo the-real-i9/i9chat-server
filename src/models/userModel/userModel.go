@@ -47,17 +47,18 @@ type NewUserT struct {
 	Bio           string `json:"bio" db:"bio"`
 }
 
-func New(ctx context.Context, email, username, password string) (newUser NewUserT, err error) {
+func New(ctx context.Context, email, username, password, bio string) (newUser NewUserT, err error) {
 	res, err := db.Query(
 		ctx,
 		`/*cypher*/
-		CREATE (u:User { email: $email, username: $username, password: $password, profile_pic_url: "{notset}", presence: "online", bio: "i9chat is Awesome!" })
+		CREATE (u:User { email: $email, username: $username, password: $password, profile_pic_url: "{notset}", bio: $bio, presence: "online", last_seen: 0 })
 		RETURN u { .username, .email, .profile_pic_url, .bio } AS new_user
 		`,
 		map[string]any{
 			"email":    email,
 			"username": username,
 			"password": password,
+			"bio":      bio,
 		},
 	)
 	if err != nil {
@@ -183,20 +184,15 @@ func ChangeBio(ctx context.Context, clientUsername, newBio string) (bool, error)
 }
 
 func ChangePresence(ctx context.Context, clientUsername, presence string, lastSeen int64) bool {
-	var lastSeenVal string
-	if presence == "online" {
-		lastSeenVal = "null"
-	} else {
-		lastSeenVal = "$last_seen"
-	}
+
 	res, err := db.Query(
 		ctx,
-		fmt.Sprintf(`/*cypher*/
+		`/*cypher*/
 		MATCH (user:User{ username: $client_username })
-		SET user.presence = $presence, user.last_seen = %s
+		SET user.presence = $presence, user.last_seen = $last_seen
 
 		RETURN true AS done
-		`, lastSeenVal),
+		`,
 		map[string]any{
 			"client_username": clientUsername,
 			"presence":        presence,

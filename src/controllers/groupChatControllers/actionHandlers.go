@@ -11,8 +11,8 @@ func changeGroupName(ctx context.Context, clientUsername, groupId string, data m
 
 	helpers.ToStruct(data, &d)
 
-	if val_err := d.Validate(); val_err != nil {
-		return nil, val_err
+	if err := d.Validate(); err != nil {
+		return nil, err
 	}
 
 	return groupChatService.ChangeGroupName(ctx, groupId, clientUsername, d.NewName)
@@ -23,8 +23,8 @@ func changeGroupDescription(ctx context.Context, clientUsername, groupId string,
 
 	helpers.ToStruct(data, &d)
 
-	if val_err := d.Validate(); val_err != nil {
-		return nil, val_err
+	if err := d.Validate(); err != nil {
+		return nil, err
 	}
 
 	return groupChatService.ChangeGroupDescription(ctx, groupId, clientUsername, d.NewDescription)
@@ -36,8 +36,8 @@ func changeGroupPicture(ctx context.Context, clientUsername, groupId string, dat
 
 	helpers.ToStruct(data, &d)
 
-	if val_err := d.Validate(); val_err != nil {
-		return nil, val_err
+	if err := d.Validate(); err != nil {
+		return nil, err
 	}
 
 	return groupChatService.ChangeGroupPicture(ctx, groupId, clientUsername, d.NewPictureData)
@@ -48,8 +48,8 @@ func addUsersToGroup(ctx context.Context, clientUsername, groupId string, data m
 
 	helpers.ToStruct(data, &d)
 
-	if val_err := d.Validate(); val_err != nil {
-		return nil, val_err
+	if err := d.Validate(); err != nil {
+		return nil, err
 	}
 
 	return groupChatService.AddUsersToGroup(ctx, groupId, clientUsername, d.NewUsers)
@@ -60,8 +60,8 @@ func removeUserFromGroup(ctx context.Context, clientUsername, groupId string, da
 
 	helpers.ToStruct(data, &d)
 
-	if val_err := d.Validate(); val_err != nil {
-		return nil, val_err
+	if err := d.Validate(); err != nil {
+		return nil, err
 	}
 
 	return groupChatService.RemoveUserFromGroup(ctx, groupId, clientUsername, d.User)
@@ -80,8 +80,8 @@ func makeUserGroupAdmin(ctx context.Context, clientUsername, groupId string, dat
 
 	helpers.ToStruct(data, &d)
 
-	if val_err := d.Validate(); val_err != nil {
-		return nil, val_err
+	if err := d.Validate(); err != nil {
+		return nil, err
 	}
 
 	return groupChatService.MakeUserGroupAdmin(ctx, groupId, clientUsername, d.User)
@@ -92,8 +92,8 @@ func removeUserFromGroupAdmins(ctx context.Context, clientUsername, groupId stri
 
 	helpers.ToStruct(data, &d)
 
-	if val_err := d.Validate(); val_err != nil {
-		return nil, val_err
+	if err := d.Validate(); err != nil {
+		return nil, err
 	}
 
 	return groupChatService.RemoveUserFromGroupAdmins(ctx, groupId, clientUsername, d.User)

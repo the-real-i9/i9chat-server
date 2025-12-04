@@ -36,7 +36,7 @@ func SendMessage(ctx context.Context, clientUsername, partnerUsername, msgConten
 		MATCH (clientUser:User{ username: $client_username }), (partnerUser:User{ username: $partner_username })
 
 		WITH clientUser, partnerUser,
-			NOT EXISTS { (clientUser)-[:HAS_CHAT]->(:DirectChat)-[:WITH_USER]->(partnerUser) } AS ffu
+			NOT EXISTS { (clientUser)-[:HAS_CHAT]->(:DirectChat)-[:WITH_USER]->(partnerUser) } AS ffu,
 			NOT EXISTS { (partnerUser)-[:HAS_CHAT]->(:DirectChat)-[:WITH_USER]->(clientUser) } AS ftu
 
 		MERGE (clientUser)-[:HAS_CHAT]->(clientChat:DirectChat{ owner_username: $client_username, partner_username: $partner_username })-[:WITH_USER]->(partnerUser)

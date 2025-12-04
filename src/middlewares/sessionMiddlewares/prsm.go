@@ -1,9 +1,7 @@
 package sessionMiddlewares
 
 import (
-	"log"
-
-	"github.com/goccy/go-json"
+	"i9chat/src/helpers"
 
 	"github.com/gofiber/fiber/v2"
 )
@@ -15,12 +13,7 @@ func PasswordResetSession(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusUnauthorized).SendString("out-of-turn endpoint access: complete the previous step of the password reset process")
 	}
 
-	var passwordResetSessionData map[string]any
-
-	if err := json.Unmarshal([]byte(prsStr), &passwordResetSessionData); err != nil {
-		log.Println("prsm.go: PasswordResetSession: json.Unmarshal:", err)
-		return fiber.ErrInternalServerError
-	}
+	passwordResetSessionData := helpers.FromJson[map[string]any](prsStr)
 
 	c.Locals("passwordReset_sess_data", passwordResetSessionData)
 

@@ -1,9 +1,7 @@
 package sessionMiddlewares
 
 import (
-	"log"
-
-	"github.com/goccy/go-json"
+	"i9chat/src/helpers"
 
 	"github.com/gofiber/fiber/v2"
 )
@@ -15,12 +13,7 @@ func SignupSession(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusUnauthorized).SendString("out-of-turn endpoint access: complete the previous step of the signup process")
 	}
 
-	var signupSessionData map[string]any
-
-	if err := json.Unmarshal([]byte(ssStr), &signupSessionData); err != nil {
-		log.Println("ssm.go: ValidateSession: json.Unmarshal:", err)
-		return fiber.ErrInternalServerError
-	}
+	signupSessionData := helpers.FromJson[map[string]any](ssStr)
 
 	c.Locals("signup_sess_data", signupSessionData)
 

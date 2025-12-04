@@ -16,13 +16,10 @@ func neo4jMapResToStruct(val any, dest any) {
 	}
 
 	if destType.Kind() != reflect.Struct {
-		panic("expected 'dest' to be a pointer to struct")
+		panic("expected 'dest' to be a struct")
 	}
 
-	valMap, ok := val.(map[string]any)
-	if !ok {
-		panic("expected 'val' to be a map[string]any")
-	}
+	valMap := val.(map[string]any)
 
 	for i := range destType.NumField() {
 		structField := destType.Field(i)
@@ -90,7 +87,7 @@ func RKeyGetMany[T any](r []*neo4j.Record, key string) (res []T) {
 			return res
 		}
 
-		resAnySlice := resAny.([]map[string]any)
+		resAnySlice := resAny.([]any)
 
 		res := make([]T, len(resAnySlice))
 

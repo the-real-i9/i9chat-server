@@ -139,7 +139,7 @@ type GroupMsgAckEvent struct {
 	ToGroup  string `redis:"toGroup" json:"toGroup"`
 	CHEId    string `redis:"CHEId" json:"CHEId"`
 	Ack      string `redis:"ack" json:"ack"`
-	At       string `redis:"at" json:"at"`
+	At       int64  `redis:"at" json:"at"`
 }
 
 type DirectMsgReactionRemovedEvent struct {

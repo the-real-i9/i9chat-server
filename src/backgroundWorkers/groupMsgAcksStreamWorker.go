@@ -56,14 +56,14 @@ func groupMsgAcksStreamBgWorker(rdb *redis.Client) {
 				msg.ToGroup = stmsg.Values["toGroup"].(string)
 				msg.CHEId = stmsg.Values["CHEId"].(string)
 				msg.Ack = stmsg.Values["ack"].(string)
-				msg.At = stmsg.Values["at"].(string)
+				msg.At = helpers.FromJson[int64](stmsg.Values["at"].(string))
 
 				msgs = append(msgs, msg)
 
 			}
 
-			groupMsgDelvToUsers := make(map[string]map[string][][2]string)
-			groupMsgReadByUsers := make(map[string]map[string][][2]string)
+			groupMsgDelvToUsers := make(map[string]map[string][][2]any)
+			groupMsgReadByUsers := make(map[string]map[string][][2]any)
 
 			userChatUnreadMsgs := make(map[string]map[string][]any)
 			userChatReadMsgs := make(map[string]map[string][]any)
@@ -86,10 +86,10 @@ func groupMsgAcksStreamBgWorker(rdb *redis.Client) {
 					userChatUnreadMsgs[msg.FromUser][msg.ToGroup] = append(userChatUnreadMsgs[msg.FromUser][msg.ToGroup], msg.CHEId)
 
 					if groupMsgDelvToUsers[msg.ToGroup] == nil {
-						groupMsgDelvToUsers[msg.ToGroup] = make(map[string][][2]string)
+						groupMsgDelvToUsers[msg.ToGroup] = make(map[string][][2]any)
 					}
 
-					groupMsgDelvToUsers[msg.ToGroup][msg.CHEId] = append(groupMsgDelvToUsers[msg.ToGroup][msg.CHEId], [2]string{msg.FromUser, msg.At})
+					groupMsgDelvToUsers[msg.ToGroup][msg.CHEId] = append(groupMsgDelvToUsers[msg.ToGroup][msg.CHEId], [2]any{msg.FromUser, msg.At})
 				}
 
 				if msg.Ack == "read" {
@@ -100,10 +100,10 @@ func groupMsgAcksStreamBgWorker(rdb *redis.Client) {
 					userChatReadMsgs[msg.FromUser][msg.ToGroup] = append(userChatReadMsgs[msg.FromUser][msg.ToGroup], msg.CHEId)
 
 					if groupMsgReadByUsers[msg.ToGroup] == nil {
-						groupMsgReadByUsers[msg.ToGroup] = make(map[string][][2]string)
+						groupMsgReadByUsers[msg.ToGroup] = make(map[string][][2]any)
 					}
 
-					groupMsgReadByUsers[msg.ToGroup][msg.CHEId] = append(groupMsgReadByUsers[msg.ToGroup][msg.CHEId], [2]string{msg.FromUser, msg.At})
+					groupMsgReadByUsers[msg.ToGroup][msg.CHEId] = append(groupMsgReadByUsers[msg.ToGroup][msg.CHEId], [2]any{msg.FromUser, msg.At})
 				}
 			}
 

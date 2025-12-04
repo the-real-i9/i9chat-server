@@ -38,6 +38,7 @@ func (b verifyEmailBody) Validate() error {
 type registerUserBody struct {
 	Username string `json:"username"`
 	Password string `json:"password"`
+	Bio      string `json:"bio"`
 }
 
 func (b registerUserBody) Validate() error {

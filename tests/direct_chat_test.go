@@ -13,7 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func XTestDirectChat(t *testing.T) {
+func TestDirectChat(t *testing.T) {
 	t.Parallel()
 
 	user1 := UserT{
@@ -40,7 +40,6 @@ func XTestDirectChat(t *testing.T) {
 		t.Log("Setup: create new accounts for users")
 
 		for _, user := range []*UserT{&user1, &user2} {
-			user := user
 
 			{
 				reqBody, err := makeReqBody(map[string]any{"email": user.Email})
@@ -186,7 +185,7 @@ func XTestDirectChat(t *testing.T) {
 		t.Log("Action: user1 sends message to user2")
 
 		err := user1.WSConn.WriteJSON(map[string]any{
-			"action": "send direct chat message",
+			"action": "direct chat: send message",
 			"data": map[string]any{
 				"partnerUsername": user2.Username,
 				"msg": map[string]any{
@@ -205,7 +204,7 @@ func XTestDirectChat(t *testing.T) {
 
 		td.Cmp(td.Require(t), user1ServerReply, td.Map(map[string]any{
 			"event":    "server reply",
-			"toAction": "send direct chat message",
+			"toAction": "direct chat: send message",
 			"data": td.Map(map[string]any{
 				"new_msg_id": td.Ignore(),
 			}, nil),
@@ -220,7 +219,7 @@ func XTestDirectChat(t *testing.T) {
 		user2NewMsgReceived := <-user2.ServerEventMsg
 
 		td.Cmp(td.Require(t), user2NewMsgReceived, td.Map(map[string]any{
-			"event": "new direct chat message",
+			"event": "direct chat: new message",
 			"data": td.SuperMapOf(map[string]any{
 				"id": user1NewMsgId,
 				"content": td.SuperMapOf(map[string]any{
@@ -237,7 +236,7 @@ func XTestDirectChat(t *testing.T) {
 		}, nil))
 
 		err := user2.WSConn.WriteJSON(map[string]any{
-			"action": "ack direct chat message delivered",
+			"action": "direct chat: ack message delivered",
 			"data": map[string]any{
 				"partnerUsername": user1.Username,
 				"msgId":           user1NewMsgId,
@@ -250,7 +249,7 @@ func XTestDirectChat(t *testing.T) {
 
 		td.Cmp(td.Require(t), user2ServerReply, td.Map(map[string]any{
 			"event":    "server reply",
-			"toAction": "ack direct chat message delivered",
+			"toAction": "direct chat: ack message delivered",
 			"data":     true,
 		}, nil))
 	}
@@ -261,7 +260,7 @@ func XTestDirectChat(t *testing.T) {
 		user1DelvAckReceipt := <-user1.ServerEventMsg
 
 		td.Cmp(td.Require(t), user1DelvAckReceipt, td.Map(map[string]any{
-			"event": "direct chat message delivered",
+			"event": "direct chat: message delivered",
 			"data": td.Map(map[string]any{
 				"partner_username": user2.Username,
 				"msg_id":           user1NewMsgId,
@@ -273,7 +272,7 @@ func XTestDirectChat(t *testing.T) {
 		t.Log("Action: user2 then acknowledges 'read'")
 
 		err := user2.WSConn.WriteJSON(map[string]any{
-			"action": "ack direct chat message read",
+			"action": "direct chat: ack message read",
 			"data": map[string]any{
 				"partnerUsername": user1.Username,
 				"msgId":           user1NewMsgId,
@@ -286,7 +285,7 @@ func XTestDirectChat(t *testing.T) {
 
 		td.Cmp(td.Require(t), user2ServerReply, td.Map(map[string]any{
 			"event":    "server reply",
-			"toAction": "ack direct chat message read",
+			"toAction": "direct chat: ack message read",
 			"data":     true,
 		}, nil))
 	}
@@ -297,7 +296,7 @@ func XTestDirectChat(t *testing.T) {
 		user1ReadAckReceipt := <-user1.ServerEventMsg
 
 		td.Cmp(td.Require(t), user1ReadAckReceipt, td.Map(map[string]any{
-			"event": "direct chat message read",
+			"event": "direct chat: message read",
 			"data": td.Map(map[string]any{
 				"partner_username": user2.Username,
 				"msg_id":           user1NewMsgId,
@@ -314,7 +313,7 @@ func XTestDirectChat(t *testing.T) {
 		require.NoError(t, err)
 
 		err = user2.WSConn.WriteJSON(map[string]any{
-			"action": "send direct chat message",
+			"action": "direct chat: send message",
 			"data": map[string]any{
 				"partnerUsername": user1.Username,
 				"msg": map[string]any{
@@ -334,7 +333,7 @@ func XTestDirectChat(t *testing.T) {
 
 		td.Cmp(td.Require(t), user2ServerReply, td.Map(map[string]any{
 			"event":    "server reply",
-			"toAction": "send direct chat message",
+			"toAction": "direct chat: send message",
 			"data": td.Map(map[string]any{
 				"new_msg_id": td.Ignore(),
 			}, nil),
@@ -349,7 +348,7 @@ func XTestDirectChat(t *testing.T) {
 		user1NewMsgReceived := <-user1.ServerEventMsg
 
 		td.Cmp(td.Require(t), user1NewMsgReceived, td.Map(map[string]any{
-			"event": "new direct chat message",
+			"event": "direct chat: new message",
 			"data": td.SuperMapOf(map[string]any{
 				"id": user2NewMsgId,
 				"content": td.SuperMapOf(map[string]any{
@@ -366,7 +365,7 @@ func XTestDirectChat(t *testing.T) {
 		}, nil))
 
 		err := user1.WSConn.WriteJSON(map[string]any{
-			"action": "ack direct chat message delivered",
+			"action": "direct chat: ack message delivered",
 			"data": map[string]any{
 				"partnerUsername": user2.Username,
 				"msgId":           user2NewMsgId,
@@ -379,7 +378,7 @@ func XTestDirectChat(t *testing.T) {
 
 		td.Cmp(td.Require(t), user1ServerReply, td.Map(map[string]any{
 			"event":    "server reply",
-			"toAction": "ack direct chat message delivered",
+			"toAction": "direct chat: ack message delivered",
 			"data":     true,
 		}, nil))
 	}
@@ -390,7 +389,7 @@ func XTestDirectChat(t *testing.T) {
 		user2DelvAckReceipt := <-user2.ServerEventMsg
 
 		td.Cmp(td.Require(t), user2DelvAckReceipt, td.Map(map[string]any{
-			"event": "direct chat message delivered",
+			"event": "direct chat: message delivered",
 			"data": td.Map(map[string]any{
 				"partner_username": user1.Username,
 				"msg_id":           user2NewMsgId,
@@ -402,7 +401,7 @@ func XTestDirectChat(t *testing.T) {
 		t.Log("Action: user1 then acknowledges 'read'")
 
 		err := user1.WSConn.WriteJSON(map[string]any{
-			"action": "ack direct chat message read",
+			"action": "direct chat: ack message read",
 			"data": map[string]any{
 				"partnerUsername": user2.Username,
 				"msgId":           user2NewMsgId,
@@ -415,7 +414,7 @@ func XTestDirectChat(t *testing.T) {
 
 		td.Cmp(td.Require(t), user1ServerReply, td.Map(map[string]any{
 			"event":    "server reply",
-			"toAction": "ack direct chat message read",
+			"toAction": "direct chat: ack message read",
 			"data":     true,
 		}, nil))
 	}
@@ -426,7 +425,7 @@ func XTestDirectChat(t *testing.T) {
 		user2ReadAckReceipt := <-user2.ServerEventMsg
 
 		td.Cmp(td.Require(t), user2ReadAckReceipt, td.Map(map[string]any{
-			"event": "direct chat message read",
+			"event": "direct chat: message read",
 			"data": td.Map(map[string]any{
 				"partner_username": user1.Username,
 				"msg_id":           user2NewMsgId,
@@ -435,6 +434,8 @@ func XTestDirectChat(t *testing.T) {
 	}
 
 	{
+		<-(time.NewTimer(100 * time.Millisecond).C)
+
 		t.Log("Action: user1 opens his chat history with user2")
 
 		req, err := http.NewRequest("GET", directChatPath+"/"+user2.Username+"/history", nil)

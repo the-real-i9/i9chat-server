@@ -186,13 +186,13 @@ func StoreGroupChatHistory(ctx context.Context, ownerUser, groupId string, CHEId
 	return nil
 }
 
-func StoreGroupMsgDeliveredToUsers(ctx context.Context, groupId, msgId string, user_deliveredAt_Pairs [][2]string) error {
+func StoreGroupMsgDeliveredToUsers(ctx context.Context, groupId, msgId string, user_deliveredAt_Pairs [][2]any) error {
 	members := []redis.Z{}
 	for _, pair := range user_deliveredAt_Pairs {
 		user := pair[0]
 
 		members = append(members, redis.Z{
-			Score:  stmsgIdToScore(pair[1]),
+			Score:  float64(pair[1].(int64)),
 			Member: user,
 		})
 	}
@@ -206,13 +206,13 @@ func StoreGroupMsgDeliveredToUsers(ctx context.Context, groupId, msgId string, u
 	return nil
 }
 
-func StoreGroupMsgReadByUsers(ctx context.Context, groupId, msgId string, user_deliveredAt_Pairs [][2]string) error {
+func StoreGroupMsgReadByUsers(ctx context.Context, groupId, msgId string, user_deliveredAt_Pairs [][2]any) error {
 	members := []redis.Z{}
 	for _, pair := range user_deliveredAt_Pairs {
 		user := pair[0]
 
 		members = append(members, redis.Z{
-			Score:  stmsgIdToScore(pair[1]),
+			Score:  float64(pair[1].(int64)),
 			Member: user,
 		})
 	}

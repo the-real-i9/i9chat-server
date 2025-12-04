@@ -79,8 +79,8 @@ func AckMessageDelivered(ctx context.Context, clientUsername, partnerUsername, m
 		go realtimeService.SendEventMsg(partnerUsername, appTypes.ServerEventMsg{
 			Event: "direct chat: message delivered",
 			Data: map[string]any{
-				"chat_partner": clientUsername,
-				"msg_id":       msgId,
+				"partner_username": clientUsername,
+				"msg_id":           msgId,
 			},
 		})
 	}
@@ -107,8 +107,8 @@ func AckMessageRead(ctx context.Context, clientUsername, partnerUsername, msgId 
 		go realtimeService.SendEventMsg(partnerUsername, appTypes.ServerEventMsg{
 			Event: "direct chat: message read",
 			Data: map[string]any{
-				"chat_partner": clientUsername,
-				"msg_id":       msgId,
+				"partner_username": clientUsername,
+				"msg_id":           msgId,
 			},
 		})
 	}
@@ -131,8 +131,8 @@ func ReactToMessage(ctx context.Context, clientUser appTypes.ClientUser, partner
 	go realtimeService.SendEventMsg(partnerUsername, appTypes.ServerEventMsg{
 		Event: "direct chat: message reaction",
 		Data: map[string]any{
-			"chat_partner": clientUser.Username,
-			"to_msg_id":    msgId,
+			"partner_username": clientUser.Username,
+			"to_msg_id":        msgId,
 			"reaction": UITypes.MsgReaction{
 				Emoji:   emoji,
 				Reactor: clientUser,
@@ -167,8 +167,8 @@ func RemoveReactionToMessage(ctx context.Context, clientUsername, partnerUsernam
 	go realtimeService.SendEventMsg(partnerUsername, appTypes.ServerEventMsg{
 		Event: "direct chat: message reaction removed",
 		Data: map[string]any{
-			"chat_partner": clientUsername,
-			"msg_id":       msgId,
+			"partner_username": clientUsername,
+			"msg_id":           msgId,
 		},
 	})
 

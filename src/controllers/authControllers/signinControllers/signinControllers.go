@@ -34,18 +34,18 @@ func Signin(c *fiber.Ctx) error {
 
 	var body signInBody
 
-	body_err := c.BodyParser(&body)
-	if body_err != nil {
-		return body_err
+	err := c.BodyParser(&body)
+	if err != nil {
+		return err
 	}
 
-	if val_err := body.Validate(); val_err != nil {
-		return val_err
+	if err := body.Validate(); err != nil {
+		return err
 	}
 
-	respData, authJwt, app_err := signinService.Signin(ctx, body.EmailOrUsername, body.Password)
-	if app_err != nil {
-		return app_err
+	respData, authJwt, err := signinService.Signin(ctx, body.EmailOrUsername, body.Password)
+	if err != nil {
+		return err
 	}
 
 	c.Cookie(helpers.Cookie("user", helpers.ToJson(map[string]any{"authJwt": authJwt}), int(10*24*time.Hour/time.Second)))

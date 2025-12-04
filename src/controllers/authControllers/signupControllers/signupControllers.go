@@ -3,7 +3,6 @@ package signupControllers
 import (
 	"i9chat/src/helpers"
 	"i9chat/src/services/auth/signupService"
-	"log"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -33,18 +32,18 @@ func RequestNewAccount(c *fiber.Ctx) error {
 
 	var body requestNewAccountBody
 
-	body_err := c.BodyParser(&body)
-	if body_err != nil {
-		return body_err
+	err := c.BodyParser(&body)
+	if err != nil {
+		return err
 	}
 
-	if val_err := body.Validate(); val_err != nil {
-		return val_err
+	if err := body.Validate(); err != nil {
+		return err
 	}
 
-	respData, sessionData, app_err := signupService.RequestNewAccount(ctx, body.Email)
-	if app_err != nil {
-		return app_err
+	respData, sessionData, err := signupService.RequestNewAccount(ctx, body.Email)
+	if err != nil {
+		return err
 	}
 
 	c.Cookie(helpers.Cookie("signup", helpers.ToJson(sessionData), int(time.Hour/time.Second)))
@@ -81,18 +80,18 @@ func VerifyEmail(c *fiber.Ctx) error {
 
 	var body verifyEmailBody
 
-	body_err := c.BodyParser(&body)
-	if body_err != nil {
-		return body_err
+	err := c.BodyParser(&body)
+	if err != nil {
+		return err
 	}
 
-	if val_err := body.Validate(); val_err != nil {
-		return val_err
+	if err := body.Validate(); err != nil {
+		return err
 	}
 
-	respData, newSessionData, app_err := signupService.VerifyEmail(ctx, sessionData, body.Code)
-	if app_err != nil {
-		return app_err
+	respData, newSessionData, err := signupService.VerifyEmail(ctx, sessionData, body.Code)
+	if err != nil {
+		return err
 	}
 
 	c.Cookie(helpers.Cookie("signup", helpers.ToJson(newSessionData), int(time.Hour/time.Second)))
@@ -110,8 +109,6 @@ func VerifyEmail(c *fiber.Ctx) error {
 //
 //	@Param			username	body		string						true	"Choose a username"
 //	@Param			password	body		string						true	"Choose a password"
-//	@Param			name		body		string						true	"User display name"
-//	@Param			birthday	body		int							true	"User birthday in milliseconds since Unix Epoch"
 //	@Param			bio			body		string						false	"User bio (optional)"
 //
 //	@Param			Cookie		header		[]string					true	"Signup session request cookie"
@@ -133,19 +130,19 @@ func RegisterUser(c *fiber.Ctx) error {
 
 	var body registerUserBody
 
-	body_err := c.BodyParser(&body)
-	if body_err != nil {
-		return body_err
+	err := c.BodyParser(&body)
+	if err != nil {
+		return err
 	}
 
-	if val_err := body.Validate(); val_err != nil {
-		log.Println(val_err)
-		return val_err
+	if err := body.Validate(); err != nil {
+		helpers.LogError(err)
+		return err
 	}
 
-	respData, authJwt, app_err := signupService.RegisterUser(ctx, sessionData, body.Username, body.Password)
-	if app_err != nil {
-		return app_err
+	respData, authJwt, err := signupService.RegisterUser(ctx, sessionData, body.Username, body.Password, body.Bio)
+	if err != nil {
+		return err
 	}
 
 	c.Cookie(helpers.Cookie("user", helpers.ToJson(map[string]any{"authJwt": authJwt}), int(10*24*time.Hour/time.Second)))

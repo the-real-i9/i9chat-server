@@ -2,11 +2,9 @@ package authMiddlewares
 
 import (
 	"i9chat/src/appTypes"
+	"i9chat/src/helpers"
 	"i9chat/src/services/securityServices"
-	"log"
 	"os"
-
-	"github.com/goccy/go-json"
 
 	"github.com/gofiber/fiber/v2"
 )
@@ -18,12 +16,7 @@ func UserAuth(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusUnauthorized).SendString("authentication required")
 	}
 
-	var userSessionData map[string]string
-
-	if err := json.Unmarshal([]byte(usStr), &userSessionData); err != nil {
-		log.Println("auth.go: UserAuth: json.Unmarshal:", err)
-		return fiber.ErrInternalServerError
-	}
+	userSessionData := helpers.FromJson[map[string]string](usStr)
 
 	sessionToken := userSessionData["authJwt"]
 

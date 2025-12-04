@@ -48,7 +48,6 @@ func XTestUserOps(t *testing.T) {
 		t.Log("Setup: create new accounts for users")
 
 		for _, user := range []*UserT{&user1, &user2, &user3} {
-			user := user
 
 			{
 				reqBody, err := makeReqBody(map[string]any{"email": user.Email})
@@ -220,5 +219,31 @@ func XTestUserOps(t *testing.T) {
 				"username": user3.Username,
 			}, nil),
 		)))
+	}
+
+	{
+		t.Log("Action: user1 changes her bio")
+
+		reqBody, err := makeReqBody(map[string]any{"newBio": "This is my new bio!"})
+		require.NoError(t, err)
+
+		req, err := http.NewRequest("POST", userPath+"/change_bio", reqBody)
+		require.NoError(t, err)
+		req.Header.Set("Cookie", user1.SessionCookie)
+		req.Header.Add("Content-Type", "application/json")
+
+		res, err := http.DefaultClient.Do(req)
+		require.NoError(t, err)
+
+		if !assert.Equal(t, http.StatusOK, res.StatusCode) {
+			rb, err := errResBody(res.Body)
+			require.NoError(t, err)
+			t.Log("unexpected error:", rb)
+			return
+		}
+
+		rb, err := succResBody[bool](res.Body)
+		require.NoError(t, err)
+		require.True(t, rb)
 	}
 }

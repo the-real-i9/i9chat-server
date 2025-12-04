@@ -12,9 +12,9 @@ func GetDirectChatHistory(c *fiber.Ctx) error {
 
 	clientUser := c.Locals("user").(appTypes.ClientUser)
 
-	respData, app_err := directChatService.GetChatHistory(ctx, clientUser.Username, c.Params("partner_username"), c.QueryInt("limit", 50), c.QueryFloat("cursor"))
-	if app_err != nil {
-		return app_err
+	respData, err := directChatService.GetChatHistory(ctx, clientUser.Username, c.Params("partner_username"), c.QueryInt("limit", 50), c.QueryFloat("cursor"))
+	if err != nil {
+		return err
 	}
 
 	return c.JSON(respData)

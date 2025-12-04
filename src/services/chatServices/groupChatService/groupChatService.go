@@ -2,7 +2,6 @@ package groupChatService
 
 import (
 	"context"
-	"fmt"
 	"i9chat/src/appTypes"
 	"i9chat/src/appTypes/UITypes"
 	"i9chat/src/helpers"
@@ -432,7 +431,7 @@ func AckMessageDelivered(ctx context.Context, clientUsername, groupId, msgId str
 			ToGroup:  groupId,
 			CHEId:    msgId,
 			Ack:      "delivered",
-			At:       fmt.Sprintf("%d", deliveredAt),
+			At:       deliveredAt,
 		})
 	}
 
@@ -452,7 +451,7 @@ func AckMessageRead(ctx context.Context, clientUsername, groupId, msgId string, 
 			ToGroup:  groupId,
 			CHEId:    msgId,
 			Ack:      "read",
-			At:       fmt.Sprintf("%d", readAt),
+			At:       readAt,
 		})
 	}
 

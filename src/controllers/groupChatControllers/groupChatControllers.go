@@ -17,16 +17,16 @@ func CreateNewGroup(c *fiber.Ctx) error {
 
 	var body newGroupChatBody
 
-	body_err := c.BodyParser(&body)
-	if body_err != nil {
-		return body_err
+	err := c.BodyParser(&body)
+	if err != nil {
+		return err
 	}
 
-	if val_err := body.Validate(); val_err != nil {
-		return val_err
+	if err := body.Validate(); err != nil {
+		return err
 	}
 
-	respData, app_err := groupChatService.NewGroup(ctx,
+	respData, err := groupChatService.NewGroup(ctx,
 		clientUser.Username,
 		body.Name,
 		body.Description,
@@ -34,8 +34,8 @@ func CreateNewGroup(c *fiber.Ctx) error {
 		body.InitUsers,
 		body.CreatedAt,
 	)
-	if app_err != nil {
-		return app_err
+	if err != nil {
+		return err
 	}
 
 	return c.Status(fiber.StatusCreated).JSON(respData)
@@ -46,9 +46,9 @@ func GetGroupMembers(c *fiber.Ctx) error {
 
 	clientUser := c.Locals("user").(appTypes.ClientUser)
 
-	respData, app_err := groupChatService.GetGroupMembers(ctx, clientUser.Username, c.Params("group_id"), c.QueryInt("limit", 100), c.QueryFloat("cursor"))
-	if app_err != nil {
-		return app_err
+	respData, err := groupChatService.GetGroupMembers(ctx, clientUser.Username, c.Params("group_id"), c.QueryInt("limit", 100), c.QueryFloat("cursor"))
+	if err != nil {
+		return err
 	}
 
 	return c.JSON(respData)
@@ -59,9 +59,9 @@ func GetGroupChatHistory(c *fiber.Ctx) error {
 
 	clientUser := c.Locals("user").(appTypes.ClientUser)
 
-	respData, app_err := groupChatService.GetChatHistory(ctx, clientUser.Username, c.Params("group_id"), c.QueryInt("limit", 50), c.QueryFloat("cursor"))
-	if app_err != nil {
-		return app_err
+	respData, err := groupChatService.GetChatHistory(ctx, clientUser.Username, c.Params("group_id"), c.QueryInt("limit", 50), c.QueryFloat("cursor"))
+	if err != nil {
+		return err
 	}
 
 	return c.JSON(respData)
@@ -103,9 +103,9 @@ func ExecuteAction(c *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusBadRequest, fmt.Sprintf("invalid group action: %s", c.Params("action")))
 	}
 
-	respData, app_err := actionHandler(ctx, clientUser.Username, c.Params("group_id"), actionData)
-	if app_err != nil {
-		return app_err
+	respData, err := actionHandler(ctx, clientUser.Username, c.Params("group_id"), actionData)
+	if err != nil {
+		return err
 	}
 
 	return c.JSON(respData)

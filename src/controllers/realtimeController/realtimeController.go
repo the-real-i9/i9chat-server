@@ -38,8 +38,8 @@ var WSStream = websocket.New(func(c *websocket.Conn) {
 			break
 		}
 
-		if val_err := body.Validate(); val_err != nil {
-			w_err = c.WriteJSON(helpers.WSErrReply(val_err, body.Action))
+		if err := body.Validate(); err != nil {
+			w_err = c.WriteJSON(helpers.WSErrReply(err, body.Action))
 			continue
 		}
 

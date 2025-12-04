@@ -23,18 +23,18 @@ func ChangeProfilePicture(c *fiber.Ctx) error {
 
 	var body changeProfilePictureBody
 
-	body_err := c.BodyParser(&body)
-	if body_err != nil {
-		return body_err
+	err := c.BodyParser(&body)
+	if err != nil {
+		return err
 	}
 
-	if val_err := body.Validate(); val_err != nil {
-		return val_err
+	if err := body.Validate(); err != nil {
+		return err
 	}
 
-	respData, authJwt, app_err := userService.ChangeProfilePicture(ctx, clientUser.Username, body.PictureData)
-	if app_err != nil {
-		return app_err
+	respData, authJwt, err := userService.ChangeProfilePicture(ctx, clientUser.Username, body.PictureData)
+	if err != nil {
+		return err
 	}
 
 	if respData != nil {
@@ -51,18 +51,18 @@ func ChangeBio(c *fiber.Ctx) error {
 
 	var body changeBioBody
 
-	body_err := c.BodyParser(&body)
-	if body_err != nil {
-		return body_err
+	err := c.BodyParser(&body)
+	if err != nil {
+		return err
 	}
 
-	if val_err := body.Validate(); val_err != nil {
-		return val_err
+	if err := body.Validate(); err != nil {
+		return err
 	}
 
-	respData, app_err := userService.ChangeBio(ctx, clientUser.Username, body.NewBio)
-	if app_err != nil {
-		return app_err
+	respData, err := userService.ChangeBio(ctx, clientUser.Username, body.NewBio)
+	if err != nil {
+		return err
 	}
 
 	return c.JSON(respData)
@@ -75,19 +75,19 @@ func SetMyLocation(c *fiber.Ctx) error {
 
 	var body updateMyGeolocationBody
 
-	body_err := c.BodyParser(&body)
-	if body_err != nil {
-		return body_err
+	err := c.BodyParser(&body)
+	if err != nil {
+		return err
 	}
 
-	if val_err := body.Validate(); val_err != nil {
-		return val_err
+	if err := body.Validate(); err != nil {
+		return err
 	}
 
-	respData, app_err := userService.SetMyLocation(ctx, clientUser.Username, body.NewGeolocation)
+	respData, err := userService.SetMyLocation(ctx, clientUser.Username, body.NewGeolocation)
 
-	if app_err != nil {
-		return app_err
+	if err != nil {
+		return err
 	}
 
 	return c.JSON(respData)
@@ -97,10 +97,10 @@ func FindUser(c *fiber.Ctx) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	respData, app_err := userService.FindUser(ctx, c.Query("username"))
+	respData, err := userService.FindUser(ctx, c.Query("username"))
 
-	if app_err != nil {
-		return app_err
+	if err != nil {
+		return err
 	}
 
 	return c.JSON(respData)
@@ -111,9 +111,9 @@ func FindNearbyUsers(c *fiber.Ctx) error {
 
 	clientUser := c.Locals("user").(appTypes.ClientUser)
 
-	respData, app_err := userService.FindNearbyUsers(ctx, clientUser.Username, c.QueryFloat("x"), c.QueryFloat("y"), c.QueryFloat("radius"))
-	if app_err != nil {
-		return app_err
+	respData, err := userService.FindNearbyUsers(ctx, clientUser.Username, c.QueryFloat("x"), c.QueryFloat("y"), c.QueryFloat("radius"))
+	if err != nil {
+		return err
 	}
 
 	return c.JSON(respData)
@@ -124,9 +124,9 @@ func GetMyChats(c *fiber.Ctx) error {
 
 	clientUser := c.Locals("user").(appTypes.ClientUser)
 
-	respData, app_err := userService.GetMyChats(ctx, clientUser.Username, c.QueryInt("limit", 20), c.QueryFloat("cursor"))
-	if app_err != nil {
-		return app_err
+	respData, err := userService.GetMyChats(ctx, clientUser.Username, c.QueryInt("limit", 20), c.QueryFloat("cursor"))
+	if err != nil {
+		return err
 	}
 
 	return c.JSON(respData)
@@ -137,9 +137,9 @@ func GetMyProfile(c *fiber.Ctx) error {
 
 	clientUser := c.Locals("user").(appTypes.ClientUser)
 
-	respData, app_err := userService.GetMyProfile(ctx, clientUser.Username)
-	if app_err != nil {
-		return app_err
+	respData, err := userService.GetMyProfile(ctx, clientUser.Username)
+	if err != nil {
+		return err
 	}
 
 	return c.JSON(respData)

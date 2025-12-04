@@ -72,8 +72,8 @@ func RemoveDirectChatHistory(ctx context.Context, ownerUser, partnerUser string,
 	return nil
 }
 
-func RemoveGroupChatHistory(ctx context.Context, groupId string, CHEIds []any) error {
-	if err := rdb().ZRem(ctx, fmt.Sprintf("group_chat:%s:history", groupId), CHEIds...).Err(); err != nil {
+func RemoveGroupChatHistory(ctx context.Context, ownerUser, groupId string, CHEIds []any) error {
+	if err := rdb().ZRem(ctx, fmt.Sprintf("group_chat:owner:%s:group_id:%s:history", ownerUser, groupId), CHEIds...).Err(); err != nil {
 		helpers.LogError(err)
 
 		return err
