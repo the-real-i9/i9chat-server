@@ -7,11 +7,11 @@ jobs:
   Tests:
     runs-on: ubuntu-latest
     services:
-      neo4j:
+      neo4j-server:
         image: neo4j:latest
         env:
-          NEO4J_AUTH: ${{secrets.NEO4J_USER}}/${{secrets.NEO4J_PASSWORD}}
-          NEO4J_PLUGINS: \[\"apoc\"\]
+          NEO4J_AUTH: neo4j/${{secrets.NEO4J_PASSWORD}}
+          NEO4JLABS_PLUGINS: \[\"apoc\"\]
         ports:
           - 7687:7687
 
@@ -37,7 +37,7 @@ jobs:
         run: cd ./tests && go test ./... -v -race
         env:
           NEO4J_URL: "neo4j://localhost"
-          NEO4J_USER: ${{secrets.NEO4J_USER}}
+          NEO4J_USER: neo4j
           NEO4J_PASSWORD: ${{secrets.NEO4J_PASSWORD}}
           REDIS_ADDR: "localhost:6379"
           AUTH_JWT_SECRET: ${{ secrets.AUTH_JWT_SECRET }}
