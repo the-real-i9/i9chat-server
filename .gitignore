@@ -1,6 +1,6 @@
 /**/.vscode/
 /**/.env
-/**/.tests.env
+/**/.test.env
 /**/.bashrc
 /**/tmp
 /**/todo*

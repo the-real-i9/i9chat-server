@@ -3,6 +3,8 @@ on:
     branches:
       - main
 name: "Test i9chat"
+permissions:
+  contents: read
 jobs:
   Tests:
     runs-on: ubuntu-latest
