@@ -71,7 +71,6 @@ func XTestGroupChat(t *testing.T) {
 		t.Log("Setup: create new accounts for users")
 
 		for _, user := range []*UserT{&user1, &user2, &user3, &user4, &user5} {
-			user := user
 
 			{
 				reqBody, err := makeReqBody(map[string]any{"email": user.Email})
@@ -165,7 +164,6 @@ func XTestGroupChat(t *testing.T) {
 		t.Log("Setup: Init user sockets")
 
 		for _, user := range []*UserT{&user1, &user2, &user3, &user4, &user5} {
-			user := user
 
 			header := http.Header{}
 			header.Set("Cookie", user.SessionCookie)
@@ -252,25 +250,29 @@ func XTestGroupChat(t *testing.T) {
 		require.NoError(t, err)
 
 		td.Cmp(td.Require(t), rb, td.SuperMapOf(map[string]any{
-			"id":          td.Ignore(),
-			"name":        newGroup.Name,
-			"description": newGroup.Description,
+			"group": td.SuperMapOf(map[string]any{
+				"id":          td.Ignore(),
+				"name":        newGroup.Name,
+				"description": newGroup.Description,
+			}, nil),
 			"history": td.Contains(td.SuperMapOf(map[string]any{
 				"che_type": "group activity",
 				"info":     "You added " + user2.Username,
 			}, nil)),
 		}, nil))
 
-		newGroup.Id = rb["id"].(string)
+		newGroup.Id = rb["group"].(map[string]any)["id"].(string)
 
 		user2RecvNewGroup := <-user2.ServerEventMsg
 
 		td.Cmp(td.Require(t), user2RecvNewGroup, td.Map(map[string]any{
 			"event": "new group chat",
 			"data": td.SuperMapOf(map[string]any{
-				"id":          newGroup.Id,
-				"name":        newGroup.Name,
-				"description": newGroup.Description,
+				"group": td.SuperMapOf(map[string]any{
+					"id":          newGroup.Id,
+					"name":        newGroup.Name,
+					"description": newGroup.Description,
+				}, nil),
 				"history": td.Contains(td.SuperMapOf(map[string]any{
 					"che_type": "group activity",
 					"info":     "You were added",
@@ -304,9 +306,11 @@ func XTestGroupChat(t *testing.T) {
 		require.NoError(t, err)
 
 		td.Cmp(td.Require(t), rb, td.SuperMapOf(map[string]any{
-			"id":          newGroup.Id,
-			"name":        newGroup.Name,
-			"description": newGroup.Description,
+			"group": td.SuperMapOf(map[string]any{
+				"id":          newGroup.Id,
+				"name":        newGroup.Name,
+				"description": newGroup.Description,
+			}, nil),
 			"history": td.Contains(td.SuperMapOf(map[string]any{
 				"che_type": "group activity",
 				"info":     "You joined",
@@ -316,7 +320,7 @@ func XTestGroupChat(t *testing.T) {
 		user1GCJoinNotif := <-user1.ServerEventMsg
 
 		td.Cmp(td.Require(t), user1GCJoinNotif, td.Map(map[string]any{
-			"event": "new group chat activity",
+			"event": "group chat: new activity",
 			"data": td.Map(map[string]any{
 				"info":     user3.Username + " joined",
 				"group_id": newGroup.Id,
@@ -326,7 +330,7 @@ func XTestGroupChat(t *testing.T) {
 		user2GCJoinNotif := <-user2.ServerEventMsg
 
 		td.Cmp(td.Require(t), user2GCJoinNotif, td.Map(map[string]any{
-			"event": "new group chat activity",
+			"event": "group chat: new activity",
 			"data": td.Map(map[string]any{
 				"info":     user3.Username + " joined",
 				"group_id": newGroup.Id,
@@ -365,7 +369,7 @@ func XTestGroupChat(t *testing.T) {
 		user2GCNewAdminNotif := <-user2.ServerEventMsg
 
 		td.Cmp(td.Require(t), user2GCNewAdminNotif, td.Map(map[string]any{
-			"event": "new group chat activity",
+			"event": "group chat: new activity",
 			"data": td.Map(map[string]any{
 				"info":     fmt.Sprintf("%s made you group admin", user1.Username),
 				"group_id": newGroup.Id,
@@ -375,40 +379,11 @@ func XTestGroupChat(t *testing.T) {
 		user3GCNewAdminNotif := <-user3.ServerEventMsg
 
 		td.Cmp(td.Require(t), user3GCNewAdminNotif, td.Map(map[string]any{
-			"event": "new group chat activity",
+			"event": "group chat: new activity",
 			"data": td.Map(map[string]any{
 				"info":     fmt.Sprintf("%s made %s group admin", user1.Username, user2.Username),
 				"group_id": newGroup.Id,
 			}, nil),
-		}, nil))
-	}
-
-	{
-		t.Log("Action: check user2 group membership info")
-
-		req, err := http.NewRequest("GET", groupChatPath+"/"+newGroup.Id+"/membership_info", nil)
-		require.NoError(t, err)
-		req.Header.Add("Content-Type", "application/json")
-		req.Header.Set("Cookie", user2.SessionCookie)
-
-		res, err := http.DefaultClient.Do(req)
-		require.NoError(t, err)
-
-		if !assert.Equal(t, http.StatusOK, res.StatusCode) {
-			rb, err := errResBody(res.Body)
-			require.NoError(t, err)
-			t.Log("unexpected error:", rb)
-			return
-		}
-
-		rb, err := succResBody[map[string]any](res.Body)
-		require.NoError(t, err)
-
-		td.Cmp(td.Require(t), rb, td.Map(map[string]any{
-			"is_member":    true,
-			"user_role":    "admin",
-			"user_removed": false,
-			"user_left":    false,
 		}, nil))
 	}
 
@@ -445,9 +420,11 @@ func XTestGroupChat(t *testing.T) {
 		td.Cmp(td.Require(t), user4GCUserAddedNotif, td.Map(map[string]any{
 			"event": "new group chat",
 			"data": td.SuperMapOf(map[string]any{
-				"id":          newGroup.Id,
-				"name":        newGroup.Name,
-				"description": newGroup.Description,
+				"group": td.SuperMapOf(map[string]any{
+					"id":          newGroup.Id,
+					"name":        newGroup.Name,
+					"description": newGroup.Description,
+				}, nil),
 				"history": td.Contains(td.SuperMapOf(map[string]any{
 					"che_type": "group activity",
 					"info":     "You were added",
@@ -460,9 +437,11 @@ func XTestGroupChat(t *testing.T) {
 		td.Cmp(td.Require(t), user5GCUserAddedNotif, td.Map(map[string]any{
 			"event": "new group chat",
 			"data": td.SuperMapOf(map[string]any{
-				"id":          newGroup.Id,
-				"name":        newGroup.Name,
-				"description": newGroup.Description,
+				"group": td.SuperMapOf(map[string]any{
+					"id":          newGroup.Id,
+					"name":        newGroup.Name,
+					"description": newGroup.Description,
+				}, nil),
 				"history": td.Contains(td.SuperMapOf(map[string]any{
 					"che_type": "group activity",
 					"info":     "You were added",
@@ -473,7 +452,7 @@ func XTestGroupChat(t *testing.T) {
 		user1GCNewUsersAddedNotif := <-user1.ServerEventMsg
 
 		td.Cmp(td.Require(t), user1GCNewUsersAddedNotif, td.Map(map[string]any{
-			"event": "new group chat activity",
+			"event": "group chat: new activity",
 			"data": td.Map(map[string]any{
 				"info":     fmt.Sprintf("%s added %s", user2.Username, helpers.JoinWithCommaAnd(user4.Username, user5.Username)),
 				"group_id": newGroup.Id,
@@ -483,7 +462,7 @@ func XTestGroupChat(t *testing.T) {
 		user3GCNewUsersAddedNotif := <-user3.ServerEventMsg
 
 		td.Cmp(td.Require(t), user3GCNewUsersAddedNotif, td.Map(map[string]any{
-			"event": "new group chat activity",
+			"event": "group chat: new activity",
 			"data": td.Map(map[string]any{
 				"info":     fmt.Sprintf("%s added %s", user2.Username, helpers.JoinWithCommaAnd(user4.Username, user5.Username)),
 				"group_id": newGroup.Id,
@@ -526,7 +505,7 @@ func XTestGroupChat(t *testing.T) {
 		user2GCNameChangeNotif := <-user2.ServerEventMsg
 
 		td.Cmp(td.Require(t), user2GCNameChangeNotif, td.Map(map[string]any{
-			"event": "new group chat activity",
+			"event": "group chat: new activity",
 			"data": td.Map(map[string]any{
 				"info":     fmt.Sprintf("%s changed group name from %s to %s", user1.Username, oldGroupName, newGroup.Name),
 				"group_id": newGroup.Id,
@@ -536,7 +515,7 @@ func XTestGroupChat(t *testing.T) {
 		user3GCNameChangeNotif := <-user3.ServerEventMsg
 
 		td.Cmp(td.Require(t), user3GCNameChangeNotif, td.Map(map[string]any{
-			"event": "new group chat activity",
+			"event": "group chat: new activity",
 			"data": td.Map(map[string]any{
 				"info":     fmt.Sprintf("%s changed group name from %s to %s", user1.Username, oldGroupName, newGroup.Name),
 				"group_id": newGroup.Id,
@@ -546,7 +525,7 @@ func XTestGroupChat(t *testing.T) {
 		user4GCNameChangeNotif := <-user4.ServerEventMsg
 
 		td.Cmp(td.Require(t), user4GCNameChangeNotif, td.Map(map[string]any{
-			"event": "new group chat activity",
+			"event": "group chat: new activity",
 			"data": td.Map(map[string]any{
 				"info":     fmt.Sprintf("%s changed group name from %s to %s", user1.Username, oldGroupName, newGroup.Name),
 				"group_id": newGroup.Id,
@@ -556,7 +535,7 @@ func XTestGroupChat(t *testing.T) {
 		user5GCNameChangeNotif := <-user5.ServerEventMsg
 
 		td.Cmp(td.Require(t), user5GCNameChangeNotif, td.Map(map[string]any{
-			"event": "new group chat activity",
+			"event": "group chat: new activity",
 			"data": td.Map(map[string]any{
 				"info":     fmt.Sprintf("%s changed group name from %s to %s", user1.Username, oldGroupName, newGroup.Name),
 				"group_id": newGroup.Id,
@@ -599,7 +578,7 @@ func XTestGroupChat(t *testing.T) {
 		user2GCDescriptionChangeNotif := <-user2.ServerEventMsg
 
 		td.Cmp(td.Require(t), user2GCDescriptionChangeNotif, td.Map(map[string]any{
-			"event": "new group chat activity",
+			"event": "group chat: new activity",
 			"data": td.Map(map[string]any{
 				"info":     fmt.Sprintf("%s changed group description from %s to %s", user1.Username, oldGroupDescription, newGroup.Description),
 				"group_id": newGroup.Id,
@@ -609,7 +588,7 @@ func XTestGroupChat(t *testing.T) {
 		user3GCDescriptionChangeNotif := <-user3.ServerEventMsg
 
 		td.Cmp(td.Require(t), user3GCDescriptionChangeNotif, td.Map(map[string]any{
-			"event": "new group chat activity",
+			"event": "group chat: new activity",
 			"data": td.Map(map[string]any{
 				"info":     fmt.Sprintf("%s changed group description from %s to %s", user1.Username, oldGroupDescription, newGroup.Description),
 				"group_id": newGroup.Id,
@@ -619,7 +598,7 @@ func XTestGroupChat(t *testing.T) {
 		user4GCDescriptionChangeNotif := <-user4.ServerEventMsg
 
 		td.Cmp(td.Require(t), user4GCDescriptionChangeNotif, td.Map(map[string]any{
-			"event": "new group chat activity",
+			"event": "group chat: new activity",
 			"data": td.Map(map[string]any{
 				"info":     fmt.Sprintf("%s changed group description from %s to %s", user1.Username, oldGroupDescription, newGroup.Description),
 				"group_id": newGroup.Id,
@@ -629,7 +608,7 @@ func XTestGroupChat(t *testing.T) {
 		user5GCDescriptionChangeNotif := <-user5.ServerEventMsg
 
 		td.Cmp(td.Require(t), user5GCDescriptionChangeNotif, td.Map(map[string]any{
-			"event": "new group chat activity",
+			"event": "group chat: new activity",
 			"data": td.Map(map[string]any{
 				"info":     fmt.Sprintf("%s changed group description from %s to %s", user1.Username, oldGroupDescription, newGroup.Description),
 				"group_id": newGroup.Id,
@@ -670,7 +649,7 @@ func XTestGroupChat(t *testing.T) {
 		user1GCPictureChangeNotif := <-user1.ServerEventMsg
 
 		td.Cmp(td.Require(t), user1GCPictureChangeNotif, td.Map(map[string]any{
-			"event": "new group chat activity",
+			"event": "group chat: new activity",
 			"data": td.Map(map[string]any{
 				"info":     fmt.Sprintf("%s changed group picture", user2.Username),
 				"group_id": newGroup.Id,
@@ -680,7 +659,7 @@ func XTestGroupChat(t *testing.T) {
 		user3GCPictureChangeNotif := <-user3.ServerEventMsg
 
 		td.Cmp(td.Require(t), user3GCPictureChangeNotif, td.Map(map[string]any{
-			"event": "new group chat activity",
+			"event": "group chat: new activity",
 			"data": td.Map(map[string]any{
 				"info":     fmt.Sprintf("%s changed group picture", user2.Username),
 				"group_id": newGroup.Id,
@@ -690,7 +669,7 @@ func XTestGroupChat(t *testing.T) {
 		user4GCPictureChangeNotif := <-user4.ServerEventMsg
 
 		td.Cmp(td.Require(t), user4GCPictureChangeNotif, td.Map(map[string]any{
-			"event": "new group chat activity",
+			"event": "group chat: new activity",
 			"data": td.Map(map[string]any{
 				"info":     fmt.Sprintf("%s changed group picture", user2.Username),
 				"group_id": newGroup.Id,
@@ -700,7 +679,7 @@ func XTestGroupChat(t *testing.T) {
 		user5GCPictureChangeNotif := <-user5.ServerEventMsg
 
 		td.Cmp(td.Require(t), user5GCPictureChangeNotif, td.Map(map[string]any{
-			"event": "new group chat activity",
+			"event": "group chat: new activity",
 			"data": td.Map(map[string]any{
 				"info":     fmt.Sprintf("%s changed group picture", user2.Username),
 				"group_id": newGroup.Id,
@@ -739,7 +718,7 @@ func XTestGroupChat(t *testing.T) {
 		user1GCAdminRemovalNotif := <-user1.ServerEventMsg
 
 		td.Cmp(td.Require(t), user1GCAdminRemovalNotif, td.Map(map[string]any{
-			"event": "new group chat activity",
+			"event": "group chat: new activity",
 			"data": td.Map(map[string]any{
 				"info":     fmt.Sprintf("%s removed you from group admins", user2.Username),
 				"group_id": newGroup.Id,
@@ -749,7 +728,7 @@ func XTestGroupChat(t *testing.T) {
 		user3GCAdminRemovalNotif := <-user3.ServerEventMsg
 
 		td.Cmp(td.Require(t), user3GCAdminRemovalNotif, td.Map(map[string]any{
-			"event": "new group chat activity",
+			"event": "group chat: new activity",
 			"data": td.Map(map[string]any{
 				"info":     fmt.Sprintf("%s removed %s from group admins", user2.Username, user1.Username),
 				"group_id": newGroup.Id,
@@ -759,7 +738,7 @@ func XTestGroupChat(t *testing.T) {
 		user4GCAdminRemovalNotif := <-user4.ServerEventMsg
 
 		td.Cmp(td.Require(t), user4GCAdminRemovalNotif, td.Map(map[string]any{
-			"event": "new group chat activity",
+			"event": "group chat: new activity",
 			"data": td.Map(map[string]any{
 				"info":     fmt.Sprintf("%s removed %s from group admins", user2.Username, user1.Username),
 				"group_id": newGroup.Id,
@@ -769,40 +748,11 @@ func XTestGroupChat(t *testing.T) {
 		user5GCAdminRemovalNotif := <-user5.ServerEventMsg
 
 		td.Cmp(td.Require(t), user5GCAdminRemovalNotif, td.Map(map[string]any{
-			"event": "new group chat activity",
+			"event": "group chat: new activity",
 			"data": td.Map(map[string]any{
 				"info":     fmt.Sprintf("%s removed %s from group admins", user2.Username, user1.Username),
 				"group_id": newGroup.Id,
 			}, nil),
-		}, nil))
-	}
-
-	{
-		t.Log("Action: check user1 group membership info")
-
-		req, err := http.NewRequest("GET", groupChatPath+"/"+newGroup.Id+"/membership_info", nil)
-		require.NoError(t, err)
-		req.Header.Add("Content-Type", "application/json")
-		req.Header.Set("Cookie", user1.SessionCookie)
-
-		res, err := http.DefaultClient.Do(req)
-		require.NoError(t, err)
-
-		if !assert.Equal(t, http.StatusOK, res.StatusCode) {
-			rb, err := errResBody(res.Body)
-			require.NoError(t, err)
-			t.Log("unexpected error:", rb)
-			return
-		}
-
-		rb, err := succResBody[map[string]any](res.Body)
-		require.NoError(t, err)
-
-		td.Cmp(td.Require(t), rb, td.Map(map[string]any{
-			"is_member":    true,
-			"user_role":    "member",
-			"user_removed": false,
-			"user_left":    false,
 		}, nil))
 	}
 
@@ -837,7 +787,7 @@ func XTestGroupChat(t *testing.T) {
 		user1GCAdminRemovalNotif := <-user1.ServerEventMsg
 
 		td.Cmp(td.Require(t), user1GCAdminRemovalNotif, td.Map(map[string]any{
-			"event": "new group chat activity",
+			"event": "group chat: new activity",
 			"data": td.Map(map[string]any{
 				"info":     fmt.Sprintf("%s removed you", user2.Username),
 				"group_id": newGroup.Id,
@@ -847,7 +797,7 @@ func XTestGroupChat(t *testing.T) {
 		user3GCAdminRemovalNotif := <-user3.ServerEventMsg
 
 		td.Cmp(td.Require(t), user3GCAdminRemovalNotif, td.Map(map[string]any{
-			"event": "new group chat activity",
+			"event": "group chat: new activity",
 			"data": td.Map(map[string]any{
 				"info":     fmt.Sprintf("%s removed %s", user2.Username, user1.Username),
 				"group_id": newGroup.Id,
@@ -857,7 +807,7 @@ func XTestGroupChat(t *testing.T) {
 		user4GCAdminRemovalNotif := <-user4.ServerEventMsg
 
 		td.Cmp(td.Require(t), user4GCAdminRemovalNotif, td.Map(map[string]any{
-			"event": "new group chat activity",
+			"event": "group chat: new activity",
 			"data": td.Map(map[string]any{
 				"info":     fmt.Sprintf("%s removed %s", user2.Username, user1.Username),
 				"group_id": newGroup.Id,
@@ -867,40 +817,11 @@ func XTestGroupChat(t *testing.T) {
 		user5GCAdminRemovalNotif := <-user5.ServerEventMsg
 
 		td.Cmp(td.Require(t), user5GCAdminRemovalNotif, td.Map(map[string]any{
-			"event": "new group chat activity",
+			"event": "group chat: new activity",
 			"data": td.Map(map[string]any{
 				"info":     fmt.Sprintf("%s removed %s", user2.Username, user1.Username),
 				"group_id": newGroup.Id,
 			}, nil),
-		}, nil))
-	}
-
-	{
-		t.Log("Action: check user1 group membership info")
-
-		req, err := http.NewRequest("GET", groupChatPath+"/"+newGroup.Id+"/membership_info", nil)
-		require.NoError(t, err)
-		req.Header.Add("Content-Type", "application/json")
-		req.Header.Set("Cookie", user1.SessionCookie)
-
-		res, err := http.DefaultClient.Do(req)
-		require.NoError(t, err)
-
-		if !assert.Equal(t, http.StatusOK, res.StatusCode) {
-			rb, err := errResBody(res.Body)
-			require.NoError(t, err)
-			t.Log("unexpected error:", rb)
-			return
-		}
-
-		rb, err := succResBody[map[string]any](res.Body)
-		require.NoError(t, err)
-
-		td.Cmp(td.Require(t), rb, td.Map(map[string]any{
-			"is_member":    false,
-			"user_role":    nil,
-			"user_removed": true,
-			"user_left":    false,
 		}, nil))
 	}
 
@@ -933,7 +854,7 @@ func XTestGroupChat(t *testing.T) {
 		user2GCLeaveNotif := <-user2.ServerEventMsg
 
 		td.Cmp(td.Require(t), user2GCLeaveNotif, td.Map(map[string]any{
-			"event": "new group chat activity",
+			"event": "group chat: new activity",
 			"data": td.Map(map[string]any{
 				"info":     user3.Username + " left",
 				"group_id": newGroup.Id,
@@ -943,7 +864,7 @@ func XTestGroupChat(t *testing.T) {
 		user4GCLeaveNotif := <-user4.ServerEventMsg
 
 		td.Cmp(td.Require(t), user4GCLeaveNotif, td.Map(map[string]any{
-			"event": "new group chat activity",
+			"event": "group chat: new activity",
 			"data": td.Map(map[string]any{
 				"info":     user3.Username + " left",
 				"group_id": newGroup.Id,
@@ -953,7 +874,7 @@ func XTestGroupChat(t *testing.T) {
 		user5GCLeaveNotif := <-user5.ServerEventMsg
 
 		td.Cmp(td.Require(t), user5GCLeaveNotif, td.Map(map[string]any{
-			"event": "new group chat activity",
+			"event": "group chat: new activity",
 			"data": td.Map(map[string]any{
 				"info":     user3.Username + " left",
 				"group_id": newGroup.Id,
@@ -962,39 +883,12 @@ func XTestGroupChat(t *testing.T) {
 	}
 
 	{
-		t.Log("Action: check user3 group membership info")
+		<-(time.NewTimer(100 * time.Millisecond).C)
 
-		req, err := http.NewRequest("GET", groupChatPath+"/"+newGroup.Id+"/membership_info", nil)
-		require.NoError(t, err)
-		req.Header.Add("Content-Type", "application/json")
-		req.Header.Set("Cookie", user3.SessionCookie)
-
-		res, err := http.DefaultClient.Do(req)
-		require.NoError(t, err)
-
-		if !assert.Equal(t, http.StatusOK, res.StatusCode) {
-			rb, err := errResBody(res.Body)
-			require.NoError(t, err)
-			t.Log("unexpected error:", rb)
-			return
-		}
-
-		rb, err := succResBody[map[string]any](res.Body)
-		require.NoError(t, err)
-
-		td.Cmp(td.Require(t), rb, td.Map(map[string]any{
-			"is_member":    false,
-			"user_role":    nil,
-			"user_removed": false,
-			"user_left":    true,
-		}, nil))
-	}
-
-	{
 		t.Log("user2 requests group info")
 
 		err := user2.WSConn.WriteJSON(map[string]any{
-			"action": "get group info",
+			"action": "group: get info",
 			"data": map[string]any{
 				"groupId": newGroup.Id,
 			},
@@ -1006,12 +900,12 @@ func XTestGroupChat(t *testing.T) {
 
 		td.Cmp(td.Require(t), user2ServerReply, td.Map(map[string]any{
 			"event":    "server reply",
-			"toAction": "get group info",
+			"toAction": "group: get info",
 			"data": td.SuperMapOf(map[string]any{
 				"name":                 newGroup.Name,
 				"description":          newGroup.Description,
 				"members_count":        td.Lax(3),
-				"members_online_count": td.Lax(3),
+				"online_members_count": td.Lax(3),
 			}, nil),
 		}, nil))
 	}
@@ -1022,7 +916,7 @@ func XTestGroupChat(t *testing.T) {
 		t.Log("Action: user4 sends message to group | other members receives the message")
 
 		err := user4.WSConn.WriteJSON(map[string]any{
-			"action": "send group chat message",
+			"action": "group chat: send message",
 			"data": map[string]any{
 				"groupId": newGroup.Id,
 				"msg": map[string]any{
@@ -1041,7 +935,7 @@ func XTestGroupChat(t *testing.T) {
 
 		td.Cmp(td.Require(t), user4ServerReply, td.Map(map[string]any{
 			"event":    "server reply",
-			"toAction": "send group chat message",
+			"toAction": "group chat: send message",
 			"data": td.Map(map[string]any{
 				"new_msg_id": td.Ignore(),
 			}, nil),
@@ -1056,7 +950,7 @@ func XTestGroupChat(t *testing.T) {
 		user2NewMsgReceived := <-user2.ServerEventMsg
 
 		td.Cmp(td.Require(t), user2NewMsgReceived, td.Map(map[string]any{
-			"event": "new group chat message",
+			"event": "group chat: new message",
 			"data": td.Map(map[string]any{
 				"message": td.SuperMapOf(map[string]any{
 					"id": user4NewMsgId,
@@ -1078,7 +972,7 @@ func XTestGroupChat(t *testing.T) {
 		user5NewMsgReceived := <-user5.ServerEventMsg
 
 		td.Cmp(td.Require(t), user5NewMsgReceived, td.Map(map[string]any{
-			"event": "new group chat message",
+			"event": "group chat: new message",
 			"data": td.Map(map[string]any{
 				"message": td.SuperMapOf(map[string]any{
 					"id": user4NewMsgId,
@@ -1103,7 +997,7 @@ func XTestGroupChat(t *testing.T) {
 
 		// user2 acknowledges 'delivered'
 		err := user2.WSConn.WriteJSON(map[string]any{
-			"action": "ack group chat message delivered",
+			"action": "group chat: ack message delivered",
 			"data": map[string]any{
 				"groupId": newGroup.Id,
 				"msgId":   user4NewMsgId,
@@ -1116,15 +1010,13 @@ func XTestGroupChat(t *testing.T) {
 
 		td.Cmp(td.Require(t), user2ServerReply, td.Map(map[string]any{
 			"event":    "server reply",
-			"toAction": "ack group chat message delivered",
-			"data": td.Map(map[string]any{
-				"delivered_to_all": false, // message hasn't delivered to all members
-			}, nil),
+			"toAction": "group chat: ack message delivered",
+			"data":     true,
 		}, nil))
 
 		// user5 acknowledges 'delivered'
 		err = user5.WSConn.WriteJSON(map[string]any{
-			"action": "ack group chat message delivered",
+			"action": "group chat: ack message delivered",
 			"data": map[string]any{
 				"groupId": newGroup.Id,
 				"msgId":   user4NewMsgId,
@@ -1137,26 +1029,38 @@ func XTestGroupChat(t *testing.T) {
 
 		td.Cmp(td.Require(t), user5ServerReply, td.Map(map[string]any{
 			"event":    "server reply",
-			"toAction": "ack group chat message delivered",
-			"data": td.Map(map[string]any{
-				"delivered_to_all": true, // message has now delivered to all members
-				// user5 will now mark message as 'delivered'
-				// this latest status will be communicated to other users
-			}, nil),
+			"toAction": "group chat: ack message delivered",
+			"data":     true,
 		}, nil))
 	}
 
 	{
-		t.Log("Action: message is now 'delivered' to all other members | each receives the 'delivered' acknowledgement | each marks message as 'delivered'")
-
-		// note: user5 has received his own 'delivered' acknowledgement receipt via server reply
-		// since he's the last user to acknowledge 'delivered' when the server detects
-		// that all members have now acknowledged 'delivered'
+		t.Log("Action: message is now 'delivered' to all other members | all receive the 'delivered' acknowledgement; marking message as 'delivered'")
 
 		user2DelvAckReceipt := <-user2.ServerEventMsg
 
 		td.Cmp(td.Require(t), user2DelvAckReceipt, td.Map(map[string]any{
-			"event": "group chat message delivered",
+			"event": "group chat: message delivered",
+			"data": td.Map(map[string]any{
+				"group_id": newGroup.Id,
+				"msg_id":   user4NewMsgId,
+			}, nil),
+		}, nil))
+
+		user4DelvAckReceipt := <-user4.ServerEventMsg
+
+		td.Cmp(td.Require(t), user4DelvAckReceipt, td.Map(map[string]any{
+			"event": "group chat: message delivered",
+			"data": td.Map(map[string]any{
+				"group_id": newGroup.Id,
+				"msg_id":   user4NewMsgId,
+			}, nil),
+		}, nil))
+
+		user5DelvAckReceipt := <-user5.ServerEventMsg
+
+		td.Cmp(td.Require(t), user5DelvAckReceipt, td.Map(map[string]any{
+			"event": "group chat: message delivered",
 			"data": td.Map(map[string]any{
 				"group_id": newGroup.Id,
 				"msg_id":   user4NewMsgId,
@@ -1170,7 +1074,7 @@ func XTestGroupChat(t *testing.T) {
 
 		// user5 acknowledges 'read'
 		err := user5.WSConn.WriteJSON(map[string]any{
-			"action": "ack group chat message read",
+			"action": "group chat: ack message read",
 			"data": map[string]any{
 				"groupId": newGroup.Id,
 				"msgId":   user4NewMsgId,
@@ -1183,15 +1087,13 @@ func XTestGroupChat(t *testing.T) {
 
 		td.Cmp(td.Require(t), user5ServerReply, td.Map(map[string]any{
 			"event":    "server reply",
-			"toAction": "ack group chat message read",
-			"data": td.Map(map[string]any{
-				"read_by_all": false, // message hasn't been read by all members
-			}, nil),
+			"toAction": "group chat: ack message read",
+			"data":     true,
 		}, nil))
 
 		// user2 acknowledges 'read'
 		err = user2.WSConn.WriteJSON(map[string]any{
-			"action": "ack group chat message read",
+			"action": "group chat: ack message read",
 			"data": map[string]any{
 				"groupId": newGroup.Id,
 				"msgId":   user4NewMsgId,
@@ -1204,26 +1106,38 @@ func XTestGroupChat(t *testing.T) {
 
 		td.Cmp(td.Require(t), user2ServerReply, td.Map(map[string]any{
 			"event":    "server reply",
-			"toAction": "ack group chat message read",
-			"data": td.Map(map[string]any{
-				"read_by_all": true, // message has now been read by all members
-				// user2 will now mark message as 'read'
-				// this latest status will be communicated to other users
-			}, nil),
+			"toAction": "group chat: ack message read",
+			"data":     true,
 		}, nil))
 	}
 
 	{
-		t.Log("Action: message is now 'read' by all other members | each receives the 'read' acknowledgement | each marks message as 'read'")
-
-		// note: user2 has received his own 'read' acknowledgement receipt via server reply
-		// since he's the last user to acknowledge 'read' when the server detects
-		// that all members have now acknowledged 'read'
+		t.Log("Action: message is now 'read' by all other members | all members receive the 'read' acknowledgement; marking message as 'read'")
 
 		user5ReadAckReceipt := <-user5.ServerEventMsg
 
 		td.Cmp(td.Require(t), user5ReadAckReceipt, td.Map(map[string]any{
-			"event": "group chat message read",
+			"event": "group chat: message read",
+			"data": td.Map(map[string]any{
+				"group_id": newGroup.Id,
+				"msg_id":   user4NewMsgId,
+			}, nil),
+		}, nil))
+
+		user4ReadAckReceipt := <-user4.ServerEventMsg
+
+		td.Cmp(td.Require(t), user4ReadAckReceipt, td.Map(map[string]any{
+			"event": "group chat: message read",
+			"data": td.Map(map[string]any{
+				"group_id": newGroup.Id,
+				"msg_id":   user4NewMsgId,
+			}, nil),
+		}, nil))
+
+		user2ReadAckReceipt := <-user2.ServerEventMsg
+
+		td.Cmp(td.Require(t), user2ReadAckReceipt, td.Map(map[string]any{
+			"event": "group chat: message read",
 			"data": td.Map(map[string]any{
 				"group_id": newGroup.Id,
 				"msg_id":   user4NewMsgId,
@@ -1232,6 +1146,8 @@ func XTestGroupChat(t *testing.T) {
 	}
 
 	{
+		<-(time.NewTimer(100 * time.Millisecond).C)
+
 		t.Log("Action: user5 opens group chat history")
 
 		req, err := http.NewRequest("GET", groupChatPath+"/"+newGroup.Id+"/history", nil)

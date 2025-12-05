@@ -52,47 +52,47 @@ func initNeo4jDriver() error {
 	_, err2 := sess.ExecuteWrite(ctx, func(tx neo4j.ManagedTransaction) (any, error) {
 		var err error
 
-		_, err = tx.Run(ctx, `CREATE CONSTRAINT unique_username IF NOT EXISTS FOR (u:User) REQUIRE u.username IS UNIQUE`, nil)
+		_, err = tx.Run(ctx, `/* cypher */ CREATE CONSTRAINT unique_username IF NOT EXISTS FOR (u:User) REQUIRE u.username IS UNIQUE`, nil)
 		if err != nil {
 			return nil, err
 		}
 
-		_, err = tx.Run(ctx, `CREATE CONSTRAINT unique_email IF NOT EXISTS FOR (u:User) REQUIRE u.email IS UNIQUE`, nil)
+		_, err = tx.Run(ctx, `/* cypher */ CREATE CONSTRAINT unique_email IF NOT EXISTS FOR (u:User) REQUIRE u.email IS UNIQUE`, nil)
 		if err != nil {
 			return nil, err
 		}
 
-		_, err = tx.Run(ctx, `CREATE CONSTRAINT unique_direct_chat IF NOT EXISTS FOR (dc:DirectChat) REQUIRE (dc.owner_username, dc.partner_username) IS UNIQUE`, nil)
+		_, err = tx.Run(ctx, `/* cypher */ CREATE CONSTRAINT unique_direct_chat IF NOT EXISTS FOR (dc:DirectChat) REQUIRE (dc.owner_username, dc.partner_username) IS UNIQUE`, nil)
 		if err != nil {
 			return nil, err
 		}
 
-		_, err = tx.Run(ctx, `CREATE CONSTRAINT unique_direct_msg IF NOT EXISTS FOR (dm:DirectMessage) REQUIRE dm.id IS UNIQUE`, nil)
+		_, err = tx.Run(ctx, `/* cypher */ CREATE CONSTRAINT unique_direct_msg IF NOT EXISTS FOR (dm:DirectMessage) REQUIRE dm.id IS UNIQUE`, nil)
 		if err != nil {
 			return nil, err
 		}
 
-		_, err = tx.Run(ctx, `CREATE CONSTRAINT unique_direct_msg_rxn IF NOT EXISTS FOR (dmrxn:DirectMessageReaction) REQUIRE (dmrxn.reactor_username, dmrxn.message_id) IS UNIQUE`, nil)
+		_, err = tx.Run(ctx, `/* cypher */ CREATE CONSTRAINT unique_direct_msg_rxn IF NOT EXISTS FOR (dmrxn:DirectMessageReaction) REQUIRE (dmrxn.reactor_username, dmrxn.message_id) IS UNIQUE`, nil)
 		if err != nil {
 			return nil, err
 		}
 
-		_, err = tx.Run(ctx, `CREATE CONSTRAINT unique_group IF NOT EXISTS FOR (g:Group) REQUIRE g.id IS UNIQUE`, nil)
+		_, err = tx.Run(ctx, `/* cypher */ CREATE CONSTRAINT unique_group IF NOT EXISTS FOR (g:Group) REQUIRE g.id IS UNIQUE`, nil)
 		if err != nil {
 			return nil, err
 		}
 
-		_, err = tx.Run(ctx, `CREATE CONSTRAINT unique_group_chat IF NOT EXISTS FOR (gc:GroupChat) REQUIRE (gc.owner_username, gc.group_id) IS UNIQUE`, nil)
+		_, err = tx.Run(ctx, `/* cypher */ CREATE CONSTRAINT unique_group_chat IF NOT EXISTS FOR (gc:GroupChat) REQUIRE (gc.owner_username, gc.group_id) IS UNIQUE`, nil)
 		if err != nil {
 			return nil, err
 		}
 
-		_, err = tx.Run(ctx, `CREATE CONSTRAINT unique_group_msg IF NOT EXISTS FOR (gm:GroupMessage) REQUIRE gm.id IS UNIQUE`, nil)
+		_, err = tx.Run(ctx, `/* cypher */ CREATE CONSTRAINT unique_group_msg IF NOT EXISTS FOR (gm:GroupMessage) REQUIRE gm.id IS UNIQUE`, nil)
 		if err != nil {
 			return nil, err
 		}
 
-		_, err = tx.Run(ctx, `CREATE CONSTRAINT unique_group_msg_rxn IF NOT EXISTS FOR (gmrxn:GroupMessageReaction) REQUIRE (gmrxn.reactor_username, gmrxn.message_id) IS UNIQUE`, nil)
+		_, err = tx.Run(ctx, `/* cypher */ CREATE CONSTRAINT unique_group_msg_rxn IF NOT EXISTS FOR (gmrxn:GroupMessageReaction) REQUIRE (gmrxn.reactor_username, gmrxn.message_id) IS UNIQUE`, nil)
 		if err != nil {
 			return nil, err
 		}

@@ -17,10 +17,12 @@ type UserProfile struct {
 }
 
 type GroupInfo struct {
-	Id          string `json:"id"`
-	Name        string `json:"name"`
-	PictureUrl  string `json:"picture_url"`
-	Description string `json:"description"`
+	Id                 string `json:"id"`
+	Name               string `json:"name"`
+	PictureUrl         string `json:"picture_url"`
+	Description        string `json:"description"`
+	MembersCount       int64  `json:"members_count"`
+	OnlineMembersCount int    `json:"online_members_count"`
 }
 
 type GroupMemberSnippet struct {

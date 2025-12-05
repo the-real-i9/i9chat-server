@@ -51,7 +51,7 @@ func newGroupsStreamBgWorker(rdb *redis.Client) {
 
 				var msg eventTypes.NewGroupEvent
 				msg.CreatorUser = stmsg.Values["creatorUser"].(string)
-				msg.GroupId = stmsg.Values["id"].(string)
+				msg.GroupId = stmsg.Values["groupId"].(string)
 				msg.GroupData = stmsg.Values["groupData"].(string)
 				msg.InitMembers = helpers.FromJson[appTypes.BinableSlice](stmsg.Values["initMembers"].(string))
 				msg.CreatorUserCHEs = helpers.FromJson[appTypes.BinableSlice](stmsg.Values["creatorUserCHEs"].(string))

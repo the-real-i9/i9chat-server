@@ -50,8 +50,8 @@ func newDirectMessagesStreamBgWorker(rdb *redis.Client) {
 
 				var msg eventTypes.NewDirectMessageEvent
 
-				msg.FirstFromUser = helpers.FromJson[bool](stmsg.Values["ffu"].(string))
-				msg.FirstToUser = helpers.FromJson[bool](stmsg.Values["ftu"].(string))
+				msg.FirstFromUser = stmsg.Values["ffu"].(string) != "0"
+				msg.FirstToUser = stmsg.Values["ftu"].(string) != "0"
 				msg.FromUser = stmsg.Values["fromUser"].(string)
 				msg.ToUser = stmsg.Values["toUser"].(string)
 				msg.CHEId = stmsg.Values["CHEId"].(string)

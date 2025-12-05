@@ -105,7 +105,7 @@ func groupUsersLeftStreamBgWorker(rdb *redis.Client) {
 				eg.Go(func() error {
 					groupId, oldMembers := groupId, oldMembers
 
-					return cache.StoreGroupMembers(sharedCtx, groupId, oldMembers)
+					return cache.RemoveGroupMembers(sharedCtx, groupId, oldMembers)
 				})
 			}
 

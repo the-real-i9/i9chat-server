@@ -21,15 +21,15 @@ func GoOnline(ctx context.Context, clientUsername string) {
 	done := user.ChangePresence(ctx, clientUsername, "online", 0)
 
 	if done {
-		realtimeService.PublishUserPresenceChange(ctx, clientUsername, map[string]any{
-			"user":     clientUsername,
-			"presence": "online",
-		})
-
 		go eventStreamService.QueueUserPresenceChangeEvent(eventTypes.UserPresenceChangeEvent{
 			Username: clientUsername,
 			Presence: "online",
 			LastSeen: 0,
+		})
+
+		realtimeService.PublishUserPresenceChange(ctx, clientUsername, map[string]any{
+			"user":     clientUsername,
+			"presence": "online",
 		})
 	}
 
@@ -41,16 +41,16 @@ func GoOffline(ctx context.Context, clientUsername string) {
 	done := user.ChangePresence(ctx, clientUsername, "offline", lastSeen)
 
 	if done {
-		realtimeService.PublishUserPresenceChange(ctx, clientUsername, map[string]any{
-			"user":      clientUsername,
-			"presence":  "offline",
-			"last_seen": lastSeen,
-		})
-
 		go eventStreamService.QueueUserPresenceChangeEvent(eventTypes.UserPresenceChangeEvent{
 			Username: clientUsername,
 			Presence: "offline",
 			LastSeen: lastSeen,
+		})
+
+		realtimeService.PublishUserPresenceChange(ctx, clientUsername, map[string]any{
+			"user":      clientUsername,
+			"presence":  "offline",
+			"last_seen": lastSeen,
 		})
 	}
 }

@@ -102,10 +102,11 @@ type NewDirectMessageEvent struct {
 }
 
 type NewGroupMessageEvent struct {
-	FromUser string `redis:"fromUser" json:"fromUser"`
-	ToGroup  string `redis:"toGroup" json:"toGroup"`
-	CHEId    string `redis:"CHEId" json:"CHEId"`
-	MsgData  string `redis:"msgData" json:"msgData"`
+	FromUser    string                `redis:"fromUser" json:"fromUser"`
+	ToGroup     string                `redis:"toGroup" json:"toGroup"`
+	CHEId       string                `redis:"CHEId" json:"CHEId"`
+	MsgData     string                `redis:"msgData" json:"msgData"`
+	MemberUsers appTypes.BinableSlice `redis:"memberUsers" json:"memberUsers"`
 }
 
 type NewDirectMsgReactionEvent struct {

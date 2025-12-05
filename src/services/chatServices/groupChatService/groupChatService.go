@@ -9,6 +9,7 @@ import (
 	"i9chat/src/services/appServices"
 	"i9chat/src/services/eventStreamService"
 	"i9chat/src/services/eventStreamService/eventTypes"
+	"maps"
 )
 
 func NewGroup(ctx context.Context, clientUsername, name, description string, pictureData []byte, initUsers []string, createdAt int64) (map[string]any, error) {
@@ -23,7 +24,6 @@ func NewGroup(ctx context.Context, clientUsername, name, description string, pic
 	}
 
 	done := newGroup.Id != ""
-
 	if !done {
 		return nil, nil
 	}
@@ -192,7 +192,7 @@ func AddUsersToGroup(ctx context.Context, groupId, clientUsername string, newUse
 
 		// history is the same for all init users, we only need separation for the cache
 		// so we make use of one user's history
-		che := newActivity.NewUsersCHE[newActivity.NewUsernames[0].(string)].(map[string]any)
+		che := maps.Clone(newActivity.NewUsersCHE[newActivity.NewUsernames[0].(string)].(map[string]any))
 
 		delete(che, "che_id")
 
@@ -270,7 +270,7 @@ func JoinGroup(ctx context.Context, groupId, clientUsername string) (any, error)
 		go broadcastActivity(memus, activInfo, groupId)
 	}
 
-	che := newActivity.ClientUserCHE
+	che := maps.Clone(newActivity.ClientUserCHE)
 
 	delete(che, "che_id")
 
@@ -403,10 +403,11 @@ func SendMessage(ctx context.Context, clientUser appTypes.ClientUser, groupId, r
 
 	// queue new message event
 	go eventStreamService.QueueNewGroupMessageEvent(eventTypes.NewGroupMessageEvent{
-		FromUser: clientUser.Username,
-		ToGroup:  groupId,
-		CHEId:    newMessage.Id,
-		MsgData:  helpers.ToJson(newMessage),
+		FromUser:    clientUser.Username,
+		ToGroup:     groupId,
+		CHEId:       newMessage.Id,
+		MsgData:     helpers.ToJson(newMessage),
+		MemberUsers: newMessage.MemberUsernames,
 	})
 
 	go func(msgData groupChat.NewMessage) {
@@ -481,7 +482,7 @@ func ReactToMessage(ctx context.Context, clientUser appTypes.ClientUser, groupId
 	})
 
 	go broadcastMsgReaction(rxnToMessage.MemberUsernames, map[string]any{
-		"in_group":  groupId,
+		"group_id":  groupId,
 		"to_msg_id": msgId,
 		"reaction": UITypes.MsgReaction{
 			Emoji:   emoji,
@@ -513,7 +514,7 @@ func RemoveReactionToMessage(ctx context.Context, clientUsername, groupId, msgId
 	})
 
 	go broadcastMsgReactionRemoved(rrtm.MemberUsernames, map[string]any{
-		"in_group":     groupId,
+		"group_id":     groupId,
 		"msg_id":       msgId,
 		"reactor_user": clientUsername,
 	})

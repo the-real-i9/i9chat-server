@@ -3,6 +3,7 @@ package backgroundWorkers
 import (
 	"context"
 	"fmt"
+	"i9chat/src/appTypes"
 	"i9chat/src/cache"
 	"i9chat/src/helpers"
 	"i9chat/src/services/eventStreamService/eventTypes"
@@ -54,6 +55,7 @@ func newGroupMessagesStreamBgWorker(rdb *redis.Client) {
 				msg.ToGroup = stmsg.Values["toGroup"].(string)
 				msg.CHEId = stmsg.Values["CHEId"].(string)
 				msg.MsgData = stmsg.Values["msgData"].(string)
+				msg.MemberUsers = helpers.FromJson[appTypes.BinableSlice](stmsg.Values["memberUsers"].(string))
 
 				msgs = append(msgs, msg)
 			}
@@ -75,10 +77,16 @@ func newGroupMessagesStreamBgWorker(rdb *redis.Client) {
 				updatedUserChats[msg.FromUser][msg.ToGroup] = stmsgIds[i]
 
 				chatMessages[msg.FromUser+" "+msg.ToGroup] = append(chatMessages[msg.FromUser+" "+msg.ToGroup], [2]string{msg.CHEId, stmsgIds[i]})
+
+				for _, memUser := range msg.MemberUsers {
+					memUser := memUser.(string)
+
+					chatMessages[memUser+" "+msg.ToGroup] = append(chatMessages[memUser+" "+msg.ToGroup], [2]string{msg.CHEId, stmsgIds[i]})
+				}
 			}
 
 			// batch processing
-			if err := cache.StoreDirectChatHistoryEntries(ctx, newMessageEntries); err != nil {
+			if err := cache.StoreGroupChatHistoryEntries(ctx, newMessageEntries); err != nil {
 				return
 			}
 

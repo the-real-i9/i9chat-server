@@ -38,6 +38,16 @@ func GetGroupMembersCount(ctx context.Context, groupId string) (int64, error) {
 	return count, nil
 }
 
+func GetGroupOnlineMembersCount(ctx context.Context, groupId string) (int, error) {
+	onMems, err := rdb().SDiff(ctx, fmt.Sprintf("group:%s:members", groupId), "offline_users_unsorted").Result()
+	if err != nil && err != redis.Nil {
+		helpers.LogError(err)
+		return 0, err
+	}
+
+	return len(onMems), nil
+}
+
 func GetChat[T any](ctx context.Context, ownerUser, chatIdent string) (chat T, err error) {
 	chatJson, err := rdb().HGet(ctx, fmt.Sprintf("user:%s:chats", ownerUser), chatIdent).Result()
 	if err != nil && err != redis.Nil {

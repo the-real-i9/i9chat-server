@@ -37,6 +37,16 @@ func BuildGroupInfoUIFromCache(ctx context.Context, groupId string) (groupInfoUI
 		return nilVal, err
 	}
 
+	groupInfoUI.MembersCount, err = cache.GetGroupMembersCount(ctx, groupId)
+	if err != nil {
+		return nilVal, err
+	}
+
+	groupInfoUI.OnlineMembersCount, err = cache.GetGroupOnlineMembersCount(ctx, groupId)
+	if err != nil {
+		return nilVal, err
+	}
+
 	return groupInfoUI, nil
 }
 
@@ -130,6 +140,8 @@ func buildCHEUIFromCache(ctx context.Context, CHEId, chatType string) (CHEUI UIT
 
 		CHEUI.Reactions = msgReactions
 		CHEUI.ReactionsCount = reactionsCount
+
+	case "group activity", "reaction":
 
 	default:
 		return nilVal, fmt.Errorf("unknown CHEType:%s: debug", CHEUI.CHEType)

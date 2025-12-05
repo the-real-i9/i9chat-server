@@ -168,13 +168,15 @@ func groupMsgAcksStreamBgWorker(rdb *redis.Client) {
 								return
 							}
 
-							if len(membersList) == int(delvToUsersCount) {
+							// delvToUsers cannot include the message sender,
+							// therefore, we exempt them from the membersList count
+							if len(membersList)-1 == int(delvToUsersCount) {
 								go func(membersList []string) {
 									for _, mu := range membersList {
 										realtimeService.SendEventMsg(mu, appTypes.ServerEventMsg{
 											Event: "group chat: message delivered",
 											Data: map[string]string{
-												"in_group": groupId,
+												"group_id": groupId,
 												"msg_id":   msgId,
 											},
 										})
@@ -187,8 +189,8 @@ func groupMsgAcksStreamBgWorker(rdb *redis.Client) {
 									_, err := db.Query(
 										ctx,
 										`/* cypher */
-											MATCH (:GroupMessage{ id: $msg_id })
-											SET delivery_status = "delivered"
+											MATCH (gm:GroupMessage{ id: $msg_id })
+											SET gm.delivery_status = "delivered"
 											`,
 										map[string]any{
 											"msg_id": msgId,
@@ -228,13 +230,15 @@ func groupMsgAcksStreamBgWorker(rdb *redis.Client) {
 								return
 							}
 
-							if len(membersList) == int(readByUsersCount) {
+							// readByUsers cannot include the message sender,
+							// therefore, we exempt them from the membersList count
+							if len(membersList)-1 == int(readByUsersCount) {
 								go func(membersList []string) {
 									for _, mu := range membersList {
 										realtimeService.SendEventMsg(mu, appTypes.ServerEventMsg{
 											Event: "group chat: message read",
 											Data: map[string]string{
-												"in_group": groupId,
+												"group_id": groupId,
 												"msg_id":   msgId,
 											},
 										})
@@ -247,8 +251,8 @@ func groupMsgAcksStreamBgWorker(rdb *redis.Client) {
 									_, err := db.Query(
 										ctx,
 										`/* cypher */
-											MATCH (:GroupMessage{ id: $msg_id })
-											SET delivery_status = "read"
+											MATCH (gm:GroupMessage{ id: $msg_id })
+											SET gm.delivery_status = "read"
 											`,
 										map[string]any{
 											"msg_id": msgId,

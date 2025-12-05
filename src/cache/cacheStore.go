@@ -34,15 +34,25 @@ func StoreNewUsers(ctx context.Context, newUsers []string) error {
 
 func StoreOfflineUsers(ctx context.Context, user_lastSeen_Pairs map[string]int64) error {
 	members := []redis.Z{}
+	membersUnsorted := []any{}
+
 	for user, lastSeen := range user_lastSeen_Pairs {
 
 		members = append(members, redis.Z{
 			Score:  float64(lastSeen),
 			Member: user,
 		})
+
+		membersUnsorted = append(membersUnsorted, user)
 	}
 
 	if err := rdb().ZAdd(ctx, "offline_users", members...).Err(); err != nil {
+		helpers.LogError(err)
+
+		return err
+	}
+
+	if err := rdb().SAdd(ctx, "offline_users_unsorted", membersUnsorted...).Err(); err != nil {
 		helpers.LogError(err)
 
 		return err

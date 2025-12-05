@@ -45,9 +45,9 @@ func SendMessage(ctx context.Context, clientUsername, partnerUsername, msgConten
 		WITH clientUser, clientChat, partnerUser, partnerChat, ffu, ftu
 		CREATE (message:DirectMessage:DirectChatEntry{ id: randomUUID(), che_type: "message", content: $message_content, delivery_status: "sent", created_at: $at }),
 			(clientUser)-[:SENDS_MESSAGE]->(message)-[:IN_DIRECT_CHAT]->(clientChat),
-			(partnerUser)-[:RECEIVES_MESSAGE]->(message)-[:IN_DIRECT_CHAT]->(partnerChat)
+			(message)-[:IN_DIRECT_CHAT { receipt: "received" }]->(partnerChat)
 
-		RETURN message { .*, content: apoc.convert.fromJsonMap(message.content), sender: $client_username, ffu, ftu } AS new_message
+		RETURN message { .*, content: apoc.convert.fromJsonMap(message.content), sender: $client_username, ffu: ffu, ftu: ftu } AS new_message
 		`,
 		map[string]any{
 			"client_username":  clientUsername,
@@ -71,7 +71,7 @@ func AckMessageDelivered(ctx context.Context, clientUsername, partnerUsername, m
 		ctx,
 		`/*cypher*/
 		MATCH (clientChat:DirectChat{ owner_username: $client_username, partner_username: $partner_username }),
-      (clientChat)<-[:IN_DIRECT_CHAT]-(message:DirectMessage{ id: $message_id, delivery_status: "sent" })<-[:RECEIVES_MESSAGE]-()
+      (clientChat)<-[:IN_DIRECT_CHAT { receipt: "received" }]-(message:DirectMessage{ id: $message_id, delivery_status: "sent" })
 
     SET message.delivery_status = "delivered", message.delivered_at = $delivered_at
 
@@ -101,7 +101,7 @@ func AckMessageRead(ctx context.Context, clientUsername, partnerUsername, msgId 
 		ctx,
 		`/*cypher*/
 		MATCH (clientChat:DirectChat{ owner_username: $client_username, partner_username: $partner_username }),
-      (clientChat)<-[:IN_DIRECT_CHAT]-(message:DirectMessage{ id: $message_id } WHERE message.delivery_status IN ["sent", "delivered"])<-[:RECEIVES_MESSAGE]-()
+      (clientChat)<-[:IN_DIRECT_CHAT { receipt: "received" }]-(message:DirectMessage{ id: $message_id } WHERE message.delivery_status IN ["sent", "delivered"])
 
     SET message.delivery_status = "read", message.read_at = $read_at
 
@@ -138,7 +138,7 @@ func ReplyToMessage(ctx context.Context, clientUsername, partnerUsername, target
 		WITH clientUser, clientChat, partnerUser, partnerChat, targetMsg, targetMsgSender
 		CREATE (replyMsg:DirectMessage:DirectChatEntry{ id: randomUUID(), che_type: "message", content: $message_content, delivery_status: "sent", created_at: $at }),
 			(clientUser)-[:SENDS_MESSAGE]->(replyMsg)-[:IN_DIRECT_CHAT]->(clientChat),
-			(partnerUser)-[:RECEIVES_MESSAGE]->(replyMsg)-[:IN_DIRECT_CHAT]->(partnerChat),
+			(replyMsg)-[:IN_DIRECT_CHAT { receipt: "received" }]->(partnerChat),
 			(replyMsg)-[:REPLIES_TO]->(targetMsg)
 
 		WITH replyMsg,

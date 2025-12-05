@@ -70,13 +70,17 @@ func userPresenceChangesStreamBgWorker(rdb *redis.Client) {
 			// batch processing
 			eg, sharedCtx := errgroup.WithContext(ctx)
 
-			eg.Go(func() error {
-				return cache.StoreOfflineUsers(sharedCtx, offlineUsers)
-			})
+			if len(offlineUsers) != 0 {
+				eg.Go(func() error {
+					return cache.StoreOfflineUsers(sharedCtx, offlineUsers)
+				})
+			}
 
-			eg.Go(func() error {
-				return cache.RemoveOfflineUsers(sharedCtx, onlineUsers)
-			})
+			if len(onlineUsers) != 0 {
+				eg.Go(func() error {
+					return cache.RemoveOfflineUsers(sharedCtx, onlineUsers)
+				})
+			}
 
 			if eg.Wait() != nil {
 				return

@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"reflect"
 	"runtime"
 	"strings"
 
@@ -14,7 +13,7 @@ import (
 )
 
 func ToStruct(val any, dest any) {
-	valType := reflect.TypeOf(val)
+	/* valType := reflect.TypeOf(val)
 
 	if valType.Kind() != reflect.Map && !(valType.Kind() == reflect.Slice && valType.Elem().Kind() == reflect.Map) {
 		panic("expected 'val' to be a map or slice of maps")
@@ -24,7 +23,7 @@ func ToStruct(val any, dest any) {
 
 	if destType.Kind() != reflect.Struct && !(destType.Kind() == reflect.Slice && destType.Elem().Kind() == reflect.Struct) {
 		panic("expected 'dest' to be a pointer to struct or slice of structs")
-	}
+	} */
 
 	bt, err := json.Marshal(val)
 	if err != nil {
