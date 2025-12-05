@@ -12,7 +12,7 @@ import (
 )
 
 func TestUserOps(t *testing.T) {
-	// t.Parallel()
+	t.Parallel()
 
 	user1 := UserT{
 		Email:    "mikeross@gmail.com",

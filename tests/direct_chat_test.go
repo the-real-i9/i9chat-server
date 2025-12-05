@@ -14,7 +14,7 @@ import (
 )
 
 func TestDirectChat(t *testing.T) {
-	// t.Parallel()
+	t.Parallel()
 
 	user1 := UserT{
 		Email:    "louislitt@gmail.com",

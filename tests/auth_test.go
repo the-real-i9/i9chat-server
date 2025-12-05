@@ -13,7 +13,7 @@ import (
 )
 
 func TestUserAuth(t *testing.T) {
-	// t.Parallel()
+	t.Parallel()
 
 	user1 := UserT{
 		Email:    "suberu@gmail.com",
