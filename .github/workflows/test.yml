@@ -14,10 +14,6 @@ jobs:
           NEO4JLABS_PLUGINS: '["apoc"]'
         options: >-
           --health-cmd "cypher-shell 'match (n) return count(n)'"
-          --health-timeout 10s
-          --health-retries 20
-          --health-interval 10s
-          --health-start-period 30s
         ports:
           - 7687:7687
 
