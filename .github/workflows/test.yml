@@ -12,8 +12,6 @@ jobs:
         env:
           NEO4J_AUTH: neo4j/${{secrets.NEO4J_PASSWORD}}
           NEO4JLABS_PLUGINS: '["apoc"]'
-        options: >-
-          --health-cmd "cypher-shell 'match (n) return count(n)'"
         ports:
           - 7687:7687
 
