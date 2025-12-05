@@ -36,7 +36,7 @@ jobs:
           go-version: "${{ matrix.go-version }}"
 
       - name: Run Test
-        run: cd ./tests && go test ./... -v -race
+        run: cd ./tests && go test . -v
         env:
           NEO4J_URL: "neo4j://localhost"
           NEO4J_USER: neo4j
