@@ -11,7 +11,13 @@ jobs:
         image: neo4j:latest
         env:
           NEO4J_AUTH: neo4j/${{secrets.NEO4J_PASSWORD}}
-          NEO4JLABS_PLUGINS: \[\"apoc\"\]
+          NEO4JLABS_PLUGINS: '["apoc"]'
+        options: >-
+          --health-cmd "cypher-shell 'match (n) return count(n)'"
+          --health-timeout 10s
+          --health-retries 20
+          --health-interval 10s
+          --health-start-period 30s
         ports:
           - 7687:7687
 
