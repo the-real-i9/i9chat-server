@@ -12,7 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func XTestUserAuth(t *testing.T) {
+func TestUserAuth(t *testing.T) {
 	t.Parallel()
 
 	user1 := UserT{

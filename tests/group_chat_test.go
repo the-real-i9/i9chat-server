@@ -14,7 +14,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func XTestGroupChat(t *testing.T) {
+func TestGroupChat(t *testing.T) {
 	t.Parallel()
 
 	user1 := UserT{

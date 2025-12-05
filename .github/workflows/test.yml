@@ -1,0 +1,51 @@
+on:
+  push:
+    branches:
+      - main
+name: "Test i9chat"
+jobs:
+  Tests:
+    runs-on: ubuntu-latest
+    services:
+      neo4j:
+        image: neo4j:latest
+        env:
+          NEO4J_AUTH: ${{secrets.NEO4J_USER}}/${{secrets.NEO4J_PASSWORD}}
+          NEO4J_PLUGINS: \[\"apoc\"\]
+        ports:
+          - 7687:7687
+
+      redis-server:
+        image: redis:latest
+        ports:
+          - 6379:6379
+    strategy:
+      matrix:
+        go-version:
+          - 1.25.x
+
+    steps:
+      - name: Fetch Repository
+        uses: actions/checkout@v4
+
+      - name: Install Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "${{ matrix.go-version }}"
+
+      - name: Run Test
+        run: cd ./tests && go test ./... -v -race
+        env:
+          NEO4J_URL: "neo4j://localhost"
+          NEO4J_USER: ${{secrets.NEO4J_USER}}
+          NEO4J_PASSWORD: ${{secrets.NEO4J_PASSWORD}}
+          REDIS_ADDR: "localhost:6379"
+          AUTH_JWT_SECRET: ${{ secrets.AUTH_JWT_SECRET }}
+          COOKIE_SECRET: ${{ secrets.COOKIE_SECRET }}
+          MAILING_EMAIL: ${{ secrets.MAILING_EMAIL }}
+          MAILING_PASSWORD: ${{ secrets.MAILING_PASSWORD }}
+          GCS_BUCKET: ${{ vars.GCS_BUCKET }}
+          GCS_API_KEY: ${{ secrets.GCS_API_KEY }}
+          DUMMY_TOKEN: ${{ secrets.DUMMY_TOKEN }}
+          SERVER_HOST: ${{ vars.SERVER_HOST }}
+          GO_ENV: remote_test

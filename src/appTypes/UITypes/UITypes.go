@@ -21,6 +21,7 @@ type GroupInfo struct {
 	Name               string `json:"name"`
 	PictureUrl         string `json:"picture_url"`
 	Description        string `json:"description"`
+	CreatedAt          int64  `json:"created_at"`
 	MembersCount       int64  `json:"members_count"`
 	OnlineMembersCount int    `json:"online_members_count"`
 }

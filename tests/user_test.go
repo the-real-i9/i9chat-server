@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func XTestUserOps(t *testing.T) {
+func TestUserOps(t *testing.T) {
 	t.Parallel()
 
 	user1 := UserT{
