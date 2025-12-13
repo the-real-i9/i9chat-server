@@ -2,11 +2,12 @@
 
 [![Test i9chat](https://github.com/the-real-i9/i9chat-server/actions/workflows/test.yml/badge.svg?event=push)](https://github.com/the-real-i9/i9chat-server/actions/workflows/test.yml)
 
-A Chat App API Server
+A Chat & Messaging API Server
 
 ## Intro
 
-i9chat is a API server for a Chat Application, built using Go and Neo4j. It supports major chat application features.
+i9chat is a full-fledged chat and messaging API server built in Go It supports all major chat application application features with a scalable, production-grade arcitecture, serving as a foundation for building apps like WhatsApp and Discord clones.
+
 
 ## Technologies and Tools
 
@@ -24,7 +25,7 @@ i9chat is a API server for a Chat Application, built using Go and Neo4j. It supp
 
 ### Technologies
 - **Go** - Programming Language
-- **Fiber** - Backend Framework
+- **Fiber** - REST API Framework
 - **Neo4j** - Graph DBMS
 - **CypherQL** - Query Language for a Graph database
 - **WebSockets** - Full-duplex, Bi-directional communication protocol
@@ -47,8 +48,9 @@ i9chat is a API server for a Chat Application, built using Go and Neo4j. It supp
 - [Technologies](#technologies)
 - [Table of Contents](#table-of-contents)
 - [Features](#features)
-- [Upcoming features](#upcoming-features)
+- [Technical Highlights](#technical-highlights)
 - [API Documentation](#api-documentation)
+- [Upcoming features](#upcoming-features)
 
 ## Features
 
@@ -101,6 +103,19 @@ Start by finding a user by their username.
 - Clients receive user "presence" and "last seen" updates (upon subscription)
 - Real-time read receipts
 
+## Technical Highlights
+
+- 
+
+## API Documentation
+
+REST request/response Communication: [Click Here](./docs/swagger.json)
+
+WebSocket Real-time Communication: [Click Here](./docs/websocketsapi.md)
+
+---
+---
+
 ## Upcoming features
 
 The following is a list of features to be supported by this Social Media Backend API.
@@ -109,9 +124,3 @@ The following is a list of features to be supported by this Social Media Backend
 
 - Image and Video processing and upload pipeline for user-generated media and post content and chat messages.
 
-
-## API Documentation
-
-REST request/response Communication: [Click Here](./docs/swagger.json)
-
-WebSocket Real-time Communication: [Click Here](./docs/websocketsapi.md)
