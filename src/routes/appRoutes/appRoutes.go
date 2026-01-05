@@ -1,6 +1,7 @@
 package appRoutes
 
 import (
+	CUC "i9chat/src/controllers/chatControllers/chatUploadControllers"
 	"i9chat/src/middlewares/authMiddlewares"
 	"i9chat/src/routes/appRoutes/directChatRoutes"
 	"i9chat/src/routes/appRoutes/groupChatRoutes"
@@ -20,4 +21,7 @@ func Route(router fiber.Router) {
 	router.Route("/group_chat", groupChatRoutes.Route)
 
 	router.Route("/dm_chat", directChatRoutes.Route)
+
+	router.Post("/chat_upload/authorize", CUC.AuthorizeUpload)
+	router.Post("/chat_upload/authorize/visual", CUC.AuthorizeVisualUpload)
 }

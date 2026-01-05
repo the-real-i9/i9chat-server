@@ -8,6 +8,7 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
+// Do here
 func GetGroup[T any](ctx context.Context, groupId string) (group T, err error) {
 	groupJson, err := rdb().HGet(ctx, "groups", groupId).Result()
 	if err != nil && err != redis.Nil {
@@ -68,6 +69,7 @@ func GetChatUnreadMsgsCount(ctx context.Context, ownerUser, chatIdent string) (i
 	return count, nil
 }
 
+// Do here
 func GetDirectChatHistoryEntry[T any](ctx context.Context, CHEId string) (CHE T, err error) {
 	CHEJson, err := rdb().HGet(ctx, "direct_chat_history_entries", CHEId).Result()
 	if err != nil && err != redis.Nil {
@@ -78,6 +80,7 @@ func GetDirectChatHistoryEntry[T any](ctx context.Context, CHEId string) (CHE T,
 	return helpers.FromJson[T](CHEJson), nil
 }
 
+// Do here
 func GetGroupChatHistoryEntry[T any](ctx context.Context, CHEId string) (CHE T, err error) {
 	CHEJson, err := rdb().HGet(ctx, "group_chat_history_entries", CHEId).Result()
 	if err != nil && err != redis.Nil {

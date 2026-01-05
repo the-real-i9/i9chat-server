@@ -10,15 +10,13 @@ import (
 )
 
 func UserAuth(c *fiber.Ctx) error {
-	usStr := c.Cookies("user")
+	usData := helpers.FromJson[map[string]any](c.Cookies("session"))["user"]
 
-	if usStr == "" {
+	if usData == nil {
 		return c.Status(fiber.StatusUnauthorized).SendString("authentication required")
 	}
 
-	userSessionData := helpers.FromJson[map[string]string](usStr)
-
-	sessionToken := userSessionData["authJwt"]
+	sessionToken := usData.(map[string]any)["authJwt"].(string)
 
 	clientUser, err := securityServices.JwtVerify[appTypes.ClientUser](sessionToken, os.Getenv("AUTH_JWT_SECRET"))
 	if err != nil {

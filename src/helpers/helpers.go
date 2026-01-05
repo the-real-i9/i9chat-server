@@ -12,27 +12,17 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
-func ToStruct(val any, dest any) {
-	/* valType := reflect.TypeOf(val)
-
-	if valType.Kind() != reflect.Map && !(valType.Kind() == reflect.Slice && valType.Elem().Kind() == reflect.Map) {
-		panic("expected 'val' to be a map or slice of maps")
-	}
-
-	destType := reflect.TypeOf(dest).Elem()
-
-	if destType.Kind() != reflect.Struct && !(destType.Kind() == reflect.Slice && destType.Elem().Kind() == reflect.Struct) {
-		panic("expected 'dest' to be a pointer to struct or slice of structs")
-	} */
-
+func ToStruct[T any](val any) (dest T) {
 	bt, err := json.Marshal(val)
 	if err != nil {
 		LogError(err)
 	}
 
-	if err := json.Unmarshal(bt, dest); err != nil {
+	if err := json.Unmarshal(bt, &dest); err != nil {
 		LogError(err)
 	}
+
+	return
 }
 
 func JoinWithCommaAnd(items ...string) string {
@@ -82,16 +72,16 @@ func WSReply(data any, toAction string) map[string]any {
 	return reply
 }
 
-func Cookie(name, value string, maxAge int) *fiber.Cookie {
+func Session(kvPairs map[string]any, path string, maxAge int) *fiber.Cookie {
 	c := &fiber.Cookie{
 		HTTPOnly: true,
 		Secure:   false,
-		Path:     "/",
 		Domain:   os.Getenv("SERVER_HOST"),
 	}
 
-	c.Name = name
-	c.Value = value
+	c.Name = "session"
+	c.Value = ToJson(kvPairs)
+	c.Path = path
 	c.MaxAge = maxAge
 
 	return c

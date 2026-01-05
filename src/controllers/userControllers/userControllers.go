@@ -3,12 +3,32 @@ package userControllers
 import (
 	"context"
 	"i9chat/src/appTypes"
-	"i9chat/src/helpers"
 	"i9chat/src/services/userService"
-	"time"
 
 	"github.com/gofiber/fiber/v2"
 )
+
+func AuthorizePPicUpload(c *fiber.Ctx) error {
+	ctx := c.Context()
+
+	var body authorizePPicUploadBody
+
+	err := c.BodyParser(&body)
+	if err != nil {
+		return err
+	}
+
+	if err = body.Validate(); err != nil {
+		return err
+	}
+
+	respData, err := userService.AuthorizePPicUpload(ctx, body.PicMIME, body.PicSize)
+	if err != nil {
+		return err
+	}
+
+	return c.JSON(respData)
+}
 
 func GetSessionUser(c *fiber.Ctx) error {
 	clientUser := c.Locals("user").(appTypes.ClientUser)
@@ -28,17 +48,13 @@ func ChangeProfilePicture(c *fiber.Ctx) error {
 		return err
 	}
 
-	if err := body.Validate(); err != nil {
+	if err := body.Validate(ctx); err != nil {
 		return err
 	}
 
-	respData, authJwt, err := userService.ChangeProfilePicture(ctx, clientUser.Username, body.PictureData)
+	respData, err := userService.ChangeProfilePicture(ctx, clientUser.Username, body.ProfilePicCloudName)
 	if err != nil {
 		return err
-	}
-
-	if respData != nil {
-		c.Cookie(helpers.Cookie("user", helpers.ToJson(map[string]any{"authJwt": authJwt}), int(10*24*time.Hour/time.Second)))
 	}
 
 	return c.JSON(respData)
@@ -146,7 +162,7 @@ func GetMyProfile(c *fiber.Ctx) error {
 }
 
 func SignOut(c *fiber.Ctx) error {
-	c.Cookie(helpers.Cookie("user", "", 0))
+	c.ClearCookie()
 
 	return c.JSON("You've been logged out!")
 }

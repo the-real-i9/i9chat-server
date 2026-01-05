@@ -41,18 +41,18 @@ func Exists(ctx context.Context, emailOrUsername string) (bool, error) {
 }
 
 type NewUserT struct {
-	Email         string `json:"email" db:"email"`
-	Username      string `json:"username" db:"username"`
-	ProfilePicUrl string `json:"profile_pic_url" db:"profile_pic_url"`
-	Bio           string `json:"bio" db:"bio"`
+	Email               string `json:"email" db:"email"`
+	Username            string `json:"username" db:"username"`
+	ProfilePicCloudName string `json:"profile_pic_cloud_name" db:"profile_pic_cloud_name"`
+	Bio                 string `json:"bio" db:"bio"`
 }
 
 func New(ctx context.Context, email, username, password, bio string) (newUser NewUserT, err error) {
 	res, err := db.Query(
 		ctx,
 		`/*cypher*/
-		CREATE (u:User { email: $email, username: $username, password: $password, profile_pic_url: "{notset}", bio: $bio, presence: "online", last_seen: 0 })
-		RETURN u { .username, .email, .profile_pic_url, .bio } AS new_user
+		CREATE (u:User { email: $email, username: $username, password: $password, profile_pic_cloud_name: "{notset}", bio: $bio, presence: "online", last_seen: 0 })
+		RETURN u { .username, .email, .profile_pic_cloud_name, .bio } AS new_user
 		`,
 		map[string]any{
 			"email":    email,
@@ -72,10 +72,10 @@ func New(ctx context.Context, email, username, password, bio string) (newUser Ne
 }
 
 type ToAuthUserT struct {
-	Email         string `json:"email" db:"email"`
-	Username      string `json:"username" db:"username"`
-	ProfilePicUrl string `json:"profile_pic_url" db:"profile_pic_url"`
-	Password      string `json:"-" db:"password"`
+	Email               string `json:"email" db:"email"`
+	Username            string `json:"username" db:"username"`
+	ProfilePicCloudName string `json:"profile_pic_cloud_name" db:"profile_pic_cloud_name"`
+	Password            string `json:"-" db:"password"`
 }
 
 func AuthFind(ctx context.Context, uniqueIdent string) (user ToAuthUserT, err error) {
@@ -85,7 +85,7 @@ func AuthFind(ctx context.Context, uniqueIdent string) (user ToAuthUserT, err er
 	MATCH (u:User)
 	WHERE u.username = $uniqueIdent OR u.email = $uniqueIdent
 
-	RETURN u { .email, .username, .profile_pic_url, .password } AS found_user
+	RETURN u { .email, .username, .profile_pic_cloud_name, .password } AS found_user
 	`,
 		map[string]any{
 			"uniqueIdent": uniqueIdent,
@@ -131,18 +131,18 @@ func ChangePassword(ctx context.Context, email, newPassword string) (bool, error
 	return true, nil
 }
 
-func ChangeProfilePicture(ctx context.Context, clientUsername, newPicUrl string) (bool, error) {
+func ChangeProfilePicture(ctx context.Context, clientUsername, profilePicCloudName string) (bool, error) {
 	res, err := db.Query(
 		ctx,
 		`/*cypher*/
 		MATCH (u:User{ username: $client_username })
-		SET u.profile_pic_url = $new_pic_url
+		SET u.profile_pic_cloud_name = $profile_pic_cloud_name
 
 		RETURN true AS done
 		`,
 		map[string]any{
-			"client_username": clientUsername,
-			"new_pic_url":     newPicUrl,
+			"client_username":        clientUsername,
+			"profile_pic_cloud_name": profilePicCloudName,
 		},
 	)
 	if err != nil {
@@ -257,7 +257,7 @@ func FindNearby(ctx context.Context, clientUsername string, x, y, radius float64
 		MATCH (u:User)
 		WHERE u.username <> $client_username AND point.distance(point({ x: $live_long, y: $live_lat, crs: "WGS-84" }), u.geolocation) <= $radius
 
-		RETURN collect(u { .username, .profile_pic_url, .bio, .presence, .last_seen }) AS nearby_users
+		RETURN collect(u { .username, .profile_pic_cloud_name, .bio, .presence, .last_seen }) AS nearby_users
 	`,
 		map[string]any{
 			"client_username": clientUsername,

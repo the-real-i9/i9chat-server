@@ -6,22 +6,16 @@ import (
 	"i9chat/src/appTypes/UITypes"
 	"i9chat/src/helpers"
 	directChat "i9chat/src/models/chatModel/directChatModel"
-	"i9chat/src/services/appServices"
 	"i9chat/src/services/eventStreamService"
 	"i9chat/src/services/eventStreamService/eventTypes"
 	"i9chat/src/services/realtimeService"
 )
 
-func SendMessage(ctx context.Context, clientUser appTypes.ClientUser, partnerUsername, replyTargetMsgId string, isReply bool, msgContent *appTypes.MsgContent, at int64) (map[string]any, error) {
-
-	err := appServices.UploadMessageMedia(ctx, clientUser.Username, msgContent)
-	if err != nil {
-		return nil, err
-	}
-
-	msgContentJson := helpers.ToJson(*msgContent)
-
-	var newMessage directChat.NewMessage
+func SendMessage(ctx context.Context, clientUser appTypes.ClientUser, partnerUsername, replyTargetMsgId string, isReply bool, msgContentJson string, at int64) (map[string]any, error) {
+	var (
+		newMessage directChat.NewMessage
+		err        error
+	)
 
 	if !isReply {
 		newMessage, err = directChat.SendMessage(ctx, clientUser.Username, partnerUsername, msgContentJson, at)

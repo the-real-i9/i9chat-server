@@ -7,9 +7,8 @@ import (
 )
 
 func changeGroupName(ctx context.Context, clientUsername, groupId string, data map[string]any) (any, error) {
-	var d changeGroupNameAction
 
-	helpers.ToStruct(data, &d)
+	d := helpers.ToStruct[changeGroupNameAction](data)
 
 	if err := d.Validate(); err != nil {
 		return nil, err
@@ -19,9 +18,8 @@ func changeGroupName(ctx context.Context, clientUsername, groupId string, data m
 }
 
 func changeGroupDescription(ctx context.Context, clientUsername, groupId string, data map[string]any) (any, error) {
-	var d changeGroupDescriptionAction
 
-	helpers.ToStruct(data, &d)
+	d := helpers.ToStruct[changeGroupDescriptionAction](data)
 
 	if err := d.Validate(); err != nil {
 		return nil, err
@@ -32,21 +30,19 @@ func changeGroupDescription(ctx context.Context, clientUsername, groupId string,
 }
 
 func changeGroupPicture(ctx context.Context, clientUsername, groupId string, data map[string]any) (any, error) {
-	var d changeGroupPictureAction
 
-	helpers.ToStruct(data, &d)
+	d := helpers.ToStruct[changeGroupPictureAction](data)
 
-	if err := d.Validate(); err != nil {
+	if err := d.Validate(ctx); err != nil {
 		return nil, err
 	}
 
-	return groupChatService.ChangeGroupPicture(ctx, groupId, clientUsername, d.NewPictureData)
+	return groupChatService.ChangeGroupPicture(ctx, groupId, clientUsername, d.PicCloudName)
 }
 
 func addUsersToGroup(ctx context.Context, clientUsername, groupId string, data map[string]any) (any, error) {
-	var d addUsersToGroupAction
 
-	helpers.ToStruct(data, &d)
+	d := helpers.ToStruct[addUsersToGroupAction](data)
 
 	if err := d.Validate(); err != nil {
 		return nil, err
@@ -56,9 +52,8 @@ func addUsersToGroup(ctx context.Context, clientUsername, groupId string, data m
 }
 
 func removeUserFromGroup(ctx context.Context, clientUsername, groupId string, data map[string]any) (any, error) {
-	var d actOnSingleUserAction
 
-	helpers.ToStruct(data, &d)
+	d := helpers.ToStruct[actOnSingleUserAction](data)
 
 	if err := d.Validate(); err != nil {
 		return nil, err
@@ -76,9 +71,8 @@ func leaveGroup(ctx context.Context, clientUsername, groupId string, _ map[strin
 }
 
 func makeUserGroupAdmin(ctx context.Context, clientUsername, groupId string, data map[string]any) (any, error) {
-	var d actOnSingleUserAction
 
-	helpers.ToStruct(data, &d)
+	d := helpers.ToStruct[actOnSingleUserAction](data)
 
 	if err := d.Validate(); err != nil {
 		return nil, err
@@ -88,9 +82,7 @@ func makeUserGroupAdmin(ctx context.Context, clientUsername, groupId string, dat
 }
 
 func removeUserFromGroupAdmins(ctx context.Context, clientUsername, groupId string, data map[string]any) (any, error) {
-	var d actOnSingleUserAction
-
-	helpers.ToStruct(data, &d)
+	d := helpers.ToStruct[actOnSingleUserAction](data)
 
 	if err := d.Validate(); err != nil {
 		return nil, err

@@ -46,8 +46,11 @@ func RequestNewAccount(c *fiber.Ctx) error {
 		return err
 	}
 
-	c.Cookie(helpers.Cookie("signup", helpers.ToJson(sessionData), int(time.Hour/time.Second)))
-	c.Cookie(helpers.Cookie("passwordReset", "", 0))
+	reqSession := map[string]any{
+		"signup": sessionData,
+	}
+
+	c.Cookie(helpers.Session(reqSession, "/api/auth/signup/verify_email", int(time.Hour/time.Second)))
 
 	return c.JSON(respData)
 }
@@ -94,7 +97,11 @@ func VerifyEmail(c *fiber.Ctx) error {
 		return err
 	}
 
-	c.Cookie(helpers.Cookie("signup", helpers.ToJson(newSessionData), int(time.Hour/time.Second)))
+	reqSession := map[string]any{
+		"signup": newSessionData,
+	}
+
+	c.Cookie(helpers.Session(reqSession, "/api/auth/signup/register_user", int(time.Hour/time.Second)))
 
 	return c.JSON(respData)
 }
@@ -145,8 +152,11 @@ func RegisterUser(c *fiber.Ctx) error {
 		return err
 	}
 
-	c.Cookie(helpers.Cookie("user", helpers.ToJson(map[string]any{"authJwt": authJwt}), int(10*24*time.Hour/time.Second)))
-	c.Cookie(helpers.Cookie("signup", "", 0))
+	reqSession := map[string]any{
+		"user": map[string]any{"authJwt": authJwt},
+	}
 
-	return c.JSON(respData)
+	c.Cookie(helpers.Session(reqSession, "/api/app", int(10*24*time.Hour/time.Second)))
+
+	return c.Status(fiber.StatusCreated).JSON(respData)
 }

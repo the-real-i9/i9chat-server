@@ -47,9 +47,8 @@ var WSStream = websocket.New(func(c *websocket.Conn) {
 
 		switch body.Action {
 		case "subscribe to user presence change":
-			var data subToUserPresenceAcd
 
-			helpers.ToStruct(body.Data, &data)
+			data := helpers.ToStruct[subToUserPresenceAcd](body.Data)
 
 			if err := data.Validate(); err != nil {
 				w_err = c.WriteJSON(helpers.WSErrReply(err, body.Action))
@@ -64,9 +63,8 @@ var WSStream = websocket.New(func(c *websocket.Conn) {
 				cancelUserPresenceSub[tu] = cancel
 			}
 		case "unsubscribe from user presence change":
-			var data unsubFromUserPresenceAcd
 
-			helpers.ToStruct(body.Data, &data)
+			data := helpers.ToStruct[unsubFromUserPresenceAcd](body.Data)
 
 			if err := data.Validate(); err != nil {
 				w_err = c.WriteJSON(helpers.WSErrReply(err, body.Action))

@@ -1,12 +1,14 @@
 package groupChatRoutes
 
 import (
-	GCC "i9chat/src/controllers/groupChatControllers"
+	GCC "i9chat/src/controllers/chatControllers/groupChatControllers"
 
 	"github.com/gofiber/fiber/v2"
 )
 
 func Route(router fiber.Router) {
+	router.Post("/group_pic_upload/authorize", GCC.AuthorizeGroupPicUpload)
+
 	router.Post("/new", GCC.CreateNewGroup)
 	router.Get("/:group_id/members", GCC.GetGroupMembers)
 	router.Get("/:group_id/history", GCC.GetGroupChatHistory)

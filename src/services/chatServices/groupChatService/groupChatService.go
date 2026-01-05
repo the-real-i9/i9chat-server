@@ -2,15 +2,75 @@ package groupChatService
 
 import (
 	"context"
+	"fmt"
+	"i9chat/src/appGlobals"
 	"i9chat/src/appTypes"
 	"i9chat/src/appTypes/UITypes"
 	"i9chat/src/helpers"
 	groupChat "i9chat/src/models/chatModel/groupChatModel"
-	"i9chat/src/services/appServices"
 	"i9chat/src/services/eventStreamService"
 	"i9chat/src/services/eventStreamService/eventTypes"
 	"maps"
+	"os"
+	"time"
+
+	"cloud.google.com/go/storage"
+	"github.com/gofiber/fiber/v2"
+	"github.com/google/uuid"
 )
+
+type AuthGroupPicDataT struct {
+	UploadUrl         string `json:"uploadUrl"`
+	GroupPicCloudName string `json:"groupPicCloudName"`
+}
+
+func AuthorizeGroupPicUpload(ctx context.Context, picMIME string, picSize [3]int64) (AuthGroupPicDataT, error) {
+	var res AuthGroupPicDataT
+
+	for small0_medium1_large2, size := range picSize {
+
+		which := [3]string{"small", "medium", "large"}
+
+		pPicCloudName := fmt.Sprintf("uploads/group/group_pics/%d%d/%s-%s", time.Now().Year(), time.Now().Month(), uuid.NewString(), which[small0_medium1_large2])
+
+		url, err := appGlobals.GCSClient.Bucket(os.Getenv("GCS_BUCKET_NAME")).SignedURL(
+			pPicCloudName,
+			&storage.SignedURLOptions{
+				Scheme:      storage.SigningSchemeV4,
+				Method:      "PUT",
+				ContentType: picMIME,
+				Expires:     time.Now().Add(15 * time.Minute),
+				Headers:     []string{fmt.Sprintf("x-goog-content-length-range: %d,%[1]d", size)},
+			},
+		)
+		if err != nil {
+			helpers.LogError(err)
+			return AuthGroupPicDataT{}, fiber.ErrInternalServerError
+		}
+
+		switch small0_medium1_large2 {
+		case 0:
+			res.UploadUrl += "small:"
+			res.GroupPicCloudName += "small:"
+		case 1:
+			res.UploadUrl += "medium:"
+			res.GroupPicCloudName += "medium:"
+		default:
+			res.UploadUrl += "large:"
+			res.GroupPicCloudName += "large:"
+		}
+
+		res.UploadUrl += url
+		res.GroupPicCloudName += pPicCloudName
+
+		if small0_medium1_large2 != 2 {
+			res.UploadUrl += " "
+			res.GroupPicCloudName += " "
+		}
+	}
+
+	return res, nil
+}
 
 func NewGroup(ctx context.Context, clientUsername, name, description string, pictureData []byte, initUsers []string, createdAt int64) (map[string]any, error) {
 	picUrl, err := uploadGroupPicture(ctx, pictureData)
@@ -47,9 +107,7 @@ func NewGroup(ctx context.Context, clientUsername, name, description string, pic
 		// so we make use of one user's history
 		cheMaps := newGroup.InitUsersCHEs[initUsers[0]]
 
-		var history []groupActivityCHE
-
-		helpers.ToStruct(cheMaps, &history)
+		history := helpers.ToStruct[[]groupActivityCHE](cheMaps)
 
 		initMemberData := map[string]any{
 			"group":   newGroup,
@@ -59,9 +117,7 @@ func NewGroup(ctx context.Context, clientUsername, name, description string, pic
 		broadcastNewGroup(newGroup.InitUsers, initMemberData)
 	}()
 
-	var history []groupActivityCHE
-
-	helpers.ToStruct(newGroup.ClientUserCHEs, &history)
+	history := helpers.ToStruct[[]groupActivityCHE](newGroup.ClientUserCHEs)
 
 	clientData := map[string]any{
 		"group":   newGroup,
@@ -130,13 +186,8 @@ func ChangeGroupDescription(ctx context.Context, groupId, clientUsername, newDes
 	return newActivity.ClientUserCHE["info"], nil
 }
 
-func ChangeGroupPicture(ctx context.Context, groupId, clientUsername string, newPictureData []byte) (any, error) {
-	newPicUrl, err := uploadGroupPicture(ctx, newPictureData)
-	if err != nil {
-		return nil, err
-	}
-
-	newActivity, err := groupChat.ChangePicture(ctx, groupId, clientUsername, newPicUrl)
+func ChangeGroupPicture(ctx context.Context, groupId, clientUsername, picCloudName string) (any, error) {
+	newActivity, err := groupChat.ChangePicture(ctx, groupId, clientUsername, picCloudName)
 	if err != nil {
 		return nil, err
 	}
@@ -149,7 +200,7 @@ func ChangeGroupPicture(ctx context.Context, groupId, clientUsername string, new
 
 	go eventStreamService.QueueGroupEditEvent(eventTypes.GroupEditEvent{
 		GroupId:        groupId,
-		UpdateKVMap:    map[string]any{"picture_url": newPicUrl},
+		UpdateKVMap:    map[string]any{"picture_cloud_name": picCloudName},
 		MemberUsers:    newActivity.MemberUsernames,
 		EditorUserCHE:  newActivity.ClientUserCHE,
 		MemberUsersCHE: newActivity.MemberUsersCHE,
@@ -374,16 +425,11 @@ func RemoveUserFromGroupAdmins(ctx context.Context, groupId, clientUsername, tar
 	return newActivity.ClientUserCHE["info"], nil
 }
 
-func SendMessage(ctx context.Context, clientUser appTypes.ClientUser, groupId, replyTargetMsgId string, isReply bool, msgContent *appTypes.MsgContent, at int64) (map[string]any, error) {
-
-	err := appServices.UploadMessageMedia(ctx, clientUser.Username, msgContent)
-	if err != nil {
-		return nil, err
-	}
-
-	msgContentJson := helpers.ToJson(*msgContent)
-
-	var newMessage groupChat.NewMessage
+func SendMessage(ctx context.Context, clientUser appTypes.ClientUser, groupId, replyTargetMsgId string, isReply bool, msgContentJson string, at int64) (map[string]any, error) {
+	var (
+		newMessage groupChat.NewMessage
+		err        error
+	)
 
 	if !isReply {
 		newMessage, err = groupChat.SendMessage(ctx, clientUser.Username, groupId, msgContentJson, at)

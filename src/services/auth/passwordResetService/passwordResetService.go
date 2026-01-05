@@ -51,13 +51,11 @@ type passReset2RespT struct {
 func ConfirmEmail(ctx context.Context, sessionData map[string]any, inputResetToken string) (passReset2RespT, map[string]any, error) {
 	var resp passReset2RespT
 
-	var sd struct {
+	sd := helpers.ToStruct[struct {
 		Email            string
 		PwdrToken        string
 		PwdrTokenExpires time.Time
-	}
-
-	helpers.ToStruct(sessionData, &sd)
+	}](sessionData)
 
 	if sd.PwdrToken != inputResetToken {
 		return resp, nil, fiber.NewError(fiber.StatusBadRequest, userErrors.IncorrectResetToken)

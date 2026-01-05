@@ -55,13 +55,11 @@ type signup2RespT struct {
 func VerifyEmail(ctx context.Context, sessionData map[string]any, inputVerfCode string) (signup2RespT, map[string]any, error) {
 	var resp signup2RespT
 
-	var sd struct {
+	sd := helpers.ToStruct[struct {
 		Email        string
 		VCode        string
 		VCodeExpires time.Time
-	}
-
-	helpers.ToStruct(sessionData, &sd)
+	}](sessionData)
 
 	if sd.VCode != inputVerfCode {
 		return resp, nil, fiber.NewError(fiber.StatusBadRequest, userErrors.IncorrectVerfCode)
@@ -119,8 +117,7 @@ func RegisterUser(ctx context.Context, sessionData map[string]any, username, pas
 	})
 
 	authJwt, err := securityServices.JwtSign(appTypes.ClientUser{
-		Username:      newUser.Username,
-		ProfilePicUrl: newUser.ProfilePicUrl,
+		Username: newUser.Username,
 	}, os.Getenv("AUTH_JWT_SECRET"), time.Now().UTC().Add(10*24*time.Hour)) // 10 days
 	if err != nil {
 		return resp, "", err

@@ -18,17 +18,17 @@ func redisDB() *redis.Client {
 }
 
 type NewGroup struct {
-	Id             string         `json:"id" db:"id"`
-	Name           string         `json:"name" db:"name"`
-	Description    string         `json:"description" db:"description"`
-	PictureUrl     string         `json:"picture_url" db:"picture_url"`
-	CreatedAt      int64          `json:"created_at" db:"created_at"`
-	InitUsers      []any          `json:"-" db:"init_users"`
-	ClientUserCHEs []any          `json:"-" db:"client_user_ches"`
-	InitUsersCHEs  map[string]any `json:"-" db:"init_users_ches"`
+	Id               string         `json:"id" db:"id"`
+	Name             string         `json:"name" db:"name"`
+	Description      string         `json:"description" db:"description"`
+	PictureCloudName string         `json:"picture_cloud_name" db:"picture_cloud_name"`
+	CreatedAt        int64          `json:"created_at" db:"created_at"`
+	InitUsers        []any          `json:"-" db:"init_users"`
+	ClientUserCHEs   []any          `json:"-" db:"client_user_ches"`
+	InitUsersCHEs    map[string]any `json:"-" db:"init_users_ches"`
 }
 
-func New(ctx context.Context, clientUsername, name, description, pictureUrl string, initUsers []string, createdAt int64) (NewGroup, error) {
+func New(ctx context.Context, clientUsername, name, description, pictureCloudName string, initUsers []string, createdAt int64) (NewGroup, error) {
 	res, err := db.Query(
 		ctx,
 		`/*cypher*/
@@ -38,7 +38,7 @@ func New(ctx context.Context, clientUsername, name, description, pictureUrl stri
 
 		WITH collect(initUser) AS initUserRows, head(collect(clientUser)) AS clientUser
 
-		CREATE (group:Group{ id: randomUUID(), name: $name, description: $description, picture_url: $picture_url, created_at: $created_at })
+		CREATE (group:Group{ id: randomUUID(), name: $name, description: $description, picture_cloud_name: $picture_cloud_name, created_at: $created_at })
 
 		CREATE (clientUser)-[:IS_MEMBER_OF { role: "admin" }]->(group),
 			(clientUser)-[:HAS_CHAT]->(clientChat:GroupChat{ owner_username: $client_username, group_id: group.id })-[:WITH_GROUP]->(group),
@@ -58,16 +58,16 @@ func New(ctx context.Context, clientUsername, name, description, pictureUrl stri
 			reduce(accm = {}, x IN collect({ inituser: initUser.username, gact1: initusergact1, gact2: initusergact2}) | apoc.map.setKey(accm, x.inituser, [{che_id: x.gact1.che_id, che_type: x.gact1.che_type, info: x.gact1.info}, {che_id: x.gact2.che_id, che_type: x.gact2.che_type, info: x.gact2.info }])) AS initUsersCHEs
 
 		WITH DISTINCT group, clientUserCHEs, initUsersCHEs
-		RETURN group { .id, .name, .description, .picture_url, .created_at, init_users: $init_users, client_user_ches: clientUserCHEs, init_users_ches: initUsersCHEs } AS new_group
+		RETURN group { .id, .name, .description, .picture_cloud_name, .created_at, init_users: $init_users, client_user_ches: clientUserCHEs, init_users_ches: initUsersCHEs } AS new_group
 		`,
 		map[string]any{
-			"client_username": clientUsername,
-			"name":            name,
-			"description":     description,
-			"picture_url":     pictureUrl,
-			"init_users":      initUsers,
-			"init_users_str":  helpers.JoinWithCommaAnd(initUsers...),
-			"created_at":      createdAt,
+			"client_username":    clientUsername,
+			"name":               name,
+			"description":        description,
+			"picture_cloud_name": pictureCloudName,
+			"init_users":         initUsers,
+			"init_users_str":     helpers.JoinWithCommaAnd(initUsers...),
+			"created_at":         createdAt,
 		},
 	)
 	if err != nil {
@@ -181,7 +181,7 @@ func ChangeDescription(ctx context.Context, groupId, clientUsername, newDescript
 	return newGact, nil
 }
 
-func ChangePicture(ctx context.Context, groupId, clientUsername, newPictureUrl string) (EditActivity, error) {
+func ChangePicture(ctx context.Context, groupId, clientUsername, pictureCloudName string) (EditActivity, error) {
 	res, err := db.Query(
 		ctx,
 		`/*cypher*/
@@ -192,7 +192,7 @@ func ChangePicture(ctx context.Context, groupId, clientUsername, newPictureUrl s
 		
 		CREATE (cligact:GroupChatEntry{ che_id: randomUUID(), che_type: "group activity", info: "You changed group picture" })-[:IN_GROUP_CHAT]->(clientChat)
 
-		SET group.picture_url = $new_pic_url
+		SET group.picture_cloud_name = $pic_cloud_name
 
 		WITH cligact { .che_id, .che_type, .info } AS clientUserCHE, group
 
@@ -212,7 +212,7 @@ func ChangePicture(ctx context.Context, groupId, clientUsername, newPictureUrl s
 		map[string]any{
 			"client_username": clientUsername,
 			"group_id":        groupId,
-			"new_pic_url":     newPictureUrl,
+			"pic_cloud_name":  pictureCloudName,
 		},
 	)
 	if err != nil {
@@ -283,7 +283,7 @@ func AddUsers(ctx context.Context, groupId, clientUsername string, newUsers []st
 			[nu IN nuRows | nu.username] AS newUsernames,
 		  reduce(accm = {}, x IN collect({ newuser: newUser.username, gact: nugact}) | apoc.map.setKey(accm, x.newuser, {che_id: x.gact.che_id, che_type: x.gact.che_type, info: x.gact.info })) AS newUsersCHE
 
-		WITH DISTINCT group { .id, .name, .description, .picture_url, .created_at } AS groupInfo, clientUserCHE, newUsersCHE, memberUsersCHE, newUsernames, memberUsernames
+		WITH DISTINCT group { .id, .name, .description, .picture_cloud_name, .created_at } AS groupInfo, clientUserCHE, newUsersCHE, memberUsersCHE, newUsernames, memberUsernames
 
 		RETURN { group_info: groupInfo, client_user_che: clientUserCHE, new_users_che: newUsersCHE, member_users_che: memberUsersCHE, new_usernames: newUsernames, member_usernames: memberUsernames } AS new_group_activity
 		`,
@@ -404,7 +404,7 @@ func Join(ctx context.Context, groupId, clientUsername string) (UserJoinedActivi
 		CREATE (clientUser)-[:IS_MEMBER_OF { role: "member" }]->(group)
 		MERGE (clientUser)-[:HAS_CHAT]->(clientChat:GroupChat{ owner_username: clientUser.username, group_id: $group_id })-[:WITH_GROUP]->(group)
 
-		WITH DISTINCT group { .id, .name, .description, .picture_url, .created_at } AS groupInfo,
+		WITH DISTINCT group { .id, .name, .description, .picture_cloud_name, .created_at } AS groupInfo,
 			clientUserCHE, memberUsersCHE, memberUsernames
 
 		RETURN { group_info: groupInfo, client_user_che: clientUserCHE, member_users_che: memberUsersCHE, member_usernames: memberUsernames } AS new_group_activity

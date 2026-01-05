@@ -48,8 +48,11 @@ func Signin(c *fiber.Ctx) error {
 		return err
 	}
 
-	c.Cookie(helpers.Cookie("user", helpers.ToJson(map[string]any{"authJwt": authJwt}), int(10*24*time.Hour/time.Second)))
-	c.Cookie(helpers.Cookie("passwordReset", "", 0))
+	reqSession := map[string]any{
+		"user": map[string]any{"authJwt": authJwt},
+	}
+
+	c.Cookie(helpers.Session(reqSession, "/api/app", int(10*24*time.Hour/time.Second)))
 
 	return c.JSON(respData)
 }

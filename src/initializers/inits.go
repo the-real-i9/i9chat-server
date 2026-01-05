@@ -12,11 +12,10 @@ import (
 	"github.com/neo4j/neo4j-go-driver/v5/neo4j"
 	"github.com/redis/go-redis/v9"
 	"github.com/redis/go-redis/v9/maintnotifications"
-	"google.golang.org/api/option"
 )
 
 func initGCSClient() error {
-	stClient, err := storage.NewClient(context.Background(), option.WithAPIKey(os.Getenv("GCS_API_KEY")))
+	stClient, err := storage.NewClient(context.Background())
 	if err != nil {
 		return err
 	}

@@ -10,6 +10,28 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
+func AuthorizeGroupPicUpload(c *fiber.Ctx) error {
+	ctx := c.Context()
+
+	var body authorizeGroupPicUploadBody
+
+	err := c.BodyParser(&body)
+	if err != nil {
+		return err
+	}
+
+	if err = body.Validate(); err != nil {
+		return err
+	}
+
+	respData, err := groupChatService.AuthorizeGroupPicUpload(ctx, body.PicMIME, body.PicSize)
+	if err != nil {
+		return err
+	}
+
+	return c.JSON(respData)
+}
+
 func CreateNewGroup(c *fiber.Ctx) error {
 	ctx := c.Context()
 

@@ -1,7 +1,7 @@
 package directChatRoutes
 
 import (
-	"i9chat/src/controllers/directChatControllers"
+	"i9chat/src/controllers/chatControllers/directChatControllers"
 
 	"github.com/gofiber/fiber/v2"
 )

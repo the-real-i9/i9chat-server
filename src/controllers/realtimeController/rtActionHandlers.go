@@ -9,21 +9,19 @@ import (
 )
 
 func sendDirectChatMsgHndl(ctx context.Context, clientUser appTypes.ClientUser, actionData map[string]any) (map[string]any, error) {
-	var acd sendDirectChatMsg
 
-	helpers.ToStruct(actionData, &acd)
+	acd := helpers.ToStruct[sendDirectChatMsg](actionData)
 
-	if err := acd.Validate(); err != nil {
+	if err := acd.Validate(ctx); err != nil {
 		return nil, err
 	}
 
-	return directChatService.SendMessage(ctx, clientUser, acd.PartnerUsername, acd.ReplyTargetMsgId, acd.IsReply, acd.Msg, acd.At)
+	return directChatService.SendMessage(ctx, clientUser, acd.PartnerUsername, acd.ReplyTargetMsgId, acd.IsReply, helpers.ToJson(acd.Msg), acd.At)
 }
 
 func ackDirectChatMsgDeliveredHndl(ctx context.Context, clientUsername string, actionData map[string]any) (any, error) {
-	var acd directChatMsgAck
 
-	helpers.ToStruct(actionData, &acd)
+	acd := helpers.ToStruct[directChatMsgAck](actionData)
 
 	if err := acd.Validate(); err != nil {
 		return nil, err
@@ -33,9 +31,8 @@ func ackDirectChatMsgDeliveredHndl(ctx context.Context, clientUsername string, a
 }
 
 func ackDirectChatMsgReadHndl(ctx context.Context, clientUsername string, actionData map[string]any) (any, error) {
-	var acd directChatMsgAck
 
-	helpers.ToStruct(actionData, &acd)
+	acd := helpers.ToStruct[directChatMsgAck](actionData)
 
 	if err := acd.Validate(); err != nil {
 		return nil, err
@@ -45,21 +42,19 @@ func ackDirectChatMsgReadHndl(ctx context.Context, clientUsername string, action
 }
 
 func sendGroupChatMsgHndl(ctx context.Context, clientUsername appTypes.ClientUser, actionData map[string]any) (map[string]any, error) {
-	var acd sendGroupChatMsg
 
-	helpers.ToStruct(actionData, &acd)
+	acd := helpers.ToStruct[sendGroupChatMsg](actionData)
 
-	if err := acd.Validate(); err != nil {
+	if err := acd.Validate(ctx); err != nil {
 		return nil, err
 	}
 
-	return groupChatService.SendMessage(ctx, clientUsername, acd.GroupId, acd.ReplyTargetMsgId, acd.IsReply, acd.Msg, acd.At)
+	return groupChatService.SendMessage(ctx, clientUsername, acd.GroupId, acd.ReplyTargetMsgId, acd.IsReply, helpers.ToJson(acd.Msg), acd.At)
 }
 
 func ackGroupChatMsgDeliveredHndl(ctx context.Context, clientUsername string, actionData map[string]any) (any, error) {
-	var acd groupChatMsgAck
 
-	helpers.ToStruct(actionData, &acd)
+	acd := helpers.ToStruct[groupChatMsgAck](actionData)
 
 	if err := acd.Validate(); err != nil {
 		return nil, err
@@ -69,9 +64,8 @@ func ackGroupChatMsgDeliveredHndl(ctx context.Context, clientUsername string, ac
 }
 
 func ackGroupChatMsgReadHndl(ctx context.Context, clientUsername string, actionData map[string]any) (any, error) {
-	var acd groupChatMsgAck
 
-	helpers.ToStruct(actionData, &acd)
+	acd := helpers.ToStruct[groupChatMsgAck](actionData)
 
 	if err := acd.Validate(); err != nil {
 		return nil, err
@@ -81,9 +75,8 @@ func ackGroupChatMsgReadHndl(ctx context.Context, clientUsername string, actionD
 }
 
 func getGroupInfoHndl(ctx context.Context, actionData map[string]any) (any, error) {
-	var acd groupInfo
 
-	helpers.ToStruct(actionData, &acd)
+	acd := helpers.ToStruct[groupInfo](actionData)
 
 	if err := acd.Validate(); err != nil {
 		return nil, err

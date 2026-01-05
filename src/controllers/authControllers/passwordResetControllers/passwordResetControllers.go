@@ -45,7 +45,11 @@ func RequestPasswordReset(c *fiber.Ctx) error {
 		return err
 	}
 
-	c.Cookie(helpers.Cookie("passwordReset", helpers.ToJson(sessionData), int(time.Hour/time.Second)))
+	reqSession := map[string]any{
+		"passwordReset": sessionData,
+	}
+
+	c.Cookie(helpers.Session(reqSession, "/api/auth/forgot_password/confirm_email", int(time.Hour/time.Second)))
 
 	return c.JSON(respData)
 }
@@ -92,7 +96,11 @@ func ConfirmEmail(c *fiber.Ctx) error {
 		return err
 	}
 
-	c.Cookie(helpers.Cookie("passwordReset", helpers.ToJson(newSessionData), int(time.Hour/time.Second)))
+	reqSession := map[string]any{
+		"passwordReset": newSessionData,
+	}
+
+	c.Cookie(helpers.Session(reqSession, "/api/auth/forgot_password/reset_password", int(time.Hour/time.Second)))
 
 	return c.JSON(respData)
 }
@@ -141,7 +149,7 @@ func ResetPassword(c *fiber.Ctx) error {
 		return err
 	}
 
-	c.Cookie(helpers.Cookie("passwordReset", "", 0))
+	c.ClearCookie()
 
 	return c.JSON(respData)
 }
