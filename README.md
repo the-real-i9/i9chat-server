@@ -113,14 +113,3 @@ REST request/response Communication: [Click Here](./docs/swagger.json)
 
 WebSocket Real-time Communication: [Click Here](./docs/websocketsapi.md)
 
----
----
-
-## Upcoming features
-
-The following is a list of features to be supported by this Social Media Backend API.
-
-### Media Processing and Upload Pipeline (In progress)
-
-- Image and Video processing and upload pipeline for user-generated media and post content and chat messages.
-
