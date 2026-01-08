@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"i9chat/src/appGlobals"
 	"i9chat/src/helpers"
+	"net/http"
 	"os"
 	"time"
 
@@ -18,7 +19,7 @@ type AuthDataT struct {
 	MediaCloudName string `json:"mediaCloudName"`
 }
 
-func Authorize(ctx context.Context, msgType, mediaMIME string, mediaSize int64) (AuthDataT, error) {
+func Authorize(ctx context.Context, msgType, mediaMIME string) (AuthDataT, error) {
 	var res AuthDataT
 
 	mediaCloudName := fmt.Sprintf("uploads/chat/%s/%d%d/%s", msgType, time.Now().Year(), time.Now().Month(), uuid.NewString())
@@ -27,10 +28,10 @@ func Authorize(ctx context.Context, msgType, mediaMIME string, mediaSize int64) 
 		mediaCloudName,
 		&storage.SignedURLOptions{
 			Scheme:      storage.SigningSchemeV4,
-			Method:      "PUT",
+			Method:      http.MethodPost,
 			ContentType: mediaMIME,
 			Expires:     time.Now().Add(15 * time.Minute),
-			Headers:     []string{fmt.Sprintf("x-goog-content-length-range: 0,%d", mediaSize)},
+			Headers:     []string{"x-goog-resumable:start"},
 		},
 	)
 	if err != nil {
@@ -44,10 +45,10 @@ func Authorize(ctx context.Context, msgType, mediaMIME string, mediaSize int64) 
 	return res, nil
 }
 
-func AuthorizeVisual(ctx context.Context, msgType string, mediaMIME [2]string, mediaSize [2]int64) (AuthDataT, error) {
+func AuthorizeVisual(ctx context.Context, msgType string, mediaMIME [2]string) (AuthDataT, error) {
 	var res AuthDataT
 
-	for blurPlch0_actual1, size := range mediaSize {
+	for blurPlch0_actual1, mime := range mediaMIME {
 
 		which := [2]string{"blur_placeholder", "actual"}
 
@@ -57,10 +58,10 @@ func AuthorizeVisual(ctx context.Context, msgType string, mediaMIME [2]string, m
 			mediaCloudName,
 			&storage.SignedURLOptions{
 				Scheme:      storage.SigningSchemeV4,
-				Method:      "PUT",
-				ContentType: mediaMIME[blurPlch0_actual1],
+				Method:      http.MethodPost,
+				ContentType: mime,
 				Expires:     time.Now().Add(15 * time.Minute),
-				Headers:     []string{fmt.Sprintf("x-goog-content-length-range: 0,%d", size)},
+				Headers:     []string{"x-goog-resumable:start"},
 			},
 		)
 		if err != nil {

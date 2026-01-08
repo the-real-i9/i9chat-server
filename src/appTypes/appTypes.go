@@ -8,10 +8,6 @@ type ClientUser struct {
 	Username string `json:"username"`
 }
 
-func (c ClientUser) MarshalBinary() ([]byte, error) {
-	return json.Marshal(c)
-}
-
 type BinableMap map[string]any
 
 func (c BinableMap) MarshalBinary() ([]byte, error) {

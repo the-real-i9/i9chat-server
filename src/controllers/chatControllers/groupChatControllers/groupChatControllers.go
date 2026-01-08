@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"i9chat/src/appTypes"
+	"i9chat/src/helpers"
 	"i9chat/src/services/chatServices/groupChatService"
 	"net/url"
 
@@ -24,7 +25,7 @@ func AuthorizeGroupPicUpload(c *fiber.Ctx) error {
 		return err
 	}
 
-	respData, err := groupChatService.AuthorizeGroupPicUpload(ctx, body.PicMIME, body.PicSize)
+	respData, err := groupChatService.AuthorizeGroupPicUpload(ctx, body.PicMIME)
 	if err != nil {
 		return err
 	}
@@ -52,7 +53,7 @@ func CreateNewGroup(c *fiber.Ctx) error {
 		clientUser.Username,
 		body.Name,
 		body.Description,
-		body.PictureData,
+		body.PictureCloudName,
 		body.InitUsers,
 		body.CreatedAt,
 	)
@@ -131,4 +132,48 @@ func ExecuteAction(c *fiber.Ctx) error {
 	}
 
 	return c.JSON(respData)
+}
+
+func SendMessage(ctx context.Context, clientUsername string, actionData map[string]any) (map[string]any, error) {
+
+	acd := helpers.ToStruct[sendGroupChatMsg](actionData)
+
+	if err := acd.Validate(ctx); err != nil {
+		return nil, err
+	}
+
+	return groupChatService.SendMessage(ctx, clientUsername, acd.GroupId, acd.ReplyTargetMsgId, acd.IsReply, helpers.ToJson(acd.Msg), acd.At)
+}
+
+func AckMessageDelivered(ctx context.Context, clientUsername string, actionData map[string]any) (any, error) {
+
+	acd := helpers.ToStruct[groupChatMsgAck](actionData)
+
+	if err := acd.Validate(); err != nil {
+		return nil, err
+	}
+
+	return groupChatService.AckMessageDelivered(ctx, clientUsername, acd.GroupId, acd.MsgId, acd.At)
+}
+
+func AckMessageRead(ctx context.Context, clientUsername string, actionData map[string]any) (any, error) {
+
+	acd := helpers.ToStruct[groupChatMsgAck](actionData)
+
+	if err := acd.Validate(); err != nil {
+		return nil, err
+	}
+
+	return groupChatService.AckMessageRead(ctx, clientUsername, acd.GroupId, acd.MsgId, acd.At)
+}
+
+func GetGroupInfo(ctx context.Context, actionData map[string]any) (any, error) {
+
+	acd := helpers.ToStruct[groupInfo](actionData)
+
+	if err := acd.Validate(); err != nil {
+		return nil, err
+	}
+
+	return groupChatService.GetGroupInfo(ctx, acd.GroupId)
 }

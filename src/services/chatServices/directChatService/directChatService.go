@@ -4,26 +4,28 @@ import (
 	"context"
 	"i9chat/src/appTypes"
 	"i9chat/src/appTypes/UITypes"
+	"i9chat/src/cache"
 	"i9chat/src/helpers"
+	"i9chat/src/helpers/gcsHelpers"
 	directChat "i9chat/src/models/chatModel/directChatModel"
 	"i9chat/src/services/eventStreamService"
 	"i9chat/src/services/eventStreamService/eventTypes"
 	"i9chat/src/services/realtimeService"
 )
 
-func SendMessage(ctx context.Context, clientUser appTypes.ClientUser, partnerUsername, replyTargetMsgId string, isReply bool, msgContentJson string, at int64) (map[string]any, error) {
+func SendMessage(ctx context.Context, clientUsername, partnerUsername, replyTargetMsgId string, isReply bool, msgContentJson string, at int64) (map[string]any, error) {
 	var (
 		newMessage directChat.NewMessage
 		err        error
 	)
 
 	if !isReply {
-		newMessage, err = directChat.SendMessage(ctx, clientUser.Username, partnerUsername, msgContentJson, at)
+		newMessage, err = directChat.SendMessage(ctx, clientUsername, partnerUsername, msgContentJson, at)
 		if err != nil {
 			return nil, err
 		}
 	} else {
-		newMessage, err = directChat.ReplyToMessage(ctx, clientUser.Username, partnerUsername, replyTargetMsgId, msgContentJson, at)
+		newMessage, err = directChat.ReplyToMessage(ctx, clientUsername, partnerUsername, replyTargetMsgId, msgContentJson, at)
 		if err != nil {
 			return nil, err
 		}
@@ -37,14 +39,16 @@ func SendMessage(ctx context.Context, clientUser appTypes.ClientUser, partnerUse
 	go eventStreamService.QueueNewDirectMessageEvent(eventTypes.NewDirectMessageEvent{
 		FirstFromUser: newMessage.FirstFromUser,
 		FirstToUser:   newMessage.FirstToUser,
-		FromUser:      clientUser.Username,
+		FromUser:      clientUsername,
 		ToUser:        partnerUsername,
 		CHEId:         newMessage.Id,
 		MsgData:       helpers.ToJson(newMessage),
 	})
 
 	go func(msgData directChat.NewMessage) {
-		msgData.Sender = clientUser
+		msgData.Sender, _ = cache.GetUser[UITypes.ClientUser](context.Background(), clientUsername)
+		gcsHelpers.MessageMediaCloudNameToUrl(msgData.Content)
+
 		realtimeService.SendEventMsg(partnerUsername, appTypes.ServerEventMsg{
 			Event: "direct chat: new message",
 			Data:  msgData,
@@ -110,8 +114,8 @@ func AckMessageRead(ctx context.Context, clientUsername, partnerUsername, msgId 
 	return done, nil
 }
 
-func ReactToMessage(ctx context.Context, clientUser appTypes.ClientUser, partnerUsername, msgId, emoji string, at int64) (any, error) {
-	rxnToMessage, err := directChat.ReactToMessage(ctx, clientUser.Username, partnerUsername, msgId, emoji, at)
+func ReactToMessage(ctx context.Context, clientUsername, partnerUsername, msgId, emoji string, at int64) (any, error) {
+	rxnToMessage, err := directChat.ReactToMessage(ctx, clientUsername, partnerUsername, msgId, emoji, at)
 	if err != nil {
 		return nil, err
 	}
@@ -122,21 +126,25 @@ func ReactToMessage(ctx context.Context, clientUser appTypes.ClientUser, partner
 		return done, nil
 	}
 
-	go realtimeService.SendEventMsg(partnerUsername, appTypes.ServerEventMsg{
-		Event: "direct chat: message reaction",
-		Data: map[string]any{
-			"partner_username": clientUser.Username,
-			"to_msg_id":        msgId,
-			"reaction": UITypes.MsgReaction{
-				Emoji:   emoji,
-				Reactor: clientUser,
+	go func() {
+		reactor, _ := cache.GetUser[UITypes.ClientUser](context.Background(), clientUsername)
+
+		realtimeService.SendEventMsg(partnerUsername, appTypes.ServerEventMsg{
+			Event: "direct chat: message reaction",
+			Data: map[string]any{
+				"partner_username": clientUsername,
+				"to_msg_id":        msgId,
+				"reaction": UITypes.MsgReaction{
+					Emoji:   emoji,
+					Reactor: reactor,
+				},
 			},
-		},
-	})
+		})
+	}()
 
 	// queue msg reaction event
 	go eventStreamService.QueueNewDirectMsgReactionEvent(eventTypes.NewDirectMsgReactionEvent{
-		FromUser: clientUser.Username,
+		FromUser: clientUsername,
 		ToUser:   partnerUsername,
 		CHEId:    rxnToMessage.CHEId,
 		RxnData:  helpers.ToJson(rxnToMessage),

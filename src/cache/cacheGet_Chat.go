@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	"i9chat/src/helpers"
-	"slices"
+	"i9chat/src/helpers/gcsHelpers"
 
 	"github.com/redis/go-redis/v9"
 )
@@ -18,37 +18,9 @@ func GetGroup[T any](ctx context.Context, groupId string) (group T, err error) {
 
 	groupMap := helpers.FromJson[map[string]any](groupJson)
 
-	picCloudName := groupMap["picture_cloud_name"].(string)
-
-	var (
-		smallPicn  string
-		mediumPicn string
-		largePicn  string
-	)
-
-	_, err = fmt.Sscanf(picCloudName, "small:%s medium:%s large:%s", &smallPicn, &mediumPicn, &largePicn)
-	if err != nil {
+	if err := gcsHelpers.GroupPicCloudNameToUrl(groupMap); err != nil {
 		return group, err
 	}
-
-	smallPicUrl, err := getMediaurl(smallPicn)
-	if err != nil {
-		return group, err
-	}
-
-	mediumPicUrl, err := getMediaurl(mediumPicn)
-	if err != nil {
-		return group, err
-	}
-
-	largePicUrl, err := getMediaurl(largePicn)
-	if err != nil {
-		return group, err
-	}
-
-	groupMap["picture_url"] = fmt.Sprintf("small:%s medium:%s large:%s", smallPicUrl, mediumPicUrl, largePicUrl)
-
-	delete(groupMap, "picture_cloud_name")
 
 	return helpers.ToStruct[T](groupMap), nil
 }
@@ -116,50 +88,8 @@ func GetDirectChatHistoryEntry[T any](ctx context.Context, CHEId string) (CHE T,
 
 	if cheType == "message" {
 		content := CHEMap["content"].(map[string]any)
-		contentProps := content["props"].(map[string]any)
-
-		if content["type"].(string) != "text" {
-			mediaCloudName := contentProps["media_cloud_name"].(string)
-
-			if slices.Contains([]string{"photo", "video"}, content["type"].(string)) {
-				var (
-					blurPlchMcn string
-					actualMcn   string
-				)
-
-				_, err = fmt.Sscanf(mediaCloudName, "blur_placeholder:%s actual:%s", &blurPlchMcn, &actualMcn)
-				if err != nil {
-					return CHE, err
-				}
-
-				blurPlchUrl, err := getMediaurl(blurPlchMcn)
-				if err != nil {
-					return CHE, err
-				}
-
-				actualUrl, err := getMediaurl(actualMcn)
-				if err != nil {
-					return CHE, err
-				}
-
-				contentProps["media_url"] = fmt.Sprintf("blur_placeholder:%s actual:%s", blurPlchUrl, actualUrl)
-			} else {
-				var mcn string
-
-				_, err = fmt.Sscanf(mediaCloudName, "%s", &mcn)
-				if err != nil {
-					return CHE, err
-				}
-
-				mediaUrl, err := getMediaurl(mcn)
-				if err != nil {
-					return CHE, err
-				}
-
-				contentProps["media_url"] = mediaUrl
-			}
-
-			delete(contentProps, "media_cloud_name")
+		if err := gcsHelpers.MessageMediaCloudNameToUrl(content); err != nil {
+			return CHE, err
 		}
 	}
 
@@ -179,50 +109,8 @@ func GetGroupChatHistoryEntry[T any](ctx context.Context, CHEId string) (CHE T, 
 
 	if cheType == "message" {
 		content := CHEMap["content"].(map[string]any)
-		contentProps := content["props"].(map[string]any)
-
-		if content["type"].(string) != "text" {
-			mediaCloudName := contentProps["media_cloud_name"].(string)
-
-			if slices.Contains([]string{"photo", "video"}, content["type"].(string)) {
-				var (
-					blurPlchMcn string
-					actualMcn   string
-				)
-
-				_, err = fmt.Sscanf(mediaCloudName, "blur_placeholder:%s actual:%s", &blurPlchMcn, &actualMcn)
-				if err != nil {
-					return CHE, err
-				}
-
-				blurPlchUrl, err := getMediaurl(blurPlchMcn)
-				if err != nil {
-					return CHE, err
-				}
-
-				actualUrl, err := getMediaurl(actualMcn)
-				if err != nil {
-					return CHE, err
-				}
-
-				contentProps["media_url"] = fmt.Sprintf("blur_placeholder:%s actual:%s", blurPlchUrl, actualUrl)
-			} else {
-				var mcn string
-
-				_, err = fmt.Sscanf(mediaCloudName, "%s", &mcn)
-				if err != nil {
-					return CHE, err
-				}
-
-				mediaUrl, err := getMediaurl(mcn)
-				if err != nil {
-					return CHE, err
-				}
-
-				contentProps["media_url"] = mediaUrl
-			}
-
-			delete(contentProps, "media_cloud_name")
+		if err := gcsHelpers.MessageMediaCloudNameToUrl(content); err != nil {
+			return CHE, err
 		}
 	}
 

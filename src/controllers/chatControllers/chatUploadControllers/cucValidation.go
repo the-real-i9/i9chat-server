@@ -3,6 +3,7 @@ package chatUploadControllers
 import (
 	"errors"
 	"i9chat/src/helpers"
+	"slices"
 	"strings"
 
 	validation "github.com/go-ozzo/ozzo-validation/v4"
@@ -44,8 +45,8 @@ func (b authorizeUploadBody) Validate() error {
 				b.MsgType == "voice", validation.By(func(value any) error {
 					val := value.(int64)
 
-					if val < 500 || val > 4*1024*1024 {
-						return errors.New("voice media_size out of range; min: 500BiB; max: 4MeB")
+					if val < 500 || val > 10*1024*1024 {
+						return errors.New("voice media_size out of range; min: 500BiB; max: 10MeB")
 					}
 
 					return nil
@@ -54,8 +55,8 @@ func (b authorizeUploadBody) Validate() error {
 				b.MsgType == "audio", validation.By(func(value any) error {
 					val := value.(int64)
 
-					if val < 1024 || val > 20*1024*1024 {
-						return errors.New("audio media_size out of range; min: 1KiB; max: 20MeB")
+					if val < 500 || val > 20*1024*1024 {
+						return errors.New("audio media_size out of range; min: 500BiB; max: 20MeB")
 					}
 
 					return nil
@@ -73,7 +74,7 @@ func (b authorizeUploadBody) Validate() error {
 		),
 	)
 
-	return helpers.ValidationError(err, "chatUploadControllers_validation.go", "authorizeUploadBody")
+	return helpers.ValidationError(err, "cucValidation.go", "authorizeUploadBody")
 }
 
 type authorizeVisualUploadBody struct {
@@ -89,15 +90,34 @@ func (b authorizeVisualUploadBody) Validate() error {
 			validation.Required,
 			validation.In("photo", "video").Error("invalid message type"),
 		),
-		validation.Field(&b.MediaMIME, validation.Required, validation.Length(2, 2).Error("expected array of 2 items.")),
-		validation.Field(&b.MediaMIME[0], validation.Required,
-			validation.In("image/jpeg", "image/png", "image/webp", "image/avif").Error(`unsupported blur placeholder media_mime; use one of ["image/jpeg", "image/png", "image/webp", "image/avif"]`),
+		validation.Field(&b.MediaMIME, validation.Required, validation.Length(2, 2).Error("expected array of 2 items."),
+			validation.By(func(value any) error {
+				val := value.([2]string)
+
+				const (
+					_             = iota
+					BLUR_MIME int = iota - 1
+					ACTUAL_MIME
+				)
+
+				if !slices.Contains([]string{"image/jpeg", "image/png", "image/webp", "image/avif"}, val[BLUR_MIME]) {
+					return errors.New(`unsupported blur placeholder media_mime; use one of ["image/jpeg", "image/png", "image/webp", "image/avif"]`)
+				}
+
+				if b.MsgType == "photo" {
+					if !slices.Contains([]string{"image/jpeg", "image/png", "image/webp", "image/avif"}, val[ACTUAL_MIME]) {
+						return errors.New(`unsupported photo media_mime; use one of ["image/jpeg", "image/png", "image/webp", "image/avif"]`)
+					}
+				} else {
+					if !slices.Contains([]string{"video/mp4", "video/webm"}, val[ACTUAL_MIME]) {
+						return errors.New(`unsupported video/reel media_mime; use one of ["video/mp4", "video/webm"]`)
+					}
+				}
+
+				return nil
+			}),
 		),
-		validation.Field(&b.MediaMIME[1], validation.Required,
-			validation.When(b.MsgType == "photo",
-				validation.In("image/jpeg", "image/png", "image/webp", "image/avif").Error(`unsupported photo media_mime; use one of ["image/jpeg", "image/png", "image/webp", "image/avif"]`),
-			).Else(validation.In("video/mp4", "video/webm").Error(`unsupported video media_mime; use one of ["video/mp4", "video/webm"]`)),
-		),
+
 		validation.Field(&b.MediaSize,
 			validation.Required,
 			validation.Length(2, 2).Error("expected a media_size array of 2 items"),
@@ -110,8 +130,8 @@ func (b authorizeVisualUploadBody) Validate() error {
 					ACTUAL_MEDIA
 				)
 
-				if media_size[BLUR_PLACEHOLDER] < 1*1024 || media_size[BLUR_PLACEHOLDER] > 10*1024 {
-					return errors.New("blur placeholder media_size out of range; min: 1KiB; max: 10KiB")
+				if media_size[BLUR_PLACEHOLDER] < 1*1024 || media_size[BLUR_PLACEHOLDER] > 100*1024 {
+					return errors.New("blur placeholder media_size out of range; min: 1KiB; max: 100KiB")
 				}
 
 				switch b.MsgType {
@@ -131,5 +151,5 @@ func (b authorizeVisualUploadBody) Validate() error {
 		),
 	)
 
-	return helpers.ValidationError(err, "chatUploadControllers_validation.go", "authorizeVisualUploadBody")
+	return helpers.ValidationError(err, "cucValidation.go", "authorizeVisualUploadBody")
 }

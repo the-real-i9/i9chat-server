@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"i9chat/src/appTypes"
+	"i9chat/src/controllers/chatControllers/directChatControllers"
+	"i9chat/src/controllers/chatControllers/groupChatControllers"
 	"i9chat/src/helpers"
 	"i9chat/src/services/realtimeService"
 	"i9chat/src/services/userService"
@@ -79,7 +81,7 @@ var WSStream = websocket.New(func(c *websocket.Conn) {
 				delete(cancelUserPresenceSub, tu)
 			}
 		case "direct chat: send message":
-			respData, err := sendDirectChatMsgHndl(ctx, clientUser, body.Data)
+			respData, err := directChatControllers.SendMessage(ctx, clientUser.Username, body.Data)
 			if err != nil {
 				w_err = c.WriteJSON(helpers.WSErrReply(err, body.Action))
 				continue
@@ -88,7 +90,7 @@ var WSStream = websocket.New(func(c *websocket.Conn) {
 			w_err = c.WriteJSON(helpers.WSReply(respData, body.Action))
 		case "direct chat: ack message delivered":
 
-			respData, err := ackDirectChatMsgDeliveredHndl(ctx, clientUser.Username, body.Data)
+			respData, err := directChatControllers.AckMessageDelivered(ctx, clientUser.Username, body.Data)
 			if err != nil {
 				w_err = c.WriteJSON(helpers.WSErrReply(err, body.Action))
 				continue
@@ -97,7 +99,7 @@ var WSStream = websocket.New(func(c *websocket.Conn) {
 			w_err = c.WriteJSON(helpers.WSReply(respData, body.Action))
 		case "direct chat: ack message read":
 
-			respData, err := ackDirectChatMsgReadHndl(ctx, clientUser.Username, body.Data)
+			respData, err := directChatControllers.AckMessageRead(ctx, clientUser.Username, body.Data)
 			if err != nil {
 				w_err = c.WriteJSON(helpers.WSErrReply(err, body.Action))
 				continue
@@ -106,7 +108,7 @@ var WSStream = websocket.New(func(c *websocket.Conn) {
 			w_err = c.WriteJSON(helpers.WSReply(respData, body.Action))
 		case "group chat: send message":
 
-			respData, err := sendGroupChatMsgHndl(ctx, clientUser, body.Data)
+			respData, err := groupChatControllers.SendMessage(ctx, clientUser.Username, body.Data)
 			if err != nil {
 				w_err = c.WriteJSON(helpers.WSErrReply(err, body.Action))
 				continue
@@ -115,7 +117,7 @@ var WSStream = websocket.New(func(c *websocket.Conn) {
 			w_err = c.WriteJSON(helpers.WSReply(respData, body.Action))
 		case "group chat: ack message delivered":
 
-			respData, err := ackGroupChatMsgDeliveredHndl(ctx, clientUser.Username, body.Data)
+			respData, err := groupChatControllers.AckMessageDelivered(ctx, clientUser.Username, body.Data)
 			if err != nil {
 				w_err = c.WriteJSON(helpers.WSErrReply(err, body.Action))
 				continue
@@ -124,7 +126,7 @@ var WSStream = websocket.New(func(c *websocket.Conn) {
 			w_err = c.WriteJSON(helpers.WSReply(respData, body.Action))
 		case "group chat: ack message read":
 
-			respData, err := ackGroupChatMsgReadHndl(ctx, clientUser.Username, body.Data)
+			respData, err := groupChatControllers.AckMessageRead(ctx, clientUser.Username, body.Data)
 			if err != nil {
 				w_err = c.WriteJSON(helpers.WSErrReply(err, body.Action))
 				continue
@@ -133,7 +135,7 @@ var WSStream = websocket.New(func(c *websocket.Conn) {
 			w_err = c.WriteJSON(helpers.WSReply(respData, body.Action))
 		case "group: get info":
 
-			respData, err := getGroupInfoHndl(ctx, body.Data)
+			respData, err := groupChatControllers.GetGroupInfo(ctx, body.Data)
 			if err != nil {
 				w_err = c.WriteJSON(helpers.WSErrReply(err, body.Action))
 				continue

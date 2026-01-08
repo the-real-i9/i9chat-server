@@ -8,7 +8,7 @@ import (
 	"i9chat/src/appTypes"
 	"i9chat/src/helpers"
 	"os"
-	"strings"
+	"regexp"
 
 	"cloud.google.com/go/storage"
 	validation "github.com/go-ozzo/ozzo-validation/v4"
@@ -39,16 +39,16 @@ func (b authorizePPicUploadBody) Validate() error {
 					LARGE
 				)
 
-				if pic_size[SMALL] < 100*1024 || pic_size[SMALL] > 500*1024 {
-					return errors.New("small pic_size out of range; min: 100KiB; max: 500KiB")
+				if pic_size[SMALL] < 1*1024 || pic_size[SMALL] > 500*1024 {
+					return errors.New("small pic_size out of range; min: 1KiB; max: 500KiB")
 				}
 
-				if pic_size[MEDIUM] < 500*1024 || pic_size[MEDIUM] > 2*1024*1024 {
-					return errors.New("medium pic_size out of range; min: 500KiB; max: 2MeB")
+				if pic_size[MEDIUM] < 1*1024 || pic_size[MEDIUM] > 1*1024*1024 {
+					return errors.New("medium pic_size out of range; min: 1KiB; max: 1MeB")
 				}
 
-				if pic_size[LARGE] < 2*1024*1024 || pic_size[LARGE] > 5*1024*1024 {
-					return errors.New("medium pic_size out of range; min: 2MeB; max: 5MeB")
+				if pic_size[LARGE] < 1*1024 || pic_size[LARGE] > 2*1024*1024 {
+					return errors.New("large pic_size out of range; min: 1KiB; max: 2MeB")
 				}
 
 				return nil
@@ -56,7 +56,7 @@ func (b authorizePPicUploadBody) Validate() error {
 		),
 	)
 
-	return helpers.ValidationError(err, "userControllers_requestValidation.go", "authorizePPicUploadBody")
+	return helpers.ValidationError(err, "ucValidation.go", "authorizePPicUploadBody")
 }
 
 type changeProfilePictureBody struct {
@@ -65,15 +65,9 @@ type changeProfilePictureBody struct {
 
 func (b changeProfilePictureBody) Validate(ctx context.Context) error {
 	err := validation.ValidateStruct(&b,
-		validation.Field(&b.ProfilePicCloudName, validation.Required, validation.By(func(value any) error {
-			val := value.(string)
-
-			if !(strings.HasPrefix(val, "small:uploads/user/profile_pics/") && strings.Contains(val, " medium:uploads/user/profile_pics/") && strings.Contains(val, " large:uploads/user/profile_pics/")) {
-				return errors.New("invalid profile pic cloud name")
-			}
-
-			return nil
-		})),
+		validation.Field(&b.ProfilePicCloudName, validation.Required, validation.Match(regexp.MustCompile(
+			`^small:uploads/user/profile_pics/[\w-/]+\w medium:uploads/user/profile_pics/[\w-/]+\w large:uploads/user/profile_pics/[\w-/]+\w$`,
+		)).Error("invalid profile pic cloud name")),
 	)
 
 	if err != nil {

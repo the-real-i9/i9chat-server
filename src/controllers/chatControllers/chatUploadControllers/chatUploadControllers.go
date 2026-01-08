@@ -20,7 +20,7 @@ func AuthorizeUpload(c *fiber.Ctx) error {
 		return err
 	}
 
-	respData, err := chatUploadService.Authorize(ctx, body.MsgType, body.MediaMIME, body.MediaSize)
+	respData, err := chatUploadService.Authorize(ctx, body.MsgType, body.MediaMIME)
 	if err != nil {
 		return err
 	}
@@ -42,7 +42,7 @@ func AuthorizeVisualUpload(c *fiber.Ctx) error {
 		return err
 	}
 
-	respData, err := chatUploadService.AuthorizeVisual(ctx, body.MsgType, body.MediaMIME, body.MediaSize)
+	respData, err := chatUploadService.AuthorizeVisual(ctx, body.MsgType, body.MediaMIME)
 	if err != nil {
 		return err
 	}

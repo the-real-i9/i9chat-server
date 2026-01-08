@@ -4,13 +4,15 @@ import (
 	"context"
 	"fmt"
 	"i9chat/src/appGlobals"
-	"i9chat/src/appTypes"
 	"i9chat/src/appTypes/UITypes"
+	"i9chat/src/cache"
 	"i9chat/src/helpers"
+	"i9chat/src/helpers/gcsHelpers"
 	groupChat "i9chat/src/models/chatModel/groupChatModel"
 	"i9chat/src/services/eventStreamService"
 	"i9chat/src/services/eventStreamService/eventTypes"
 	"maps"
+	"net/http"
 	"os"
 	"time"
 
@@ -24,10 +26,10 @@ type AuthGroupPicDataT struct {
 	GroupPicCloudName string `json:"groupPicCloudName"`
 }
 
-func AuthorizeGroupPicUpload(ctx context.Context, picMIME string, picSize [3]int64) (AuthGroupPicDataT, error) {
+func AuthorizeGroupPicUpload(ctx context.Context, picMIME string) (AuthGroupPicDataT, error) {
 	var res AuthGroupPicDataT
 
-	for small0_medium1_large2, size := range picSize {
+	for small0_medium1_large2 := range 3 {
 
 		which := [3]string{"small", "medium", "large"}
 
@@ -37,10 +39,10 @@ func AuthorizeGroupPicUpload(ctx context.Context, picMIME string, picSize [3]int
 			pPicCloudName,
 			&storage.SignedURLOptions{
 				Scheme:      storage.SigningSchemeV4,
-				Method:      "PUT",
+				Method:      http.MethodPost,
 				ContentType: picMIME,
 				Expires:     time.Now().Add(15 * time.Minute),
-				Headers:     []string{fmt.Sprintf("x-goog-content-length-range: %d,%[1]d", size)},
+				Headers:     []string{"x-goog-resumable:start"},
 			},
 		)
 		if err != nil {
@@ -72,13 +74,8 @@ func AuthorizeGroupPicUpload(ctx context.Context, picMIME string, picSize [3]int
 	return res, nil
 }
 
-func NewGroup(ctx context.Context, clientUsername, name, description string, pictureData []byte, initUsers []string, createdAt int64) (map[string]any, error) {
-	picUrl, err := uploadGroupPicture(ctx, pictureData)
-	if err != nil {
-		return nil, err
-	}
-
-	newGroup, err := groupChat.New(ctx, clientUsername, name, description, picUrl, initUsers, createdAt)
+func NewGroup(ctx context.Context, clientUsername, name, description, pictureCloudName string, initUsers []string, createdAt int64) (map[string]any, error) {
+	newGroup, err := groupChat.New(ctx, clientUsername, name, description, pictureCloudName, initUsers, createdAt)
 	if err != nil {
 		return nil, err
 	}
@@ -425,19 +422,19 @@ func RemoveUserFromGroupAdmins(ctx context.Context, groupId, clientUsername, tar
 	return newActivity.ClientUserCHE["info"], nil
 }
 
-func SendMessage(ctx context.Context, clientUser appTypes.ClientUser, groupId, replyTargetMsgId string, isReply bool, msgContentJson string, at int64) (map[string]any, error) {
+func SendMessage(ctx context.Context, clientUsername, groupId, replyTargetMsgId string, isReply bool, msgContentJson string, at int64) (map[string]any, error) {
 	var (
 		newMessage groupChat.NewMessage
 		err        error
 	)
 
 	if !isReply {
-		newMessage, err = groupChat.SendMessage(ctx, clientUser.Username, groupId, msgContentJson, at)
+		newMessage, err = groupChat.SendMessage(ctx, clientUsername, groupId, msgContentJson, at)
 		if err != nil {
 			return nil, err
 		}
 	} else {
-		newMessage, err = groupChat.ReplyToMessage(ctx, clientUser.Username, groupId, replyTargetMsgId, msgContentJson, at)
+		newMessage, err = groupChat.ReplyToMessage(ctx, clientUsername, groupId, replyTargetMsgId, msgContentJson, at)
 		if err != nil {
 			return nil, err
 		}
@@ -449,7 +446,7 @@ func SendMessage(ctx context.Context, clientUser appTypes.ClientUser, groupId, r
 
 	// queue new message event
 	go eventStreamService.QueueNewGroupMessageEvent(eventTypes.NewGroupMessageEvent{
-		FromUser:    clientUser.Username,
+		FromUser:    clientUsername,
 		ToGroup:     groupId,
 		CHEId:       newMessage.Id,
 		MsgData:     helpers.ToJson(newMessage),
@@ -457,7 +454,9 @@ func SendMessage(ctx context.Context, clientUser appTypes.ClientUser, groupId, r
 	})
 
 	go func(msgData groupChat.NewMessage) {
-		msgData.Sender = clientUser
+
+		msgData.Sender, _ = cache.GetUser[UITypes.ClientUser](context.Background(), clientUsername)
+		gcsHelpers.MessageMediaCloudNameToUrl(msgData.Content)
 
 		broadcastNewMessage(newMessage.MemberUsernames, msgData, groupId)
 	}(newMessage)
@@ -505,8 +504,8 @@ func AckMessageRead(ctx context.Context, clientUsername, groupId, msgId string, 
 	return done, nil
 }
 
-func ReactToMessage(ctx context.Context, clientUser appTypes.ClientUser, groupId, msgId, emoji string, at int64) (any, error) {
-	rxnToMessage, err := groupChat.ReactToMessage(ctx, clientUser.Username, groupId, msgId, emoji, at)
+func ReactToMessage(ctx context.Context, clientUsername, groupId, msgId, emoji string, at int64) (any, error) {
+	rxnToMessage, err := groupChat.ReactToMessage(ctx, clientUsername, groupId, msgId, emoji, at)
 	if err != nil {
 		return nil, err
 	}
@@ -519,7 +518,7 @@ func ReactToMessage(ctx context.Context, clientUser appTypes.ClientUser, groupId
 
 	// queue msg reaction event
 	go eventStreamService.QueueNewGroupMsgReactionEvent(eventTypes.NewGroupMsgReactionEvent{
-		FromUser: clientUser.Username,
+		FromUser: clientUsername,
 		ToGroup:  groupId,
 		CHEId:    rxnToMessage.CHEId,
 		RxnData:  helpers.ToJson(rxnToMessage),
@@ -527,14 +526,18 @@ func ReactToMessage(ctx context.Context, clientUser appTypes.ClientUser, groupId
 		Emoji:    emoji,
 	})
 
-	go broadcastMsgReaction(rxnToMessage.MemberUsernames, map[string]any{
-		"group_id":  groupId,
-		"to_msg_id": msgId,
-		"reaction": UITypes.MsgReaction{
-			Emoji:   emoji,
-			Reactor: clientUser,
-		},
-	})
+	go func() {
+		reactor, _ := cache.GetUser[UITypes.ClientUser](context.Background(), clientUsername)
+
+		broadcastMsgReaction(rxnToMessage.MemberUsernames, map[string]any{
+			"group_id":  groupId,
+			"to_msg_id": msgId,
+			"reaction": UITypes.MsgReaction{
+				Emoji:   emoji,
+				Reactor: reactor,
+			},
+		})
+	}()
 
 	return done, nil
 }

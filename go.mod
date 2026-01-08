@@ -5,7 +5,6 @@ go 1.25.4
 require (
 	cloud.google.com/go/storage v1.58.0
 	github.com/fasthttp/websocket v1.5.12
-	github.com/gabriel-vasile/mimetype v1.4.11
 	github.com/go-ozzo/ozzo-validation/v4 v4.3.0
 	github.com/goccy/go-json v0.10.5
 	github.com/gofiber/contrib/websocket v1.3.4

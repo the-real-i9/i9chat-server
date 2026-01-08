@@ -11,6 +11,7 @@ import (
 	"i9chat/src/services/eventStreamService"
 	"i9chat/src/services/eventStreamService/eventTypes"
 	"i9chat/src/services/realtimeService"
+	"net/http"
 	"os"
 	"time"
 
@@ -37,15 +38,35 @@ func GoOnline(ctx context.Context, clientUsername string) {
 
 }
 
+func GoOffline(ctx context.Context, clientUsername string) {
+	lastSeen := time.Now().UTC().UnixMilli()
+
+	done := user.ChangePresence(ctx, clientUsername, "offline", lastSeen)
+
+	if done {
+		go eventStreamService.QueueUserPresenceChangeEvent(eventTypes.UserPresenceChangeEvent{
+			Username: clientUsername,
+			Presence: "offline",
+			LastSeen: lastSeen,
+		})
+
+		realtimeService.PublishUserPresenceChange(ctx, clientUsername, map[string]any{
+			"user":      clientUsername,
+			"presence":  "offline",
+			"last_seen": lastSeen,
+		})
+	}
+}
+
 type AuthPPicDataT struct {
 	UploadUrl     string `json:"uploadUrl"`
 	PPicCloudName string `json:"profilePicCloudName"`
 }
 
-func AuthorizePPicUpload(ctx context.Context, picMIME string, picSize [3]int64) (AuthPPicDataT, error) {
+func AuthorizePPicUpload(ctx context.Context, picMIME string) (AuthPPicDataT, error) {
 	var res AuthPPicDataT
 
-	for small0_medium1_large2, size := range picSize {
+	for small0_medium1_large2 := range 3 {
 
 		which := [3]string{"small", "medium", "large"}
 
@@ -55,10 +76,10 @@ func AuthorizePPicUpload(ctx context.Context, picMIME string, picSize [3]int64) 
 			pPicCloudName,
 			&storage.SignedURLOptions{
 				Scheme:      storage.SigningSchemeV4,
-				Method:      "PUT",
+				Method:      http.MethodPost,
 				ContentType: picMIME,
 				Expires:     time.Now().Add(15 * time.Minute),
-				Headers:     []string{fmt.Sprintf("x-goog-content-length-range: %d,%[1]d", size)},
+				Headers:     []string{"x-goog-resumable:start"},
 			},
 		)
 		if err != nil {
@@ -88,26 +109,6 @@ func AuthorizePPicUpload(ctx context.Context, picMIME string, picSize [3]int64) 
 	}
 
 	return res, nil
-}
-
-func GoOffline(ctx context.Context, clientUsername string) {
-	lastSeen := time.Now().UTC().UnixMilli()
-
-	done := user.ChangePresence(ctx, clientUsername, "offline", lastSeen)
-
-	if done {
-		go eventStreamService.QueueUserPresenceChangeEvent(eventTypes.UserPresenceChangeEvent{
-			Username: clientUsername,
-			Presence: "offline",
-			LastSeen: lastSeen,
-		})
-
-		realtimeService.PublishUserPresenceChange(ctx, clientUsername, map[string]any{
-			"user":      clientUsername,
-			"presence":  "offline",
-			"last_seen": lastSeen,
-		})
-	}
 }
 
 func ChangeProfilePicture(ctx context.Context, clientUsername, profilePicCloudName string) (any, error) {

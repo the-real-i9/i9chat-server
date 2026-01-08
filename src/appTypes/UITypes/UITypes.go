@@ -1,5 +1,11 @@
 package UITypes
 
+type ClientUser struct {
+	Username      string `json:"username"`
+	ProfilePicUrl string `json:"profile_pic_url"`
+	Presence      string `json:"presence"`
+}
+
 type UserSnippet struct {
 	Username      string `json:"username" db:"username"`
 	ProfilePicUrl string `json:"profile_pic_url" db:"profile_pic_url"`
