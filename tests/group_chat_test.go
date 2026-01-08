@@ -2,6 +2,7 @@ package tests
 
 import (
 	"fmt"
+	"i9chat/src/appGlobals"
 	"i9chat/src/helpers"
 	"net/http"
 	"os"
@@ -16,6 +17,7 @@ import (
 
 func TestGroupChat(t *testing.T) {
 	// t.Parallel()
+	require := require.New(t)
 
 	user1 := UserT{
 		Email:    "harrydasouza@gmail.com",
@@ -74,20 +76,20 @@ func TestGroupChat(t *testing.T) {
 
 			{
 				reqBody, err := makeReqBody(map[string]any{"email": user.Email})
-				require.NoError(t, err)
+				require.NoError(err)
 
 				res, err := http.Post(signupPath+"/request_new_account", "application/json", reqBody)
-				require.NoError(t, err)
+				require.NoError(err)
 
 				if !assert.Equal(t, http.StatusOK, res.StatusCode) {
 					rb, err := errResBody(res.Body)
-					require.NoError(t, err)
+					require.NoError(err)
 					t.Log("unexpected error:", rb)
 					return
 				}
 
 				rb, err := succResBody[map[string]any](res.Body)
-				require.NoError(t, err)
+				require.NoError(err)
 
 				td.Cmp(td.Require(t), rb, td.SuperMapOf(map[string]any{
 					"msg": "A 6-digit verification code has been sent to " + user.Email,
@@ -98,25 +100,25 @@ func TestGroupChat(t *testing.T) {
 
 			{
 				reqBody, err := makeReqBody(map[string]any{"code": os.Getenv("DUMMY_TOKEN")})
-				require.NoError(t, err)
+				require.NoError(err)
 
 				req, err := http.NewRequest("POST", signupPath+"/verify_email", reqBody)
-				require.NoError(t, err)
+				require.NoError(err)
 				req.Header.Set("Cookie", user.SessionCookie)
 				req.Header.Add("Content-Type", "application/json")
 
 				res, err := http.DefaultClient.Do(req)
-				require.NoError(t, err)
+				require.NoError(err)
 
 				if !assert.Equal(t, http.StatusOK, res.StatusCode) {
 					rb, err := errResBody(res.Body)
-					require.NoError(t, err)
+					require.NoError(err)
 					t.Log("unexpected error:", rb)
 					return
 				}
 
 				rb, err := succResBody[map[string]any](res.Body)
-				require.NoError(t, err)
+				require.NoError(err)
 
 				td.Cmp(td.Require(t), rb, td.SuperMapOf(map[string]any{
 					"msg": fmt.Sprintf("Your email '%s' has been verified!", user.Email),
@@ -130,25 +132,25 @@ func TestGroupChat(t *testing.T) {
 					"username": user.Username,
 					"password": user.Password,
 				})
-				require.NoError(t, err)
+				require.NoError(err)
 
 				req, err := http.NewRequest("POST", signupPath+"/register_user", reqBody)
-				require.NoError(t, err)
+				require.NoError(err)
 				req.Header.Add("Content-Type", "application/json")
 				req.Header.Set("Cookie", user.SessionCookie)
 
 				res, err := http.DefaultClient.Do(req)
-				require.NoError(t, err)
+				require.NoError(err)
 
-				if !assert.Equal(t, http.StatusOK, res.StatusCode) {
+				if !assert.Equal(t, http.StatusCreated, res.StatusCode) {
 					rb, err := errResBody(res.Body)
-					require.NoError(t, err)
+					require.NoError(err)
 					t.Log("unexpected error:", rb)
 					return
 				}
 
 				rb, err := succResBody[map[string]any](res.Body)
-				require.NoError(t, err)
+				require.NoError(err)
 
 				td.Cmp(td.Require(t), rb, td.SuperMapOf(map[string]any{
 					"msg":  "Signup success!",
@@ -168,11 +170,11 @@ func TestGroupChat(t *testing.T) {
 			header := http.Header{}
 			header.Set("Cookie", user.SessionCookie)
 			wsConn, res, err := websocket.DefaultDialer.Dial(wsPath, header)
-			require.NoError(t, err)
+			require.NoError(err)
 
 			if !assert.Equal(t, http.StatusSwitchingProtocols, res.StatusCode) {
 				rb, err := errResBody(res.Body)
-				require.NoError(t, err)
+				require.NoError(err)
 				t.Log("unexpected error:", rb)
 				return
 			}
@@ -209,45 +211,118 @@ func TestGroupChat(t *testing.T) {
 		}
 	}
 
-	groupChatPic, err := os.ReadFile("./test_files/group_pic.png")
-	require.NoError(t, err)
-
-	newGroup := struct {
-		Id          string
-		Name        string
-		Description string
-		Picture     []byte
-	}{Name: "World Changers! 💪💪💪", Description: "We're world changers! Join the train!", Picture: groupChatPic}
+	var (
+		uploadUrl         string
+		groupPicCloudName string
+		filePath          = "./test_files/group_pic.png"
+		contentType       = "image/png"
+	)
 
 	{
-		t.Log("Action: user1 creates group chat with user2 | user2 receives the new group")
+		fileInfo, err := os.Stat(filePath)
+		require.NoError(err)
 
-		reqBody, err := makeReqBody(map[string]any{
-			"name":        newGroup.Name,
-			"description": newGroup.Description,
-			"pictureData": newGroup.Picture,
-			"initUsers":   []string{user2.Username},
-			"createdAt":   time.Now().UTC().UnixMilli(),
-		})
-		require.NoError(t, err)
+		t.Log("--- Authorize group picture upload ---")
 
-		req, err := http.NewRequest("POST", groupChatPath+"/new", reqBody)
-		require.NoError(t, err)
-		req.Header.Add("Content-Type", "application/json")
+		reqBody, err := makeReqBody(map[string]any{"pic_mime": contentType, "pic_size": [3]int64{fileInfo.Size(), fileInfo.Size(), fileInfo.Size()}})
+		require.NoError(err)
+
+		req, err := http.NewRequest("POST", groupChatPath+"/group_pic_upload/authorize", reqBody)
+		require.NoError(err)
 		req.Header.Set("Cookie", user1.SessionCookie)
+		req.Header.Add("Content-Type", "application/json")
 
 		res, err := http.DefaultClient.Do(req)
-		require.NoError(t, err)
+		require.NoError(err)
 
-		if !assert.Equal(t, http.StatusCreated, res.StatusCode) {
+		if !assert.Equal(t, http.StatusOK, res.StatusCode) {
 			rb, err := errResBody(res.Body)
-			require.NoError(t, err)
+			require.NoError(err)
 			t.Log("unexpected error:", rb)
 			return
 		}
 
 		rb, err := succResBody[map[string]any](res.Body)
-		require.NoError(t, err)
+		require.NoError(err)
+
+		td.Cmp(td.Require(t), rb, td.Map(map[string]any{
+			"uploadUrl":         td.Ignore(),
+			"groupPicCloudName": td.Ignore(),
+		}, nil))
+
+		uploadUrl = rb["uploadUrl"].(string)
+		groupPicCloudName = rb["groupPicCloudName"].(string)
+	}
+
+	{
+		t.Log("Upload session started:")
+
+		varUploadUrl := make([]string, 3)
+		_, err := fmt.Sscanf(uploadUrl, "small:%s medium:%s large:%s", &varUploadUrl[0], &varUploadUrl[1], &varUploadUrl[2])
+		require.NoError(err)
+
+		for i, smlUploadUrl := range varUploadUrl {
+			varSize := []string{"small", "medium", "large"}
+
+			t.Logf("Uploading %s group pic started", varSize[i])
+
+			sessionUrl := startResumableUpload(smlUploadUrl, contentType, t)
+
+			uploadFileInChunks(sessionUrl, filePath, contentType, logProgress, t)
+
+			t.Logf("Uploading %s group pic complete", varSize[i])
+		}
+
+		defer func(ppcn string) {
+			varGroupPicCloudName := make([]string, 3)
+			_, err = fmt.Sscanf(ppcn, "small:%s medium:%s large:%s", &varGroupPicCloudName[0], &varGroupPicCloudName[1], &varGroupPicCloudName[2])
+			require.NoError(err)
+
+			for _, smlGroupPicCn := range varGroupPicCloudName {
+				err := appGlobals.GCSClient.Bucket(os.Getenv("GCS_BUCKET_NAME")).Object(smlGroupPicCn).Delete(t.Context())
+				require.NoError(err)
+			}
+		}(groupPicCloudName)
+
+		t.Log("Upload complete")
+	}
+
+	newGroup := struct {
+		Id               string
+		Name             string
+		Description      string
+		PictureCloudName string
+	}{Name: "World Changers! 💪💪💪", Description: "We're world changers! Join the train!", PictureCloudName: groupPicCloudName}
+
+	{
+		t.Log("Action: user1 creates group chat with user2 | user2 receives the new group")
+
+		reqBody, err := makeReqBody(map[string]any{
+			"name":             newGroup.Name,
+			"description":      newGroup.Description,
+			"pictureCloudName": newGroup.PictureCloudName,
+			"initUsers":        []string{user2.Username},
+			"createdAt":        time.Now().UTC().UnixMilli(),
+		})
+		require.NoError(err)
+
+		req, err := http.NewRequest("POST", groupChatPath+"/new", reqBody)
+		require.NoError(err)
+		req.Header.Add("Content-Type", "application/json")
+		req.Header.Set("Cookie", user1.SessionCookie)
+
+		res, err := http.DefaultClient.Do(req)
+		require.NoError(err)
+
+		if !assert.Equal(t, http.StatusCreated, res.StatusCode) {
+			rb, err := errResBody(res.Body)
+			require.NoError(err)
+			t.Log("unexpected error:", rb)
+			return
+		}
+
+		rb, err := succResBody[map[string]any](res.Body)
+		require.NoError(err)
 
 		td.Cmp(td.Require(t), rb, td.SuperMapOf(map[string]any{
 			"group": td.SuperMapOf(map[string]any{
@@ -285,25 +360,25 @@ func TestGroupChat(t *testing.T) {
 		t.Log("Action: user3 joins group | user1 & user2 are notified")
 
 		reqBody, err := makeReqBody(map[string]any{})
-		require.NoError(t, err)
+		require.NoError(err)
 
 		req, err := http.NewRequest("POST", groupChatPath+"/"+newGroup.Id+"/execute_action/join", reqBody)
-		require.NoError(t, err)
+		require.NoError(err)
 		req.Header.Add("Content-Type", "application/json")
 		req.Header.Set("Cookie", user3.SessionCookie)
 
 		res, err := http.DefaultClient.Do(req)
-		require.NoError(t, err)
+		require.NoError(err)
 
 		if !assert.Equal(t, http.StatusOK, res.StatusCode) {
 			rb, err := errResBody(res.Body)
-			require.NoError(t, err)
+			require.NoError(err)
 			t.Log("unexpected error:", rb)
 			return
 		}
 
 		rb, err := succResBody[map[string]any](res.Body)
-		require.NoError(t, err)
+		require.NoError(err)
 
 		td.Cmp(td.Require(t), rb, td.SuperMapOf(map[string]any{
 			"group": td.SuperMapOf(map[string]any{
@@ -344,27 +419,27 @@ func TestGroupChat(t *testing.T) {
 		reqBody, err := makeReqBody(map[string]any{
 			"user": user2.Username,
 		})
-		require.NoError(t, err)
+		require.NoError(err)
 
 		req, err := http.NewRequest("POST", groupChatPath+"/"+newGroup.Id+"/execute_action/make user admin", reqBody)
-		require.NoError(t, err)
+		require.NoError(err)
 		req.Header.Add("Content-Type", "application/json")
 		req.Header.Set("Cookie", user1.SessionCookie)
 
 		res, err := http.DefaultClient.Do(req)
-		require.NoError(t, err)
+		require.NoError(err)
 
 		if !assert.Equal(t, http.StatusOK, res.StatusCode) {
 			rb, err := errResBody(res.Body)
-			require.NoError(t, err)
+			require.NoError(err)
 			t.Log("unexpected error:", rb)
 			return
 		}
 
 		rb, err := succResBody[string](res.Body)
-		require.NoError(t, err)
+		require.NoError(err)
 
-		require.Equal(t, fmt.Sprintf("You made %s group admin", user2.Username), rb)
+		require.Equal(fmt.Sprintf("You made %s group admin", user2.Username), rb)
 
 		user2GCNewAdminNotif := <-user2.ServerEventMsg
 
@@ -393,27 +468,27 @@ func TestGroupChat(t *testing.T) {
 		reqBody, err := makeReqBody(map[string]any{
 			"newUsers": []string{user4.Username, user5.Username},
 		})
-		require.NoError(t, err)
+		require.NoError(err)
 
 		req, err := http.NewRequest("POST", groupChatPath+"/"+newGroup.Id+"/execute_action/add users", reqBody)
-		require.NoError(t, err)
+		require.NoError(err)
 		req.Header.Add("Content-Type", "application/json")
 		req.Header.Set("Cookie", user2.SessionCookie)
 
 		res, err := http.DefaultClient.Do(req)
-		require.NoError(t, err)
+		require.NoError(err)
 
 		if !assert.Equal(t, http.StatusOK, res.StatusCode) {
 			rb, err := errResBody(res.Body)
-			require.NoError(t, err)
+			require.NoError(err)
 			t.Log("unexpected error:", rb)
 			return
 		}
 
 		rb, err := succResBody[string](res.Body)
-		require.NoError(t, err)
+		require.NoError(err)
 
-		require.Equal(t, fmt.Sprintf("You added %s", helpers.JoinWithCommaAnd(user4.Username, user5.Username)), rb)
+		require.Equal(fmt.Sprintf("You added %s", helpers.JoinWithCommaAnd(user4.Username, user5.Username)), rb)
 
 		user4GCUserAddedNotif := <-user4.ServerEventMsg
 
@@ -480,27 +555,27 @@ func TestGroupChat(t *testing.T) {
 		reqBody, err := makeReqBody(map[string]any{
 			"newName": newGroup.Name,
 		})
-		require.NoError(t, err)
+		require.NoError(err)
 
 		req, err := http.NewRequest("POST", groupChatPath+"/"+newGroup.Id+"/execute_action/change name", reqBody)
-		require.NoError(t, err)
+		require.NoError(err)
 		req.Header.Add("Content-Type", "application/json")
 		req.Header.Set("Cookie", user1.SessionCookie)
 
 		res, err := http.DefaultClient.Do(req)
-		require.NoError(t, err)
+		require.NoError(err)
 
 		if !assert.Equal(t, http.StatusOK, res.StatusCode) {
 			rb, err := errResBody(res.Body)
-			require.NoError(t, err)
+			require.NoError(err)
 			t.Log("unexpected error:", rb)
 			return
 		}
 
 		rb, err := succResBody[string](res.Body)
-		require.NoError(t, err)
+		require.NoError(err)
 
-		require.Equal(t, fmt.Sprintf("You changed group name from %s to %s", oldGroupName, newGroup.Name), rb)
+		require.Equal(fmt.Sprintf("You changed group name from %s to %s", oldGroupName, newGroup.Name), rb)
 
 		user2GCNameChangeNotif := <-user2.ServerEventMsg
 
@@ -553,27 +628,27 @@ func TestGroupChat(t *testing.T) {
 		reqBody, err := makeReqBody(map[string]any{
 			"newDescription": newGroup.Description,
 		})
-		require.NoError(t, err)
+		require.NoError(err)
 
 		req, err := http.NewRequest("POST", groupChatPath+"/"+newGroup.Id+"/execute_action/change description", reqBody)
-		require.NoError(t, err)
+		require.NoError(err)
 		req.Header.Add("Content-Type", "application/json")
 		req.Header.Set("Cookie", user1.SessionCookie)
 
 		res, err := http.DefaultClient.Do(req)
-		require.NoError(t, err)
+		require.NoError(err)
 
 		if !assert.Equal(t, http.StatusOK, res.StatusCode) {
 			rb, err := errResBody(res.Body)
-			require.NoError(t, err)
+			require.NoError(err)
 			t.Log("unexpected error:", rb)
 			return
 		}
 
 		rb, err := succResBody[string](res.Body)
-		require.NoError(t, err)
+		require.NoError(err)
 
-		require.Equal(t, fmt.Sprintf("You changed group description from %s to %s", oldGroupDescription, newGroup.Description), rb)
+		require.Equal(fmt.Sprintf("You changed group description from %s to %s", oldGroupDescription, newGroup.Description), rb)
 
 		user2GCDescriptionChangeNotif := <-user2.ServerEventMsg
 
@@ -619,32 +694,32 @@ func TestGroupChat(t *testing.T) {
 	{
 		t.Log("Action: user2 changes group picture | other members are notified")
 
-		newGroup.Picture = groupChatPic
+		newGroup.PictureCloudName = groupPicCloudName
 
 		reqBody, err := makeReqBody(map[string]any{
-			"newPictureData": newGroup.Picture,
+			"picture_cloud_name": newGroup.PictureCloudName,
 		})
-		require.NoError(t, err)
+		require.NoError(err)
 
 		req, err := http.NewRequest("POST", groupChatPath+"/"+newGroup.Id+"/execute_action/change picture", reqBody)
-		require.NoError(t, err)
+		require.NoError(err)
 		req.Header.Add("Content-Type", "application/json")
 		req.Header.Set("Cookie", user2.SessionCookie)
 
 		res, err := http.DefaultClient.Do(req)
-		require.NoError(t, err)
+		require.NoError(err)
 
 		if !assert.Equal(t, http.StatusOK, res.StatusCode) {
 			rb, err := errResBody(res.Body)
-			require.NoError(t, err)
+			require.NoError(err)
 			t.Log("unexpected error:", rb)
 			return
 		}
 
 		rb, err := succResBody[string](res.Body)
-		require.NoError(t, err)
+		require.NoError(err)
 
-		require.Equal(t, "You changed group picture", rb)
+		require.Equal("You changed group picture", rb)
 
 		user1GCPictureChangeNotif := <-user1.ServerEventMsg
 
@@ -693,27 +768,27 @@ func TestGroupChat(t *testing.T) {
 		reqBody, err := makeReqBody(map[string]any{
 			"user": user1.Username,
 		})
-		require.NoError(t, err)
+		require.NoError(err)
 
 		req, err := http.NewRequest("POST", groupChatPath+"/"+newGroup.Id+"/execute_action/remove user from admins", reqBody)
-		require.NoError(t, err)
+		require.NoError(err)
 		req.Header.Add("Content-Type", "application/json")
 		req.Header.Set("Cookie", user2.SessionCookie)
 
 		res, err := http.DefaultClient.Do(req)
-		require.NoError(t, err)
+		require.NoError(err)
 
 		if !assert.Equal(t, http.StatusOK, res.StatusCode) {
 			rb, err := errResBody(res.Body)
-			require.NoError(t, err)
+			require.NoError(err)
 			t.Log("unexpected error:", rb)
 			return
 		}
 
 		rb, err := succResBody[string](res.Body)
-		require.NoError(t, err)
+		require.NoError(err)
 
-		require.Equal(t, fmt.Sprintf("You removed %s from group admins", user1.Username), rb)
+		require.Equal(fmt.Sprintf("You removed %s from group admins", user1.Username), rb)
 
 		user1GCAdminRemovalNotif := <-user1.ServerEventMsg
 
@@ -762,27 +837,27 @@ func TestGroupChat(t *testing.T) {
 		reqBody, err := makeReqBody(map[string]any{
 			"user": user1.Username,
 		})
-		require.NoError(t, err)
+		require.NoError(err)
 
 		req, err := http.NewRequest("POST", groupChatPath+"/"+newGroup.Id+"/execute_action/remove user", reqBody)
-		require.NoError(t, err)
+		require.NoError(err)
 		req.Header.Add("Content-Type", "application/json")
 		req.Header.Set("Cookie", user2.SessionCookie)
 
 		res, err := http.DefaultClient.Do(req)
-		require.NoError(t, err)
+		require.NoError(err)
 
 		if !assert.Equal(t, http.StatusOK, res.StatusCode) {
 			rb, err := errResBody(res.Body)
-			require.NoError(t, err)
+			require.NoError(err)
 			t.Log("unexpected error:", rb)
 			return
 		}
 
 		rb, err := succResBody[string](res.Body)
-		require.NoError(t, err)
+		require.NoError(err)
 
-		require.Equal(t, fmt.Sprintf("You removed %s", user1.Username), rb)
+		require.Equal(fmt.Sprintf("You removed %s", user1.Username), rb)
 
 		user1GCAdminRemovalNotif := <-user1.ServerEventMsg
 
@@ -829,27 +904,27 @@ func TestGroupChat(t *testing.T) {
 		t.Log("Action: user3 leaves group | other members are notified")
 
 		reqBody, err := makeReqBody(map[string]any{})
-		require.NoError(t, err)
+		require.NoError(err)
 
 		req, err := http.NewRequest("POST", groupChatPath+"/"+newGroup.Id+"/execute_action/leave", reqBody)
-		require.NoError(t, err)
+		require.NoError(err)
 		req.Header.Add("Content-Type", "application/json")
 		req.Header.Set("Cookie", user3.SessionCookie)
 
 		res, err := http.DefaultClient.Do(req)
-		require.NoError(t, err)
+		require.NoError(err)
 
 		if !assert.Equal(t, http.StatusOK, res.StatusCode) {
 			rb, err := errResBody(res.Body)
-			require.NoError(t, err)
+			require.NoError(err)
 			t.Log("unexpected error:", rb)
 			return
 		}
 
 		rb, err := succResBody[string](res.Body)
-		require.NoError(t, err)
+		require.NoError(err)
 
-		require.Equal(t, "You left", rb)
+		require.Equal("You left", rb)
 
 		user2GCLeaveNotif := <-user2.ServerEventMsg
 
@@ -893,7 +968,7 @@ func TestGroupChat(t *testing.T) {
 				"groupId": newGroup.Id,
 			},
 		})
-		require.NoError(t, err)
+		require.NoError(err)
 
 		// user2's server reply (response) to action
 		user2ServerReply := <-user2.ServerEventMsg
@@ -928,7 +1003,7 @@ func TestGroupChat(t *testing.T) {
 				"at": time.Now().UTC().UnixMilli(),
 			},
 		})
-		require.NoError(t, err)
+		require.NoError(err)
 
 		// user4's server reply (response) to action
 		user4ServerReply := <-user4.ServerEventMsg
@@ -1004,7 +1079,7 @@ func TestGroupChat(t *testing.T) {
 				"at":      time.Now().UTC().UnixMilli(),
 			},
 		})
-		require.NoError(t, err)
+		require.NoError(err)
 
 		user2ServerReply := <-user2.ServerEventMsg
 
@@ -1023,7 +1098,7 @@ func TestGroupChat(t *testing.T) {
 				"at":      time.Now().UTC().UnixMilli(),
 			},
 		})
-		require.NoError(t, err)
+		require.NoError(err)
 
 		user5ServerReply := <-user5.ServerEventMsg
 
@@ -1081,7 +1156,7 @@ func TestGroupChat(t *testing.T) {
 				"at":      time.Now().UTC().UnixMilli(),
 			},
 		})
-		require.NoError(t, err)
+		require.NoError(err)
 
 		user5ServerReply := <-user5.ServerEventMsg
 
@@ -1100,7 +1175,7 @@ func TestGroupChat(t *testing.T) {
 				"at":      time.Now().UTC().UnixMilli(),
 			},
 		})
-		require.NoError(t, err)
+		require.NoError(err)
 
 		user2ServerReply := <-user2.ServerEventMsg
 
@@ -1151,22 +1226,22 @@ func TestGroupChat(t *testing.T) {
 		t.Log("Action: user5 opens group chat history")
 
 		req, err := http.NewRequest("GET", groupChatPath+"/"+newGroup.Id+"/history", nil)
-		require.NoError(t, err)
+		require.NoError(err)
 		req.Header.Add("Content-Type", "application/json")
 		req.Header.Set("Cookie", user5.SessionCookie)
 
 		res, err := http.DefaultClient.Do(req)
-		require.NoError(t, err)
+		require.NoError(err)
 
 		if !assert.Equal(t, http.StatusOK, res.StatusCode) {
 			rb, err := errResBody(res.Body)
-			require.NoError(t, err)
+			require.NoError(err)
 			t.Log("unexpected error:", rb)
 			return
 		}
 
 		rb, err := succResBody[[]map[string]any](res.Body)
-		require.NoError(t, err)
+		require.NoError(err)
 
 		td.Cmp(td.Require(t), rb,
 			td.All(

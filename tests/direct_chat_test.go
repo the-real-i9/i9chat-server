@@ -2,6 +2,7 @@ package tests
 
 import (
 	"fmt"
+	"i9chat/src/appGlobals"
 	"net/http"
 	"os"
 	"testing"
@@ -15,6 +16,7 @@ import (
 
 func TestDirectChat(t *testing.T) {
 	// t.Parallel()
+	require := require.New(t)
 
 	user1 := UserT{
 		Email:    "louislitt@gmail.com",
@@ -43,20 +45,20 @@ func TestDirectChat(t *testing.T) {
 
 			{
 				reqBody, err := makeReqBody(map[string]any{"email": user.Email})
-				require.NoError(t, err)
+				require.NoError(err)
 
 				res, err := http.Post(signupPath+"/request_new_account", "application/json", reqBody)
-				require.NoError(t, err)
+				require.NoError(err)
 
 				if !assert.Equal(t, http.StatusOK, res.StatusCode) {
 					rb, err := errResBody(res.Body)
-					require.NoError(t, err)
+					require.NoError(err)
 					t.Log("unexpected error:", rb)
 					return
 				}
 
 				rb, err := succResBody[map[string]any](res.Body)
-				require.NoError(t, err)
+				require.NoError(err)
 
 				td.Cmp(td.Require(t), rb, td.SuperMapOf(map[string]any{
 					"msg": "A 6-digit verification code has been sent to " + user.Email,
@@ -67,25 +69,25 @@ func TestDirectChat(t *testing.T) {
 
 			{
 				reqBody, err := makeReqBody(map[string]any{"code": os.Getenv("DUMMY_TOKEN")})
-				require.NoError(t, err)
+				require.NoError(err)
 
 				req, err := http.NewRequest("POST", signupPath+"/verify_email", reqBody)
-				require.NoError(t, err)
+				require.NoError(err)
 				req.Header.Set("Cookie", user.SessionCookie)
 				req.Header.Add("Content-Type", "application/json")
 
 				res, err := http.DefaultClient.Do(req)
-				require.NoError(t, err)
+				require.NoError(err)
 
 				if !assert.Equal(t, http.StatusOK, res.StatusCode) {
 					rb, err := errResBody(res.Body)
-					require.NoError(t, err)
+					require.NoError(err)
 					t.Log("unexpected error:", rb)
 					return
 				}
 
 				rb, err := succResBody[map[string]any](res.Body)
-				require.NoError(t, err)
+				require.NoError(err)
 
 				td.Cmp(td.Require(t), rb, td.SuperMapOf(map[string]any{
 					"msg": fmt.Sprintf("Your email '%s' has been verified!", user.Email),
@@ -99,25 +101,25 @@ func TestDirectChat(t *testing.T) {
 					"username": user.Username,
 					"password": user.Password,
 				})
-				require.NoError(t, err)
+				require.NoError(err)
 
 				req, err := http.NewRequest("POST", signupPath+"/register_user", reqBody)
-				require.NoError(t, err)
+				require.NoError(err)
 				req.Header.Add("Content-Type", "application/json")
 				req.Header.Set("Cookie", user.SessionCookie)
 
 				res, err := http.DefaultClient.Do(req)
-				require.NoError(t, err)
+				require.NoError(err)
 
-				if !assert.Equal(t, http.StatusOK, res.StatusCode) {
+				if !assert.Equal(t, http.StatusCreated, res.StatusCode) {
 					rb, err := errResBody(res.Body)
-					require.NoError(t, err)
+					require.NoError(err)
 					t.Log("unexpected error:", rb)
 					return
 				}
 
 				rb, err := succResBody[map[string]any](res.Body)
-				require.NoError(t, err)
+				require.NoError(err)
 
 				td.Cmp(td.Require(t), rb, td.SuperMapOf(map[string]any{
 					"msg":  "Signup success!",
@@ -133,16 +135,14 @@ func TestDirectChat(t *testing.T) {
 		t.Log("Setup: Init user sockets")
 
 		for _, user := range []*UserT{&user1, &user2} {
-			user := user
-
 			header := http.Header{}
 			header.Set("Cookie", user.SessionCookie)
 			wsConn, res, err := websocket.DefaultDialer.Dial(wsPath, header)
-			require.NoError(t, err)
+			require.NoError(err)
 
 			if !assert.Equal(t, http.StatusSwitchingProtocols, res.StatusCode) {
 				rb, err := errResBody(res.Body)
-				require.NoError(t, err)
+				require.NoError(err)
 				t.Log("unexpected error:", rb)
 				return
 			}
@@ -197,7 +197,7 @@ func TestDirectChat(t *testing.T) {
 				"at": time.Now().UTC().UnixMilli(),
 			},
 		})
-		require.NoError(t, err)
+		require.NoError(err)
 
 		// user1's server reply (response) to action
 		user1ServerReply := <-user1.ServerEventMsg
@@ -243,7 +243,7 @@ func TestDirectChat(t *testing.T) {
 				"at":              time.Now().UTC().UnixMilli(),
 			},
 		})
-		require.NoError(t, err)
+		require.NoError(err)
 
 		user2ServerReply := <-user2.ServerEventMsg
 
@@ -279,7 +279,7 @@ func TestDirectChat(t *testing.T) {
 				"at":              time.Now().UTC().UnixMilli(),
 			},
 		})
-		require.NoError(t, err)
+		require.NoError(err)
 
 		user2ServerReply := <-user2.ServerEventMsg
 
@@ -309,8 +309,90 @@ func TestDirectChat(t *testing.T) {
 	{
 		t.Log("Action: user2 sends message to user1")
 
-		photo, err := os.ReadFile("./test_files/profile_pic.png")
-		require.NoError(t, err)
+		var (
+			uploadUrl       string
+			mediaCloudName  string
+			blurImagePath   = "./test_files/photo_blur.jpg"
+			actualImagePath = "./test_files/photo.jpg"
+			contentType     = "image/jpeg"
+		)
+
+		blurImageInfo, err := os.Stat(blurImagePath)
+		require.NoError(err)
+		actualImageInfo, err := os.Stat(actualImagePath)
+		require.NoError(err)
+
+		{
+
+			t.Log("--- Authorize message media upload ---")
+
+			reqBody, err := makeReqBody(map[string]any{
+				"msg_type":   "photo",
+				"media_mime": [2]string{contentType, contentType},
+				"media_size": [2]int64{blurImageInfo.Size(), actualImageInfo.Size()},
+			})
+			require.NoError(err)
+
+			req, err := http.NewRequest("POST", chatUploadPath+"/authorize/visual", reqBody)
+			require.NoError(err)
+			req.Header.Set("Cookie", user1.SessionCookie)
+			req.Header.Add("Content-Type", "application/json")
+
+			res, err := http.DefaultClient.Do(req)
+			require.NoError(err)
+
+			if !assert.Equal(t, http.StatusOK, res.StatusCode) {
+				rb, err := errResBody(res.Body)
+				require.NoError(err)
+				t.Log("unexpected error:", rb)
+				return
+			}
+
+			rb, err := succResBody[map[string]any](res.Body)
+			require.NoError(err)
+
+			td.Cmp(td.Require(t), rb, td.SuperMapOf(map[string]any{
+				"uploadUrl":      td.Ignore(),
+				"mediaCloudName": td.Ignore(),
+			}, nil))
+
+			uploadUrl = rb["uploadUrl"].(string)
+			mediaCloudName = rb["mediaCloudName"].(string)
+		}
+
+		{
+			t.Log("Upload session started:")
+
+			varUploadUrl := make([]string, 2)
+			_, err := fmt.Sscanf(uploadUrl, "blur_placeholder:%s actual:%s", &varUploadUrl[0], &varUploadUrl[1])
+			require.NoError(err)
+
+			for i, baUploadUrl := range varUploadUrl {
+				varMedia := []string{"blur_placeholder", "actual"}
+				varPath := []string{blurImagePath, actualImagePath}
+
+				t.Logf("Uploading %s message media started", varMedia[i])
+
+				sessionUrl := startResumableUpload(baUploadUrl, contentType, t)
+
+				uploadFileInChunks(sessionUrl, varPath[i], contentType, logProgress, t)
+
+				t.Logf("Uploading %s message media complete", varMedia[i])
+			}
+
+			defer func(mcn string) {
+				varMediaCloudName := make([]string, 2)
+				_, err = fmt.Sscanf(mcn, "blur_placeholder:%s actual:%s", &varMediaCloudName[0], &varMediaCloudName[1])
+				require.NoError(err)
+
+				for _, baMcn := range varMediaCloudName {
+					err := appGlobals.GCSClient.Bucket(os.Getenv("GCS_BUCKET_NAME")).Object(baMcn).Delete(t.Context())
+					require.NoError(err)
+				}
+			}(mediaCloudName)
+
+			t.Log("Upload complete")
+		}
 
 		err = user2.WSConn.WriteJSON(map[string]any{
 			"action": "direct chat: send message",
@@ -319,14 +401,14 @@ func TestDirectChat(t *testing.T) {
 				"msg": map[string]any{
 					"type": "photo",
 					"props": map[string]any{
-						"data":    photo,
-						"caption": "I'm guuud!",
+						"media_cloud_name": mediaCloudName,
+						"caption":          "I'm guuud!",
 					},
 				},
 				"at": time.Now().UTC().UnixMilli(),
 			},
 		})
-		require.NoError(t, err)
+		require.NoError(err)
 
 		// user2's server reply (response) to action
 		user2ServerReply := <-user2.ServerEventMsg
@@ -372,7 +454,7 @@ func TestDirectChat(t *testing.T) {
 				"at":              time.Now().UTC().UnixMilli(),
 			},
 		})
-		require.NoError(t, err)
+		require.NoError(err)
 
 		user1ServerReply := <-user1.ServerEventMsg
 
@@ -408,7 +490,7 @@ func TestDirectChat(t *testing.T) {
 				"at":              time.Now().UTC().UnixMilli(),
 			},
 		})
-		require.NoError(t, err)
+		require.NoError(err)
 
 		user1ServerReply := <-user1.ServerEventMsg
 
@@ -439,22 +521,22 @@ func TestDirectChat(t *testing.T) {
 		t.Log("Action: user1 opens his chat history with user2")
 
 		req, err := http.NewRequest("GET", directChatPath+"/"+user2.Username+"/history", nil)
-		require.NoError(t, err)
+		require.NoError(err)
 		req.Header.Add("Content-Type", "application/json")
 		req.Header.Set("Cookie", user1.SessionCookie)
 
 		res, err := http.DefaultClient.Do(req)
-		require.NoError(t, err)
+		require.NoError(err)
 
 		if !assert.Equal(t, http.StatusOK, res.StatusCode) {
 			rb, err := errResBody(res.Body)
-			require.NoError(t, err)
+			require.NoError(err)
 			t.Log("unexpected error:", rb)
 			return
 		}
 
 		rb, err := succResBody[[]map[string]any](res.Body)
-		require.NoError(t, err)
+		require.NoError(err)
 
 		td.Cmp(td.Require(t), rb,
 			td.All(

@@ -144,7 +144,7 @@ func InitApp() error {
 	}
 
 	if os.Getenv("GO_ENV") == "test" {
-		if err := godotenv.Load(".test.env"); err != nil {
+		if err := godotenv.Load(".env.test"); err != nil {
 			return err
 		}
 	}
@@ -165,7 +165,7 @@ func InitApp() error {
 }
 
 func CleanUp() {
-	if err := appGlobals.Neo4jDriver.Close(context.TODO()); err != nil {
+	if err := appGlobals.Neo4jDriver.Close(context.Background()); err != nil {
 		helpers.LogError(err)
 	}
 

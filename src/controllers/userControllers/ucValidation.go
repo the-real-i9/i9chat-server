@@ -4,15 +4,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"i9chat/src/appGlobals"
 	"i9chat/src/appTypes"
 	"i9chat/src/helpers"
-	"os"
+	"i9chat/src/helpers/gcsHelpers"
 	"regexp"
 
-	"cloud.google.com/go/storage"
 	validation "github.com/go-ozzo/ozzo-validation/v4"
-	"github.com/gofiber/fiber/v2"
 )
 
 type authorizePPicUploadBody struct {
@@ -71,13 +68,38 @@ func (b changeProfilePictureBody) Validate(ctx context.Context) error {
 	)
 
 	if err != nil {
-		return helpers.ValidationError(err, "userControllers_validation.go", "changeProfilePictureBody")
+		return helpers.ValidationError(err, "ucValidation.go", "changeProfilePictureBody")
 	}
 
-	_, err = appGlobals.GCSClient.Bucket(os.Getenv("GCS_BUCKET_NAME")).Object(b.ProfilePicCloudName).Attrs(ctx)
-	if errors.Is(err, storage.ErrObjectNotExist) {
-		return fiber.NewError(fiber.StatusBadRequest, fmt.Sprintf("upload error: profile picture (%s) does not exist in cloud", b.ProfilePicCloudName))
-	}
+	go func(ppicCn string) {
+		ctx := context.Background()
+
+		var (
+			smallPPicCn  string
+			mediumPPicCn string
+			largePPicCn  string
+		)
+
+		fmt.Sscanf(ppicCn, "small:%s medium:%s large:%s", &smallPPicCn, &mediumPPicCn, &largePPicCn)
+
+		if mInfo := gcsHelpers.GetMediaInfo(ctx, smallPPicCn); mInfo != nil {
+			if mInfo.Size < 1*1024 || mInfo.Size > 500*1024 {
+				gcsHelpers.DeleteCloudMedia(ctx, smallPPicCn)
+			}
+		}
+
+		if mInfo := gcsHelpers.GetMediaInfo(ctx, mediumPPicCn); mInfo != nil {
+			if mInfo.Size < 1*1024 || mInfo.Size > 1*1024*1024 {
+				gcsHelpers.DeleteCloudMedia(ctx, mediumPPicCn)
+			}
+		}
+
+		if mInfo := gcsHelpers.GetMediaInfo(ctx, largePPicCn); mInfo != nil {
+			if mInfo.Size < 1*1024 || mInfo.Size > 2*1024*1024 {
+				gcsHelpers.DeleteCloudMedia(ctx, largePPicCn)
+			}
+		}
+	}(b.ProfilePicCloudName)
 
 	return nil
 }
@@ -94,7 +116,7 @@ func (b changeBioBody) Validate() error {
 		),
 	)
 
-	return helpers.ValidationError(err, "userControllers_validation.go", "changeBioBody")
+	return helpers.ValidationError(err, "ucValidation.go", "changeBioBody")
 }
 
 type updateMyGeolocationBody struct {
@@ -106,6 +128,6 @@ func (b updateMyGeolocationBody) Validate() error {
 		validation.Field(&b.NewGeolocation, validation.Required),
 	)
 
-	return helpers.ValidationError(err, "userControllers_validation.go", "updateMyGeolocationBody")
+	return helpers.ValidationError(err, "ucValidation.go", "updateMyGeolocationBody")
 
 }

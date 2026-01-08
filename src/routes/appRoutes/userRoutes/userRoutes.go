@@ -8,7 +8,7 @@ import (
 
 func Route(router fiber.Router) {
 
-	router.Post("me/profile_pic_upload/authorize", UC.AuthorizePPicUpload)
+	router.Post("/profile_pic_upload/authorize", UC.AuthorizePPicUpload)
 
 	router.Get("/session_user", UC.GetSessionUser)
 	router.Get("/me", UC.GetMyProfile)

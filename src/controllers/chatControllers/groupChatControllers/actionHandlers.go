@@ -37,7 +37,7 @@ func changeGroupPicture(ctx context.Context, clientUsername, groupId string, dat
 		return nil, err
 	}
 
-	return groupChatService.ChangeGroupPicture(ctx, groupId, clientUsername, d.PicCloudName)
+	return groupChatService.ChangeGroupPicture(ctx, groupId, clientUsername, d.PictureCloudName)
 }
 
 func addUsersToGroup(ctx context.Context, clientUsername, groupId string, data map[string]any) (any, error) {

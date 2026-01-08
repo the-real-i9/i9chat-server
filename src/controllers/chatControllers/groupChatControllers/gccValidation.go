@@ -4,17 +4,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"i9chat/src/appGlobals"
 	"i9chat/src/controllers/chatControllers/chatTypes"
 	"i9chat/src/helpers"
-	"os"
+	"i9chat/src/helpers/gcsHelpers"
 	"regexp"
 	"time"
 
-	"cloud.google.com/go/storage"
 	validation "github.com/go-ozzo/ozzo-validation/v4"
 	"github.com/go-ozzo/ozzo-validation/v4/is"
-	"github.com/gofiber/fiber/v2"
 )
 
 type newGroupChatBody struct {
@@ -29,13 +26,50 @@ func (b newGroupChatBody) Validate() error {
 	err := validation.ValidateStruct(&b,
 		validation.Field(&b.Name, validation.Required),
 		validation.Field(&b.Description, validation.Required),
-		validation.Field(&b.PictureCloudName, validation.Required),
+		validation.Field(&b.PictureCloudName, validation.Required,
+			validation.Match(regexp.MustCompile(
+				`^small:uploads/group/group_pics/[\w-/]+\w medium:uploads/group/group_pics/[\w-/]+\w large:uploads/group/group_pics/[\w-/]+\w$`,
+			)).Error("invalid group picture cloud name"),
+		),
 		validation.Field(&b.InitUsers, validation.Required, validation.Length(1, 0).Error("at least 1 other user is required to start a group")),
 		validation.Field(&b.CreatedAt, validation.Required, validation.Max(time.Now().UTC().UnixMilli()).Error("invalid future time")),
 	)
 
-	return helpers.ValidationError(err, "gccValidation.go", "newGroupChatBody")
+	if err != nil {
+		return helpers.ValidationError(err, "gccValidation.go", "newGroupChatBody")
+	}
 
+	go func(gpicCn string) {
+		ctx := context.Background()
+
+		var (
+			smallPPicCn  string
+			mediumPPicCn string
+			largePPicCn  string
+		)
+
+		fmt.Sscanf(gpicCn, "small:%s medium:%s large:%s", &smallPPicCn, &mediumPPicCn, &largePPicCn)
+
+		if mInfo := gcsHelpers.GetMediaInfo(ctx, smallPPicCn); mInfo != nil {
+			if mInfo.Size < 1*1024 || mInfo.Size > 500*1024 {
+				gcsHelpers.DeleteCloudMedia(ctx, smallPPicCn)
+			}
+		}
+
+		if mInfo := gcsHelpers.GetMediaInfo(ctx, mediumPPicCn); mInfo != nil {
+			if mInfo.Size < 1*1024 || mInfo.Size > 1*1024*1024 {
+				gcsHelpers.DeleteCloudMedia(ctx, mediumPPicCn)
+			}
+		}
+
+		if mInfo := gcsHelpers.GetMediaInfo(ctx, largePPicCn); mInfo != nil {
+			if mInfo.Size < 1*1024 || mInfo.Size > 2*1024*1024 {
+				gcsHelpers.DeleteCloudMedia(ctx, largePPicCn)
+			}
+		}
+	}(b.PictureCloudName)
+
+	return nil
 }
 
 type changeGroupNameAction struct {
@@ -109,12 +143,12 @@ func (b authorizeGroupPicUploadBody) Validate() error {
 }
 
 type changeGroupPictureAction struct {
-	PicCloudName string `json:"pic_cloud_name"`
+	PictureCloudName string `json:"picture_cloud_name"`
 }
 
 func (d changeGroupPictureAction) Validate(ctx context.Context) error {
 	err := validation.ValidateStruct(&d,
-		validation.Field(&d.PicCloudName, validation.Required, validation.Match(regexp.MustCompile(
+		validation.Field(&d.PictureCloudName, validation.Required, validation.Match(regexp.MustCompile(
 			`^small:uploads/group/group_pics/[\w-/]+\w medium:uploads/group/group_pics/[\w-/]+\w large:uploads/group/group_pics/[\w-/]+\w$`,
 		)).Error("invalid group picture cloud name")),
 	)
@@ -123,10 +157,35 @@ func (d changeGroupPictureAction) Validate(ctx context.Context) error {
 		return helpers.ValidationError(err, "gccValidation.go", "changeGroupPictureAction")
 	}
 
-	_, err = appGlobals.GCSClient.Bucket(os.Getenv("GCS_BUCKET_NAME")).Object(d.PicCloudName).Attrs(ctx)
-	if errors.Is(err, storage.ErrObjectNotExist) {
-		return fiber.NewError(fiber.StatusBadRequest, fmt.Sprintf("upload error: group picture (%s) does not exist in cloud", d.PicCloudName))
-	}
+	go func(gpicCn string) {
+		ctx := context.Background()
+
+		var (
+			smallPPicCn  string
+			mediumPPicCn string
+			largePPicCn  string
+		)
+
+		fmt.Sscanf(gpicCn, "small:%s medium:%s large:%s", &smallPPicCn, &mediumPPicCn, &largePPicCn)
+
+		if mInfo := gcsHelpers.GetMediaInfo(ctx, smallPPicCn); mInfo != nil {
+			if mInfo.Size < 1*1024 || mInfo.Size > 500*1024 {
+				gcsHelpers.DeleteCloudMedia(ctx, smallPPicCn)
+			}
+		}
+
+		if mInfo := gcsHelpers.GetMediaInfo(ctx, mediumPPicCn); mInfo != nil {
+			if mInfo.Size < 1*1024 || mInfo.Size > 1*1024*1024 {
+				gcsHelpers.DeleteCloudMedia(ctx, mediumPPicCn)
+			}
+		}
+
+		if mInfo := gcsHelpers.GetMediaInfo(ctx, largePPicCn); mInfo != nil {
+			if mInfo.Size < 1*1024 || mInfo.Size > 2*1024*1024 {
+				gcsHelpers.DeleteCloudMedia(ctx, largePPicCn)
+			}
+		}
+	}(d.PictureCloudName)
 
 	return nil
 }

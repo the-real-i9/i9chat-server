@@ -14,6 +14,7 @@ import (
 
 func TestUserAuth(t *testing.T) {
 	// t.Parallel()
+	require := require.New(t)
 
 	user1 := UserT{
 		Email:    "suberu@gmail.com",
@@ -29,20 +30,20 @@ func TestUserAuth(t *testing.T) {
 		t.Log("Action: user1 requests a new account")
 
 		reqBody, err := makeReqBody(map[string]any{"email": user1.Email})
-		require.NoError(t, err)
+		require.NoError(err)
 
 		res, err := http.Post(signupPath+"/request_new_account", "application/json", reqBody)
-		require.NoError(t, err)
+		require.NoError(err)
 
 		if !assert.Equal(t, http.StatusOK, res.StatusCode) {
 			rb, err := errResBody(res.Body)
-			require.NoError(t, err)
+			require.NoError(err)
 			t.Log("unexpected error:", rb)
 			return
 		}
 
 		rb, err := succResBody[map[string]any](res.Body)
-		require.NoError(t, err)
+		require.NoError(err)
 
 		td.Cmp(td.Require(t), rb, td.SuperMapOf(map[string]any{
 			"msg": "A 6-digit verification code has been sent to " + user1.Email,
@@ -55,52 +56,52 @@ func TestUserAuth(t *testing.T) {
 		t.Log("Action: user1 sends an incorrect email verf code")
 
 		reqBody, err := makeReqBody(map[string]any{"code": "000111"})
-		require.NoError(t, err)
+		require.NoError(err)
 
 		req, err := http.NewRequest("POST", signupPath+"/verify_email", reqBody)
-		require.NoError(t, err)
+		require.NoError(err)
 		req.Header.Set("Cookie", user1.SessionCookie)
 		req.Header.Add("Content-Type", "application/json")
 
 		res, err := http.DefaultClient.Do(req)
-		require.NoError(t, err)
+		require.NoError(err)
 
 		if !assert.Equal(t, http.StatusBadRequest, res.StatusCode) {
 			rb, err := errResBody(res.Body)
-			require.NoError(t, err)
+			require.NoError(err)
 			t.Log("unexpected error:", rb)
 			return
 		}
 
 		rb, err := errResBody(res.Body)
-		require.NoError(t, err)
+		require.NoError(err)
 
-		require.Equal(t, "uERR_4001", rb)
+		require.Equal("uERR_4001", rb)
 	}
 
 	{
 		t.Log("Action: user1 sends the correct email verf code")
 
 		reqBody, err := makeReqBody(map[string]any{"code": os.Getenv("DUMMY_TOKEN")})
-		require.NoError(t, err)
+		require.NoError(err)
 
 		req, err := http.NewRequest("POST", signupPath+"/verify_email", reqBody)
-		require.NoError(t, err)
+		require.NoError(err)
 		req.Header.Set("Cookie", user1.SessionCookie)
 		req.Header.Add("Content-Type", "application/json")
 
 		res, err := http.DefaultClient.Do(req)
-		require.NoError(t, err)
+		require.NoError(err)
 
 		if !assert.Equal(t, http.StatusOK, res.StatusCode) {
 			rb, err := errResBody(res.Body)
-			require.NoError(t, err)
+			require.NoError(err)
 			t.Log("unexpected error:", rb)
 			return
 		}
 
 		rb, err := succResBody[map[string]any](res.Body)
-		require.NoError(t, err)
+		require.NoError(err)
 
 		td.Cmp(td.Require(t), rb, td.SuperMapOf(map[string]any{
 			"msg": fmt.Sprintf("Your email '%s' has been verified!", user1.Email),
@@ -116,25 +117,25 @@ func TestUserAuth(t *testing.T) {
 			"username": user1.Username,
 			"password": user1.Password,
 		})
-		require.NoError(t, err)
+		require.NoError(err)
 
 		req, err := http.NewRequest("POST", signupPath+"/register_user", reqBody)
-		require.NoError(t, err)
+		require.NoError(err)
 		req.Header.Add("Content-Type", "application/json")
 		req.Header.Set("Cookie", user1.SessionCookie)
 
 		res, err := http.DefaultClient.Do(req)
-		require.NoError(t, err)
+		require.NoError(err)
 
-		if !assert.Equal(t, http.StatusOK, res.StatusCode) {
+		if !assert.Equal(t, http.StatusCreated, res.StatusCode) {
 			rb, err := errResBody(res.Body)
-			require.NoError(t, err)
+			require.NoError(err)
 			t.Log("unexpected error:", rb)
 			return
 		}
 
 		rb, err := succResBody[map[string]any](res.Body)
-		require.NoError(t, err)
+		require.NoError(err)
 
 		td.Cmp(td.Require(t), rb, td.SuperMapOf(map[string]any{
 			"msg":  "Signup success!",
@@ -148,23 +149,23 @@ func TestUserAuth(t *testing.T) {
 		t.Log("Action: user1 signs out")
 
 		req, err := http.NewRequest("GET", signoutPath, nil)
-		require.NoError(t, err)
+		require.NoError(err)
 		req.Header.Set("Cookie", user1.SessionCookie)
 
 		res, err := http.DefaultClient.Do(req)
-		require.NoError(t, err)
+		require.NoError(err)
 
 		if !assert.Equal(t, http.StatusOK, res.StatusCode) {
 			rb, err := errResBody(res.Body)
-			require.NoError(t, err)
+			require.NoError(err)
 			t.Log("unexpected error:", rb)
 			return
 		}
 
 		rb, err := succResBody[string](res.Body)
-		require.NoError(t, err)
+		require.NoError(err)
 
-		require.Equal(t, "You've been logged out!", rb)
+		require.Equal("You've been logged out!", rb)
 	}
 
 	{
@@ -174,22 +175,22 @@ func TestUserAuth(t *testing.T) {
 			"emailOrUsername": user1.Email,
 			"password":        "millini_x",
 		})
-		require.NoError(t, err)
+		require.NoError(err)
 
 		res, err := http.Post(signinPath, "application/json", reqBody)
-		require.NoError(t, err)
+		require.NoError(err)
 
 		if !assert.Equal(t, http.StatusNotFound, res.StatusCode) {
 			rb, err := errResBody(res.Body)
-			require.NoError(t, err)
+			require.NoError(err)
 			t.Log("unexpected error:", rb)
 			return
 		}
 
 		rb, err := errResBody(res.Body)
-		require.NoError(t, err)
+		require.NoError(err)
 
-		require.Equal(t, "uERR_4007", rb)
+		require.Equal("uERR_4007", rb)
 	}
 
 	{
@@ -199,20 +200,20 @@ func TestUserAuth(t *testing.T) {
 			"emailOrUsername": user1.Username,
 			"password":        user1.Password,
 		})
-		require.NoError(t, err)
+		require.NoError(err)
 
 		res, err := http.Post(signinPath, "application/json", reqBody)
-		require.NoError(t, err)
+		require.NoError(err)
 
 		if !assert.Equal(t, http.StatusOK, res.StatusCode) {
 			rb, err := errResBody(res.Body)
-			require.NoError(t, err)
+			require.NoError(err)
 			t.Log("unexpected error:", rb)
 			return
 		}
 
 		rb, err := succResBody[map[string]any](res.Body)
-		require.NoError(t, err)
+		require.NoError(err)
 
 		td.Cmp(td.Require(t), rb, td.SuperMapOf(map[string]any{
 			"msg":  "Signin success!",
@@ -224,21 +225,21 @@ func TestUserAuth(t *testing.T) {
 		t.Log("Action: userX requests an account with an already existing email")
 
 		reqBody, err := makeReqBody(map[string]any{"email": user1.Email})
-		require.NoError(t, err)
+		require.NoError(err)
 
 		res, err := http.Post(signupPath+"/request_new_account", "application/json", reqBody)
-		require.NoError(t, err)
+		require.NoError(err)
 
 		if !assert.Equal(t, http.StatusConflict, res.StatusCode) {
 			rb, err := errResBody(res.Body)
-			require.NoError(t, err)
+			require.NoError(err)
 			t.Log("unexpected error:", rb)
 			return
 		}
 
 		rb, err := errResBody(res.Body)
-		require.NoError(t, err)
+		require.NoError(err)
 
-		require.Equal(t, "uERR_4000", rb)
+		require.Equal("uERR_4000", rb)
 	}
 }

@@ -2,6 +2,7 @@ package tests
 
 import (
 	"fmt"
+	"i9chat/src/appGlobals"
 	"net/http"
 	"os"
 	"testing"
@@ -13,6 +14,7 @@ import (
 
 func TestUserOps(t *testing.T) {
 	// t.Parallel()
+	require := require.New(t)
 
 	user1 := UserT{
 		Email:    "mikeross@gmail.com",
@@ -51,20 +53,20 @@ func TestUserOps(t *testing.T) {
 
 			{
 				reqBody, err := makeReqBody(map[string]any{"email": user.Email})
-				require.NoError(t, err)
+				require.NoError(err)
 
 				res, err := http.Post(signupPath+"/request_new_account", "application/json", reqBody)
-				require.NoError(t, err)
+				require.NoError(err)
 
 				if !assert.Equal(t, http.StatusOK, res.StatusCode) {
 					rb, err := errResBody(res.Body)
-					require.NoError(t, err)
+					require.NoError(err)
 					t.Log("unexpected error:", rb)
 					return
 				}
 
 				rb, err := succResBody[map[string]any](res.Body)
-				require.NoError(t, err)
+				require.NoError(err)
 
 				td.Cmp(td.Require(t), rb, td.SuperMapOf(map[string]any{
 					"msg": "A 6-digit verification code has been sent to " + user.Email,
@@ -75,25 +77,25 @@ func TestUserOps(t *testing.T) {
 
 			{
 				reqBody, err := makeReqBody(map[string]any{"code": os.Getenv("DUMMY_TOKEN")})
-				require.NoError(t, err)
+				require.NoError(err)
 
 				req, err := http.NewRequest("POST", signupPath+"/verify_email", reqBody)
-				require.NoError(t, err)
+				require.NoError(err)
 				req.Header.Set("Cookie", user.SessionCookie)
 				req.Header.Add("Content-Type", "application/json")
 
 				res, err := http.DefaultClient.Do(req)
-				require.NoError(t, err)
+				require.NoError(err)
 
 				if !assert.Equal(t, http.StatusOK, res.StatusCode) {
 					rb, err := errResBody(res.Body)
-					require.NoError(t, err)
+					require.NoError(err)
 					t.Log("unexpected error:", rb)
 					return
 				}
 
 				rb, err := succResBody[map[string]any](res.Body)
-				require.NoError(t, err)
+				require.NoError(err)
 
 				td.Cmp(td.Require(t), rb, td.SuperMapOf(map[string]any{
 					"msg": fmt.Sprintf("Your email '%s' has been verified!", user.Email),
@@ -107,25 +109,25 @@ func TestUserOps(t *testing.T) {
 					"username": user.Username,
 					"password": user.Password,
 				})
-				require.NoError(t, err)
+				require.NoError(err)
 
 				req, err := http.NewRequest("POST", signupPath+"/register_user", reqBody)
-				require.NoError(t, err)
+				require.NoError(err)
 				req.Header.Add("Content-Type", "application/json")
 				req.Header.Set("Cookie", user.SessionCookie)
 
 				res, err := http.DefaultClient.Do(req)
-				require.NoError(t, err)
+				require.NoError(err)
 
-				if !assert.Equal(t, http.StatusOK, res.StatusCode) {
+				if !assert.Equal(t, http.StatusCreated, res.StatusCode) {
 					rb, err := errResBody(res.Body)
-					require.NoError(t, err)
+					require.NoError(err)
 					t.Log("unexpected error:", rb)
 					return
 				}
 
 				rb, err := succResBody[map[string]any](res.Body)
-				require.NoError(t, err)
+				require.NoError(err)
 
 				td.Cmp(td.Require(t), rb, td.SuperMapOf(map[string]any{
 					"msg":  "Signup success!",
@@ -141,52 +143,52 @@ func TestUserOps(t *testing.T) {
 		t.Log("Action: user1 sets her geolocation")
 
 		reqBody, err := makeReqBody(map[string]any{"newGeolocation": map[string]any{"x": user1.Geolocation.X, "y": user1.Geolocation.Y}})
-		require.NoError(t, err)
+		require.NoError(err)
 
 		req, err := http.NewRequest("POST", userPath+"/set_geolocation", reqBody)
-		require.NoError(t, err)
+		require.NoError(err)
 		req.Header.Set("Cookie", user1.SessionCookie)
 		req.Header.Add("Content-Type", "application/json")
 
 		res, err := http.DefaultClient.Do(req)
-		require.NoError(t, err)
+		require.NoError(err)
 
 		if !assert.Equal(t, http.StatusOK, res.StatusCode) {
 			rb, err := errResBody(res.Body)
-			require.NoError(t, err)
+			require.NoError(err)
 			t.Log("unexpected error:", rb)
 			return
 		}
 
 		rb, err := succResBody[bool](res.Body)
-		require.NoError(t, err)
-		require.True(t, rb)
+		require.NoError(err)
+		require.True(rb)
 	}
 
 	{
 		t.Log("Action: user2 sets her geolocation")
 
 		reqBody, err := makeReqBody(map[string]any{"newGeolocation": map[string]any{"x": user2.Geolocation.X, "y": user2.Geolocation.Y}})
-		require.NoError(t, err)
+		require.NoError(err)
 
 		req, err := http.NewRequest("POST", userPath+"/set_geolocation", reqBody)
-		require.NoError(t, err)
+		require.NoError(err)
 		req.Header.Set("Cookie", user2.SessionCookie)
 		req.Header.Add("Content-Type", "application/json")
 
 		res, err := http.DefaultClient.Do(req)
-		require.NoError(t, err)
+		require.NoError(err)
 
 		if !assert.Equal(t, http.StatusOK, res.StatusCode) {
 			rb, err := errResBody(res.Body)
-			require.NoError(t, err)
+			require.NoError(err)
 			t.Log("unexpected error:", rb)
 			return
 		}
 
 		rb, err := succResBody[bool](res.Body)
-		require.NoError(t, err)
-		require.True(t, rb)
+		require.NoError(err)
+		require.True(rb)
 	}
 
 	{
@@ -195,21 +197,21 @@ func TestUserOps(t *testing.T) {
 		x, y, radius := user1.Geolocation.X, user1.Geolocation.Y, 350000.0
 
 		req, err := http.NewRequest("GET", fmt.Sprintf("%s%s?x=%f&y=%f&radius=%f", userPath, "/find_nearby_users", x, y, radius), nil)
-		require.NoError(t, err)
+		require.NoError(err)
 		req.Header.Set("Cookie", user1.SessionCookie)
 
 		res, err := http.DefaultClient.Do(req)
-		require.NoError(t, err)
+		require.NoError(err)
 
 		if !assert.Equal(t, http.StatusOK, res.StatusCode) {
 			rb, err := errResBody(res.Body)
-			require.NoError(t, err)
+			require.NoError(err)
 			t.Log("unexpected error:", rb)
 			return
 		}
 
 		rb, err := succResBody[[]map[string]any](res.Body)
-		require.NoError(t, err)
+		require.NoError(err)
 
 		td.Cmp(td.Require(t), rb, td.Contains(td.Any(
 			td.SuperMapOf(map[string]any{
@@ -225,25 +227,127 @@ func TestUserOps(t *testing.T) {
 		t.Log("Action: user1 changes her bio")
 
 		reqBody, err := makeReqBody(map[string]any{"newBio": "This is my new bio!"})
-		require.NoError(t, err)
+		require.NoError(err)
 
 		req, err := http.NewRequest("POST", userPath+"/change_bio", reqBody)
-		require.NoError(t, err)
+		require.NoError(err)
 		req.Header.Set("Cookie", user1.SessionCookie)
 		req.Header.Add("Content-Type", "application/json")
 
 		res, err := http.DefaultClient.Do(req)
-		require.NoError(t, err)
+		require.NoError(err)
 
 		if !assert.Equal(t, http.StatusOK, res.StatusCode) {
 			rb, err := errResBody(res.Body)
-			require.NoError(t, err)
+			require.NoError(err)
 			t.Log("unexpected error:", rb)
 			return
 		}
 
 		rb, err := succResBody[bool](res.Body)
-		require.NoError(t, err)
-		require.True(t, rb)
+		require.NoError(err)
+		require.True(rb)
+	}
+
+	{
+		t.Log("Action: user2 changes her profile picture")
+
+		var (
+			uploadUrl           string
+			profilePicCloudName string
+			filePath            = "./test_files/profile_pic.png"
+			contentType         = "image/png"
+		)
+
+		{
+			fileInfo, err := os.Stat(filePath)
+			require.NoError(err)
+
+			t.Log("--- Authorize profile picture upload ---")
+
+			reqBody, err := makeReqBody(map[string]any{"pic_mime": contentType, "pic_size": [3]int64{fileInfo.Size(), fileInfo.Size(), fileInfo.Size()}})
+			require.NoError(err)
+
+			req, err := http.NewRequest("POST", userPath+"/profile_pic_upload/authorize", reqBody)
+			require.NoError(err)
+			req.Header.Set("Cookie", user2.SessionCookie)
+			req.Header.Add("Content-Type", "application/json")
+
+			res, err := http.DefaultClient.Do(req)
+			require.NoError(err)
+
+			if !assert.Equal(t, http.StatusOK, res.StatusCode) {
+				rb, err := errResBody(res.Body)
+				require.NoError(err)
+				t.Log("unexpected error:", rb)
+				return
+			}
+
+			rb, err := succResBody[map[string]any](res.Body)
+			require.NoError(err)
+
+			td.Cmp(td.Require(t), rb, td.Map(map[string]any{
+				"uploadUrl":           td.Ignore(),
+				"profilePicCloudName": td.Ignore(),
+			}, nil))
+
+			uploadUrl = rb["uploadUrl"].(string)
+			profilePicCloudName = rb["profilePicCloudName"].(string)
+		}
+
+		{
+			t.Log("Upload session started:")
+
+			varUploadUrl := make([]string, 3)
+			_, err := fmt.Sscanf(uploadUrl, "small:%s medium:%s large:%s", &varUploadUrl[0], &varUploadUrl[1], &varUploadUrl[2])
+			require.NoError(err)
+
+			for i, smlUploadUrl := range varUploadUrl {
+				varSize := []string{"small", "medium", "large"}
+
+				t.Logf("Uploading %s profile pic started", varSize[i])
+
+				sessionUrl := startResumableUpload(smlUploadUrl, contentType, t)
+
+				uploadFileInChunks(sessionUrl, filePath, contentType, logProgress, t)
+
+				t.Logf("Uploading %s profile pic complete", varSize[i])
+			}
+
+			defer func(ppcn string) {
+				varPPicCloudName := make([]string, 3)
+				_, err = fmt.Sscanf(ppcn, "small:%s medium:%s large:%s", &varPPicCloudName[0], &varPPicCloudName[1], &varPPicCloudName[2])
+				require.NoError(err)
+
+				for _, smlPPicCn := range varPPicCloudName {
+					err := appGlobals.GCSClient.Bucket(os.Getenv("GCS_BUCKET_NAME")).Object(smlPPicCn).Delete(t.Context())
+					require.NoError(err)
+				}
+			}(profilePicCloudName)
+
+			t.Log("Upload complete")
+		}
+
+		reqBody, err := makeReqBody(map[string]any{"profile_pic_cloud_name": profilePicCloudName})
+		require.NoError(err)
+
+		req, err := http.NewRequest("POST", userPath+"/change_profile_picture", reqBody)
+		require.NoError(err)
+		req.Header.Set("Cookie", user2.SessionCookie)
+		req.Header.Add("Content-Type", "application/json")
+
+		res, err := http.DefaultClient.Do(req)
+		require.NoError(err)
+
+		if !assert.Equal(t, http.StatusOK, res.StatusCode) {
+			rb, err := errResBody(res.Body)
+			require.NoError(err)
+			t.Log("unexpected error:", rb)
+			return
+		}
+
+		rb, err := succResBody[bool](res.Body)
+		require.NoError(err)
+		require.True(rb)
 	}
 }
