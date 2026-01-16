@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"i9chat/src/appTypes"
 	"i9chat/src/appTypes/UITypes"
+	"i9chat/src/helpers"
 	user "i9chat/src/models/userModel"
 	"i9chat/src/services/cloudStorageService"
 	"i9chat/src/services/eventStreamService"
@@ -54,6 +55,34 @@ func GoOffline(ctx context.Context, clientUsername string) {
 	}
 }
 
+func UserExists(ctx context.Context, emailOrUsername string) (bool, error) {
+	return user.Exists(ctx, emailOrUsername)
+}
+
+func NewUser(ctx context.Context, email, username, password, bio string) (user.NewUserT, error) {
+	newUser, err := user.New(ctx, email, username, password, bio)
+	if err != nil {
+		return user.NewUserT{}, nil
+	}
+
+	if newUser.Email != "" {
+		go eventStreamService.QueueNewUserEvent(eventTypes.NewUserEvent{
+			Username: newUser.Username,
+			UserData: helpers.ToJson(newUser),
+		})
+	}
+
+	return newUser, nil
+}
+
+func SigninUserFind(ctx context.Context, uniqueIdent string) (user.SignedInUserT, error) {
+	return user.SigninFind(ctx, uniqueIdent)
+}
+
+func ChangeUserPassword(ctx context.Context, email, newPassword string) (bool, error) {
+	return user.ChangePassword(ctx, email, newPassword)
+}
+
 type AuthPPicDataT struct {
 	UploadUrl     string `json:"uploadUrl"`
 	PPicCloudName string `json:"profilePicCloudName"`
@@ -70,7 +99,7 @@ func AuthorizePPicUpload(ctx context.Context, picMIME string) (AuthPPicDataT, er
 
 		url, err := cloudStorageService.GetUploadUrl(pPicCloudName, picMIME)
 		if err != nil {
-			return AuthPPicDataT{}, fiber.ErrInternalServerError
+			return res, fiber.ErrInternalServerError
 		}
 
 		switch small0_medium1_large2 {

@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"i9chat/src/appErrors/userErrors"
 	"i9chat/src/helpers"
-	user "i9chat/src/models/userModel"
 	"i9chat/src/services/mailService"
 	"i9chat/src/services/securityServices"
+	"i9chat/src/services/userService"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -20,7 +20,7 @@ type passReset1RespT struct {
 func RequestPasswordReset(ctx context.Context, email string) (passReset1RespT, map[string]any, error) {
 	var resp passReset1RespT
 
-	userExists, err := user.Exists(ctx, email)
+	userExists, err := userService.UserExists(ctx, email)
 	if err != nil {
 		return resp, nil, err
 	}
@@ -86,7 +86,7 @@ func ResetPassword(ctx context.Context, sessionData map[string]any, newPassword 
 		return resp, err
 	}
 
-	done, err := user.ChangePassword(ctx, email, hashedPassword)
+	done, err := userService.ChangeUserPassword(ctx, email, hashedPassword)
 	if err != nil {
 		return resp, err
 	}

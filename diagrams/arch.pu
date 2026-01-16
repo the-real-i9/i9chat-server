@@ -1,0 +1,37 @@
+@startuml i9chat_api_arch
+!include <C4/C4_Component>
+
+' !includeurl https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
+
+title i9chat API Server
+
+Container(api, "i9chat API Server", "Go")
+
+System_Ext(emailSystem, "Email System", "Google SMTP")
+System(cloudStorageSystem, "Cloud Storage System", "Google Cloud Storage")
+
+ContainerDb(database, "Database", "Neo4j")
+ContainerDb(inmemorydb, "In-memory Database", "Redis Key-Value Store")
+ContainerQueue(eventQueue, "Event Queue/Stream", "Redis Streams")
+ContainerDb(pubsubMS, "Pub/Sub Messaging System", "Redis Pub/Sub")
+
+Component(cloudStorageService, "Cloud Storage Service", "GCS Go client library", "Consists GCS bucket interaction and object cloud name to URL conversion routines")
+Rel(cloudStorageService, cloudStorageSystem, "Uses")
+
+Component(cache, "Cache", "go-redis", "Cache management routines: store, get, update, and delete")
+Rel(cache, inmemorydb, "Reads/Writes")
+Rel(cache, cloudStorageService, "Calls")
+
+Component(securityServices, "Security Services", "Go, golang-jwt, bcrypt", "Consists security-related logic for: JWT signing/verification, Digit token generation with expiration etc.")
+Component(mailService, "Mail Service", "Go, gomail.v2, crypto/tls", "Consists routine for sending email")
+Component(eventStreamService, "Event Stream Service", "Go, go-redis (XAdd)", "Consists routines for queueing application events")
+Rel(mailService, emailSystem, "Uses")
+Rel(eventStreamService, eventQueue, "Add event")
+
+Component(realtimeService, "Realtime Service", "Go, sync, go-redis (Publish, Subscribe, [LPOP, RPUSH]), websocket", "Consists routines for managing active user sockets, subscribing users to pub/sub messaging channels, publishing messages to channels, sending server event messages; queueing (RPUSH) undelivered messages in Redis when user socket is offline; dequeueing (LPOP) undelivered messages from Redis when user socket comes online")
+Rel(realtimeService, pubsubMS, "Calls (Publish/Subscribe)")
+Rel(realtimeService, inmemorydb, "Reads/Writes (LPOP, RPUSH)")
+
+@enduml
+
+

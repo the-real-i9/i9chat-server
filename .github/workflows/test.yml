@@ -1,5 +1,10 @@
 on:
   push:
+    paths:
+      - "src/**"
+      - "tests/**"
+      - "main.go"
+      - "go.mod"
     branches:
       - main
 name: "Test i9chat"

@@ -45,6 +45,7 @@ type NewUserT struct {
 	Username            string `json:"username" db:"username"`
 	ProfilePicCloudName string `json:"profile_pic_cloud_name" db:"profile_pic_cloud_name"`
 	Bio                 string `json:"bio" db:"bio"`
+	Presence            string `json:"presence" db:"presence"`
 }
 
 func New(ctx context.Context, email, username, password, bio string) (newUser NewUserT, err error) {
@@ -52,7 +53,7 @@ func New(ctx context.Context, email, username, password, bio string) (newUser Ne
 		ctx,
 		`/*cypher*/
 		CREATE (u:User { email: $email, username: $username, password: $password, profile_pic_cloud_name: "{notset}", bio: $bio, presence: "online", last_seen: 0 })
-		RETURN u { .username, .email, .profile_pic_cloud_name, .bio } AS new_user
+		RETURN u { .username, .email, .profile_pic_cloud_name, .bio. .presence } AS new_user
 		`,
 		map[string]any{
 			"email":    email,
@@ -71,22 +72,21 @@ func New(ctx context.Context, email, username, password, bio string) (newUser Ne
 	return newUser, nil
 }
 
-type ToAuthUserT struct {
-	Email               string `json:"email" db:"email"`
+type SignedInUserT struct {
 	Username            string `json:"username" db:"username"`
 	ProfilePicCloudName string `json:"profile_pic_cloud_name" db:"profile_pic_cloud_name"`
 	Password            string `json:"-" db:"password"`
 }
 
-func AuthFind(ctx context.Context, uniqueIdent string) (user ToAuthUserT, err error) {
+func SigninFind(ctx context.Context, uniqueIdent string) (user SignedInUserT, err error) {
 	res, err := db.Query(
 		ctx,
 		`/*cypher*/
-	MATCH (u:User)
-	WHERE u.username = $uniqueIdent OR u.email = $uniqueIdent
+		MATCH (u:User)
+		WHERE u.username = $uniqueIdent OR u.email = $uniqueIdent
 
-	RETURN u { .email, .username, .profile_pic_cloud_name, .password } AS found_user
-	`,
+		RETURN u { .username, .profile_pic_cloud_name, .password } AS found_user
+		`,
 		map[string]any{
 			"uniqueIdent": uniqueIdent,
 		},
@@ -100,7 +100,7 @@ func AuthFind(ctx context.Context, uniqueIdent string) (user ToAuthUserT, err er
 		return user, nil
 	}
 
-	user = modelHelpers.RKeyGet[ToAuthUserT](res.Records, "found_user")
+	user = modelHelpers.RKeyGet[SignedInUserT](res.Records, "found_user")
 
 	return user, nil
 }

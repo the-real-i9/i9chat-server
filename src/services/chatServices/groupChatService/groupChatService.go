@@ -33,7 +33,7 @@ func AuthorizeGroupPicUpload(ctx context.Context, picMIME string) (AuthGroupPicD
 
 		url, err := cloudStorageService.GetUploadUrl(groupPicCloudName, picMIME)
 		if err != nil {
-			return AuthGroupPicDataT{}, fiber.ErrInternalServerError
+			return res, fiber.ErrInternalServerError
 		}
 
 		switch small0_medium1_large2 {

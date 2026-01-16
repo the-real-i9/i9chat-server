@@ -3,14 +3,9 @@ package chatUploadService
 import (
 	"context"
 	"fmt"
-	"i9chat/src/appGlobals"
-	"i9chat/src/helpers"
 	"i9chat/src/services/cloudStorageService"
-	"net/http"
-	"os"
 	"time"
 
-	"cloud.google.com/go/storage"
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
 )
@@ -27,7 +22,7 @@ func Authorize(ctx context.Context, msgType, mediaMIME string) (AuthDataT, error
 
 	url, err := cloudStorageService.GetUploadUrl(mediaCloudName, mediaMIME)
 	if err != nil {
-		return AuthDataT{}, fiber.ErrInternalServerError
+		return res, fiber.ErrInternalServerError
 	}
 
 	res.UploadUrl = url
@@ -45,19 +40,9 @@ func AuthorizeVisual(ctx context.Context, msgType string, mediaMIME [2]string) (
 
 		mediaCloudName := fmt.Sprintf("uploads/chat/%s/%d%d/%s-%s", msgType, time.Now().Year(), time.Now().Month(), uuid.NewString(), which[blurPlch0_actual1])
 
-		url, err := appGlobals.GCSClient.Bucket(os.Getenv("GCS_BUCKET_NAME")).SignedURL(
-			mediaCloudName,
-			&storage.SignedURLOptions{
-				Scheme:      storage.SigningSchemeV4,
-				Method:      http.MethodPost,
-				ContentType: mime,
-				Expires:     time.Now().Add(15 * time.Minute),
-				Headers:     []string{"x-goog-resumable:start"},
-			},
-		)
+		url, err := cloudStorageService.GetUploadUrl(mediaCloudName, mime)
 		if err != nil {
-			helpers.LogError(err)
-			return AuthDataT{}, fiber.ErrInternalServerError
+			return res, fiber.ErrInternalServerError
 		}
 
 		if blurPlch0_actual1 == 0 {

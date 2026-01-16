@@ -25,6 +25,19 @@ func ToStruct[T any](val any) (dest T) {
 	return
 }
 
+func StructToMap(val any) (dest map[string]any) {
+	bt, err := json.Marshal(val)
+	if err != nil {
+		LogError(err)
+	}
+
+	if err := json.Unmarshal(bt, &dest); err != nil {
+		LogError(err)
+	}
+
+	return
+}
+
 func JoinWithCommaAnd(items ...string) string {
 	n := len(items)
 	if n == 0 {
