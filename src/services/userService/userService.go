@@ -3,19 +3,15 @@ package userService
 import (
 	"context"
 	"fmt"
-	"i9chat/src/appGlobals"
 	"i9chat/src/appTypes"
 	"i9chat/src/appTypes/UITypes"
-	"i9chat/src/helpers"
 	user "i9chat/src/models/userModel"
+	"i9chat/src/services/cloudStorageService"
 	"i9chat/src/services/eventStreamService"
 	"i9chat/src/services/eventStreamService/eventTypes"
 	"i9chat/src/services/realtimeService"
-	"net/http"
-	"os"
 	"time"
 
-	"cloud.google.com/go/storage"
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
 )
@@ -72,18 +68,8 @@ func AuthorizePPicUpload(ctx context.Context, picMIME string) (AuthPPicDataT, er
 
 		pPicCloudName := fmt.Sprintf("uploads/user/profile_pics/%d%d/%s-%s", time.Now().Year(), time.Now().Month(), uuid.NewString(), which[small0_medium1_large2])
 
-		url, err := appGlobals.GCSClient.Bucket(os.Getenv("GCS_BUCKET_NAME")).SignedURL(
-			pPicCloudName,
-			&storage.SignedURLOptions{
-				Scheme:      storage.SigningSchemeV4,
-				Method:      http.MethodPost,
-				ContentType: picMIME,
-				Expires:     time.Now().Add(15 * time.Minute),
-				Headers:     []string{"x-goog-resumable:start"},
-			},
-		)
+		url, err := cloudStorageService.GetUploadUrl(pPicCloudName, picMIME)
 		if err != nil {
-			helpers.LogError(err)
 			return AuthPPicDataT{}, fiber.ErrInternalServerError
 		}
 

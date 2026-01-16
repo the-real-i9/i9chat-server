@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"i9chat/src/appGlobals"
 	"i9chat/src/helpers"
+	"i9chat/src/services/cloudStorageService"
 	"net/http"
 	"os"
 	"time"
@@ -24,18 +25,8 @@ func Authorize(ctx context.Context, msgType, mediaMIME string) (AuthDataT, error
 
 	mediaCloudName := fmt.Sprintf("uploads/chat/%s/%d%d/%s", msgType, time.Now().Year(), time.Now().Month(), uuid.NewString())
 
-	url, err := appGlobals.GCSClient.Bucket(os.Getenv("GCS_BUCKET_NAME")).SignedURL(
-		mediaCloudName,
-		&storage.SignedURLOptions{
-			Scheme:      storage.SigningSchemeV4,
-			Method:      http.MethodPost,
-			ContentType: mediaMIME,
-			Expires:     time.Now().Add(15 * time.Minute),
-			Headers:     []string{"x-goog-resumable:start"},
-		},
-	)
+	url, err := cloudStorageService.GetUploadUrl(mediaCloudName, mediaMIME)
 	if err != nil {
-		helpers.LogError(err)
 		return AuthDataT{}, fiber.ErrInternalServerError
 	}
 

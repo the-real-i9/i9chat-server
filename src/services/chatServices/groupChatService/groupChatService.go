@@ -3,20 +3,16 @@ package groupChatService
 import (
 	"context"
 	"fmt"
-	"i9chat/src/appGlobals"
 	"i9chat/src/appTypes/UITypes"
 	"i9chat/src/cache"
 	"i9chat/src/helpers"
-	"i9chat/src/helpers/gcsHelpers"
 	groupChat "i9chat/src/models/chatModel/groupChatModel"
+	"i9chat/src/services/cloudStorageService"
 	"i9chat/src/services/eventStreamService"
 	"i9chat/src/services/eventStreamService/eventTypes"
 	"maps"
-	"net/http"
-	"os"
 	"time"
 
-	"cloud.google.com/go/storage"
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
 )
@@ -33,20 +29,10 @@ func AuthorizeGroupPicUpload(ctx context.Context, picMIME string) (AuthGroupPicD
 
 		which := [3]string{"small", "medium", "large"}
 
-		pPicCloudName := fmt.Sprintf("uploads/group/group_pics/%d%d/%s-%s", time.Now().Year(), time.Now().Month(), uuid.NewString(), which[small0_medium1_large2])
+		groupPicCloudName := fmt.Sprintf("uploads/group/group_pics/%d%d/%s-%s", time.Now().Year(), time.Now().Month(), uuid.NewString(), which[small0_medium1_large2])
 
-		url, err := appGlobals.GCSClient.Bucket(os.Getenv("GCS_BUCKET_NAME")).SignedURL(
-			pPicCloudName,
-			&storage.SignedURLOptions{
-				Scheme:      storage.SigningSchemeV4,
-				Method:      http.MethodPost,
-				ContentType: picMIME,
-				Expires:     time.Now().Add(15 * time.Minute),
-				Headers:     []string{"x-goog-resumable:start"},
-			},
-		)
+		url, err := cloudStorageService.GetUploadUrl(groupPicCloudName, picMIME)
 		if err != nil {
-			helpers.LogError(err)
 			return AuthGroupPicDataT{}, fiber.ErrInternalServerError
 		}
 
@@ -63,7 +49,7 @@ func AuthorizeGroupPicUpload(ctx context.Context, picMIME string) (AuthGroupPicD
 		}
 
 		res.UploadUrl += url
-		res.GroupPicCloudName += pPicCloudName
+		res.GroupPicCloudName += groupPicCloudName
 
 		if small0_medium1_large2 != 2 {
 			res.UploadUrl += " "
@@ -456,7 +442,7 @@ func SendMessage(ctx context.Context, clientUsername, groupId, replyTargetMsgId 
 	go func(msgData groupChat.NewMessage) {
 
 		msgData.Sender, _ = cache.GetUser[UITypes.ClientUser](context.Background(), clientUsername)
-		gcsHelpers.MessageMediaCloudNameToUrl(msgData.Content)
+		cloudStorageService.MessageMediaCloudNameToUrl(msgData.Content)
 
 		broadcastNewMessage(newMessage.MemberUsernames, msgData, groupId)
 	}(newMessage)

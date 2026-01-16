@@ -1,4 +1,4 @@
-package gcsHelpers
+package cloudStorageService
 
 import (
 	"fmt"

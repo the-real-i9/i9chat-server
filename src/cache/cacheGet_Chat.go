@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	"i9chat/src/helpers"
-	"i9chat/src/helpers/gcsHelpers"
+	"i9chat/src/services/cloudStorageService"
 
 	"github.com/redis/go-redis/v9"
 )
@@ -18,7 +18,7 @@ func GetGroup[T any](ctx context.Context, groupId string) (group T, err error) {
 
 	groupMap := helpers.FromJson[map[string]any](groupJson)
 
-	if err := gcsHelpers.GroupPicCloudNameToUrl(groupMap); err != nil {
+	if err := cloudStorageService.GroupPicCloudNameToUrl(groupMap); err != nil {
 		return group, err
 	}
 
@@ -88,7 +88,7 @@ func GetDirectChatHistoryEntry[T any](ctx context.Context, CHEId string) (CHE T,
 
 	if cheType == "message" {
 		content := CHEMap["content"].(map[string]any)
-		if err := gcsHelpers.MessageMediaCloudNameToUrl(content); err != nil {
+		if err := cloudStorageService.MessageMediaCloudNameToUrl(content); err != nil {
 			return CHE, err
 		}
 	}
@@ -109,7 +109,7 @@ func GetGroupChatHistoryEntry[T any](ctx context.Context, CHEId string) (CHE T, 
 
 	if cheType == "message" {
 		content := CHEMap["content"].(map[string]any)
-		if err := gcsHelpers.MessageMediaCloudNameToUrl(content); err != nil {
+		if err := cloudStorageService.MessageMediaCloudNameToUrl(content); err != nil {
 			return CHE, err
 		}
 	}

@@ -3,7 +3,7 @@ package chatTypes
 import (
 	"context"
 	"fmt"
-	"i9chat/src/helpers/gcsHelpers"
+	"i9chat/src/services/cloudStorageService"
 	"regexp"
 	"slices"
 
@@ -68,35 +68,35 @@ func (m MsgContent) Validate() error {
 
 				fmt.Sscanf(mediaCloudName, "blur_placeholder:%s actual:%s", &mcnBlur, &mcnActual)
 
-				if mInfo := gcsHelpers.GetMediaInfo(ctx, mcnBlur); mInfo != nil {
+				if mInfo := cloudStorageService.GetMediaInfo(ctx, mcnBlur); mInfo != nil {
 					if mInfo.Size < 1*1024 || mInfo.Size > 100*1024 {
-						gcsHelpers.DeleteCloudMedia(ctx, mcnBlur)
+						cloudStorageService.DeleteCloudMedia(ctx, mcnBlur)
 					}
 				}
 
-				if mInfo := gcsHelpers.GetMediaInfo(ctx, mcnActual); mInfo != nil {
+				if mInfo := cloudStorageService.GetMediaInfo(ctx, mcnActual); mInfo != nil {
 					if msgType == "photo" && mInfo.Size < 1*1024 || mInfo.Size > 10*1024*1024 {
-						gcsHelpers.DeleteCloudMedia(ctx, mcnActual)
+						cloudStorageService.DeleteCloudMedia(ctx, mcnActual)
 					} else if mInfo.Size < 1*1024 || mInfo.Size > 40*1024*1024 {
-						gcsHelpers.DeleteCloudMedia(ctx, mcnActual)
+						cloudStorageService.DeleteCloudMedia(ctx, mcnActual)
 					}
 				}
 			case "voice":
-				if mInfo := gcsHelpers.GetMediaInfo(ctx, mediaCloudName); mInfo != nil {
+				if mInfo := cloudStorageService.GetMediaInfo(ctx, mediaCloudName); mInfo != nil {
 					if mInfo.Size < 500 || mInfo.Size > 10*1024*1024 {
-						gcsHelpers.DeleteCloudMedia(ctx, mediaCloudName)
+						cloudStorageService.DeleteCloudMedia(ctx, mediaCloudName)
 					}
 				}
 			case "audio":
-				if mInfo := gcsHelpers.GetMediaInfo(ctx, mediaCloudName); mInfo != nil {
+				if mInfo := cloudStorageService.GetMediaInfo(ctx, mediaCloudName); mInfo != nil {
 					if mInfo.Size < 500 || mInfo.Size > 20*1024*1024 {
-						gcsHelpers.DeleteCloudMedia(ctx, mediaCloudName)
+						cloudStorageService.DeleteCloudMedia(ctx, mediaCloudName)
 					}
 				}
 			default:
-				if mInfo := gcsHelpers.GetMediaInfo(ctx, mediaCloudName); mInfo != nil {
+				if mInfo := cloudStorageService.GetMediaInfo(ctx, mediaCloudName); mInfo != nil {
 					if mInfo.Size < 500 || mInfo.Size > 50*1024*1024 {
-						gcsHelpers.DeleteCloudMedia(ctx, mediaCloudName)
+						cloudStorageService.DeleteCloudMedia(ctx, mediaCloudName)
 					}
 				}
 			}

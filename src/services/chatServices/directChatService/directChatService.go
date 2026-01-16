@@ -6,8 +6,8 @@ import (
 	"i9chat/src/appTypes/UITypes"
 	"i9chat/src/cache"
 	"i9chat/src/helpers"
-	"i9chat/src/helpers/gcsHelpers"
 	directChat "i9chat/src/models/chatModel/directChatModel"
+	"i9chat/src/services/cloudStorageService"
 	"i9chat/src/services/eventStreamService"
 	"i9chat/src/services/eventStreamService/eventTypes"
 	"i9chat/src/services/realtimeService"
@@ -47,7 +47,7 @@ func SendMessage(ctx context.Context, clientUsername, partnerUsername, replyTarg
 
 	go func(msgData directChat.NewMessage) {
 		msgData.Sender, _ = cache.GetUser[UITypes.ClientUser](context.Background(), clientUsername)
-		gcsHelpers.MessageMediaCloudNameToUrl(msgData.Content)
+		cloudStorageService.MessageMediaCloudNameToUrl(msgData.Content)
 
 		realtimeService.SendEventMsg(partnerUsername, appTypes.ServerEventMsg{
 			Event: "direct chat: new message",

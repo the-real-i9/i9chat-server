@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"i9chat/src/appTypes"
 	"i9chat/src/helpers"
-	"i9chat/src/helpers/gcsHelpers"
+	"i9chat/src/services/cloudStorageService"
 	"regexp"
 
 	validation "github.com/go-ozzo/ozzo-validation/v4"
@@ -82,21 +82,21 @@ func (b changeProfilePictureBody) Validate(ctx context.Context) error {
 
 		fmt.Sscanf(ppicCn, "small:%s medium:%s large:%s", &smallPPicCn, &mediumPPicCn, &largePPicCn)
 
-		if mInfo := gcsHelpers.GetMediaInfo(ctx, smallPPicCn); mInfo != nil {
+		if mInfo := cloudStorageService.GetMediaInfo(ctx, smallPPicCn); mInfo != nil {
 			if mInfo.Size < 1*1024 || mInfo.Size > 500*1024 {
-				gcsHelpers.DeleteCloudMedia(ctx, smallPPicCn)
+				cloudStorageService.DeleteCloudMedia(ctx, smallPPicCn)
 			}
 		}
 
-		if mInfo := gcsHelpers.GetMediaInfo(ctx, mediumPPicCn); mInfo != nil {
+		if mInfo := cloudStorageService.GetMediaInfo(ctx, mediumPPicCn); mInfo != nil {
 			if mInfo.Size < 1*1024 || mInfo.Size > 1*1024*1024 {
-				gcsHelpers.DeleteCloudMedia(ctx, mediumPPicCn)
+				cloudStorageService.DeleteCloudMedia(ctx, mediumPPicCn)
 			}
 		}
 
-		if mInfo := gcsHelpers.GetMediaInfo(ctx, largePPicCn); mInfo != nil {
+		if mInfo := cloudStorageService.GetMediaInfo(ctx, largePPicCn); mInfo != nil {
 			if mInfo.Size < 1*1024 || mInfo.Size > 2*1024*1024 {
-				gcsHelpers.DeleteCloudMedia(ctx, largePPicCn)
+				cloudStorageService.DeleteCloudMedia(ctx, largePPicCn)
 			}
 		}
 	}(b.ProfilePicCloudName)
