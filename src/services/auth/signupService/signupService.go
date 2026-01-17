@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"i9chat/src/appErrors/userErrors"
 	"i9chat/src/appTypes"
+	"i9chat/src/appTypes/UITypes"
 	"i9chat/src/helpers"
 	"i9chat/src/services/cloudStorageService"
 	"i9chat/src/services/mailService"
@@ -78,8 +79,8 @@ func VerifyEmail(ctx context.Context, sessionData map[string]any, inputVerfCode 
 }
 
 type signup3RespT struct {
-	Msg  string `json:"msg"`
-	User any    `json:"user"`
+	Msg  string             `json:"msg"`
+	User UITypes.ClientUser `json:"user"`
 }
 
 func RegisterUser(ctx context.Context, sessionData map[string]any, username, password, bio string) (signup3RespT, string, error) {
@@ -121,7 +122,7 @@ func RegisterUser(ctx context.Context, sessionData map[string]any, username, pas
 	cloudStorageService.ProfilePicCloudNameToUrl(userMap)
 
 	resp.Msg = "Signup success!"
-	resp.User = userMap
+	resp.User = helpers.ToStruct[UITypes.ClientUser](userMap)
 
 	return resp, authJwt, nil
 }

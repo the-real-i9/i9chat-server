@@ -19,7 +19,7 @@ import (
 //	@Param			email	body		string									true	"Provide your email address"
 //
 //	@Success		200		{object}	passwordResetService.passReset1RespT	"Proceed to email confirmation"
-//	@Header			200		{array}		Set-Cookie								"Password Reset session response cookie"
+//	@Header			200		{string}	Set-cookie								"Password Reset session response cookie"
 //
 //	@Failure		404		{object}	appErrors.HTTPError						"No user with this email exists"
 //
@@ -63,16 +63,16 @@ func RequestPasswordReset(c *fiber.Ctx) error {
 //	@Produce		json
 //
 //	@Param			token	body		string									true	"6-digit token"
-//	@Param			Cookie	header		[]string								true	"Password Reset session request cookie"
+//	@Param			Cookie	header		string									true	"Password Reset session request cookie"
 //
 //	@Success		200		{object}	passwordResetService.passReset2RespT	"Email confirmed. You're about to reset your password"
-//	@Header			200		{array}		Set-Cookie								"Password Reset session request cookie"
+//	@Header			200		{string}	Set-cookie								"Password Reset session request cookie"
 //
 //	@Failure		400		{object}	appErrors.HTTPError						"Incorrect or expired confirmation token"
-//	@Header			400		{array}		Set-Cookie								"Password Reset session request cookie"
+//	@Header			400		{string}	Set-cookie								"Password Reset session request cookie"
 //
 //	@Failure		500		{object}	appErrors.HTTPError
-//	@Header			500		{array}		Set-Cookie	"Password Reset session request cookie"
+//	@Header			500		{string}	Set-cookie	"Password Reset session request cookie"
 //
 //	@Router			/auth/forgot_password/confirm_email [post]
 func ConfirmEmail(c *fiber.Ctx) error {
@@ -116,15 +116,15 @@ func ConfirmEmail(c *fiber.Ctx) error {
 //	@Param			newPassword			body		string									true	"Choose a new password"
 //	@Param			confirmNewPassword	body		string									true	"Conform new password"
 //
-//	@Param			Cookie				header		[]string								true	"Password Reset session request cookie"
+//	@Param			Cookie				header		string									true	"Password Reset session request cookie"
 //
 //	@Success		200					{object}	passwordResetService.passReset3RespT	"Password changed successfully"
 //
 //	@Failure		400					{object}	appErrors.HTTPError						"Passwords mismatch."
-//	@Header			400					{array}		Set-Cookie								"Password Reset session response cookie"
+//	@Header			400					{string}	Set-cookie								"Password Reset session response cookie"
 //
 //	@Failure		500					{object}	appErrors.HTTPError
-//	@Header			500					{array}		Set-Cookie	"Password Reset session response cookie"
+//	@Header			500					{string}	Set-cookie	"Password Reset session response cookie"
 //
 //	@Router			/auth/forgot_password/reset_password [post]
 func ResetPassword(c *fiber.Ctx) error {

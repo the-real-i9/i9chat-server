@@ -4,6 +4,7 @@ import (
 	"context"
 	"i9chat/src/appErrors/userErrors"
 	"i9chat/src/appTypes"
+	"i9chat/src/appTypes/UITypes"
 	"i9chat/src/helpers"
 	"i9chat/src/services/cloudStorageService"
 	"i9chat/src/services/securityServices"
@@ -15,8 +16,8 @@ import (
 )
 
 type signinRespT struct {
-	Msg  string `json:"msg"`
-	User any    `json:"user"`
+	Msg  string             `json:"msg"`
+	User UITypes.ClientUser `json:"user"`
 }
 
 func Signin(ctx context.Context, emailOrUsername, password string) (signinRespT, string, error) {
@@ -54,7 +55,7 @@ func Signin(ctx context.Context, emailOrUsername, password string) (signinRespT,
 	cloudStorageService.ProfilePicCloudNameToUrl(userMap)
 
 	resp.Msg = "Signin success!"
-	resp.User = userMap
+	resp.User = helpers.ToStruct[UITypes.ClientUser](userMap)
 
 	return resp, authJwt, nil
 }

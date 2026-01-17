@@ -75,6 +75,7 @@ func New(ctx context.Context, email, username, password, bio string) (newUser Ne
 type SignedInUserT struct {
 	Username            string `json:"username" db:"username"`
 	ProfilePicCloudName string `json:"profile_pic_cloud_name" db:"profile_pic_cloud_name"`
+	Presence            string `json:"presence" db:"presence"`
 	Password            string `json:"-" db:"password"`
 }
 
@@ -85,7 +86,7 @@ func SigninFind(ctx context.Context, uniqueIdent string) (user SignedInUserT, er
 		MATCH (u:User)
 		WHERE u.username = $uniqueIdent OR u.email = $uniqueIdent
 
-		RETURN u { .username, .profile_pic_cloud_name, .password } AS found_user
+		RETURN u { .username, .profile_pic_cloud_name, .presence, .password } AS found_user
 		`,
 		map[string]any{
 			"uniqueIdent": uniqueIdent,

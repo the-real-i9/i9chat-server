@@ -20,7 +20,7 @@ import (
 //	@Param			Password		body		string						true	"User Password"
 //
 //	@Success		200				{object}	signinService.signinRespT	"Signin Success!"
-//	@Header			200				{array}		Set-Cookie					"User session response cookie containing auth JWT"
+//	@Header			200				{string}	Set-Cookie					"User session response cookie containing auth JWT"
 //
 //	@Failure		400				{object}	appErrors.HTTPError
 //
