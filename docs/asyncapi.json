@@ -2,7 +2,7 @@
   "asyncapi": "3.0.0",
   "id": "https://github.com/the-real-i9/i9chat-server",
   "info": {
-    "title": "i9lyfe API Server",
+    "title": "i9chat API Server",
     "version": "1.0.0",
     "contact": {
       "name": "i9",
