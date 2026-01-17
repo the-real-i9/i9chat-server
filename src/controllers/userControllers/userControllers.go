@@ -3,7 +3,8 @@ package userControllers
 import (
 	"i9chat/src/appTypes"
 	"i9chat/src/appTypes/UITypes"
-	"i9chat/src/cache"
+	"i9chat/src/helpers"
+	"i9chat/src/services/cloudStorageService"
 	"i9chat/src/services/userService"
 
 	"github.com/gofiber/fiber/v2"
@@ -34,12 +35,15 @@ func AuthorizePPicUpload(c *fiber.Ctx) error {
 func GetSessionUser(c *fiber.Ctx) error {
 	clientUser := c.Locals("user").(appTypes.ClientUser)
 
-	user, err := cache.GetUser[UITypes.ClientUser](c.Context(), clientUser.Username)
+	user, err := userService.SigninUserFind(c.Context(), clientUser.Username)
 	if err != nil {
 		return fiber.ErrInternalServerError
 	}
 
-	return c.JSON(user)
+	userMap := helpers.StructToMap(user)
+	cloudStorageService.ProfilePicCloudNameToUrl(userMap)
+
+	return c.JSON(helpers.ToStruct[UITypes.ClientUser](userMap))
 }
 
 func ChangeProfilePicture(c *fiber.Ctx) error {

@@ -126,10 +126,10 @@ func AuthorizePPicUpload(ctx context.Context, picMIME string) (AuthPPicDataT, er
 	return res, nil
 }
 
-func ChangeProfilePicture(ctx context.Context, clientUsername, profilePicCloudName string) (any, error) {
+func ChangeProfilePicture(ctx context.Context, clientUsername, profilePicCloudName string) (bool, error) {
 	done, err := user.ChangeProfilePicture(ctx, clientUsername, profilePicCloudName)
 	if err != nil {
-		return nil, err
+		return false, err
 	}
 
 	if done {
