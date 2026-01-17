@@ -109,7 +109,7 @@ Start by finding a user by their username.
 
 ## API Documentation
 
-REST request/response Communication: [Click Here](./docs/swagger.json)
+HTTP (REST) API: [Click Here](./docs/swagger.json)
 
-WebSocket Real-time Communication: [Click Here](./docs/websocketsapi.md)
+WebSockets API: [Click Here](./docs/asyncapi.json)
 

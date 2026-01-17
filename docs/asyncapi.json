@@ -1,0 +1,85 @@
+{
+  "asyncapi": "3.0.0",
+  "id": "https://github.com/the-real-i9/i9chat-server",
+  "info": {
+    "title": "i9lyfe API Server",
+    "version": "1.0.0",
+    "contact": {
+      "name": "i9",
+      "email": "oluwarinolasam@gmail.com"
+    }
+  },
+  "defaultContentType": "application/json",
+  "channels": {
+    "wsPath": {
+      "address": "/api/app/ws",
+      "messages": {
+        "subscribeToUserPresenceChange": {
+          "$ref": "#/components/messages/subscribeToUserPresenceChange"
+        }
+      },
+      "bindings": {
+        "ws": {
+          "method": "GET",
+          "headers": {
+            "type": "object",
+            "properties": {
+              "Cookie": "string"
+            }
+          }
+        }
+      }
+    }
+  },
+  "operations": {
+    "subscribeToUserPresenceChange": {
+      "title": "Subscribe to user presence change",
+      "summary": "This operation allows a user to subscribe to receiving realtime updates on user presence status (online/offline)",
+      "action": "receive",
+      "channel": {
+        "$ref": "#/channels/wsPath"
+      },
+      "messages": [
+        {
+          "$ref": "#/channels/wsPath/messages/subscribeToUserPresenceChange"
+        }
+      ]
+    }
+  },
+  "components": {
+    "messages": {
+      "subscribeToUserPresenceChange": {
+        "payload": {
+          "type": "object",
+          "properties": {
+            "action": {
+              "const": "subscribe to user presence change"
+            },
+            "data": {
+              "type": "object",
+              "properties": {
+                "users": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              },
+              "required": [
+                "users"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "action",
+            "data"
+          ],
+          "additionalProperties": false
+        },
+        "contentType": "application/json",
+        "examples": {}
+      }
+    }
+  }
+}
