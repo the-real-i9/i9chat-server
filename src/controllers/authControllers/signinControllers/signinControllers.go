@@ -16,8 +16,8 @@ import (
 //	@Accept			json
 //	@Produce		json
 //
-//	@Param			EmailOrUsername	body		string						true	"Email or Username"
-//	@Param			Password		body		string						true	"User Password"
+//	@Param			emailOrUsername	body		string						true	"Email or Username"
+//	@Param			password		body		string						true	"User Password"
 //
 //	@Success		200				{object}	signinService.signinRespT	"Signin Success!"
 //	@Header			200				{string}	Set-Cookie					"Authenticated user session response cookie containing auth JWT"

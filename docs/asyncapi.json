@@ -3,6 +3,7 @@
   "id": "https://github.com/the-real-i9/i9chat-server",
   "info": {
     "title": "i9chat API Server",
+    "description": "A Chat App API Server",
     "version": "1.0.0",
     "contact": {
       "name": "i9",
@@ -24,7 +25,9 @@
           "headers": {
             "type": "object",
             "properties": {
-              "Cookie": "string"
+              "Cookie": {
+                "type": "string"
+              }
             }
           }
         }
@@ -77,8 +80,7 @@
           ],
           "additionalProperties": false
         },
-        "contentType": "application/json",
-        "examples": {}
+        "contentType": "application/json"
       }
     }
   }
