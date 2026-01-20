@@ -106,7 +106,13 @@ Start by finding a user by their username.
 
 ## ✨Technical Highlights✨
 
-- 
+- I switched from a relational database to a graph database when most hot queries were beginning to involve more than two table JOINs, a point where query performance starts to deplete, and a direct graph relationship shines.
+
+- Chat history is served from a Redis Sorted Set, while I use Redis Stream’s stream message ID for ordering, so that received messages appear in the order they were delivered rather than in the order they were created, which is the way WhatsApp works.
+
+- I use an abstract “ChatEntry” entity to represent an item in the chat history, which may be a message, a reaction, or a group activity. While each of these are an entity of their own, the “ChatEntry” generalization allows for a more efficient processing of a chat history READ request, where we won’t have to UNION multiple entity READs and re-order them; an approach that’s highly inefficient.
+
+- All media processing and upload is offloaded to client-side. This eliminates a source of performance bottleneck, as a lot of user requests involving media processing will have to compete for server resources, an effect that will be felt even on user requests that don’t involve media processing unless additional infrastructure is added, which will incur unnecessary additional cost. Modern devices are powerful on their own when it comes to media processing.
 
 ## API Graph Model Overview
 
