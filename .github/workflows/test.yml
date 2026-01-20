@@ -3,6 +3,7 @@ on:
     paths:
       - "src/**"
       - "tests/**"
+      - ".github/**"
       - "main.go"
       - "go.mod"
     branches:
