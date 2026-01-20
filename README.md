@@ -49,8 +49,9 @@ i9chat is a full-fledged chat and messaging API server built in Go It supports a
 - [Table of Contents](#table-of-contents)
 - [Features](#features)
 - [Technical Highlights](#technical-highlights)
+- [API Graph Model Overview](#api-graph-model-overview)
 - [API Documentation](#api-documentation)
-- [Upcoming features](#upcoming-features)
+- [API Diagrams](#api-diagrams)
 
 ## Features
 
@@ -107,9 +108,19 @@ Start by finding a user by their username.
 
 - 
 
+## API Graph Model Overview
+
+Read [Here](./docs/graph-model-overview.md)
+
 ## API Documentation
 
-HTTP (REST) API: [Click Here](./docs/swagger.json)
+HTTP (REST) API: [Open Swagger JSON](./docs/swagger.json)
 
-WebSockets API: [Click Here](./docs/asyncapi.json)
+WebSockets API: [Open AsyncAPI JSON](./docs/asyncapi.json)
+
+
+## API Diagrams
+
+Architecture Diagrams: [See here](./diagrams/arch-diags.md)
+
 
