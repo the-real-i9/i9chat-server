@@ -48,7 +48,7 @@ i9chat is a full-fledged chat and messaging API server built in Go It supports a
 - [Technologies](#technologies)
 - [Table of Contents](#table-of-contents)
 - [Features](#features)
-- [Technical Highlights](#technical-highlights)
+- [✨Technical Highlights✨](#technical-highlights)
 - [API Graph Model Overview](#api-graph-model-overview)
 - [API Documentation](#api-documentation)
 - [API Diagrams](#api-diagrams)
@@ -104,7 +104,7 @@ Start by finding a user by their username.
 - Clients receive user "presence" and "last seen" updates (upon subscription)
 - Real-time read receipts
 
-## Technical Highlights
+## ✨Technical Highlights✨
 
 - 
 
