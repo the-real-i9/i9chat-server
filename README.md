@@ -106,7 +106,7 @@ Start by finding a user by their username.
 
 ## ✨Technical Highlights✨
 
-- I switched from a relational database to a graph database when most hot queries were beginning to involve more than two table JOINs, a point where query performance starts to deplete, and a direct graph relationship shines.
+- I switched from a relational database to a graph database when I saw that most hot queries involve more than two table JOINs, a point where SQL query performance starts to deplete, and a direct graph relationship shines.
 
 - Chat history is served from a Redis Sorted Set, while I use Redis Stream’s stream message ID for ordering, so that received messages appear in the order they were delivered rather than in the order they were created, which is the way WhatsApp works.
 
