@@ -53,7 +53,7 @@ func New(ctx context.Context, email, username, password, bio string) (newUser Ne
 		ctx,
 		`/*cypher*/
 		CREATE (u:User { email: $email, username: $username, password: $password, profile_pic_cloud_name: "{notset}", bio: $bio, presence: "online", last_seen: 0 })
-		RETURN u { .username, .email, .profile_pic_cloud_name, .bio. .presence } AS new_user
+		RETURN u { .username, .email, .profile_pic_cloud_name, .bio, .presence } AS new_user
 		`,
 		map[string]any{
 			"email":    email,
