@@ -6,6 +6,7 @@ import (
 	"i9chat/src/appTypes"
 	"i9chat/src/cache"
 	"i9chat/src/helpers"
+	groupChat "i9chat/src/models/chatModel/groupChatModel"
 	"i9chat/src/services/eventStreamService/eventTypes"
 	"log"
 
@@ -54,10 +55,9 @@ func groupUsersAddedStreamBgWorker(rdb *redis.Client) {
 				msg.GroupId = stmsg.Values["groupId"].(string)
 				msg.Admin = stmsg.Values["admin"].(string)
 				msg.NewMembers = helpers.FromJson[appTypes.BinableSlice](stmsg.Values["newMembers"].(string))
-				msg.MemberUsers = helpers.FromJson[appTypes.BinableSlice](stmsg.Values["memberUsers"].(string))
 				msg.AdminCHE = helpers.FromJson[appTypes.BinableMap](stmsg.Values["adminCHE"].(string))
 				msg.NewMembersCHE = helpers.FromJson[appTypes.BinableMap](stmsg.Values["newMembersCHE"].(string))
-				msg.MemberUsersCHE = helpers.FromJson[appTypes.BinableMap](stmsg.Values["memberUsersCHE"].(string))
+				msg.MemInfo = stmsg.Values["memInfo"].(string)
 
 				msgs = append(msgs, msg)
 
@@ -107,10 +107,15 @@ func groupUsersAddedStreamBgWorker(rdb *redis.Client) {
 					chatGroupActivities[newMem+" "+msg.GroupId] = append(chatGroupActivities[newMem+" "+msg.GroupId], [2]string{CHEId, fmt.Sprintf("%s-%d", stmsgIds[i], nmemi)})
 				}
 
-				for memui, memUser := range msg.MemberUsers {
+				postActivity, err := groupChat.PostGroupActivityBgDBOper(ctx, msg.GroupId, msg.MemInfo, stmsgIds[i], append(msg.NewMembers, msg.Admin))
+				if err != nil {
+					return
+				}
+
+				for memui, memUser := range postActivity.MemberUsernames {
 					memUser := memUser.(string)
 
-					gactData := msg.MemberUsersCHE[memUser].(map[string]any)
+					gactData := postActivity.MemberUsersCHE[memUser].(map[string]any)
 
 					CHEId := gactData["che_id"].(string)
 

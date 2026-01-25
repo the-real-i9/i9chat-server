@@ -81,9 +81,8 @@ func New(ctx context.Context, clientUsername, name, description, pictureCloudNam
 }
 
 type EditActivity struct {
-	ClientUserCHE   map[string]any `json:"-" db:"client_user_che"`
-	MemberUsersCHE  map[string]any `json:"-" db:"member_users_che"`
-	MemberUsernames []any          `json:"-" db:"member_usernames"`
+	ClientUserCHE map[string]any `json:"-" db:"client_user_che"`
+	MemInfo       string         `json:"-" db:"mem_info"`
 }
 
 func ChangeName(ctx context.Context, groupId, clientUsername, newName string) (EditActivity, error) {
@@ -101,21 +100,11 @@ func ChangeName(ctx context.Context, groupId, clientUsername, newName string) (E
 
 		SET group.name = $new_name
 
-		WITH cligact { .che_id, .che_type, .info } AS clientUserCHE, old_name, group
-
-		OPTIONAL MATCH (group)<-[:IS_MEMBER_OF]-(memberUser WHERE memberUser.username <> $client_username)
-		OPTIONAL MATCH (memberUser)-[:HAS_CHAT]->(memberChat)-[:WITH_GROUP]->(group)
+		WITH cligact { .che_id, .che_type, .info } AS clientUserCHE, old_name
 
 		LET memInfo = $client_username + " changed group name from " + old_name + " to " + $new_name
-		WITH clientUserCHE, collect(memberUser.username) AS memberUsernames,
-			collect(memberChat) AS memberChats,
-			reduce(accm = {}, mu IN collect({ muname: memberUser.username, minf: memInfo }) | apoc.map.setKey(accm, mu.muname, { che_id: randomUUID(), che_type: "group activity", info: mu.minf })) AS memberUsersCHE
 
-		FOREACH (mc IN memberChats | CREATE (:GroupChatEntry{ che_id: memberUsersCHE[mc.owner_username].che_id, che_type: memberUsersCHE[mc.owner_username].che_type, info: memberUsersCHE[mc.owner_username].info })-[:IN_GROUP_CHAT]->(mc))
-
-		WITH DISTINCT clientUserCHE, memberUsersCHE, memberUsernames
-
-		RETURN { client_user_che: clientUserCHE , member_users_che: memberUsersCHE, member_usernames: memberUsernames } AS new_group_activity
+		RETURN { client_user_che: clientUserCHE , mem_info: memInfo } AS new_group_activity
 		`,
 		map[string]any{
 			"client_username": clientUsername,
@@ -149,21 +138,11 @@ func ChangeDescription(ctx context.Context, groupId, clientUsername, newDescript
 		SET group.description = $new_description
 
 		WITH cligact { .che_id, .che_type, .info } AS clientUserCHE, 
-			old_description, group
-
-		OPTIONAL MATCH (group)<-[:IS_MEMBER_OF]-(memberUser WHERE memberUser.username <> $client_username)
-		OPTIONAL MATCH (memberUser)-[:HAS_CHAT]->(memberChat)-[:WITH_GROUP]->(group)
+			old_description
 
 		LET memInfo = $client_username + " changed group description from " + old_description + " to " + $new_description
-		WITH clientUserCHE, collect(memberUser.username) AS memberUsernames,
-			collect(memberChat) AS memberChats,
-			reduce(accm = {}, mu IN collect({ muname: memberUser.username, minf: memInfo }) | apoc.map.setKey(accm, mu.muname, { che_id: randomUUID(), che_type: "group activity", info: mu.minf })) AS memberUsersCHE
 
-		FOREACH (mc IN memberChats | CREATE (:GroupChatEntry{ che_id: memberUsersCHE[mc.owner_username].che_id, che_type: memberUsersCHE[mc.owner_username].che_type, info: memberUsersCHE[mc.owner_username].info })-[:IN_GROUP_CHAT]->(mc))
-
-		WITH DISTINCT clientUserCHE, memberUsersCHE, memberUsernames
-
-		RETURN { client_user_che: clientUserCHE , member_users_che: memberUsersCHE, member_usernames: memberUsernames } AS new_group_activity
+		RETURN { client_user_che: clientUserCHE , mem_info: memInfo } AS new_group_activity
 		`,
 		map[string]any{
 			"client_username": clientUsername,
@@ -196,18 +175,9 @@ func ChangePicture(ctx context.Context, groupId, clientUsername, pictureCloudNam
 
 		WITH cligact { .che_id, .che_type, .info } AS clientUserCHE, group
 
-		OPTIONAL MATCH (group)<-[:IS_MEMBER_OF]-(memberUser WHERE memberUser.username <> $client_username)
-		OPTIONAL MATCH (memberUser)-[:HAS_CHAT]->(memberChat)-[:WITH_GROUP]->(group)
+		LET memInfo = $client_username + " changed group picture"
 
-		WITH clientUserCHE, collect(memberUser.username) AS memberUsernames,
-			collect(memberChat) AS memberChats,
-			reduce(accm = {}, mu IN collect(memberUser.username) | apoc.map.setKey(accm, mu, { che_id: randomUUID(), che_type: "group activity", info: $client_username + " changed group picture" })) AS memberUsersCHE
-
-		FOREACH (mc IN memberChats | CREATE (:GroupChatEntry{ che_id: memberUsersCHE[mc.owner_username].che_id, che_type: memberUsersCHE[mc.owner_username].che_type, info: memberUsersCHE[mc.owner_username].info })-[:IN_GROUP_CHAT]->(mc))
-
-		WITH DISTINCT clientUserCHE, memberUsersCHE, memberUsernames
-
-		RETURN { client_user_che: clientUserCHE , member_users_che: memberUsersCHE, member_usernames: memberUsernames } AS new_group_activity
+		RETURN { client_user_che: clientUserCHE , mem_info: memInfo } AS new_group_activity
 		`,
 		map[string]any{
 			"client_username": clientUsername,
@@ -226,12 +196,11 @@ func ChangePicture(ctx context.Context, groupId, clientUsername, pictureCloudNam
 }
 
 type AddUsersActivity struct {
-	GroupInfo       map[string]any `json:"-" db:"group_info"`
-	ClientUserCHE   map[string]any `json:"-" db:"client_user_che"`
-	NewUsersCHE     map[string]any `json:"-" db:"new_users_che"`
-	MemberUsersCHE  map[string]any `json:"-" db:"member_users_che"`
-	NewUsernames    []any          `json:"-" db:"new_usernames"`
-	MemberUsernames []any          `json:"-" db:"member_usernames"`
+	GroupInfo     map[string]any `json:"-" db:"group_info"`
+	ClientUserCHE map[string]any `json:"-" db:"client_user_che"`
+	NewUsersCHE   map[string]any `json:"-" db:"new_users_che"`
+	NewUsernames  []any          `json:"-" db:"new_usernames"`
+	MemInfo       string         `json:"-" db:"mem_info"`
 }
 
 func AddUsers(ctx context.Context, groupId, clientUsername string, newUsers []string) (AddUsersActivity, error) {
@@ -252,18 +221,7 @@ func AddUsers(ctx context.Context, groupId, clientUsername string, newUsers []st
 
 		CREATE (cligact:GroupChatEntry{ che_id: randomUUID(), che_type: "group activity", info: "You added " + $new_users_str })-[:IN_GROUP_CHAT]->(clientChat)
 
-		WITH group, group AS canNullG, nuRows, cligact { .che_id, .che_type, .info } AS clientUserCHE
-		OPTIONAL MATCH (canNullG)<-[:IS_MEMBER_OF]-(memberUser WHERE memberUser.username <> $client_username)
-		OPTIONAL MATCH (memberUser)-[:HAS_CHAT]->(memberChat)-[:WITH_GROUP]->(canNullG)
-
-		WITH group, nuRows, clientUserCHE,
-			collect(memberUser.username) AS memberUsernames,
-			collect(memberChat) AS memberChats,
-			reduce(accm = {}, mu IN collect(memberUser.username) | apoc.map.setKey(accm, mu, { che_id: randomUUID(), che_type: "group activity", info: $client_username + " added " + $new_users_str })) AS memberUsersCHE
-
-		FOREACH (mc IN memberChats | CREATE (:GroupChatEntry{ che_id: memberUsersCHE[mc.owner_username].che_id, che_type: memberUsersCHE[mc.owner_username].che_type, info: memberUsersCHE[mc.owner_username].info })-[:IN_GROUP_CHAT]->(mc))
-
-		WITH group, nuRows, clientUserCHE, memberUsersCHE, memberUsernames
+		WITH group, nuRows, cligact { .che_id, .che_type, .info } AS clientUserCHE
 		UNWIND nuRows AS newUser
 
 		LET canNullG = group, canNullNU = newUser
@@ -272,20 +230,21 @@ func AddUsers(ctx context.Context, groupId, clientUsername string, newUsers []st
 
 		DELETE rur
 
-		WITH group, newUser, nuRows, clientUserCHE, memberUsersCHE, memberUsernames
+		WITH group, newUser, nuRows, clientUserCHE
 		CREATE (newUser)-[:IS_MEMBER_OF { role: "member" }]->(group)
 		MERGE (newUser)-[:HAS_CHAT]->(newUserChat:GroupChat{ owner_username: newUser.username, group_id: $group_id })-[:WITH_GROUP]->(group)
 
 		CREATE (nugact:GroupChatEntry{ che_id: randomUUID(), che_type: "group activity",  info: "You were added" })-[:IN_GROUP_CHAT]->(newUserChat)
 
-
-		WITH group, clientUserCHE, memberUsersCHE, memberUsernames,
+		WITH group, clientUserCHE,
 			[nu IN nuRows | nu.username] AS newUsernames,
 		  reduce(accm = {}, x IN collect({ newuser: newUser.username, gact: nugact}) | apoc.map.setKey(accm, x.newuser, {che_id: x.gact.che_id, che_type: x.gact.che_type, info: x.gact.info })) AS newUsersCHE
 
-		WITH DISTINCT group { .id, .name, .description, .picture_cloud_name, .created_at } AS groupInfo, clientUserCHE, newUsersCHE, memberUsersCHE, newUsernames, memberUsernames
+		WITH DISTINCT group { .id, .name, .description, .picture_cloud_name, .created_at } AS groupInfo, clientUserCHE, newUsersCHE, newUsernames
 
-		RETURN { group_info: groupInfo, client_user_che: clientUserCHE, new_users_che: newUsersCHE, member_users_che: memberUsersCHE, new_usernames: newUsernames, member_usernames: memberUsernames } AS new_group_activity
+		LET memInfo = $client_username + " added " + $new_users_str
+
+		RETURN { group_info: groupInfo, client_user_che: clientUserCHE, new_users_che: newUsersCHE, new_usernames: newUsernames, mem_info: memInfo } AS new_group_activity
 		`,
 		map[string]any{
 			"client_username": clientUsername,
@@ -305,10 +264,9 @@ func AddUsers(ctx context.Context, groupId, clientUsername string, newUsers []st
 }
 
 type RemoveUserActivity struct {
-	ClientUserCHE   map[string]any `json:"-" db:"client_user_che"`
-	TargetUserCHE   map[string]any `json:"-" db:"target_user_che"`
-	MemberUsersCHE  map[string]any `json:"-" db:"member_users_che"`
-	MemberUsernames []any          `json:"-" db:"member_usernames"`
+	ClientUserCHE map[string]any `json:"-" db:"client_user_che"`
+	TargetUserCHE map[string]any `json:"-" db:"target_user_che"`
+	MemInfo       string         `json:"-" db:"mem_info"`
 }
 
 func RemoveUser(ctx context.Context, groupId, clientUsername, targetUser string) (RemoveUserActivity, error) {
@@ -331,21 +289,11 @@ func RemoveUser(ctx context.Context, groupId, clientUsername, targetUser string)
 		CREATE (group)-[:REMOVED_USER]->(targetUser),
 			(tugact:GroupChatEntry{ che_id: randomUUID(), che_type: "group activity", info: $client_username + " removed you" })-[:IN_GROUP_CHAT]->(targetUserChat)
 
-		WITH clientUserCHE, tugact { .che_id, .che_type, .info } AS targetUserCHE, group
+		WITH clientUserCHE, tugact { .che_id, .che_type, .info } AS targetUserCHE
 
-		OPTIONAL MATCH (group)<-[:IS_MEMBER_OF]-(memberUser WHERE memberUser.username <> $client_username)
-		OPTIONAL MATCH (memberUser)-[:HAS_CHAT]->(memberChat)-[:WITH_GROUP]->(group)
+		LET memInfo = $client_username + " removed " + $target_user
 
-		WITH clientUserCHE, targetUserCHE,
-			collect(memberUser.username) AS memberUsernames,
-			collect(memberChat) AS memberChats,
-		  reduce(accm = {}, mu IN collect(memberUser.username) | apoc.map.setKey(accm, mu, { che_id: randomUUID(), che_type: "group activity", info: $client_username + " removed " + $target_user } )) AS memberUsersCHE
-
-		FOREACH (mc IN memberChats | CREATE (:GroupChatEntry{ che_id: memberUsersCHE[mc.owner_username].che_id, che_type: memberUsersCHE[mc.owner_username].che_type, info: memberUsersCHE[mc.owner_username].info })-[:IN_GROUP_CHAT]->(mc))
-
-		WITH DISTINCT clientUserCHE, targetUserCHE, memberUsersCHE, memberUsernames
-
-		RETURN { client_user_che: clientUserCHE, target_user_che: targetUserCHE, member_users_che: memberUsersCHE, member_usernames: memberUsernames } AS new_group_activity
+		RETURN { client_user_che: clientUserCHE, target_user_che: targetUserCHE, mem_info: memInfo } AS new_group_activity
 		`,
 		map[string]any{
 			"client_username": clientUsername,
@@ -364,10 +312,9 @@ func RemoveUser(ctx context.Context, groupId, clientUsername, targetUser string)
 }
 
 type UserJoinedActivity struct {
-	GroupInfo       map[string]any `json:"-" db:"group_info"`
-	ClientUserCHE   map[string]any `json:"-" db:"client_user_che"`
-	MemberUsersCHE  map[string]any `json:"-" db:"member_users_che"`
-	MemberUsernames []any          `json:"-" db:"member_usernames"`
+	GroupInfo     map[string]any `json:"-" db:"group_info"`
+	ClientUserCHE map[string]any `json:"-" db:"client_user_che"`
+	MemInfo       string         `json:"-" db:"mem_info"`
 }
 
 func Join(ctx context.Context, groupId, clientUsername string) (UserJoinedActivity, error) {
@@ -382,32 +329,23 @@ func Join(ctx context.Context, groupId, clientUsername string) (UserJoinedActivi
 
 		CREATE (cligact:GroupChatEntry{ che_id: randomUUID(), che_type: "group activity", info: "You joined" })-[:IN_GROUP_CHAT]->(clientChat)
 
-		WITH group, clientUser, group AS canNullG, cligact { .che_id, .che_type, .info } AS clientUserCHE
-		OPTIONAL MATCH (canNullG)<-[:IS_MEMBER_OF]-(memberUser)
-		OPTIONAL MATCH (memberUser)-[:HAS_CHAT]->(memberChat)-[:WITH_GROUP]->(canNullG)
-
-		WITH group, clientUser, clientUserCHE,
-			collect(memberUser.username) AS memberUsernames,
-			collect(memberChat) AS memberChats,
-			reduce(accm = {}, mu IN collect(memberUser.username) | apoc.map.setKey(accm, mu, { che_id: randomUUID(), che_type: "group activity", info: $client_username + " joined" })) AS memberUsersCHE
-
-		FOREACH (mc IN memberChats | CREATE (:GroupChatEntry{ che_id: memberUsersCHE[mc.owner_username].che_id, che_type: memberUsersCHE[mc.owner_username].che_type, info: memberUsersCHE[mc.owner_username].info })-[:IN_GROUP_CHAT]->(mc))
-
 		WITH group, clientUser, group AS canNullG, clientUser AS canNullCU, 
-			clientUserCHE, memberUsersCHE, memberUsernames
+			cligact { .che_id, .che_type, .info } AS clientUserCHE
 		
 		OPTIONAL MATCH (canNullCU)-[lgr:LEFT_GROUP]->(canNullG)
 
 		DELETE lgr
 
-		WITH group, clientUser, clientUserCHE, memberUsersCHE, memberUsernames
+		WITH group, clientUser, clientUserCHE
 		CREATE (clientUser)-[:IS_MEMBER_OF { role: "member" }]->(group)
 		MERGE (clientUser)-[:HAS_CHAT]->(clientChat:GroupChat{ owner_username: clientUser.username, group_id: $group_id })-[:WITH_GROUP]->(group)
 
 		WITH DISTINCT group { .id, .name, .description, .picture_cloud_name, .created_at } AS groupInfo,
-			clientUserCHE, memberUsersCHE, memberUsernames
+			clientUserCHE
 
-		RETURN { group_info: groupInfo, client_user_che: clientUserCHE, member_users_che: memberUsersCHE, member_usernames: memberUsernames } AS new_group_activity
+		LET memInfo = $client_username + " joined"
+
+		RETURN { group_info: groupInfo, client_user_che: clientUserCHE, mem_info: memInfo } AS new_group_activity
 		`,
 		map[string]any{
 			"client_username": clientUsername,
@@ -425,9 +363,8 @@ func Join(ctx context.Context, groupId, clientUsername string) (UserJoinedActivi
 }
 
 type UserLeftActivity struct {
-	ClientUserCHE   map[string]any `json:"-" db:"client_user_che"`
-	MemberUsersCHE  map[string]any `json:"-" db:"member_users_che"`
-	MemberUsernames []any          `json:"-" db:"member_usernames"`
+	ClientUserCHE map[string]any `json:"-" db:"client_user_che"`
+	MemInfo       string         `json:"-" db:"mem_info"`
 }
 
 func Leave(ctx context.Context, groupId, clientUsername string) (UserLeftActivity, error) {
@@ -445,21 +382,11 @@ func Leave(ctx context.Context, groupId, clientUsername string) (UserLeftActivit
 		CREATE (clientUser)-[:LEFT_GROUP]->(group),
 			(cligact:GroupChatEntry{ che_id: randomUUID(), che_type: "group activity", info: "You left" })-[:IN_GROUP_CHAT]->(clientChat)
 
-		WITH group, cligact { .che_id, .che_type, .info } AS clientUserCHE
+		WITH cligact { .che_id, .che_type, .info } AS clientUserCHE
 
-		OPTIONAL MATCH (group)<-[:IS_MEMBER_OF]-(memberUser)
-		OPTIONAL MATCH (memberUser)-[:HAS_CHAT]->(memberChat)-[:WITH_GROUP]->(group)
+		LET memInfo = $client_username + " left"
 
-		WITH clientUserCHE,
-			collect(memberUser.username) AS memberUsernames,
-			collect(memberChat) AS memberChats,
-			reduce(accm = {}, mu IN collect(memberUser.username) | apoc.map.setKey(accm, mu, { che_id: randomUUID(), che_type: "group activity", info: $client_username + " left" })) AS memberUsersCHE
-
-		FOREACH (mc IN memberChats | CREATE (:GroupChatEntry{ che_id: memberUsersCHE[mc.owner_username].che_id, che_type: memberUsersCHE[mc.owner_username].che_type, info: memberUsersCHE[mc.owner_username].info })-[:IN_GROUP_CHAT]->(mc))
-
-		WITH DISTINCT clientUserCHE, memberUsersCHE, memberUsernames
-
-		RETURN { client_user_che: clientUserCHE, member_users_che: memberUsersCHE, member_usernames: memberUsernames } AS new_group_activity
+		RETURN { client_user_che: clientUserCHE, mem_info: memInfo } AS new_group_activity
 		`,
 		map[string]any{
 			"client_username": clientUsername,
@@ -477,10 +404,9 @@ func Leave(ctx context.Context, groupId, clientUsername string) (UserLeftActivit
 }
 
 type MakeUserAdminActivity struct {
-	ClientUserCHE   map[string]any `json:"-" db:"client_user_che"`
-	TargetUserCHE   map[string]any `json:"-" db:"target_user_che"`
-	MemberUsersCHE  map[string]any `json:"-" db:"member_users_che"`
-	MemberUsernames []any          `json:"-" db:"member_usernames"`
+	ClientUserCHE map[string]any `json:"-" db:"client_user_che"`
+	TargetUserCHE map[string]any `json:"-" db:"target_user_che"`
+	MemInfo       string         `json:"-" db:"mem_info"`
 }
 
 func MakeUserAdmin(ctx context.Context, groupId, clientUsername, targetUser string) (MakeUserAdminActivity, error) {
@@ -502,20 +428,11 @@ func MakeUserAdmin(ctx context.Context, groupId, clientUsername, targetUser stri
 
 		CREATE (tugact:GroupChatEntry{ che_id: randomUUID(), che_type: "group activity", info: $client_username + " made you group admin" })-[:IN_GROUP_CHAT]->(targetUserChat)
 
-		WITH group, clientUserCHE, tugact { .che_id, .che_type, .info } AS targetUserCHE
-		OPTIONAL MATCH (group)<-[:IS_MEMBER_OF]-(memberUser WHERE NOT memberUser.username IN [$client_username, $target_user])
-		OPTIONAL MATCH (memberUser)-[:HAS_CHAT]->(memberChat)-[:WITH_GROUP]->(group)
+		WITH DISTINCT clientUserCHE, tugact { .che_id, .che_type, .info } AS targetUserCHE
 
-		WITH clientUserCHE, targetUserCHE,
-			collect(memberUser.username) AS memberUsernames,
-			collect(memberChat) AS memberChats,
-			reduce(accm = {}, mu IN collect(memberUser.username) | apoc.map.setKey(accm, mu, { che_id: randomUUID(), che_type: "group activity", info: $client_username + " made " + $target_user + " group admin" })) AS memberUsersCHE
+		LET memInfo = $client_username + " made " + $target_user + " group admin"
 
-		FOREACH (mc IN memberChats | CREATE (:GroupChatEntry{ che_id: memberUsersCHE[mc.owner_username].che_id, che_type: memberUsersCHE[mc.owner_username].che_type, info: memberUsersCHE[mc.owner_username].info })-[:IN_GROUP_CHAT]->(mc))
-
-		WITH DISTINCT clientUserCHE, targetUserCHE, memberUsersCHE, memberUsernames
-
-		RETURN { client_user_che: clientUserCHE, target_user_che: targetUserCHE, member_users_che: memberUsersCHE, member_usernames: memberUsernames } AS new_group_activity
+		RETURN { client_user_che: clientUserCHE, target_user_che: targetUserCHE, mem_info: memInfo } AS new_group_activity
 		`,
 		map[string]any{
 			"client_username": clientUsername,
@@ -534,10 +451,9 @@ func MakeUserAdmin(ctx context.Context, groupId, clientUsername, targetUser stri
 }
 
 type RemoveUserFromAdminsActivity struct {
-	ClientUserCHE   map[string]any `json:"-" db:"client_user_che"`
-	TargetUserCHE   map[string]any `json:"-" db:"target_user_che"`
-	MemberUsersCHE  map[string]any `json:"-" db:"member_users_che"`
-	MemberUsernames []any          `json:"-" db:"member_usernames"`
+	ClientUserCHE map[string]any `json:"-" db:"client_user_che"`
+	TargetUserCHE map[string]any `json:"-" db:"target_user_che"`
+	MemInfo       string         `json:"-" db:"mem_info"`
 }
 
 func RemoveUserFromAdmins(ctx context.Context, groupId, clientUsername, targetUser string) (RemoveUserFromAdminsActivity, error) {
@@ -559,20 +475,11 @@ func RemoveUserFromAdmins(ctx context.Context, groupId, clientUsername, targetUs
 		
 		CREATE (tugact:GroupChatEntry{ che_id: randomUUID(), che_type: "group activity", info: $client_username + " removed you from group admins" })-[:IN_GROUP_CHAT]->(targetUserChat)
 
-		WITH group, clientUserCHE, tugact { .che_id, .che_type, .info } AS targetUserCHE
-		OPTIONAL MATCH (group)<-[:IS_MEMBER_OF]-(memberUser WHERE NOT memberUser.username IN [$client_username, $target_user])
-		OPTIONAL MATCH (memberUser)-[:HAS_CHAT]->(memberChat)-[:WITH_GROUP]->(group)
+		WITH DISTINCT clientUserCHE, tugact { .che_id, .che_type, .info } AS targetUserCHE
 
-		WITH clientUserCHE, targetUserCHE,
-			collect(memberUser.username) AS memberUsernames,
-			collect(memberChat) AS memberChats,
-			reduce(accm = {}, mu IN collect(memberUser.username) | apoc.map.setKey(accm, mu, { che_id: randomUUID(), che_type: "group activity", info: $client_username + " removed " + $target_user + " from group admins" })) AS memberUsersCHE
+		LET memInfo = $client_username + " removed " + $target_user + " from group admins"
 
-		FOREACH (mc IN memberChats | CREATE (:GroupChatEntry{ che_id: memberUsersCHE[mc.owner_username].che_id, che_type: memberUsersCHE[mc.owner_username].che_type, info: memberUsersCHE[mc.owner_username].info })-[:IN_GROUP_CHAT]->(mc))
-
-		WITH DISTINCT clientUserCHE, targetUserCHE, memberUsersCHE, memberUsernames
-
-		RETURN { client_user_che: clientUserCHE, target_user_che: targetUserCHE, member_users_che: memberUsersCHE, member_usernames: memberUsernames } AS new_group_activity
+		RETURN { client_user_che: clientUserCHE, target_user_che: targetUserCHE, mem_info: memInfo } AS new_group_activity
 		`,
 		map[string]any{
 			"client_username": clientUsername,
@@ -590,6 +497,46 @@ func RemoveUserFromAdmins(ctx context.Context, groupId, clientUsername, targetUs
 	return newGact, nil
 }
 
+type PostGroupActivity struct {
+	MemberUsersCHE  map[string]any `json:"-" db:"member_users_che"`
+	MemberUsernames []any          `json:"-" db:"member_usernames"`
+}
+
+func PostGroupActivityBgDBOper(ctx context.Context, groupId, memInfo, gactId string, exemptUsers []any) (PostGroupActivity, error) {
+	res, err := db.Query(
+		ctx,
+		`/*cypher*/
+		CYPHER 25
+
+		OPTIONAL MATCH (group:Group{ id: $group_id })<-[:IS_MEMBER_OF]-(memberUser WHERE NOT memberUser.username IN $exempt_users)
+		OPTIONAL MATCH (memberUser)-[:HAS_CHAT]->(memberChat)-[:WITH_GROUP]->(group)
+
+		WITH collect(memberUser.username) AS memberUsernames, collect(memberChat) AS memberChats,
+			reduce(accm = {}, mu IN collect(memberUser.username) | apoc.map.setKey(accm, mu, { che_id: $gact_id, che_type: "group activity", info: $mem_info })) AS memberUsersCHE
+
+		FOREACH (mc IN memberChats | MERGE (gce:GroupChatEntry{ che_id: memberUsersCHE[mc.owner_username].che_id })-[:IN_GROUP_CHAT]->(mc) ON CREATE SET gce.che_type = memberUsersCHE[mc.owner_username].che_type, gce.info = memberUsersCHE[mc.owner_username].info)
+
+		WITH DISTINCT memberUsersCHE, memberUsernames
+
+		RETURN { member_users_che: memberUsersCHE, member_usernames: memberUsernames } AS post_group_activity
+		`,
+		map[string]any{
+			"group_id":     groupId,
+			"mem_info":     memInfo,
+			"gact_id":      gactId,
+			"exempt_users": exemptUsers,
+		},
+	)
+	if err != nil {
+		helpers.LogError(err)
+		return PostGroupActivity{}, fiber.ErrInternalServerError
+	}
+
+	pGact := modelHelpers.RKeyGet[PostGroupActivity](res.Records, "post_group_activity")
+
+	return pGact, nil
+}
+
 type NewMessage struct {
 	Id                   string         `json:"id" db:"id"`
 	ChatHistoryEntryType string         `json:"che_type" db:"che_type"`
@@ -598,7 +545,6 @@ type NewMessage struct {
 	CreatedAt            int64          `json:"created_at" db:"created_at"`
 	Sender               any            `json:"sender" db:"sender"`
 	ReplyTargetMsg       map[string]any `json:"reply_target_msg,omitempty" db:"reply_target_msg"`
-	MemberUsernames      []any          `json:"-" db:"member_usernames"`
 }
 
 func SendMessage(ctx context.Context, clientUsername, groupId, msgContent string, at int64) (NewMessage, error) {
@@ -611,18 +557,8 @@ func SendMessage(ctx context.Context, clientUsername, groupId, msgContent string
 		CREATE (message:GroupMessage:GroupChatEntry{ id: randomUUID(), che_type: "message", content: $message_content, delivery_status: "sent", created_at: $at }),
 			(clientUser)-[:SENDS_MESSAGE]->(message)-[:IN_GROUP_CHAT]->(clientChat)
 		
-		WITH group, message
-
-		OPTIONAL MATCH (group)<-[:IS_MEMBER_OF]-(memberUser WHERE memberUser.username <> $client_username)
-		OPTIONAL MATCH (memberUser)-[:HAS_CHAT]->(memberChat)-[:WITH_GROUP]->(group)
-
-		WITH message, collect(memberUser.username) AS member_usernames,
-			collect(memberChat) AS memberChats
-
-		FOREACH (mc IN memberChats | CREATE (message)-[:IN_GROUP_CHAT { receipt: "received" }]->(mc))
-
-		WITH DISTINCT message, member_usernames
-		RETURN message { .*, content: apoc.convert.fromJsonMap(message.content), sender: $client_username, member_usernames } AS new_message
+		WITH DISTINCT message
+		RETURN message { .*, content: apoc.convert.fromJsonMap(message.content), sender: $client_username } AS new_message
 		`,
 		map[string]any{
 			"client_username": clientUsername,
@@ -639,6 +575,44 @@ func SendMessage(ctx context.Context, clientUsername, groupId, msgContent string
 	newMessage := modelHelpers.RKeyGet[NewMessage](res.Records, "new_message")
 
 	return newMessage, nil
+}
+
+type PostNewMessage struct {
+	MemberUsernames []any `json:"-" db:"member_usernames"`
+}
+
+func PostSendMessage(ctx context.Context, clientUsername, groupId, msgId string) (PostNewMessage, error) {
+	res, err := db.Query(
+		ctx,
+		`/* cypher */
+		CYPHER 25
+
+		MATCH (message:GroupMessage{ id: $msg_id })
+
+		OPTIONAL MATCH (group:Group{ id: $group_id })<-[:IS_MEMBER_OF]-(memberUser WHERE memberUser.username <> $client_username)
+		OPTIONAL MATCH (memberUser)-[:HAS_CHAT]->(memberChat)-[:WITH_GROUP]->(group)
+
+		WITH message, collect(memberUser.username) AS memberUsernames,
+			collect(memberChat) AS memberChats
+
+		FOREACH (mc IN memberChats | MERGE (message)-[rel:IN_GROUP_CHAT]->(mc) ON CREATE SET rel.receipt = "received")
+
+		RETURN { member_usernames: memberUsernames } AS post_new_message
+		`,
+		map[string]any{
+			"client_username": clientUsername,
+			"group_id":        groupId,
+			"msg_id":          msgId,
+		},
+	)
+	if err != nil {
+		helpers.LogError(err)
+		return PostNewMessage{}, fiber.ErrInternalServerError
+	}
+
+	pnm := modelHelpers.RKeyGet[PostNewMessage](res.Records, "post_new_message")
+
+	return pnm, nil
 }
 
 func AckMessageDelivered(ctx context.Context, clientUsername, groupId, msgId string, deliveredAt int64) (bool, error) {
@@ -714,22 +688,14 @@ func ReplyToMessage(ctx context.Context, clientUsername, groupId, targetMsgId, m
 			(clientUser)-[:SENDS_MESSAGE]->(replyMsg)-[:IN_GROUP_CHAT]->(clientChat),
 			(replyMsg)-[:REPLIES_TO]->(targetMsg)
 		
-		WITH group, replyMsg, targetMsg
+		WITH replyMsg, targetMsg
 
 		MATCH (targetMsg)<-[:SENDS_MESSAGE]-(targetMsgSender)
 
-		OPTIONAL MATCH (group)<-[:IS_MEMBER_OF]-(memberUser WHERE memberUser.username <> $client_username)
-		OPTIONAL MATCH (memberUser)-[:HAS_CHAT]->(memberChat)-[:WITH_GROUP]->(group)
+		WITH DISTINCT replyMsg,
+			targetMsg { .id, content: apoc.convert.fromJsonMap(targetMsg.content), sender: targetMsgSender.username } AS reply_target_msg
 
-		WITH replyMsg, targetMsg, targetMsgSender,
-			collect(memberChat) as memberChats
-
-		FOREACH (mc IN memberChats | CREATE (replyMsg)-[:IN_GROUP_CHAT { receipt: "received" }]->(mc))
-
-		WITH DISTINCT replyMsg, collect(memberUser.username) AS member_usernames,
-			targetMsg { .id, content: apoc.convert.fromJsonMap(targetMsg.content), sender_user: targetMsgSender.username } AS reply_target_msg
-
-		RETURN replyMsg { .*, content: apoc.convert.fromJsonMap(replyMsg.content), che_type: "message", sender: $client_username, reply_target_msg, member_usernames } AS new_message
+		RETURN replyMsg { .*, content: apoc.convert.fromJsonMap(replyMsg.content), sender: $client_username, reply_target_msg } AS new_message
 		`,
 		map[string]any{
 			"client_username": clientUsername,
@@ -754,7 +720,6 @@ type RxnToMessage struct {
 	ChatHistoryEntryType string `json:"che_type" db:"che_type"`
 	Emoji                string `json:"emoji" db:"emoji"`
 	Reactor              any    `json:"reactor" db:"reactor"`
-	MemberUsernames      []any  `json:"-" db:"member_usernames"`
 }
 
 func ReactToMessage(ctx context.Context, clientUsername, groupId, msgId, emoji string, at int64) (RxnToMessage, error) {
@@ -768,7 +733,7 @@ func ReactToMessage(ctx context.Context, clientUsername, groupId, msgId, emoji s
 
 		MATCH (clientChat)<-[IN_GROUP_CHAT]-(message:GroupMessage{ id: $message_id })
 
-		WITH group, clientUser, message, clientChat
+		WITH clientUser, message, clientChat
 		MERGE (msgrxn:GroupMessageReaction:GroupChatEntry{ reactor_username: clientUser.username, message_id: $message_id })
 		ON CREATE
 			SET msgrxn.che_id = randomUUID(),
@@ -781,16 +746,7 @@ func ReactToMessage(ctx context.Context, clientUsername, groupId, msgId, emoji s
 
 		MERGE (msgrxn)-[:IN_GROUP_CHAT]->(clientChat)
 
-		WITH group, msgrxn
-
-		OPTIONAL MATCH (group)<-[:IS_MEMBER_OF]-(memberUser WHERE memberUser.username <> $client_username)
-		OPTIONAL MATCH (memberUser)-[:HAS_CHAT]->(memberChat)-[:WITH_GROUP]->(group)
-
-		WITH msgrxn, collect(memberChat) AS memberChats
-
-		FOREACH (mc IN memberChats | CREATE (msgrxn)-[:IN_GROUP_CHAT]->(mc))
-
-		RETURN msgrxn { .che_id, .che_type, .emoji, to_msg_id: $message_id, reactor: $client_username, member_usernames: collect(memberUser.username) } rxn_to_msg
+		RETURN msgrxn { .che_id, .che_type, .emoji, to_msg_id: $message_id, reactor: $client_username } rxn_to_msg
 		`,
 		map[string]any{
 			"client_username": clientUsername,
@@ -810,9 +766,39 @@ func ReactToMessage(ctx context.Context, clientUsername, groupId, msgId, emoji s
 	return rxnToMessage, nil
 }
 
+func PostReactToMessage(ctx context.Context, clientUsername, groupId, msgId string) error {
+	_, err := db.Query(
+		ctx,
+		`/* cypher */
+		CYPHER 25
+
+		MATCH (message:GroupMessage{ id: $msg_id }), (msgrxn:GroupMessageReaction{ reactor_username: $client_username, message_id: $msg_id })
+
+		OPTIONAL MATCH (group:Group{ id: $group_id })<-[:IS_MEMBER_OF]-(memberUser WHERE memberUser.username <> $client_username)
+		OPTIONAL MATCH (memberUser)-[:HAS_CHAT]->(memberChat)-[:WITH_GROUP]->(group)
+
+		WITH msgrxn, collect(memberChat) AS memberChats
+
+		FOREACH (mc IN memberChats | MERGE (msgrxn)-[:IN_GROUP_CHAT]->(mc))
+
+		FINISH
+		`,
+		map[string]any{
+			"client_username": clientUsername,
+			"group_id":        groupId,
+			"msg_id":          msgId,
+		},
+	)
+	if err != nil {
+		helpers.LogError(err)
+		return err
+	}
+
+	return nil
+}
+
 type RemovedRxnToMessage struct {
-	CHEId           string `json:"-" db:"msgrxn_che_id"`
-	MemberUsernames []any  `json:"-" db:"member_usernames"`
+	CHEId string `json:"-" db:"msgrxn_che_id"`
 }
 
 func RemoveReactionToMessage(ctx context.Context, clientUsername, groupId, msgId string) (RemovedRxnToMessage, error) {
@@ -825,16 +811,12 @@ func RemoveReactionToMessage(ctx context.Context, clientUsername, groupId, msgId
 		MATCH (clientChat)<-[IN_GROUP_CHAT]-(message:GroupMessage{ id: $message_id }),
 			(msgrxn:GroupMessageReaction:GroupChatEntry{ reactor_username: clientUser.username, message_id: message.id }),
 			(clientUser)-[crxn:REACTS_TO_MESSAGE]->(message)
-		
+
 		LET msgrxn_che_id = msgrxn.che_id
 
 		DETACH DELETE msgrxn, crxn
-		
-		WITH group, msgrxn_che_id
 
-		OPTIONAL MATCH (group)<-[:IS_MEMBER_OF]-(memberUser WHERE memberUser.username <> $client_username)
-
-		RETURN DISTINCT { msgrxn_che_id, member_usernames: collect(memberUser.username) } AS rmvd_rxn_to_msg
+		RETURN DISTINCT { msgrxn_che_id } AS rmvd_rxn_to_msg
 		`,
 		map[string]any{
 			"client_username": clientUsername,

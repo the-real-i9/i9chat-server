@@ -46,8 +46,16 @@ func SendMessage(ctx context.Context, clientUsername, partnerUsername, replyTarg
 	})
 
 	go func(msgData directChat.NewMessage) {
-		msgData.Sender, _ = cache.GetUser[UITypes.ClientUser](context.Background(), clientUsername)
-		cloudStorageService.MessageMediaCloudNameToUrl(msgData.Content)
+		var err error
+
+		msgData.Sender, err = cache.GetUser[UITypes.ClientUser](context.Background(), clientUsername)
+		if err != nil {
+			return
+		}
+		err = cloudStorageService.MessageMediaCloudNameToUrl(msgData.Content)
+		if err != nil {
+			return
+		}
 
 		realtimeService.SendEventMsg(partnerUsername, appTypes.ServerEventMsg{
 			Event: "direct chat: new message",
@@ -127,7 +135,10 @@ func ReactToMessage(ctx context.Context, clientUsername, partnerUsername, msgId,
 	}
 
 	go func() {
-		reactor, _ := cache.GetUser[UITypes.ClientUser](context.Background(), clientUsername)
+		reactor, err := cache.GetUser[UITypes.ClientUser](context.Background(), clientUsername)
+		if err != nil {
+			return
+		}
 
 		realtimeService.SendEventMsg(partnerUsername, appTypes.ServerEventMsg{
 			Event: "direct chat: message reaction",

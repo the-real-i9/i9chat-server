@@ -3,9 +3,9 @@ package backgroundWorkers
 import (
 	"context"
 	"fmt"
-	"i9chat/src/appTypes"
 	"i9chat/src/cache"
 	"i9chat/src/helpers"
+	groupChat "i9chat/src/models/chatModel/groupChatModel"
 	"i9chat/src/services/eventStreamService/eventTypes"
 	"log"
 
@@ -55,7 +55,6 @@ func newGroupMessagesStreamBgWorker(rdb *redis.Client) {
 				msg.ToGroup = stmsg.Values["toGroup"].(string)
 				msg.CHEId = stmsg.Values["CHEId"].(string)
 				msg.MsgData = stmsg.Values["msgData"].(string)
-				msg.MemberUsers = helpers.FromJson[appTypes.BinableSlice](stmsg.Values["memberUsers"].(string))
 
 				msgs = append(msgs, msg)
 			}
@@ -78,7 +77,12 @@ func newGroupMessagesStreamBgWorker(rdb *redis.Client) {
 
 				chatMessages[msg.FromUser+" "+msg.ToGroup] = append(chatMessages[msg.FromUser+" "+msg.ToGroup], [2]string{msg.CHEId, stmsgIds[i]})
 
-				for _, memUser := range msg.MemberUsers {
+				postNewMessage, err := groupChat.PostSendMessage(ctx, msg.FromUser, msg.ToGroup, msg.CHEId)
+				if err != nil {
+					return
+				}
+
+				for _, memUser := range postNewMessage.MemberUsernames {
 					memUser := memUser.(string)
 
 					chatMessages[memUser+" "+msg.ToGroup] = append(chatMessages[memUser+" "+msg.ToGroup], [2]string{msg.CHEId, stmsgIds[i]})

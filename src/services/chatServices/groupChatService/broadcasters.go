@@ -1,8 +1,14 @@
 package groupChatService
 
 import (
+	"context"
+	"fmt"
+	"i9chat/src/appGlobals"
 	"i9chat/src/appTypes"
+	"i9chat/src/helpers"
 	"i9chat/src/services/realtimeService"
+
+	"github.com/redis/go-redis/v9"
 )
 
 func broadcastNewGroup(targetUsers []any, data any) {
@@ -15,46 +21,147 @@ func broadcastNewGroup(targetUsers []any, data any) {
 	}
 }
 
-func broadcastNewMessage(memberUsernames []any, data any, groupId string) {
-	for _, mu := range memberUsernames {
+func broadcastNewMessage(groupId string, data any, clientUsername string) {
+	ctx := context.Background()
 
-		realtimeService.SendEventMsg(mu.(string), appTypes.ServerEventMsg{
-			Event: "group chat: new message",
-			Data: map[string]any{
-				"message":  data,
-				"group_id": groupId,
-			},
-		})
+	var cursor uint64 = 0
+
+	for {
+		musers, nextCursor, err := appGlobals.RedisClient.SScan(ctx, fmt.Sprintf("group:%s:members", groupId), cursor, "*", 100).Result()
+		if err != nil && err != redis.Nil {
+			helpers.LogError(err)
+			return
+		}
+
+		for _, mu := range musers {
+			if mu == clientUsername {
+				continue
+			}
+
+			go realtimeService.SendEventMsg(mu, appTypes.ServerEventMsg{
+				Event: "group chat: new message",
+				Data: map[string]any{
+					"message":  data,
+					"group_id": groupId,
+				},
+			})
+		}
+
+		if nextCursor == 0 {
+			break
+		}
+
+		cursor = nextCursor
 	}
 }
 
-func broadcastActivity(memberUsernames []any, data any, groupId string) {
-	for _, mu := range memberUsernames {
+func broadcastActivityToOne(mu string, info any, groupId string) {
+	go realtimeService.SendEventMsg(mu, appTypes.ServerEventMsg{
+		Event: "group chat: new activity",
+		Data: map[string]any{
+			"info":     info,
+			"group_id": groupId,
+		},
+	})
+}
 
-		realtimeService.SendEventMsg(mu.(string), appTypes.ServerEventMsg{
-			Event: "group chat: new activity",
-			Data: map[string]any{
-				"info":     data,
-				"group_id": groupId,
-			},
-		})
+func broadcastActivityToAll(groupId string, info string, except []any) {
+	ctx := context.Background()
+
+	exceptUsers := make(map[string]bool, len(except))
+	for _, u := range except {
+		exceptUsers[u.(string)] = true
+	}
+
+	var cursor uint64 = 0
+
+	for {
+		musers, nextCursor, err := appGlobals.RedisClient.SScan(ctx, fmt.Sprintf("group:%s:members", groupId), cursor, "*", 100).Result()
+		if err != nil && err != redis.Nil {
+			helpers.LogError(err)
+			return
+		}
+
+		for _, mu := range musers {
+			if exceptUsers[mu] {
+				continue
+			}
+
+			go realtimeService.SendEventMsg(mu, appTypes.ServerEventMsg{
+				Event: "group chat: new activity",
+				Data: map[string]any{
+					"info":     info,
+					"group_id": groupId,
+				},
+			})
+		}
+
+		if nextCursor == 0 {
+			break
+		}
+
+		cursor = nextCursor
 	}
 }
 
-func broadcastMsgReaction(memberUsernames []any, data any) {
-	for _, mu := range memberUsernames {
-		realtimeService.SendEventMsg(mu.(string), appTypes.ServerEventMsg{
-			Event: "group chat: message reaction",
-			Data:  data,
-		})
+func broadcastMsgReaction(groupId, clientUsername string, data any) {
+	ctx := context.Background()
+
+	var cursor uint64 = 0
+
+	for {
+		musers, nextCursor, err := appGlobals.RedisClient.SScan(ctx, fmt.Sprintf("group:%s:members", groupId), cursor, "*", 100).Result()
+		if err != nil && err != redis.Nil {
+			helpers.LogError(err)
+			return
+		}
+
+		for _, mu := range musers {
+			if mu == clientUsername {
+				continue
+			}
+
+			go realtimeService.SendEventMsg(mu, appTypes.ServerEventMsg{
+				Event: "group chat: message reaction",
+				Data:  data,
+			})
+		}
+
+		if nextCursor == 0 {
+			break
+		}
+
+		cursor = nextCursor
 	}
 }
 
-func broadcastMsgReactionRemoved(memberUsernames []any, data any) {
-	for _, mu := range memberUsernames {
-		realtimeService.SendEventMsg(mu.(string), appTypes.ServerEventMsg{
-			Event: "group chat: message reaction removed",
-			Data:  data,
-		})
+func broadcastMsgReactionRemoved(groupId, clientUsername string, data any) {
+	ctx := context.Background()
+
+	var cursor uint64 = 0
+
+	for {
+		musers, nextCursor, err := appGlobals.RedisClient.SScan(ctx, fmt.Sprintf("group:%s:members", groupId), cursor, "*", 100).Result()
+		if err != nil && err != redis.Nil {
+			helpers.LogError(err)
+			return
+		}
+
+		for _, mu := range musers {
+			if mu == clientUsername {
+				continue
+			}
+
+			go realtimeService.SendEventMsg(mu, appTypes.ServerEventMsg{
+				Event: "group chat: message reaction removed",
+				Data:  data,
+			})
+		}
+
+		if nextCursor == 0 {
+			break
+		}
+
+		cursor = nextCursor
 	}
 }

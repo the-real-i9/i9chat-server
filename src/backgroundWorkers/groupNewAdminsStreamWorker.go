@@ -6,6 +6,7 @@ import (
 	"i9chat/src/appTypes"
 	"i9chat/src/cache"
 	"i9chat/src/helpers"
+	groupChat "i9chat/src/models/chatModel/groupChatModel"
 	"i9chat/src/services/eventStreamService/eventTypes"
 	"log"
 
@@ -54,10 +55,9 @@ func groupNewAdminsStreamBgWorker(rdb *redis.Client) {
 				msg.GroupId = stmsg.Values["groupId"].(string)
 				msg.Admin = stmsg.Values["admin"].(string)
 				msg.NewAdmin = stmsg.Values["newAdmin"].(string)
-				msg.MemberUsers = helpers.FromJson[appTypes.BinableSlice](stmsg.Values["memberUsers"].(string))
 				msg.AdminCHE = helpers.FromJson[appTypes.BinableMap](stmsg.Values["adminCHE"].(string))
 				msg.NewAdminCHE = helpers.FromJson[appTypes.BinableMap](stmsg.Values["newAdminCHE"].(string))
-				msg.MemberUsersCHE = helpers.FromJson[appTypes.BinableMap](stmsg.Values["memberUsersCHE"].(string))
+				msg.MemInfo = stmsg.Values["memInfo"].(string)
 
 				msgs = append(msgs, msg)
 
@@ -93,10 +93,15 @@ func groupNewAdminsStreamBgWorker(rdb *redis.Client) {
 					chatGroupActivities[msg.NewAdmin+" "+msg.GroupId] = append(chatGroupActivities[msg.NewAdmin+" "+msg.GroupId], [2]string{CHEId, stmsgIds[i]})
 				}
 
-				for memui, memUser := range msg.MemberUsers {
+				postActivity, err := groupChat.PostGroupActivityBgDBOper(ctx, msg.GroupId, msg.MemInfo, stmsgIds[i], []any{msg.Admin, msg.NewAdmin})
+				if err != nil {
+					return
+				}
+
+				for memui, memUser := range postActivity.MemberUsernames {
 					memUser := memUser.(string)
 
-					gactData := msg.MemberUsersCHE[memUser].(map[string]any)
+					gactData := postActivity.MemberUsersCHE[memUser].(map[string]any)
 
 					CHEId := gactData["che_id"].(string)
 

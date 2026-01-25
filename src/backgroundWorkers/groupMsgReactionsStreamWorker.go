@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"i9chat/src/cache"
 	"i9chat/src/helpers"
+	groupChat "i9chat/src/models/chatModel/groupChatModel"
 	"i9chat/src/services/eventStreamService/eventTypes"
 	"log"
 
@@ -67,6 +68,8 @@ func groupMsgReactionsStreamBgWorker(rdb *redis.Client) {
 
 			msgReactions := make(map[string][]string)
 
+			postDBExtrasFuncs := []func() error{}
+
 			// batch data for batch processing
 			for i, msg := range msgs {
 				newMsgReactionEntries = append(newMsgReactionEntries, msg.CHEId, msg.RxnData)
@@ -74,6 +77,10 @@ func groupMsgReactionsStreamBgWorker(rdb *redis.Client) {
 				chatMsgReactions[msg.FromUser+" "+msg.ToGroup] = append(chatMsgReactions[msg.FromUser+" "+msg.ToGroup], [2]string{msg.CHEId, stmsgIds[i]})
 
 				msgReactions[msg.ToMsgId] = append(msgReactions[msg.ToMsgId], msg.FromUser, msg.Emoji)
+
+				postDBExtrasFuncs = append(postDBExtrasFuncs, func() error {
+					return groupChat.PostReactToMessage(ctx, msg.FromUser, msg.ToGroup, msg.ToMsgId)
+				})
 			}
 
 			// batch processing
@@ -101,6 +108,10 @@ func groupMsgReactionsStreamBgWorker(rdb *redis.Client) {
 
 					return cache.StoreMsgReactions(sharedCtx, msgId, userWithEmojiPairs)
 				})
+			}
+
+			for _, fn := range postDBExtrasFuncs {
+				eg.Go(fn)
 			}
 
 			if eg.Wait() != nil {

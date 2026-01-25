@@ -6,6 +6,7 @@ import (
 	"i9chat/src/appTypes"
 	"i9chat/src/cache"
 	"i9chat/src/helpers"
+	groupChat "i9chat/src/models/chatModel/groupChatModel"
 	"i9chat/src/services/eventStreamService/eventTypes"
 	"log"
 
@@ -53,9 +54,8 @@ func groupUsersLeftStreamBgWorker(rdb *redis.Client) {
 
 				msg.GroupId = stmsg.Values["groupId"].(string)
 				msg.OldMember = stmsg.Values["oldMember"].(string)
-				msg.MemberUsers = helpers.FromJson[appTypes.BinableSlice](stmsg.Values["memberUsers"].(string))
 				msg.OldMemberCHE = helpers.FromJson[appTypes.BinableMap](stmsg.Values["oldMemberCHE"].(string))
-				msg.MemberUsersCHE = helpers.FromJson[appTypes.BinableMap](stmsg.Values["memberUsersCHE"].(string))
+				msg.MemInfo = stmsg.Values["memInfo"].(string)
 
 				msgs = append(msgs, msg)
 
@@ -81,10 +81,15 @@ func groupUsersLeftStreamBgWorker(rdb *redis.Client) {
 
 				chatGroupActivities[msg.OldMember+" "+msg.GroupId] = append(chatGroupActivities[msg.OldMember+" "+msg.GroupId], [2]string{CHEId, stmsgIds[i]})
 
-				for memui, memUser := range msg.MemberUsers {
+				postActivity, err := groupChat.PostGroupActivityBgDBOper(ctx, msg.GroupId, msg.MemInfo, stmsgIds[i], []any{})
+				if err != nil {
+					return
+				}
+
+				for memui, memUser := range postActivity.MemberUsernames {
 					memUser := memUser.(string)
 
-					gactData := msg.MemberUsersCHE[memUser].(map[string]any)
+					gactData := postActivity.MemberUsersCHE[memUser].(map[string]any)
 
 					CHEId := gactData["che_id"].(string)
 

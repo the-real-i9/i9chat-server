@@ -123,18 +123,14 @@ func ChangeGroupName(ctx context.Context, groupId, clientUsername, newName strin
 	}
 
 	go eventStreamService.QueueGroupEditEvent(eventTypes.GroupEditEvent{
-		GroupId:        groupId,
-		UpdateKVMap:    map[string]any{"name": newName},
-		MemberUsers:    newActivity.MemberUsernames,
-		EditorUserCHE:  newActivity.ClientUserCHE,
-		MemberUsersCHE: newActivity.MemberUsersCHE,
+		GroupId:       groupId,
+		EditorUser:    clientUsername,
+		UpdateKVMap:   map[string]any{"name": newName},
+		EditorUserCHE: newActivity.ClientUserCHE,
+		MemInfo:       newActivity.MemInfo,
 	})
 
-	if memus := newActivity.MemberUsernames; len(memus) != 0 {
-		activInfo := newActivity.MemberUsersCHE[memus[0].(string)].(map[string]any)["info"]
-
-		go broadcastActivity(memus, activInfo, groupId)
-	}
+	go broadcastActivityToAll(groupId, newActivity.MemInfo, []any{clientUsername})
 
 	return newActivity.ClientUserCHE["info"], nil
 }
@@ -152,19 +148,14 @@ func ChangeGroupDescription(ctx context.Context, groupId, clientUsername, newDes
 	}
 
 	go eventStreamService.QueueGroupEditEvent(eventTypes.GroupEditEvent{
-		GroupId:        groupId,
-		EditorUser:     clientUsername,
-		UpdateKVMap:    map[string]any{"description": newDescription},
-		MemberUsers:    newActivity.MemberUsernames,
-		EditorUserCHE:  newActivity.ClientUserCHE,
-		MemberUsersCHE: newActivity.MemberUsersCHE,
+		GroupId:       groupId,
+		EditorUser:    clientUsername,
+		UpdateKVMap:   map[string]any{"description": newDescription},
+		EditorUserCHE: newActivity.ClientUserCHE,
+		MemInfo:       newActivity.MemInfo,
 	})
 
-	if memus := newActivity.MemberUsernames; len(memus) != 0 {
-		activInfo := newActivity.MemberUsersCHE[memus[0].(string)].(map[string]any)["info"]
-
-		go broadcastActivity(memus, activInfo, groupId)
-	}
+	go broadcastActivityToAll(groupId, newActivity.MemInfo, []any{clientUsername})
 
 	return newActivity.ClientUserCHE["info"], nil
 }
@@ -182,18 +173,13 @@ func ChangeGroupPicture(ctx context.Context, groupId, clientUsername, picCloudNa
 	}
 
 	go eventStreamService.QueueGroupEditEvent(eventTypes.GroupEditEvent{
-		GroupId:        groupId,
-		UpdateKVMap:    map[string]any{"picture_cloud_name": picCloudName},
-		MemberUsers:    newActivity.MemberUsernames,
-		EditorUserCHE:  newActivity.ClientUserCHE,
-		MemberUsersCHE: newActivity.MemberUsersCHE,
+		GroupId:       groupId,
+		UpdateKVMap:   map[string]any{"picture_cloud_name": picCloudName},
+		EditorUserCHE: newActivity.ClientUserCHE,
+		MemInfo:       newActivity.MemInfo,
 	})
 
-	if memus := newActivity.MemberUsernames; len(memus) != 0 {
-		activInfo := newActivity.MemberUsersCHE[memus[0].(string)].(map[string]any)["info"]
-
-		go broadcastActivity(memus, activInfo, groupId)
-	}
+	go broadcastActivityToAll(groupId, newActivity.MemInfo, []any{clientUsername})
 
 	return newActivity.ClientUserCHE["info"], nil
 }
@@ -210,13 +196,12 @@ func AddUsersToGroup(ctx context.Context, groupId, clientUsername string, newUse
 	}
 
 	go eventStreamService.QueueGroupUsersAddedEvent(eventTypes.GroupUsersAddedEvent{
-		GroupId:        groupId,
-		Admin:          clientUsername,
-		NewMembers:     newActivity.NewUsernames,
-		MemberUsers:    newActivity.MemberUsernames,
-		AdminCHE:       newActivity.ClientUserCHE,
-		NewMembersCHE:  newActivity.NewUsersCHE,
-		MemberUsersCHE: newActivity.MemberUsersCHE,
+		GroupId:       groupId,
+		Admin:         clientUsername,
+		NewMembers:    newActivity.NewUsernames,
+		AdminCHE:      newActivity.ClientUserCHE,
+		NewMembersCHE: newActivity.NewUsersCHE,
+		MemInfo:       newActivity.MemInfo,
 	})
 
 	go func(newActivity groupChat.AddUsersActivity) {
@@ -224,7 +209,7 @@ func AddUsersToGroup(ctx context.Context, groupId, clientUsername string, newUse
 			return
 		}
 
-		// history is the same for all init users, we only need separation for the cache
+		// history is the same for all init users, we only need separation for our cache
 		// so we make use of one user's history
 		che := maps.Clone(newActivity.NewUsersCHE[newActivity.NewUsernames[0].(string)].(map[string]any))
 
@@ -238,11 +223,7 @@ func AddUsersToGroup(ctx context.Context, groupId, clientUsername string, newUse
 		broadcastNewGroup(newActivity.NewUsernames, newMemData)
 	}(newActivity)
 
-	if memus := newActivity.MemberUsernames; len(memus) != 0 {
-		activInfo := newActivity.MemberUsersCHE[memus[0].(string)].(map[string]any)["info"]
-
-		go broadcastActivity(memus, activInfo, groupId)
-	}
+	go broadcastActivityToAll(groupId, newActivity.MemInfo, append(newActivity.NewUsernames, clientUsername))
 
 	return newActivity.ClientUserCHE["info"], nil
 }
@@ -259,22 +240,17 @@ func RemoveUserFromGroup(ctx context.Context, groupId, clientUsername, targetUse
 	}
 
 	go eventStreamService.QueueGroupUserRemovedEvent(eventTypes.GroupUserRemovedEvent{
-		GroupId:        groupId,
-		Admin:          clientUsername,
-		OldMember:      targetUser,
-		MemberUsers:    newActivity.MemberUsernames,
-		AdminCHE:       newActivity.ClientUserCHE,
-		OldMemberCHE:   newActivity.TargetUserCHE,
-		MemberUsersCHE: newActivity.MemberUsersCHE,
+		GroupId:      groupId,
+		Admin:        clientUsername,
+		OldMember:    targetUser,
+		AdminCHE:     newActivity.ClientUserCHE,
+		OldMemberCHE: newActivity.TargetUserCHE,
+		MemInfo:      newActivity.MemInfo,
 	})
 
-	go broadcastActivity([]any{targetUser}, newActivity.TargetUserCHE["info"], groupId)
+	go broadcastActivityToOne(targetUser, newActivity.TargetUserCHE["info"], groupId)
 
-	if memus := newActivity.MemberUsernames; len(memus) != 0 {
-		activInfo := newActivity.MemberUsersCHE[memus[0].(string)].(map[string]any)["info"]
-
-		go broadcastActivity(memus, activInfo, groupId)
-	}
+	go broadcastActivityToAll(groupId, newActivity.MemInfo, []any{clientUsername, targetUser})
 
 	return newActivity.ClientUserCHE["info"], nil
 }
@@ -291,18 +267,13 @@ func JoinGroup(ctx context.Context, groupId, clientUsername string) (any, error)
 	}
 
 	go eventStreamService.QueueGroupUserJoinedEvent(eventTypes.GroupUserJoinedEvent{
-		GroupId:        groupId,
-		NewMember:      clientUsername,
-		MemberUsers:    newActivity.MemberUsernames,
-		NewMemberCHE:   newActivity.ClientUserCHE,
-		MemberUsersCHE: newActivity.MemberUsersCHE,
+		GroupId:      groupId,
+		NewMember:    clientUsername,
+		NewMemberCHE: newActivity.ClientUserCHE,
+		MemInfo:      newActivity.MemInfo,
 	})
 
-	if memus := newActivity.MemberUsernames; len(memus) != 0 {
-		activInfo := newActivity.MemberUsersCHE[memus[0].(string)].(map[string]any)["info"]
-
-		go broadcastActivity(memus, activInfo, groupId)
-	}
+	go broadcastActivityToAll(groupId, newActivity.MemInfo, []any{clientUsername})
 
 	che := maps.Clone(newActivity.ClientUserCHE)
 
@@ -328,18 +299,13 @@ func LeaveGroup(ctx context.Context, groupId, clientUsername string) (any, error
 	}
 
 	go eventStreamService.QueueGroupUserLeftEvent(eventTypes.GroupUserLeftEvent{
-		GroupId:        groupId,
-		OldMember:      clientUsername,
-		MemberUsers:    newActivity.MemberUsernames,
-		OldMemberCHE:   newActivity.ClientUserCHE,
-		MemberUsersCHE: newActivity.MemberUsersCHE,
+		GroupId:      groupId,
+		OldMember:    clientUsername,
+		OldMemberCHE: newActivity.ClientUserCHE,
+		MemInfo:      newActivity.MemInfo,
 	})
 
-	if memus := newActivity.MemberUsernames; len(memus) != 0 {
-		activInfo := newActivity.MemberUsersCHE[memus[0].(string)].(map[string]any)["info"]
-
-		go broadcastActivity(memus, activInfo, groupId)
-	}
+	go broadcastActivityToAll(groupId, newActivity.MemInfo, []any{clientUsername})
 
 	return newActivity.ClientUserCHE["info"], nil
 }
@@ -356,22 +322,17 @@ func MakeUserGroupAdmin(ctx context.Context, groupId, clientUsername, targetUser
 	}
 
 	go eventStreamService.QueueGroupMakeUserAdminEvent(eventTypes.GroupMakeUserAdminEvent{
-		GroupId:        groupId,
-		Admin:          clientUsername,
-		NewAdmin:       targetUser,
-		MemberUsers:    newActivity.MemberUsernames,
-		AdminCHE:       newActivity.ClientUserCHE,
-		NewAdminCHE:    newActivity.TargetUserCHE,
-		MemberUsersCHE: newActivity.MemberUsersCHE,
+		GroupId:     groupId,
+		Admin:       clientUsername,
+		NewAdmin:    targetUser,
+		AdminCHE:    newActivity.ClientUserCHE,
+		NewAdminCHE: newActivity.TargetUserCHE,
+		MemInfo:     newActivity.MemInfo,
 	})
 
-	go broadcastActivity([]any{targetUser}, newActivity.TargetUserCHE["info"], groupId)
+	go broadcastActivityToOne(targetUser, newActivity.TargetUserCHE["info"], groupId)
 
-	if memus := newActivity.MemberUsernames; len(memus) != 0 {
-		activInfo := newActivity.MemberUsersCHE[memus[0].(string)].(map[string]any)["info"]
-
-		go broadcastActivity(memus, activInfo, groupId)
-	}
+	go broadcastActivityToAll(groupId, newActivity.MemInfo, []any{clientUsername, targetUser})
 
 	return newActivity.ClientUserCHE["info"], nil
 }
@@ -388,22 +349,17 @@ func RemoveUserFromGroupAdmins(ctx context.Context, groupId, clientUsername, tar
 	}
 
 	go eventStreamService.QueueGroupRemoveUserFromAdminsEvent(eventTypes.GroupRemoveUserFromAdminsEvent{
-		GroupId:        groupId,
-		Admin:          clientUsername,
-		OldAdmin:       targetUser,
-		MemberUsers:    newActivity.MemberUsernames,
-		AdminCHE:       newActivity.ClientUserCHE,
-		OldAdminCHE:    newActivity.TargetUserCHE,
-		MemberUsersCHE: newActivity.MemberUsersCHE,
+		GroupId:     groupId,
+		Admin:       clientUsername,
+		OldAdmin:    targetUser,
+		AdminCHE:    newActivity.ClientUserCHE,
+		OldAdminCHE: newActivity.TargetUserCHE,
+		MemInfo:     newActivity.MemInfo,
 	})
 
-	go broadcastActivity([]any{targetUser}, newActivity.TargetUserCHE["info"], groupId)
+	go broadcastActivityToOne(targetUser, newActivity.TargetUserCHE["info"], groupId)
 
-	if memus := newActivity.MemberUsernames; len(memus) != 0 {
-		activInfo := newActivity.MemberUsersCHE[memus[0].(string)].(map[string]any)["info"]
-
-		go broadcastActivity(memus, activInfo, groupId)
-	}
+	go broadcastActivityToAll(groupId, newActivity.MemInfo, []any{clientUsername, targetUser})
 
 	return newActivity.ClientUserCHE["info"], nil
 }
@@ -432,19 +388,26 @@ func SendMessage(ctx context.Context, clientUsername, groupId, replyTargetMsgId 
 
 	// queue new message event
 	go eventStreamService.QueueNewGroupMessageEvent(eventTypes.NewGroupMessageEvent{
-		FromUser:    clientUsername,
-		ToGroup:     groupId,
-		CHEId:       newMessage.Id,
-		MsgData:     helpers.ToJson(newMessage),
-		MemberUsers: newMessage.MemberUsernames,
+		FromUser: clientUsername,
+		ToGroup:  groupId,
+		CHEId:    newMessage.Id,
+		MsgData:  helpers.ToJson(newMessage),
 	})
 
 	go func(msgData groupChat.NewMessage) {
+		var err error
+		msgData.Sender, err = cache.GetUser[UITypes.ClientUser](context.Background(), clientUsername)
+		if err != nil {
+			return
+		}
 
-		msgData.Sender, _ = cache.GetUser[UITypes.ClientUser](context.Background(), clientUsername)
-		cloudStorageService.MessageMediaCloudNameToUrl(msgData.Content)
+		msgData.Content = maps.Clone(msgData.Content)
+		err = cloudStorageService.MessageMediaCloudNameToUrl(msgData.Content)
+		if err != nil {
+			return
+		}
 
-		broadcastNewMessage(newMessage.MemberUsernames, msgData, groupId)
+		broadcastNewMessage(groupId, msgData, clientUsername)
 	}(newMessage)
 
 	return map[string]any{"new_msg_id": newMessage.Id}, nil
@@ -513,9 +476,12 @@ func ReactToMessage(ctx context.Context, clientUsername, groupId, msgId, emoji s
 	})
 
 	go func() {
-		reactor, _ := cache.GetUser[UITypes.ClientUser](context.Background(), clientUsername)
+		reactor, err := cache.GetUser[UITypes.ClientUser](context.Background(), clientUsername)
+		if err != nil {
+			return
+		}
 
-		broadcastMsgReaction(rxnToMessage.MemberUsernames, map[string]any{
+		broadcastMsgReaction(groupId, clientUsername, map[string]any{
 			"group_id":  groupId,
 			"to_msg_id": msgId,
 			"reaction": UITypes.MsgReaction{
@@ -548,7 +514,7 @@ func RemoveReactionToMessage(ctx context.Context, clientUsername, groupId, msgId
 		CHEId:    rrtm.CHEId,
 	})
 
-	go broadcastMsgReactionRemoved(rrtm.MemberUsernames, map[string]any{
+	go broadcastMsgReactionRemoved(groupId, clientUsername, map[string]any{
 		"group_id":     groupId,
 		"msg_id":       msgId,
 		"reactor_user": clientUsername,

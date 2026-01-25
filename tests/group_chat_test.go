@@ -958,7 +958,7 @@ func TestGroupChat(t *testing.T) {
 	}
 
 	{
-		<-(time.NewTimer(100 * time.Millisecond).C)
+		<-(time.NewTimer(300 * time.Millisecond).C)
 
 		t.Log("user2 requests group info")
 
@@ -1068,6 +1068,8 @@ func TestGroupChat(t *testing.T) {
 	}
 
 	{
+		<-(time.NewTimer(300 * time.Millisecond).C)
+
 		t.Log("Action: user2 & user5 acknowledges 'delivered'")
 
 		// user2 acknowledges 'delivered'
