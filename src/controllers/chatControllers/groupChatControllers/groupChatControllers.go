@@ -8,6 +8,7 @@ import (
 	"i9chat/src/services/chatServices/groupChatService"
 	"net/url"
 
+	"github.com/goccy/go-json"
 	"github.com/gofiber/fiber/v2"
 )
 
@@ -95,7 +96,7 @@ func ExecuteAction(c *fiber.Ctx) error {
 
 	clientUser := c.Locals("user").(appTypes.ClientUser)
 
-	type handler func(ctx context.Context, clientUsername, groupId string, data map[string]any) (any, error)
+	type handler func(ctx context.Context, clientUsername, groupId string, data json.RawMessage) (any, error)
 
 	actionToHandlerMap := map[string]handler{
 		"join":                    joinGroup,
@@ -109,11 +110,11 @@ func ExecuteAction(c *fiber.Ctx) error {
 		"leave":                   leaveGroup,
 	}
 
-	var actionData map[string]any
+	var actionData json.RawMessage
 
-	ad_err := c.BodyParser(&actionData)
-	if ad_err != nil {
-		return ad_err
+	err := c.BodyParser(&actionData)
+	if err != nil {
+		return err
 	}
 
 	action, err := url.PathUnescape(c.Params("action"))
@@ -134,9 +135,9 @@ func ExecuteAction(c *fiber.Ctx) error {
 	return c.JSON(respData)
 }
 
-func SendMessage(ctx context.Context, clientUsername string, actionData map[string]any) (map[string]any, error) {
+func SendMessage(ctx context.Context, clientUsername string, actionData json.RawMessage) (map[string]any, error) {
 
-	acd := helpers.ToStruct[sendGroupChatMsg](actionData)
+	acd := helpers.FromBtJson[sendGroupChatMsg](actionData)
 
 	if err := acd.Validate(ctx); err != nil {
 		return nil, err
@@ -145,9 +146,9 @@ func SendMessage(ctx context.Context, clientUsername string, actionData map[stri
 	return groupChatService.SendMessage(ctx, clientUsername, acd.GroupId, acd.ReplyTargetMsgId, acd.IsReply, helpers.ToJson(acd.Msg), acd.At)
 }
 
-func AckMessageDelivered(ctx context.Context, clientUsername string, actionData map[string]any) (any, error) {
+func AckMessageDelivered(ctx context.Context, clientUsername string, actionData json.RawMessage) (any, error) {
 
-	acd := helpers.ToStruct[groupChatMsgAck](actionData)
+	acd := helpers.FromBtJson[groupChatMsgAck](actionData)
 
 	if err := acd.Validate(); err != nil {
 		return nil, err
@@ -156,9 +157,9 @@ func AckMessageDelivered(ctx context.Context, clientUsername string, actionData 
 	return groupChatService.AckMessageDelivered(ctx, clientUsername, acd.GroupId, acd.MsgId, acd.At)
 }
 
-func AckMessageRead(ctx context.Context, clientUsername string, actionData map[string]any) (any, error) {
+func AckMessageRead(ctx context.Context, clientUsername string, actionData json.RawMessage) (any, error) {
 
-	acd := helpers.ToStruct[groupChatMsgAck](actionData)
+	acd := helpers.FromBtJson[groupChatMsgAck](actionData)
 
 	if err := acd.Validate(); err != nil {
 		return nil, err
@@ -167,9 +168,9 @@ func AckMessageRead(ctx context.Context, clientUsername string, actionData map[s
 	return groupChatService.AckMessageRead(ctx, clientUsername, acd.GroupId, acd.MsgId, acd.At)
 }
 
-func GetGroupInfo(ctx context.Context, actionData map[string]any) (any, error) {
+func GetGroupInfo(ctx context.Context, actionData json.RawMessage) (any, error) {
 
-	acd := helpers.ToStruct[groupInfo](actionData)
+	acd := helpers.FromBtJson[groupInfo](actionData)
 
 	if err := acd.Validate(); err != nil {
 		return nil, err

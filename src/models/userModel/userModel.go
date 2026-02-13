@@ -41,19 +41,19 @@ func Exists(ctx context.Context, emailOrUsername string) (bool, error) {
 }
 
 type NewUserT struct {
-	Email               string `json:"email" db:"email"`
-	Username            string `json:"username" db:"username"`
-	ProfilePicCloudName string `json:"profile_pic_cloud_name" db:"profile_pic_cloud_name"`
-	Bio                 string `json:"bio" db:"bio"`
-	Presence            string `json:"presence" db:"presence"`
+	Email         string `json:"email" db:"email"`
+	Username      string `json:"username" db:"username"`
+	ProfilePicUrl string `json:"profile_pic_url" db:"profile_pic_url"`
+	Bio           string `json:"bio" db:"bio"`
+	Presence      string `json:"presence" db:"presence"`
 }
 
 func New(ctx context.Context, email, username, password, bio string) (newUser NewUserT, err error) {
 	res, err := db.Query(
 		ctx,
 		`/*cypher*/
-		CREATE (u:User { email: $email, username: $username, password: $password, profile_pic_cloud_name: "{notset}", bio: $bio, presence: "online", last_seen: 0 })
-		RETURN u { .username, .email, .profile_pic_cloud_name, .bio, .presence } AS new_user
+		CREATE (u:User { email: $email, username: $username, password: $password, profile_pic_url: "{notset}", bio: $bio, presence: "online", last_seen: 0 })
+		RETURN u { .username, .email, .profile_pic_url, .bio, .presence } AS new_user
 		`,
 		map[string]any{
 			"email":    email,
@@ -73,10 +73,10 @@ func New(ctx context.Context, email, username, password, bio string) (newUser Ne
 }
 
 type SignedInUserT struct {
-	Username            string `json:"username" db:"username"`
-	ProfilePicCloudName string `json:"profile_pic_cloud_name" db:"profile_pic_cloud_name"`
-	Presence            string `json:"presence" db:"presence"`
-	Password            string `json:"-" db:"password"`
+	Username      string `json:"username" db:"username"`
+	ProfilePicUrl string `json:"profile_pic_url" db:"profile_pic_url"`
+	Presence      string `json:"presence" db:"presence"`
+	Password      string `json:"-" db:"password"`
 }
 
 func SigninFind(ctx context.Context, uniqueIdent string) (user SignedInUserT, err error) {
@@ -86,7 +86,7 @@ func SigninFind(ctx context.Context, uniqueIdent string) (user SignedInUserT, er
 		MATCH (u:User)
 		WHERE u.username = $uniqueIdent OR u.email = $uniqueIdent
 
-		RETURN u { .username, .profile_pic_cloud_name, .presence, .password } AS found_user
+		RETURN u { .username, .profile_pic_url, .presence, .password } AS found_user
 		`,
 		map[string]any{
 			"uniqueIdent": uniqueIdent,
@@ -106,14 +106,14 @@ func SigninFind(ctx context.Context, uniqueIdent string) (user SignedInUserT, er
 	return user, nil
 }
 
-func ChangePassword(ctx context.Context, email, newPassword string) (bool, error) {
+func ChangePassword(ctx context.Context, email, newPassword string) (string, error) {
 	res, err := db.Query(
 		ctx,
 		`/*cypher*/
 		MATCH (user:User{ email: $email })
 		SET user.password = $newPassword
 
-		RETURN true AS done
+		RETURN user.username AS username
 		`,
 		map[string]any{
 			"email":       email,
@@ -122,14 +122,16 @@ func ChangePassword(ctx context.Context, email, newPassword string) (bool, error
 	)
 	if err != nil {
 		helpers.LogError(err)
-		return false, fiber.ErrInternalServerError
+		return "", fiber.ErrInternalServerError
 	}
 
 	if len(res.Records) == 0 {
-		return false, nil
+		return "", nil
 	}
 
-	return true, nil
+	username := modelHelpers.RKeyGet[string](res.Records, "username")
+
+	return username, nil
 }
 
 func ChangeProfilePicture(ctx context.Context, clientUsername, profilePicCloudName string) (bool, error) {
@@ -137,13 +139,13 @@ func ChangeProfilePicture(ctx context.Context, clientUsername, profilePicCloudNa
 		ctx,
 		`/*cypher*/
 		MATCH (u:User{ username: $client_username })
-		SET u.profile_pic_cloud_name = $profile_pic_cloud_name
+		SET u.profile_pic_url = $profile_pic_url
 
 		RETURN true AS done
 		`,
 		map[string]any{
-			"client_username":        clientUsername,
-			"profile_pic_cloud_name": profilePicCloudName,
+			"client_username": clientUsername,
+			"profile_pic_url": profilePicCloudName,
 		},
 	)
 	if err != nil {
@@ -258,7 +260,7 @@ func FindNearby(ctx context.Context, clientUsername string, x, y, radius float64
 		MATCH (u:User)
 		WHERE u.username <> $client_username AND point.distance(point({ x: $live_long, y: $live_lat, crs: "WGS-84" }), u.geolocation) <= $radius
 
-		RETURN collect(u { .username, .profile_pic_cloud_name, .bio, .presence, .last_seen }) AS nearby_users
+		RETURN collect(u { .username, .profile_pic_url, .bio, .presence, .last_seen }) AS nearby_users
 	`,
 		map[string]any{
 			"client_username": clientUsername,

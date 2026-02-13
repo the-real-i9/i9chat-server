@@ -37,10 +37,10 @@ func neo4jMapResToStruct(val any, dest any) {
 			continue
 		}
 
-		mapKeyT := reflect.TypeOf(valMap[mapKey])
+		mapKeyValT := reflect.TypeOf(valMap[mapKey])
 
-		if !mapKeyT.AssignableTo(structField.Type) {
-			panic(fmt.Sprintf("cannot map key %s of type %s to struct field %s of type %s", mapKey, mapKeyT.Kind(), structField.Name, structField.Type.Kind()))
+		if !mapKeyValT.AssignableTo(structField.Type) {
+			panic(fmt.Sprintf("cannot map key %s of type %s to struct field %s of type %s", mapKey, mapKeyValT.Kind(), structField.Name, structField.Type.Kind()))
 		}
 
 		destVal.Field(i).Set(reflect.ValueOf(valMap[mapKey]))
@@ -71,7 +71,6 @@ func RKeyGet[T any](r []*neo4j.Record, key string) (res T) {
 	}
 
 	return resAny.(T)
-
 }
 
 func RKeyGetMany[T any](r []*neo4j.Record, key string) (res []T) {

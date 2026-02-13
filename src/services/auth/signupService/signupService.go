@@ -14,6 +14,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/goccy/go-json"
 	"github.com/gofiber/fiber/v2"
 )
 
@@ -52,10 +53,10 @@ type signup2RespT struct {
 	Msg string `json:"msg"`
 }
 
-func VerifyEmail(ctx context.Context, sessionData map[string]any, inputVerfCode string) (signup2RespT, map[string]any, error) {
+func VerifyEmail(ctx context.Context, sessionData json.RawMessage, inputVerfCode string) (signup2RespT, map[string]any, error) {
 	var resp signup2RespT
 
-	sd := helpers.ToStruct[struct {
+	sd := helpers.FromBtJson[struct {
 		Email        string
 		VCode        string
 		VCodeExpires time.Time
@@ -83,10 +84,12 @@ type signup3RespT struct {
 	User UITypes.ClientUser `json:"user"`
 }
 
-func RegisterUser(ctx context.Context, sessionData map[string]any, username, password, bio string) (signup3RespT, string, error) {
+func RegisterUser(ctx context.Context, sessionData json.RawMessage, username, password, bio string) (signup3RespT, string, error) {
 	var resp signup3RespT
 
-	email := sessionData["email"].(string)
+	email := helpers.FromBtJson[struct {
+		Email string
+	}](sessionData).Email
 
 	userExists, err := userService.UserExists(ctx, username)
 	if err != nil {
@@ -118,11 +121,10 @@ func RegisterUser(ctx context.Context, sessionData map[string]any, username, pas
 		return resp, "", err
 	}
 
-	userMap := helpers.StructToMap(newUser)
-	cloudStorageService.ProfilePicCloudNameToUrl(userMap)
+	newUser.ProfilePicUrl = cloudStorageService.ProfilePicCloudNameToUrl(newUser.ProfilePicUrl)
 
 	resp.Msg = "Signup success!"
-	resp.User = helpers.ToStruct[UITypes.ClientUser](userMap)
+	resp.User = UITypes.ClientUser{Username: newUser.Username, ProfilePicUrl: newUser.ProfilePicUrl, Presence: newUser.Presence}
 
 	return resp, authJwt, nil
 }

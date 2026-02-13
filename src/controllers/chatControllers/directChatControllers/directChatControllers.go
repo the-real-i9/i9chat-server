@@ -6,6 +6,7 @@ import (
 	"i9chat/src/helpers"
 	"i9chat/src/services/chatServices/directChatService"
 
+	"github.com/goccy/go-json"
 	"github.com/gofiber/fiber/v2"
 )
 
@@ -22,9 +23,9 @@ func GetDirectChatHistory(c *fiber.Ctx) error {
 	return c.JSON(respData)
 }
 
-func SendMessage(ctx context.Context, clientUsername string, actionData map[string]any) (map[string]any, error) {
+func SendMessage(ctx context.Context, clientUsername string, actionData json.RawMessage) (map[string]any, error) {
 
-	acd := helpers.ToStruct[sendDirectChatMsg](actionData)
+	acd := helpers.FromBtJson[sendDirectChatMsg](actionData)
 
 	if err := acd.Validate(ctx); err != nil {
 		return nil, err
@@ -33,9 +34,9 @@ func SendMessage(ctx context.Context, clientUsername string, actionData map[stri
 	return directChatService.SendMessage(ctx, clientUsername, acd.PartnerUsername, acd.ReplyTargetMsgId, acd.IsReply, helpers.ToJson(acd.Msg), acd.At)
 }
 
-func AckMessageDelivered(ctx context.Context, clientUsername string, actionData map[string]any) (any, error) {
+func AckMessageDelivered(ctx context.Context, clientUsername string, actionData json.RawMessage) (any, error) {
 
-	acd := helpers.ToStruct[directChatMsgAck](actionData)
+	acd := helpers.FromBtJson[directChatMsgAck](actionData)
 
 	if err := acd.Validate(); err != nil {
 		return nil, err
@@ -44,9 +45,9 @@ func AckMessageDelivered(ctx context.Context, clientUsername string, actionData 
 	return directChatService.AckMessageDelivered(ctx, clientUsername, acd.PartnerUsername, acd.MsgId, acd.At)
 }
 
-func AckMessageRead(ctx context.Context, clientUsername string, actionData map[string]any) (any, error) {
+func AckMessageRead(ctx context.Context, clientUsername string, actionData json.RawMessage) (any, error) {
 
-	acd := helpers.ToStruct[directChatMsgAck](actionData)
+	acd := helpers.FromBtJson[directChatMsgAck](actionData)
 
 	if err := acd.Validate(); err != nil {
 		return nil, err

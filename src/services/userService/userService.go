@@ -80,7 +80,21 @@ func SigninUserFind(ctx context.Context, uniqueIdent string) (user.SignedInUserT
 }
 
 func ChangeUserPassword(ctx context.Context, email, newPassword string) (bool, error) {
-	return user.ChangePassword(ctx, email, newPassword)
+	username, err := user.ChangePassword(ctx, email, newPassword)
+	if err != nil {
+		return false, err
+	}
+
+	done := username != ""
+
+	if done {
+		go eventStreamService.QueueEditUserEvent(eventTypes.EditUserEvent{
+			Username:    username,
+			UpdateKVMap: map[string]any{"password": newPassword},
+		})
+	}
+
+	return done, nil
 }
 
 type AuthPPicDataT struct {
@@ -135,7 +149,7 @@ func ChangeProfilePicture(ctx context.Context, clientUsername, profilePicCloudNa
 	if done {
 		go eventStreamService.QueueEditUserEvent(eventTypes.EditUserEvent{
 			Username:    clientUsername,
-			UpdateKVMap: map[string]any{"profile_pic_cloud_name": profilePicCloudName},
+			UpdateKVMap: map[string]any{"profile_pic_url": profilePicCloudName},
 		})
 	}
 

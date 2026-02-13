@@ -56,6 +56,7 @@ func directMsgReactionsStreamBgWorker(rdb *redis.Client) {
 				msg.RxnData = stmsg.Values["rxnData"].(string)
 				msg.ToMsgId = stmsg.Values["toMsgId"].(string)
 				msg.Emoji = stmsg.Values["emoji"].(string)
+				msg.CHECursor = helpers.FromJson[int64](stmsg.Values["cheCursor"].(string))
 
 				msgs = append(msgs, msg)
 
@@ -63,15 +64,15 @@ func directMsgReactionsStreamBgWorker(rdb *redis.Client) {
 
 			newMsgReactionEntries := []string{}
 
-			chatMsgReactions := make(map[string][][2]string)
+			chatMsgReactions := make(map[string][][2]any)
 
 			msgReactions := make(map[string][]string)
 
 			// batch data for batch processing
-			for i, msg := range msgs {
+			for _, msg := range msgs {
 				newMsgReactionEntries = append(newMsgReactionEntries, msg.CHEId, msg.RxnData)
 
-				chatMsgReactions[msg.FromUser+" "+msg.ToUser] = append(chatMsgReactions[msg.FromUser+" "+msg.ToUser], [2]string{msg.CHEId, stmsgIds[i]})
+				chatMsgReactions[msg.FromUser+" "+msg.ToUser] = append(chatMsgReactions[msg.FromUser+" "+msg.ToUser], [2]any{msg.CHEId, float64(msg.CHECursor)})
 
 				msgReactions[msg.ToMsgId] = append(msgReactions[msg.ToMsgId], msg.FromUser, msg.Emoji)
 			}
@@ -83,15 +84,15 @@ func directMsgReactionsStreamBgWorker(rdb *redis.Client) {
 
 			eg, sharedCtx := errgroup.WithContext(ctx)
 
-			for ownerUserPartnerUser, CHEId_stmsgId_Pairs := range chatMsgReactions {
+			for ownerUserPartnerUser, CHEId_score_Pairs := range chatMsgReactions {
 				eg.Go(func() error {
-					ownerUserPartnerUser, CHEId_stmsgId_Pairs := ownerUserPartnerUser, CHEId_stmsgId_Pairs
+					ownerUserPartnerUser, CHEId_score_Pairs := ownerUserPartnerUser, CHEId_score_Pairs
 
 					var ownerUser, partnerUser string
 
 					fmt.Sscanf(ownerUserPartnerUser, "%s %s", &ownerUser, &partnerUser)
 
-					return cache.StoreDirectChatHistory(sharedCtx, ownerUser, partnerUser, CHEId_stmsgId_Pairs)
+					return cache.StoreDirectChatHistory(sharedCtx, ownerUser, partnerUser, CHEId_score_Pairs)
 				})
 			}
 

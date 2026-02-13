@@ -4,11 +4,13 @@ import (
 	"context"
 	"i9chat/src/helpers"
 	"i9chat/src/services/chatServices/groupChatService"
+
+	"github.com/goccy/go-json"
 )
 
-func changeGroupName(ctx context.Context, clientUsername, groupId string, data map[string]any) (any, error) {
+func changeGroupName(ctx context.Context, clientUsername, groupId string, data json.RawMessage) (any, error) {
 
-	d := helpers.ToStruct[changeGroupNameAction](data)
+	d := helpers.FromBtJson[changeGroupNameAction](data)
 
 	if err := d.Validate(); err != nil {
 		return nil, err
@@ -17,9 +19,9 @@ func changeGroupName(ctx context.Context, clientUsername, groupId string, data m
 	return groupChatService.ChangeGroupName(ctx, groupId, clientUsername, d.NewName)
 }
 
-func changeGroupDescription(ctx context.Context, clientUsername, groupId string, data map[string]any) (any, error) {
+func changeGroupDescription(ctx context.Context, clientUsername, groupId string, data json.RawMessage) (any, error) {
 
-	d := helpers.ToStruct[changeGroupDescriptionAction](data)
+	d := helpers.FromBtJson[changeGroupDescriptionAction](data)
 
 	if err := d.Validate(); err != nil {
 		return nil, err
@@ -29,9 +31,9 @@ func changeGroupDescription(ctx context.Context, clientUsername, groupId string,
 
 }
 
-func changeGroupPicture(ctx context.Context, clientUsername, groupId string, data map[string]any) (any, error) {
+func changeGroupPicture(ctx context.Context, clientUsername, groupId string, data json.RawMessage) (any, error) {
 
-	d := helpers.ToStruct[changeGroupPictureAction](data)
+	d := helpers.FromBtJson[changeGroupPictureAction](data)
 
 	if err := d.Validate(ctx); err != nil {
 		return nil, err
@@ -40,9 +42,9 @@ func changeGroupPicture(ctx context.Context, clientUsername, groupId string, dat
 	return groupChatService.ChangeGroupPicture(ctx, groupId, clientUsername, d.PictureCloudName)
 }
 
-func addUsersToGroup(ctx context.Context, clientUsername, groupId string, data map[string]any) (any, error) {
+func addUsersToGroup(ctx context.Context, clientUsername, groupId string, data json.RawMessage) (any, error) {
 
-	d := helpers.ToStruct[addUsersToGroupAction](data)
+	d := helpers.FromBtJson[addUsersToGroupAction](data)
 
 	if err := d.Validate(); err != nil {
 		return nil, err
@@ -51,9 +53,9 @@ func addUsersToGroup(ctx context.Context, clientUsername, groupId string, data m
 	return groupChatService.AddUsersToGroup(ctx, groupId, clientUsername, d.NewUsers)
 }
 
-func removeUserFromGroup(ctx context.Context, clientUsername, groupId string, data map[string]any) (any, error) {
+func removeUserFromGroup(ctx context.Context, clientUsername, groupId string, data json.RawMessage) (any, error) {
 
-	d := helpers.ToStruct[actOnSingleUserAction](data)
+	d := helpers.FromBtJson[actOnSingleUserAction](data)
 
 	if err := d.Validate(); err != nil {
 		return nil, err
@@ -62,17 +64,17 @@ func removeUserFromGroup(ctx context.Context, clientUsername, groupId string, da
 	return groupChatService.RemoveUserFromGroup(ctx, groupId, clientUsername, d.User)
 }
 
-func joinGroup(ctx context.Context, clientUsername, groupId string, _ map[string]any) (any, error) {
+func joinGroup(ctx context.Context, clientUsername, groupId string, _ json.RawMessage) (any, error) {
 	return groupChatService.JoinGroup(ctx, groupId, clientUsername)
 }
 
-func leaveGroup(ctx context.Context, clientUsername, groupId string, _ map[string]any) (any, error) {
+func leaveGroup(ctx context.Context, clientUsername, groupId string, _ json.RawMessage) (any, error) {
 	return groupChatService.LeaveGroup(ctx, groupId, clientUsername)
 }
 
-func makeUserGroupAdmin(ctx context.Context, clientUsername, groupId string, data map[string]any) (any, error) {
+func makeUserGroupAdmin(ctx context.Context, clientUsername, groupId string, data json.RawMessage) (any, error) {
 
-	d := helpers.ToStruct[actOnSingleUserAction](data)
+	d := helpers.FromBtJson[actOnSingleUserAction](data)
 
 	if err := d.Validate(); err != nil {
 		return nil, err
@@ -81,8 +83,8 @@ func makeUserGroupAdmin(ctx context.Context, clientUsername, groupId string, dat
 	return groupChatService.MakeUserGroupAdmin(ctx, groupId, clientUsername, d.User)
 }
 
-func removeUserFromGroupAdmins(ctx context.Context, clientUsername, groupId string, data map[string]any) (any, error) {
-	d := helpers.ToStruct[actOnSingleUserAction](data)
+func removeUserFromGroupAdmins(ctx context.Context, clientUsername, groupId string, data json.RawMessage) (any, error) {
+	d := helpers.FromBtJson[actOnSingleUserAction](data)
 
 	if err := d.Validate(); err != nil {
 		return nil, err

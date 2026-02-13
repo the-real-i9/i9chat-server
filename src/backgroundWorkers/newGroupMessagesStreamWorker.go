@@ -55,27 +55,28 @@ func newGroupMessagesStreamBgWorker(rdb *redis.Client) {
 				msg.ToGroup = stmsg.Values["toGroup"].(string)
 				msg.CHEId = stmsg.Values["CHEId"].(string)
 				msg.MsgData = stmsg.Values["msgData"].(string)
+				msg.CHECursor = helpers.FromJson[int64](stmsg.Values["cheCursor"].(string))
 
 				msgs = append(msgs, msg)
 			}
 
 			newMessageEntries := []string{}
 
-			updatedUserChats := make(map[string]map[string]string)
+			updatedUserChats := make(map[string]map[string]float64)
 
-			chatMessages := make(map[string][][2]string)
+			chatMessages := make(map[string][][2]any)
 
 			// batch data for batch processing
-			for i, msg := range msgs {
+			for _, msg := range msgs {
 				newMessageEntries = append(newMessageEntries, msg.CHEId, msg.MsgData)
 
 				if updatedUserChats[msg.FromUser] == nil {
-					updatedUserChats[msg.FromUser] = make(map[string]string)
+					updatedUserChats[msg.FromUser] = make(map[string]float64)
 				}
 
-				updatedUserChats[msg.FromUser][msg.ToGroup] = stmsgIds[i]
+				updatedUserChats[msg.FromUser][msg.ToGroup] = float64(msg.CHECursor)
 
-				chatMessages[msg.FromUser+" "+msg.ToGroup] = append(chatMessages[msg.FromUser+" "+msg.ToGroup], [2]string{msg.CHEId, stmsgIds[i]})
+				chatMessages[msg.FromUser+" "+msg.ToGroup] = append(chatMessages[msg.FromUser+" "+msg.ToGroup], [2]any{msg.CHEId, float64(msg.CHECursor)})
 
 				postNewMessage, err := groupChat.PostSendMessage(ctx, msg.FromUser, msg.ToGroup, msg.CHEId)
 				if err != nil {
@@ -85,7 +86,7 @@ func newGroupMessagesStreamBgWorker(rdb *redis.Client) {
 				for _, memUser := range postNewMessage.MemberUsernames {
 					memUser := memUser.(string)
 
-					chatMessages[memUser+" "+msg.ToGroup] = append(chatMessages[memUser+" "+msg.ToGroup], [2]string{msg.CHEId, stmsgIds[i]})
+					chatMessages[memUser+" "+msg.ToGroup] = append(chatMessages[memUser+" "+msg.ToGroup], [2]any{msg.CHEId, float64(msg.CHECursor)})
 				}
 			}
 
@@ -96,23 +97,23 @@ func newGroupMessagesStreamBgWorker(rdb *redis.Client) {
 
 			eg, sharedCtx := errgroup.WithContext(ctx)
 
-			for ownerUser, groupId_stmsgId_Pairs := range updatedUserChats {
+			for ownerUser, groupId_score_Pairs := range updatedUserChats {
 				eg.Go(func() error {
-					ownerUser, groupId_stmsgId_Pairs := ownerUser, groupId_stmsgId_Pairs
+					ownerUser, groupId_score_Pairs := ownerUser, groupId_score_Pairs
 
-					return cache.StoreUserChatIdents(sharedCtx, ownerUser, groupId_stmsgId_Pairs)
+					return cache.StoreUserChatIdents(sharedCtx, ownerUser, groupId_score_Pairs)
 				})
 			}
 
-			for ownerUserGroupId, CHEId_stmsgId_Pairs := range chatMessages {
+			for ownerUserGroupId, CHEId_score_Pairs := range chatMessages {
 				eg.Go(func() error {
-					ownerUserGroupId, CHEId_stmsgId_Pairs := ownerUserGroupId, CHEId_stmsgId_Pairs
+					ownerUserGroupId, CHEId_score_Pairs := ownerUserGroupId, CHEId_score_Pairs
 
 					var ownerUser, groupId string
 
 					fmt.Sscanf(ownerUserGroupId, "%s %s", &ownerUser, &groupId)
 
-					return cache.StoreGroupChatHistory(sharedCtx, ownerUser, groupId, CHEId_stmsgId_Pairs)
+					return cache.StoreGroupChatHistory(sharedCtx, ownerUser, groupId, CHEId_score_Pairs)
 				})
 			}
 

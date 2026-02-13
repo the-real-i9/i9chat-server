@@ -18,15 +18,16 @@ func redisDB() *redis.Client {
 }
 
 type NewMessage struct {
-	Id                   string         `json:"id" db:"id"`
-	ChatHistoryEntryType string         `json:"che_type" db:"che_type"`
-	Content              map[string]any `json:"content" db:"content"`
-	DeliveryStatus       string         `json:"delivery_status" db:"delivery_status"`
-	CreatedAt            int64          `json:"created_at" db:"created_at"`
-	Sender               any            `json:"sender" db:"sender"`
-	ReplyTargetMsg       map[string]any `json:"reply_target_msg,omitempty" db:"reply_target_msg"`
-	FirstFromUser        bool           `json:"-" db:"ffu"`
-	FirstToUser          bool           `json:"-" db:"ftu"`
+	Id             string         `json:"id" db:"id"`
+	CHEType        string         `json:"che_type" db:"che_type"`
+	Content        map[string]any `json:"content" db:"content"`
+	DeliveryStatus string         `json:"delivery_status" db:"delivery_status"`
+	CreatedAt      int64          `json:"created_at" db:"created_at"`
+	Sender         any            `json:"sender" db:"sender"`
+	ReplyTargetMsg map[string]any `json:"reply_target_msg,omitempty" db:"reply_target_msg"`
+	Cursor         int64          `json:"cursor" db:"cursor"`
+	FirstFromUser  bool           `json:"-" db:"ffu"`
+	FirstToUser    bool           `json:"-" db:"ftu"`
 }
 
 func SendMessage(ctx context.Context, clientUsername, partnerUsername, msgContent string, at int64) (NewMessage, error) {
@@ -39,21 +40,31 @@ func SendMessage(ctx context.Context, clientUsername, partnerUsername, msgConten
 			NOT EXISTS { (clientUser)-[:HAS_CHAT]->(:DirectChat)-[:WITH_USER]->(partnerUser) } AS ffu,
 			NOT EXISTS { (partnerUser)-[:HAS_CHAT]->(:DirectChat)-[:WITH_USER]->(clientUser) } AS ftu
 
+		MERGE (serialCounter:DirectCHESerialCounter{ name: $direct_che_serial_counter })
+		ON CREATE SET serialCounter.value = 0
+
+		LET dummy = 0
+
+		CALL apoc.atomic.add(serialCounter, 'value', 1) YIELD cheNextVal
+
 		MERGE (clientUser)-[:HAS_CHAT]->(clientChat:DirectChat{ owner_username: $client_username, partner_username: $partner_username })-[:WITH_USER]->(partnerUser)
 		MERGE (partnerUser)-[:HAS_CHAT]->(partnerChat:DirectChat{ owner_username: $partner_username, partner_username: $client_username })-[:WITH_USER]->(clientUser)
 
-		WITH clientUser, clientChat, partnerUser, partnerChat, ffu, ftu
-		CREATE (message:DirectMessage:DirectChatEntry{ id: randomUUID(), che_type: "message", content: $message_content, delivery_status: "sent", created_at: $at }),
+		WITH clientUser, clientChat, partnerUser, partnerChat, cheNextVal, ffu, ftu
+		CREATE (message:DirectMessage:DirectChatEntry{ id: randomUUID(), che_type: "message", content: $message_content, delivery_status: "sent", created_at: $at, cursor: cheNextVal }),
 			(clientUser)-[:SENDS_MESSAGE]->(message)-[:IN_DIRECT_CHAT]->(clientChat),
 			(message)-[:IN_DIRECT_CHAT { receipt: "received" }]->(partnerChat)
+		
+		SET clientChat.cursor = cheNextVal
 
 		RETURN message { .*, content: apoc.convert.fromJsonMap(message.content), sender: $client_username, ffu: ffu, ftu: ftu } AS new_message
 		`,
 		map[string]any{
-			"client_username":  clientUsername,
-			"partner_username": partnerUsername,
-			"message_content":  msgContent,
-			"at":               at,
+			"client_username":           clientUsername,
+			"partner_username":          partnerUsername,
+			"message_content":           msgContent,
+			"at":                        at,
+			"direct_che_serial_counter": "$directCHESC$",
 		},
 	)
 	if err != nil {
@@ -66,16 +77,16 @@ func SendMessage(ctx context.Context, clientUsername, partnerUsername, msgConten
 	return newMsg, nil
 }
 
-func AckMessageDelivered(ctx context.Context, clientUsername, partnerUsername, msgId string, deliveredAt int64) (bool, error) {
+func AckMessageDelivered(ctx context.Context, clientUsername, partnerUsername, msgId string, deliveredAt int64) (*int64, error) {
 	res, err := db.Query(
 		ctx,
 		`/*cypher*/
 		MATCH (clientChat:DirectChat{ owner_username: $client_username, partner_username: $partner_username }),
       (clientChat)<-[:IN_DIRECT_CHAT { receipt: "received" }]-(message:DirectMessage{ id: $message_id, delivery_status: "sent" })
 
-    SET message.delivery_status = "delivered", message.delivered_at = $delivered_at
+    SET message.delivery_status = "delivered", message.delivered_at = $delivered_at, clientChat.cursor = message.cursor
 
-		RETURN true AS done
+		RETURN clientChat.cursor AS cursor
 		`,
 		map[string]any{
 			"client_username":  clientUsername,
@@ -86,14 +97,16 @@ func AckMessageDelivered(ctx context.Context, clientUsername, partnerUsername, m
 	)
 	if err != nil {
 		helpers.LogError(err)
-		return false, fiber.ErrInternalServerError
+		return nil, fiber.ErrInternalServerError
 	}
 
 	if len(res.Records) == 0 {
-		return false, nil
+		return nil, nil
 	}
 
-	return true, nil
+	cursor := modelHelpers.RKeyGet[int64](res.Records, "cursor")
+
+	return &cursor, nil
 }
 
 func AckMessageRead(ctx context.Context, clientUsername, partnerUsername, msgId string, readAt int64) (bool, error) {
@@ -132,26 +145,41 @@ func ReplyToMessage(ctx context.Context, clientUsername, partnerUsername, target
 		`/*cypher*/
 		MATCH (clientUser:User{ username: $client_username }), (partnerUser:User{ username: $partner_username })
 		MATCH (targetMsg:DirectMessage { id: $target_msg_id })<-[:SENDS_MESSAGE]-(targetMsgSender)
+
+		WITH clientUser, partnerUser,
+			NOT EXISTS { (clientUser)-[:HAS_CHAT]->(:DirectChat)-[:WITH_USER]->(partnerUser) } AS ffu,
+			NOT EXISTS { (partnerUser)-[:HAS_CHAT]->(:DirectChat)-[:WITH_USER]->(clientUser) } AS ftu
+
+		MERGE (serialCounter:DirectCHESerialCounter{ name: $direct_che_serial_counter })
+		ON CREATE SET serialCounter.value = 0
+
+		LET dummy = 0
+
+		CALL apoc.atomic.add(serialCounter, 'value', 1) YIELD cheNextVal
+
 		MERGE (clientUser)-[:HAS_CHAT]->(clientChat:DirectChat{ owner_username: $client_username, partner_username: $partner_username })-[:WITH_USER]->(partnerUser)
 		MERGE (partnerUser)-[:HAS_CHAT]->(partnerChat:DirectChat{ owner_username: $partner_username, partner_username: $client_username })-[:WITH_USER]->(clientUser)
 
-		WITH clientUser, clientChat, partnerUser, partnerChat, targetMsg, targetMsgSender
-		CREATE (replyMsg:DirectMessage:DirectChatEntry{ id: randomUUID(), che_type: "message", content: $message_content, delivery_status: "sent", created_at: $at }),
+		WITH clientUser, clientChat, partnerUser, partnerChat, targetMsg, targetMsgSender, cheNextVal, ffu, ftu
+		CREATE (replyMsg:DirectMessage:DirectChatEntry{ id: randomUUID(), che_type: "message", content: $message_content, delivery_status: "sent", created_at: $at, cursor: cheNextVal }),
 			(clientUser)-[:SENDS_MESSAGE]->(replyMsg)-[:IN_DIRECT_CHAT]->(clientChat),
 			(replyMsg)-[:IN_DIRECT_CHAT { receipt: "received" }]->(partnerChat),
 			(replyMsg)-[:REPLIES_TO]->(targetMsg)
 
+		SET clientChat.cursor = cheNextVal
+
 		WITH replyMsg,
 			targetMsg { .id, content: apoc.convert.fromJsonMap(targetMsg.content), sender_user: targetMsgSender.username } AS reply_target_msg
 
-		RETURN replyMsg { .*, content: apoc.convert.fromJsonMap(replyMsg.content), created_at, sender: $client_username, reply_target_msg } AS new_message
+		RETURN replyMsg { .*, content: apoc.convert.fromJsonMap(replyMsg.content), created_at, sender: $client_username, reply_target_msg, ffu: ffu, ftu: ftu } AS new_message
 		`,
 		map[string]any{
-			"client_username":  clientUsername,
-			"partner_username": partnerUsername,
-			"message_content":  msgContent,
-			"target_msg_id":    targetMsgId,
-			"at":               at,
+			"client_username":           clientUsername,
+			"partner_username":          partnerUsername,
+			"message_content":           msgContent,
+			"target_msg_id":             targetMsgId,
+			"at":                        at,
+			"direct_che_serial_counter": "$directCHESC$",
 		},
 	)
 	if err != nil {
@@ -165,11 +193,12 @@ func ReplyToMessage(ctx context.Context, clientUsername, partnerUsername, target
 }
 
 type RxnToMessage struct {
-	CHEId                string `json:"-" db:"che_id"`
-	ChatHistoryEntryType string `json:"che_type" db:"che_type"`
-	Emoji                string `json:"emoji" db:"emoji"`
-	Reactor              any    `json:"reactor" db:"reactor"`
-	ToMsgId              string `json:"to_msg_id" db:"to_msg_id"`
+	CHEId   string `json:"-" db:"che_id"`
+	CHEType string `json:"che_type" db:"che_type"`
+	Emoji   string `json:"emoji" db:"emoji"`
+	Reactor any    `json:"reactor" db:"reactor"`
+	Cursor  int64  `json:"cursor" db:"cursor"`
+	ToMsgId string `json:"to_msg_id" db:"to_msg_id"`
 }
 
 func ReactToMessage(ctx context.Context, clientUsername, partnerUsername, msgId, emoji string, at int64) (RxnToMessage, error) {
@@ -180,29 +209,37 @@ func ReactToMessage(ctx context.Context, clientUsername, partnerUsername, msgId,
 			(clientChat)<-[:IN_DIRECT_CHAT]-(message:DirectMessage{ id: $message_id }),
 			(partnerUser)-[:HAS_CHAT]->(partnerChat)-[:WITH_USER]->(clientUser)
 
-		WITH clientUser, message, partnerUser, partnerChat
+		MERGE (serialCounter:DirectCHESerialCounter{ name: $direct_che_serial_counter })
+		ON CREATE SET serialCounter.value = 0
+
+		LET dummy = 0
+		
+		CALL apoc.atomic.add(serialCounter, 'value', 1) YIELD cheNextVal
+
+		WITH clientUser, message, partnerUser, partnerChat, cheNextVal
 		MERGE (msgrxn:DirectMessageReaction:DirectChatEntry{ reactor_username: clientUser.username, message_id: $message_id })
 		ON CREATE
 			SET msgrxn.che_id = randomUUID(),
 				msgrxn.che_type = "reaction"
 
-		SET msgrxn.emoji = $emoji, msgrxn.at = $at
+		SET msgrxn.emoji = $emoji, msgrxn.at = $at, msgrxn.cursor = cheNextVal
 
 		MERGE (clientUser)-[crxn:REACTS_TO_MESSAGE]->(message)
 		SET crxn.emoji = $emoji, crxn.at = $at
-		
+
 		MERGE (msgrxn)-[:IN_DIRECT_CHAT]->(clientChat)
 		MERGE (msgrxn)-[:IN_DIRECT_CHAT]->(partnerChat)
 
-		RETURN msgrxn { .che_id, .che_type, .emoji, to_msg_id: $message_id, reactor: $client_username } AS rxn_to_msg
+		RETURN msgrxn { .che_id, .che_type, .emoji, to_msg_id: $message_id, reactor: $client_username, .cursor } AS rxn_to_msg
 
 		`,
 		map[string]any{
-			"client_username":  clientUsername,
-			"partner_username": partnerUsername,
-			"message_id":       msgId,
-			"emoji":            emoji,
-			"at":               at,
+			"client_username":           clientUsername,
+			"partner_username":          partnerUsername,
+			"message_id":                msgId,
+			"emoji":                     emoji,
+			"at":                        at,
+			"direct_che_serial_counter": "$directCHESC$",
 		},
 	)
 	if err != nil {

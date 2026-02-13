@@ -10,7 +10,6 @@ import (
 	"i9chat/src/services/cloudStorageService"
 	"i9chat/src/services/eventStreamService"
 	"i9chat/src/services/eventStreamService/eventTypes"
-	"maps"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -66,8 +65,7 @@ func NewGroup(ctx context.Context, clientUsername, name, description, pictureClo
 		return nil, err
 	}
 
-	done := newGroup.Id != ""
-	if !done {
+	if newGroup.Id == "" {
 		return nil, nil
 	}
 
@@ -78,33 +76,47 @@ func NewGroup(ctx context.Context, clientUsername, name, description, pictureClo
 		InitMembers:     newGroup.InitUsers,
 		CreatorUserCHEs: newGroup.ClientUserCHEs,
 		InitMembersCHEs: newGroup.InitUsersCHEs,
+		ChatCursor:      newGroup.ChatCursor,
 	})
 
-	type groupActivityCHE struct {
-		CHEType string `json:"che_type"`
-		Info    string `json:"info"`
-	}
-
-	go func() {
+	go func(newGroup groupChat.NewGroup) {
 		// history is the same for all init users, we only need separation for the cache
 		// so we make use of one user's history
-		cheMaps := newGroup.InitUsersCHEs[initUsers[0]]
+		history := newGroup.InitUsersCHEs[initUsers[0]].([]any)
 
-		history := helpers.ToStruct[[]groupActivityCHE](cheMaps)
+		newGroup.PictureUrl = cloudStorageService.GroupPicCloudNameToUrl(newGroup.PictureUrl)
+
+		var UIHistory []UITypes.ChatHistoryEntry
+
+		for _, hist := range history {
+			hist := hist.(map[string]any)
+
+			UIHistory = append(UIHistory, UITypes.ChatHistoryEntry{CHEType: hist["che_type"].(string), Info: hist["info"].(string), Cursor: hist["cursor"].(int64)})
+		}
 
 		initMemberData := map[string]any{
-			"group":   newGroup,
-			"history": history,
+			"chat":    UITypes.ChatSnippet{Type: "group", Group: newGroup, UnreadMC: 2, Cursor: newGroup.ChatCursor},
+			"history": UIHistory,
 		}
 
 		broadcastNewGroup(newGroup.InitUsers, initMemberData)
-	}()
+	}(newGroup)
 
-	history := helpers.ToStruct[[]groupActivityCHE](newGroup.ClientUserCHEs)
+	history := newGroup.ClientUserCHEs
+
+	newGroup.PictureUrl = cloudStorageService.GroupPicCloudNameToUrl(newGroup.PictureUrl)
+
+	var UIHistory []UITypes.ChatHistoryEntry
+
+	for _, hist := range history {
+		hist := hist.(map[string]any)
+
+		UIHistory = append(UIHistory, UITypes.ChatHistoryEntry{CHEType: hist["che_type"].(string), Info: hist["info"].(string), Cursor: hist["cursor"].(int64)})
+	}
 
 	clientData := map[string]any{
-		"group":   newGroup,
-		"history": history,
+		"chat":    UITypes.ChatSnippet{Type: "group", Group: newGroup, UnreadMC: 2, Cursor: newGroup.ChatCursor},
+		"history": UIHistory,
 	}
 
 	return clientData, nil
@@ -130,9 +142,17 @@ func ChangeGroupName(ctx context.Context, groupId, clientUsername, newName strin
 		MemInfo:       newActivity.MemInfo,
 	})
 
-	go broadcastActivityToAll(groupId, newActivity.MemInfo, []any{clientUsername})
+	go broadcastActivityToAll(groupId, UITypes.ChatHistoryEntry{
+		CHEType: newActivity.MemberUserCHE["che_type"].(string),
+		Info:    newActivity.MemberUserCHE["info"].(string),
+		Cursor:  newActivity.MemberUserCHE["cursor"].(int64),
+	}, []any{clientUsername})
 
-	return newActivity.ClientUserCHE["info"], nil
+	return UITypes.ChatHistoryEntry{
+		CHEType: newActivity.ClientUserCHE["che_type"].(string),
+		Info:    newActivity.ClientUserCHE["info"].(string),
+		Cursor:  newActivity.ClientUserCHE["cursor"].(int64),
+	}, nil
 }
 
 func ChangeGroupDescription(ctx context.Context, groupId, clientUsername, newDescription string) (any, error) {
@@ -155,9 +175,17 @@ func ChangeGroupDescription(ctx context.Context, groupId, clientUsername, newDes
 		MemInfo:       newActivity.MemInfo,
 	})
 
-	go broadcastActivityToAll(groupId, newActivity.MemInfo, []any{clientUsername})
+	go broadcastActivityToAll(groupId, UITypes.ChatHistoryEntry{
+		CHEType: newActivity.MemberUserCHE["che_type"].(string),
+		Info:    newActivity.MemberUserCHE["info"].(string),
+		Cursor:  newActivity.MemberUserCHE["cursor"].(int64),
+	}, []any{clientUsername})
 
-	return newActivity.ClientUserCHE["info"], nil
+	return UITypes.ChatHistoryEntry{
+		CHEType: newActivity.ClientUserCHE["che_type"].(string),
+		Info:    newActivity.ClientUserCHE["info"].(string),
+		Cursor:  newActivity.ClientUserCHE["cursor"].(int64),
+	}, nil
 }
 
 func ChangeGroupPicture(ctx context.Context, groupId, clientUsername, picCloudName string) (any, error) {
@@ -174,14 +202,22 @@ func ChangeGroupPicture(ctx context.Context, groupId, clientUsername, picCloudNa
 
 	go eventStreamService.QueueGroupEditEvent(eventTypes.GroupEditEvent{
 		GroupId:       groupId,
-		UpdateKVMap:   map[string]any{"picture_cloud_name": picCloudName},
+		UpdateKVMap:   map[string]any{"picture_url": picCloudName},
 		EditorUserCHE: newActivity.ClientUserCHE,
 		MemInfo:       newActivity.MemInfo,
 	})
 
-	go broadcastActivityToAll(groupId, newActivity.MemInfo, []any{clientUsername})
+	go broadcastActivityToAll(groupId, UITypes.ChatHistoryEntry{
+		CHEType: newActivity.MemberUserCHE["che_type"].(string),
+		Info:    newActivity.MemberUserCHE["info"].(string),
+		Cursor:  newActivity.MemberUserCHE["cursor"].(int64),
+	}, []any{clientUsername})
 
-	return newActivity.ClientUserCHE["info"], nil
+	return UITypes.ChatHistoryEntry{
+		CHEType: newActivity.ClientUserCHE["che_type"].(string),
+		Info:    newActivity.ClientUserCHE["info"].(string),
+		Cursor:  newActivity.ClientUserCHE["cursor"].(int64),
+	}, nil
 }
 
 func AddUsersToGroup(ctx context.Context, groupId, clientUsername string, newUsers []string) (any, error) {
@@ -211,21 +247,31 @@ func AddUsersToGroup(ctx context.Context, groupId, clientUsername string, newUse
 
 		// history is the same for all init users, we only need separation for our cache
 		// so we make use of one user's history
-		che := maps.Clone(newActivity.NewUsersCHE[newActivity.NewUsernames[0].(string)].(map[string]any))
+		che := newActivity.NewUsersCHE[newActivity.NewUsernames[0].(string)].(map[string]any)
 
-		delete(che, "che_id")
+		groupInfo := newActivity.GroupInfo
+
+		groupInfo["picture_url"] = cloudStorageService.GroupPicCloudNameToUrl(groupInfo["picture_url"].(string))
 
 		newMemData := map[string]any{
-			"group":   newActivity.GroupInfo,
-			"history": []map[string]any{che},
+			"chat":    UITypes.ChatSnippet{Type: "group", Group: groupInfo, UnreadMC: 1, Cursor: newActivity.ChatCursor},
+			"history": []UITypes.ChatHistoryEntry{UITypes.ChatHistoryEntry{CHEType: che["che_type"].(string), Info: che["info"].(string), Cursor: che["cursor"].(int64)}},
 		}
 
 		broadcastNewGroup(newActivity.NewUsernames, newMemData)
 	}(newActivity)
 
-	go broadcastActivityToAll(groupId, newActivity.MemInfo, append(newActivity.NewUsernames, clientUsername))
+	go broadcastActivityToAll(groupId, UITypes.ChatHistoryEntry{
+		CHEType: newActivity.MemberUserCHE["che_type"].(string),
+		Info:    newActivity.MemberUserCHE["info"].(string),
+		Cursor:  newActivity.MemberUserCHE["cursor"].(int64),
+	}, append(newActivity.NewUsernames, clientUsername))
 
-	return newActivity.ClientUserCHE["info"], nil
+	return UITypes.ChatHistoryEntry{
+		CHEType: newActivity.ClientUserCHE["che_type"].(string),
+		Info:    newActivity.ClientUserCHE["info"].(string),
+		Cursor:  newActivity.ClientUserCHE["cursor"].(int64),
+	}, nil
 }
 
 func RemoveUserFromGroup(ctx context.Context, groupId, clientUsername, targetUser string) (any, error) {
@@ -248,11 +294,23 @@ func RemoveUserFromGroup(ctx context.Context, groupId, clientUsername, targetUse
 		MemInfo:      newActivity.MemInfo,
 	})
 
-	go broadcastActivityToOne(targetUser, newActivity.TargetUserCHE["info"], groupId)
+	go broadcastActivityToOne(groupId, UITypes.ChatHistoryEntry{
+		CHEType: newActivity.TargetUserCHE["che_type"].(string),
+		Info:    newActivity.TargetUserCHE["info"].(string),
+		Cursor:  newActivity.TargetUserCHE["cursor"].(int64),
+	}, targetUser)
 
-	go broadcastActivityToAll(groupId, newActivity.MemInfo, []any{clientUsername, targetUser})
+	go broadcastActivityToAll(groupId, UITypes.ChatHistoryEntry{
+		CHEType: newActivity.MemberUserCHE["che_type"].(string),
+		Info:    newActivity.MemberUserCHE["info"].(string),
+		Cursor:  newActivity.MemberUserCHE["cursor"].(int64),
+	}, []any{clientUsername, targetUser})
 
-	return newActivity.ClientUserCHE["info"], nil
+	return UITypes.ChatHistoryEntry{
+		CHEType: newActivity.ClientUserCHE["che_type"].(string),
+		Info:    newActivity.ClientUserCHE["info"].(string),
+		Cursor:  newActivity.ClientUserCHE["cursor"].(int64),
+	}, nil
 }
 
 func JoinGroup(ctx context.Context, groupId, clientUsername string) (any, error) {
@@ -273,18 +331,24 @@ func JoinGroup(ctx context.Context, groupId, clientUsername string) (any, error)
 		MemInfo:      newActivity.MemInfo,
 	})
 
-	go broadcastActivityToAll(groupId, newActivity.MemInfo, []any{clientUsername})
+	go broadcastActivityToAll(groupId, UITypes.ChatHistoryEntry{
+		CHEType: newActivity.MemberUserCHE["che_type"].(string),
+		Info:    newActivity.MemberUserCHE["info"].(string),
+		Cursor:  newActivity.MemberUserCHE["cursor"].(int64),
+	}, []any{clientUsername})
 
-	che := maps.Clone(newActivity.ClientUserCHE)
+	che := newActivity.ClientUserCHE
 
-	delete(che, "che_id")
+	groupInfo := newActivity.GroupInfo
 
-	newMemData := map[string]any{
-		"group":   newActivity.GroupInfo,
-		"history": []map[string]any{che},
+	groupInfo["picture_url"] = cloudStorageService.GroupPicCloudNameToUrl(groupInfo["picture_url"].(string))
+
+	clientData := map[string]any{
+		"chat":    UITypes.ChatSnippet{Type: "group", Group: groupInfo, UnreadMC: 1, Cursor: newActivity.ChatCursor},
+		"history": []UITypes.ChatHistoryEntry{UITypes.ChatHistoryEntry{CHEType: che["che_type"].(string), Info: che["info"].(string), Cursor: che["cursor"].(int64)}},
 	}
 
-	return newMemData, nil
+	return clientData, nil
 }
 
 func LeaveGroup(ctx context.Context, groupId, clientUsername string) (any, error) {
@@ -305,9 +369,17 @@ func LeaveGroup(ctx context.Context, groupId, clientUsername string) (any, error
 		MemInfo:      newActivity.MemInfo,
 	})
 
-	go broadcastActivityToAll(groupId, newActivity.MemInfo, []any{clientUsername})
+	go broadcastActivityToAll(groupId, UITypes.ChatHistoryEntry{
+		CHEType: newActivity.MemberUserCHE["che_type"].(string),
+		Info:    newActivity.MemberUserCHE["info"].(string),
+		Cursor:  newActivity.MemberUserCHE["cursor"].(int64),
+	}, []any{clientUsername})
 
-	return newActivity.ClientUserCHE["info"], nil
+	return UITypes.ChatHistoryEntry{
+		CHEType: newActivity.ClientUserCHE["che_type"].(string),
+		Info:    newActivity.ClientUserCHE["info"].(string),
+		Cursor:  newActivity.ClientUserCHE["cursor"].(int64),
+	}, nil
 }
 
 func MakeUserGroupAdmin(ctx context.Context, groupId, clientUsername, targetUser string) (any, error) {
@@ -330,11 +402,23 @@ func MakeUserGroupAdmin(ctx context.Context, groupId, clientUsername, targetUser
 		MemInfo:     newActivity.MemInfo,
 	})
 
-	go broadcastActivityToOne(targetUser, newActivity.TargetUserCHE["info"], groupId)
+	go broadcastActivityToOne(groupId, UITypes.ChatHistoryEntry{
+		CHEType: newActivity.TargetUserCHE["che_type"].(string),
+		Info:    newActivity.TargetUserCHE["info"].(string),
+		Cursor:  newActivity.TargetUserCHE["cursor"].(int64),
+	}, targetUser)
 
-	go broadcastActivityToAll(groupId, newActivity.MemInfo, []any{clientUsername, targetUser})
+	go broadcastActivityToAll(groupId, UITypes.ChatHistoryEntry{
+		CHEType: newActivity.MemberUserCHE["che_type"].(string),
+		Info:    newActivity.MemberUserCHE["info"].(string),
+		Cursor:  newActivity.MemberUserCHE["cursor"].(int64),
+	}, []any{clientUsername, targetUser})
 
-	return newActivity.ClientUserCHE["info"], nil
+	return UITypes.ChatHistoryEntry{
+		CHEType: newActivity.ClientUserCHE["che_type"].(string),
+		Info:    newActivity.ClientUserCHE["info"].(string),
+		Cursor:  newActivity.ClientUserCHE["cursor"].(int64),
+	}, nil
 }
 
 func RemoveUserFromGroupAdmins(ctx context.Context, groupId, clientUsername, targetUser string) (any, error) {
@@ -357,11 +441,23 @@ func RemoveUserFromGroupAdmins(ctx context.Context, groupId, clientUsername, tar
 		MemInfo:     newActivity.MemInfo,
 	})
 
-	go broadcastActivityToOne(targetUser, newActivity.TargetUserCHE["info"], groupId)
+	go broadcastActivityToOne(groupId, UITypes.ChatHistoryEntry{
+		CHEType: newActivity.TargetUserCHE["che_type"].(string),
+		Info:    newActivity.TargetUserCHE["info"].(string),
+		Cursor:  newActivity.TargetUserCHE["cursor"].(int64),
+	}, targetUser)
 
-	go broadcastActivityToAll(groupId, newActivity.MemInfo, []any{clientUsername, targetUser})
+	go broadcastActivityToAll(groupId, UITypes.ChatHistoryEntry{
+		CHEType: newActivity.MemberUserCHE["che_type"].(string),
+		Info:    newActivity.MemberUserCHE["info"].(string),
+		Cursor:  newActivity.MemberUserCHE["cursor"].(int64),
+	}, []any{clientUsername, targetUser})
 
-	return newActivity.ClientUserCHE["info"], nil
+	return UITypes.ChatHistoryEntry{
+		CHEType: newActivity.ClientUserCHE["che_type"].(string),
+		Info:    newActivity.ClientUserCHE["info"].(string),
+		Cursor:  newActivity.ClientUserCHE["cursor"].(int64),
+	}, nil
 }
 
 func SendMessage(ctx context.Context, clientUsername, groupId, replyTargetMsgId string, isReply bool, msgContentJson string, at int64) (map[string]any, error) {
@@ -388,49 +484,49 @@ func SendMessage(ctx context.Context, clientUsername, groupId, replyTargetMsgId 
 
 	// queue new message event
 	go eventStreamService.QueueNewGroupMessageEvent(eventTypes.NewGroupMessageEvent{
-		FromUser: clientUsername,
-		ToGroup:  groupId,
-		CHEId:    newMessage.Id,
-		MsgData:  helpers.ToJson(newMessage),
+		FromUser:  clientUsername,
+		ToGroup:   groupId,
+		CHEId:     newMessage.Id,
+		MsgData:   helpers.ToJson(newMessage),
+		CHECursor: newMessage.Cursor,
 	})
 
-	go func(msgData groupChat.NewMessage) {
-		var err error
-		msgData.Sender, err = cache.GetUser[UITypes.ClientUser](context.Background(), clientUsername)
-		if err != nil {
-			return
-		}
+	go func(msg groupChat.NewMessage) {
+		uisender, _ := cache.GetUser[UITypes.ClientUser](context.Background(), clientUsername)
 
-		msgData.Content = maps.Clone(msgData.Content)
-		err = cloudStorageService.MessageMediaCloudNameToUrl(msgData.Content)
-		if err != nil {
-			return
-		}
+		uisender.ProfilePicUrl = cloudStorageService.ProfilePicCloudNameToUrl(uisender.ProfilePicUrl)
 
-		broadcastNewMessage(groupId, msgData, clientUsername)
+		cloudStorageService.MessageMediaCloudNameToUrl(msg.Content)
+
+		UImsg := UITypes.ChatHistoryEntry{CHEType: msg.CHEType, Id: msg.Id, Content: msg.Content, DeliveryStatus: msg.DeliveryStatus, CreatedAt: msg.CreatedAt, Sender: uisender, ReplyTargetMsg: msg.ReplyTargetMsg, Cursor: msg.Cursor}
+
+		broadcastNewMessage(groupId, UImsg, clientUsername)
 	}(newMessage)
 
-	return map[string]any{"new_msg_id": newMessage.Id}, nil
+	return map[string]any{"new_msg_id": newMessage.Id, "che_cursor": newMessage.Cursor}, nil
 }
 
-func AckMessageDelivered(ctx context.Context, clientUsername, groupId, msgId string, deliveredAt int64) (bool, error) {
-	done, err := groupChat.AckMessageDelivered(ctx, clientUsername, groupId, msgId, deliveredAt)
+func AckMessageDelivered(ctx context.Context, clientUsername, groupId, msgId string, deliveredAt int64) (map[string]any, error) {
+	msgCursor, err := groupChat.AckMessageDelivered(ctx, clientUsername, groupId, msgId, deliveredAt)
 	if err != nil {
-		return done, err
+		return nil, err
 	}
 
-	if done {
-		// queue msg ack event
-		go eventStreamService.QueueGroupMsgAckEvent(eventTypes.GroupMsgAckEvent{
-			FromUser: clientUsername,
-			ToGroup:  groupId,
-			CHEId:    msgId,
-			Ack:      "delivered",
-			At:       deliveredAt,
-		})
+	if msgCursor == nil {
+		return nil, nil
 	}
 
-	return done, nil
+	// queue msg ack event
+	go eventStreamService.QueueGroupMsgAckEvent(eventTypes.GroupMsgAckEvent{
+		FromUser:   clientUsername,
+		ToGroup:    groupId,
+		CHEId:      msgId,
+		Ack:        "delivered",
+		At:         deliveredAt,
+		ChatCursor: *msgCursor,
+	})
+
+	return map[string]any{"updated_chat_cursor": *msgCursor}, nil
 }
 
 func AckMessageRead(ctx context.Context, clientUsername, groupId, msgId string, readAt int64) (any, error) {
@@ -459,66 +555,66 @@ func ReactToMessage(ctx context.Context, clientUsername, groupId, msgId, emoji s
 		return nil, err
 	}
 
-	done := rxnToMessage.CHEId != ""
-
-	if !done {
-		return done, nil
+	if rxnToMessage.CHEId == "" {
+		return nil, nil
 	}
 
-	// queue msg reaction event
-	go eventStreamService.QueueNewGroupMsgReactionEvent(eventTypes.NewGroupMsgReactionEvent{
-		FromUser: clientUsername,
-		ToGroup:  groupId,
-		CHEId:    rxnToMessage.CHEId,
-		RxnData:  helpers.ToJson(rxnToMessage),
-		ToMsgId:  msgId,
-		Emoji:    emoji,
-	})
+	go func(rxnData groupChat.RxnToMessage) {
+		uireactor, _ := cache.GetUser[UITypes.MsgReactor](context.Background(), clientUsername)
 
-	go func() {
-		reactor, err := cache.GetUser[UITypes.ClientUser](context.Background(), clientUsername)
-		if err != nil {
-			return
-		}
+		uireactor.ProfilePicUrl = cloudStorageService.ProfilePicCloudNameToUrl(uireactor.ProfilePicUrl)
 
 		broadcastMsgReaction(groupId, clientUsername, map[string]any{
-			"group_id":  groupId,
-			"to_msg_id": msgId,
-			"reaction": UITypes.MsgReaction{
-				Emoji:   emoji,
-				Reactor: reactor,
+			"group_id": groupId,
+			"che":      UITypes.ChatHistoryEntry{CHEType: rxnData.CHEType, Reactor: clientUsername, Emoji: rxnData.Emoji, Cursor: rxnData.Cursor},
+			"msg_reaction": map[string]any{
+				"msg_id": msgId,
+				"reaction": UITypes.MsgReaction{
+					Emoji:   emoji,
+					Reactor: uireactor,
+				},
 			},
 		})
-	}()
+	}(rxnToMessage)
 
-	return done, nil
+	go func(rxnData groupChat.RxnToMessage) {
+		eventStreamService.QueueNewGroupMsgReactionEvent(eventTypes.NewGroupMsgReactionEvent{
+			FromUser:  clientUsername,
+			ToGroup:   groupId,
+			CHEId:     rxnData.CHEId,
+			RxnData:   helpers.ToJson(rxnData),
+			ToMsgId:   msgId,
+			Emoji:     emoji,
+			CHECursor: rxnData.Cursor,
+		})
+	}(rxnToMessage)
+
+	return map[string]any{"che_cursor": rxnToMessage.Cursor}, nil
 }
 
 func RemoveReactionToMessage(ctx context.Context, clientUsername, groupId, msgId string, at int64) (any, error) {
-	rrtm, err := groupChat.RemoveReactionToMessage(ctx, clientUsername, groupId, msgId)
+	CHEId, err := groupChat.RemoveReactionToMessage(ctx, clientUsername, groupId, msgId)
 	if err != nil {
 		return nil, err
 	}
 
-	done := rrtm.CHEId != ""
-
-	if !done {
-		return done, nil
-	}
+	done := CHEId != ""
 
 	// queue reaction removed event
-	go eventStreamService.QueueGroupMsgReactionRemovedEvent(eventTypes.GroupMsgReactionRemovedEvent{
-		FromUser: clientUsername,
-		ToGroup:  groupId,
-		ToMsgId:  msgId,
-		CHEId:    rrtm.CHEId,
-	})
+	if done {
+		go broadcastMsgReactionRemoved(groupId, clientUsername, map[string]any{
+			"group_id":     groupId,
+			"msg_id":       msgId,
+			"reactor_user": clientUsername,
+		})
 
-	go broadcastMsgReactionRemoved(groupId, clientUsername, map[string]any{
-		"group_id":     groupId,
-		"msg_id":       msgId,
-		"reactor_user": clientUsername,
-	})
+		go eventStreamService.QueueGroupMsgReactionRemovedEvent(eventTypes.GroupMsgReactionRemovedEvent{
+			FromUser: clientUsername,
+			ToGroup:  groupId,
+			ToMsgId:  msgId,
+			CHEId:    CHEId,
+		})
+	}
 
 	return done, nil
 }

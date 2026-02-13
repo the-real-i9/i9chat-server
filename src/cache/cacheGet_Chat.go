@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"i9chat/src/helpers"
-	"i9chat/src/services/cloudStorageService"
 
 	"github.com/redis/go-redis/v9"
 )
@@ -16,13 +15,7 @@ func GetGroup[T any](ctx context.Context, groupId string) (group T, err error) {
 		return group, err
 	}
 
-	groupMap := helpers.FromJson[map[string]any](groupJson)
-
-	if err := cloudStorageService.GroupPicCloudNameToUrl(groupMap); err != nil {
-		return group, err
-	}
-
-	return helpers.ToStruct[T](groupMap), nil
+	return helpers.FromJson[T](groupJson), nil
 }
 
 func GetGroupMembersList(ctx context.Context, groupId string) ([]string, error) {
@@ -82,18 +75,7 @@ func GetDirectChatHistoryEntry[T any](ctx context.Context, CHEId string) (CHE T,
 		return CHE, err
 	}
 
-	CHEMap := helpers.FromJson[map[string]any](CHEJson)
-
-	cheType := CHEMap["che_type"].(string)
-
-	if cheType == "message" {
-		content := CHEMap["content"].(map[string]any)
-		if err := cloudStorageService.MessageMediaCloudNameToUrl(content); err != nil {
-			return CHE, err
-		}
-	}
-
-	return helpers.ToStruct[T](CHEMap), nil
+	return helpers.FromJson[T](CHEJson), nil
 }
 
 func GetGroupChatHistoryEntry[T any](ctx context.Context, CHEId string) (CHE T, err error) {
@@ -103,18 +85,7 @@ func GetGroupChatHistoryEntry[T any](ctx context.Context, CHEId string) (CHE T, 
 		return CHE, err
 	}
 
-	CHEMap := helpers.FromJson[map[string]any](CHEJson)
-
-	cheType := CHEMap["che_type"].(string)
-
-	if cheType == "message" {
-		content := CHEMap["content"].(map[string]any)
-		if err := cloudStorageService.MessageMediaCloudNameToUrl(content); err != nil {
-			return CHE, err
-		}
-	}
-
-	return helpers.ToStruct[T](CHEMap), nil
+	return helpers.FromJson[T](CHEJson), nil
 }
 
 func GetMsgReactions(ctx context.Context, msgId string) (map[string]string, error) {

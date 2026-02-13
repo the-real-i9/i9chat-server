@@ -55,6 +55,7 @@ func directMsgAcksStreamBgWorker(rdb *redis.Client) {
 				msg.CHEId = stmsg.Values["CHEId"].(string)
 				msg.Ack = stmsg.Values["ack"].(string)
 				msg.At = helpers.FromJson[int64](stmsg.Values["at"].(string))
+				msg.ChatCursor = helpers.FromJson[int64](stmsg.Values["chatCursor"].(string))
 
 				msgs = append(msgs, msg)
 
@@ -65,19 +66,19 @@ func directMsgAcksStreamBgWorker(rdb *redis.Client) {
 			userChatUnreadMsgs := make(map[string]map[string][]any)
 			userChatReadMsgs := make(map[string]map[string][]any)
 
-			updatedFromUserChats := make(map[string]map[string]string)
+			updatedFromUserChats := make(map[string]map[string]float64)
 
 			// batch data for batch processing
-			for i, msg := range msgs {
+			for _, msg := range msgs {
 
 				ackMessages = append(ackMessages, [3]any{msg.CHEId, msg.Ack, msg.At})
 
 				if msg.Ack == "delivered" {
 					if updatedFromUserChats[msg.FromUser] == nil {
-						updatedFromUserChats[msg.FromUser] = make(map[string]string)
+						updatedFromUserChats[msg.FromUser] = make(map[string]float64)
 					}
 
-					updatedFromUserChats[msg.FromUser][msg.ToUser] = stmsgIds[i]
+					updatedFromUserChats[msg.FromUser][msg.ToUser] = float64(msg.ChatCursor)
 
 					if userChatUnreadMsgs[msg.FromUser] == nil {
 						userChatUnreadMsgs[msg.FromUser] = make(map[string][]any)
@@ -98,10 +99,10 @@ func directMsgAcksStreamBgWorker(rdb *redis.Client) {
 			// batch processing
 			eg, sharedCtx := errgroup.WithContext(ctx)
 
-			for _, CHEId_ack_ackAt_stmsgId := range ackMessages {
+			for _, CHEId_ack_ackAt := range ackMessages {
 
 				eg.Go(func() error {
-					CHEId, ack, ackAt := CHEId_ack_ackAt_stmsgId[0], CHEId_ack_ackAt_stmsgId[1], CHEId_ack_ackAt_stmsgId[2]
+					CHEId, ack, ackAt := CHEId_ack_ackAt[0], CHEId_ack_ackAt[1], CHEId_ack_ackAt[2]
 
 					return cache.UpdateDirectMessage(sharedCtx, CHEId.(string), map[string]any{
 						"delivery_status":         ack,
@@ -110,11 +111,11 @@ func directMsgAcksStreamBgWorker(rdb *redis.Client) {
 				})
 			}
 
-			for ownerUser, partnerUser_stmsgId_Pairs := range updatedFromUserChats {
+			for ownerUser, partnerUser_score_Pairs := range updatedFromUserChats {
 				eg.Go(func() error {
-					ownerUser, partnerUser_stmsgId_Pairs := ownerUser, partnerUser_stmsgId_Pairs
+					ownerUser, partnerUser_score_Pairs := ownerUser, partnerUser_score_Pairs
 
-					return cache.StoreUserChatIdents(sharedCtx, ownerUser, partnerUser_stmsgId_Pairs)
+					return cache.StoreUserChatIdents(sharedCtx, ownerUser, partnerUser_score_Pairs)
 				})
 			}
 

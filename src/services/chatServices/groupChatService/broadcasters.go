@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"i9chat/src/appGlobals"
 	"i9chat/src/appTypes"
+	"i9chat/src/appTypes/UITypes"
 	"i9chat/src/helpers"
 	"i9chat/src/services/realtimeService"
 
@@ -21,7 +22,7 @@ func broadcastNewGroup(targetUsers []any, data any) {
 	}
 }
 
-func broadcastNewMessage(groupId string, data any, clientUsername string) {
+func broadcastNewMessage(groupId string, data UITypes.ChatHistoryEntry, clientUsername string) {
 	ctx := context.Background()
 
 	var cursor uint64 = 0
@@ -39,10 +40,10 @@ func broadcastNewMessage(groupId string, data any, clientUsername string) {
 			}
 
 			go realtimeService.SendEventMsg(mu, appTypes.ServerEventMsg{
-				Event: "group chat: new message",
+				Event: "group chat: new che: message",
 				Data: map[string]any{
-					"message":  data,
 					"group_id": groupId,
+					"che":      data,
 				},
 			})
 		}
@@ -55,17 +56,17 @@ func broadcastNewMessage(groupId string, data any, clientUsername string) {
 	}
 }
 
-func broadcastActivityToOne(mu string, info any, groupId string) {
+func broadcastActivityToOne(groupId string, gactCHE UITypes.ChatHistoryEntry, mu string) {
 	go realtimeService.SendEventMsg(mu, appTypes.ServerEventMsg{
-		Event: "group chat: new activity",
+		Event: "group chat: new che: group activity",
 		Data: map[string]any{
-			"info":     info,
 			"group_id": groupId,
+			"che":      gactCHE,
 		},
 	})
 }
 
-func broadcastActivityToAll(groupId string, info string, except []any) {
+func broadcastActivityToAll(groupId string, gactCHE UITypes.ChatHistoryEntry, except []any) {
 	ctx := context.Background()
 
 	exceptUsers := make(map[string]bool, len(except))
@@ -82,19 +83,21 @@ func broadcastActivityToAll(groupId string, info string, except []any) {
 			return
 		}
 
-		for _, mu := range musers {
-			if exceptUsers[mu] {
-				continue
-			}
+		go func(musers []string) {
+			for _, mu := range musers {
+				if exceptUsers[mu] {
+					continue
+				}
 
-			go realtimeService.SendEventMsg(mu, appTypes.ServerEventMsg{
-				Event: "group chat: new activity",
-				Data: map[string]any{
-					"info":     info,
-					"group_id": groupId,
-				},
-			})
-		}
+				realtimeService.SendEventMsg(mu, appTypes.ServerEventMsg{
+					Event: "group chat: new che: group activity",
+					Data: map[string]any{
+						"group_id": groupId,
+						"che":      gactCHE,
+					},
+				})
+			}
+		}(musers)
 
 		if nextCursor == 0 {
 			break

@@ -3,12 +3,9 @@ package cloudStorageService
 import (
 	"fmt"
 	"i9chat/src/helpers"
-	"slices"
 )
 
-func ProfilePicCloudNameToUrl(userMap map[string]any) error {
-	ppicCloudName := userMap["profile_pic_cloud_name"].(string)
-
+func ProfilePicCloudNameToUrl(ppicCloudName string) string {
 	if ppicCloudName != "{notset}" {
 		var (
 			smallPPicn  string
@@ -19,37 +16,19 @@ func ProfilePicCloudNameToUrl(userMap map[string]any) error {
 		_, err := fmt.Sscanf(ppicCloudName, "small:%s medium:%s large:%s", &smallPPicn, &mediumPPicn, &largePPicn)
 		if err != nil {
 			helpers.LogError(err)
-			return err
 		}
 
-		smallPicUrl, err := GetMediaurl(smallPPicn)
-		if err != nil {
-			return err
-		}
+		smallPicUrl := GetMediaUrl(smallPPicn)
+		mediumPicUrl := GetMediaUrl(mediumPPicn)
+		largePicUrl := GetMediaUrl(largePPicn)
 
-		mediumPicUrl, err := GetMediaurl(mediumPPicn)
-		if err != nil {
-			return err
-		}
-
-		largePicUrl, err := GetMediaurl(largePPicn)
-		if err != nil {
-			return err
-		}
-
-		userMap["profile_pic_url"] = fmt.Sprintf("small:%s medium:%s large:%s", smallPicUrl, mediumPicUrl, largePicUrl)
-	} else {
-		userMap["profile_pic_url"] = "{notset}"
+		return fmt.Sprintf("small:%s medium:%s large:%s", smallPicUrl, mediumPicUrl, largePicUrl)
 	}
 
-	delete(userMap, "profile_pic_cloud_name")
-
-	return nil
+	return ppicCloudName
 }
 
-func GroupPicCloudNameToUrl(groupMap map[string]any) error {
-	picCloudName := groupMap["picture_cloud_name"].(string)
-
+func GroupPicCloudNameToUrl(picCloudName string) string {
 	var (
 		smallPicn  string
 		mediumPicn string
@@ -59,38 +38,24 @@ func GroupPicCloudNameToUrl(groupMap map[string]any) error {
 	_, err := fmt.Sscanf(picCloudName, "small:%s medium:%s large:%s", &smallPicn, &mediumPicn, &largePicn)
 	if err != nil {
 		helpers.LogError(err)
-		return err
 	}
 
-	smallPicUrl, err := GetMediaurl(smallPicn)
-	if err != nil {
-		return err
-	}
+	smallPicUrl := GetMediaUrl(smallPicn)
+	mediumPicUrl := GetMediaUrl(mediumPicn)
+	largePicUrl := GetMediaUrl(largePicn)
 
-	mediumPicUrl, err := GetMediaurl(mediumPicn)
-	if err != nil {
-		return err
-	}
-
-	largePicUrl, err := GetMediaurl(largePicn)
-	if err != nil {
-		return err
-	}
-
-	groupMap["picture_url"] = fmt.Sprintf("small:%s medium:%s large:%s", smallPicUrl, mediumPicUrl, largePicUrl)
-
-	delete(groupMap, "picture_cloud_name")
-
-	return nil
+	return fmt.Sprintf("small:%s medium:%s large:%s", smallPicUrl, mediumPicUrl, largePicUrl)
 }
 
-func MessageMediaCloudNameToUrl(msgContent map[string]any) error {
+func MessageMediaCloudNameToUrl(msgContent map[string]any) {
 	contentProps := msgContent["props"].(map[string]any)
 
-	if msgContent["type"].(string) != "text" {
+	msgContentType := msgContent["type"].(string)
+
+	if msgContentType != "text" {
 		mediaCloudName := contentProps["media_cloud_name"].(string)
 
-		if slices.Contains([]string{"photo", "video"}, msgContent["type"].(string)) {
+		if msgContentType == "photo" || msgContentType == "video" {
 			var (
 				blurPlchMcn string
 				actualMcn   string
@@ -99,31 +64,18 @@ func MessageMediaCloudNameToUrl(msgContent map[string]any) error {
 			_, err := fmt.Sscanf(mediaCloudName, "blur_placeholder:%s actual:%s", &blurPlchMcn, &actualMcn)
 			if err != nil {
 				helpers.LogError(err)
-				return err
 			}
 
-			blurPlchUrl, err := GetMediaurl(blurPlchMcn)
-			if err != nil {
-				return err
-			}
-
-			actualUrl, err := GetMediaurl(actualMcn)
-			if err != nil {
-				return err
-			}
+			blurPlchUrl := GetMediaUrl(blurPlchMcn)
+			actualUrl := GetMediaUrl(actualMcn)
 
 			contentProps["media_url"] = fmt.Sprintf("blur_placeholder:%s actual:%s", blurPlchUrl, actualUrl)
 		} else {
-			mediaUrl, err := GetMediaurl(mediaCloudName)
-			if err != nil {
-				return err
-			}
+			mediaUrl := GetMediaUrl(mediaCloudName)
 
 			contentProps["media_url"] = mediaUrl
 		}
 
 		delete(contentProps, "media_cloud_name")
 	}
-
-	return nil
 }

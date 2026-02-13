@@ -12,7 +12,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
-func ToStruct[T any](val any) (dest T) {
+/* func ToStruct[T any](val any) (dest T) {
 	bt, err := json.Marshal(val)
 	if err != nil {
 		LogError(err)
@@ -23,9 +23,9 @@ func ToStruct[T any](val any) (dest T) {
 	}
 
 	return
-}
+} */
 
-func StructToMap(val any) (dest map[string]any) {
+/* func StructToMap(val any) (dest map[string]any) {
 	bt, err := json.Marshal(val)
 	if err != nil {
 		LogError(err)
@@ -36,7 +36,7 @@ func StructToMap(val any) (dest map[string]any) {
 	}
 
 	return
-}
+} */
 
 func JoinWithCommaAnd(items ...string) string {
 	n := len(items)
@@ -125,8 +125,25 @@ func ToJson(data any) string {
 	return string(d)
 }
 
+func ToBtJson(data any) []byte {
+	d, err := json.Marshal(data)
+	if err != nil {
+		LogError(err)
+	}
+	return d
+}
+
 func FromJson[T any](jsonStr string) (res T) {
 	err := json.Unmarshal([]byte(jsonStr), &res)
+	if err != nil {
+		LogError(err)
+	}
+
+	return
+}
+
+func FromBtJson[T any](jsonBt []byte) (res T) {
+	err := json.Unmarshal(jsonBt, &res)
 	if err != nil {
 		LogError(err)
 	}

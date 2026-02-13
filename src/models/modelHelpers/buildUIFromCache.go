@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"i9chat/src/appTypes/UITypes"
 	"i9chat/src/cache"
+	"i9chat/src/services/cloudStorageService"
 )
 
 func BuildUserSnippetUIFromCache(ctx context.Context, username string) (userSnippetUI UITypes.UserSnippet, err error) {
@@ -14,6 +15,8 @@ func BuildUserSnippetUIFromCache(ctx context.Context, username string) (userSnip
 	if err != nil {
 		return nilVal, err
 	}
+
+	userSnippetUI.ProfilePicUrl = cloudStorageService.ProfilePicCloudNameToUrl(userSnippetUI.ProfilePicUrl)
 
 	return userSnippetUI, nil
 }
@@ -26,6 +29,8 @@ func BuildUserProfileUIFromCache(ctx context.Context, username string) (userProf
 		return nilVal, err
 	}
 
+	userProfileUI.ProfilePicUrl = cloudStorageService.ProfilePicCloudNameToUrl(userProfileUI.ProfilePicUrl)
+
 	return userProfileUI, nil
 }
 
@@ -36,6 +41,8 @@ func BuildGroupInfoUIFromCache(ctx context.Context, groupId string) (groupInfoUI
 	if err != nil {
 		return nilVal, err
 	}
+
+	groupInfoUI.PictureUrl = cloudStorageService.GroupPicCloudNameToUrl(groupInfoUI.PictureUrl)
 
 	groupInfoUI.MembersCount, err = cache.GetGroupMembersCount(ctx, groupId)
 	if err != nil {
@@ -58,6 +65,8 @@ func buildGroupMemberSnippetUIFromCache(ctx context.Context, muser string) (gmem
 		return nilVal, err
 	}
 
+	gmemSnippetUI.ProfilePicUrl = cloudStorageService.ProfilePicCloudNameToUrl(gmemSnippetUI.ProfilePicUrl)
+
 	return gmemSnippetUI, nil
 }
 
@@ -71,17 +80,23 @@ func buildChatSnippetUIFromCache(ctx context.Context, clientUsername, chatIdent 
 
 	switch chatSnippetUI.Type {
 	case "direct":
-		chatSnippetUI.PartnerUser, err = cache.GetUser[UITypes.ChatPartnerUser](ctx, chatSnippetUI.PartnerUser.(string))
+		csuipu, err := cache.GetUser[UITypes.ChatPartnerUser](ctx, chatSnippetUI.PartnerUser.(string))
 		if err != nil {
 			return nilVal, err
 		}
+
+		csuipu.ProfilePicUrl = cloudStorageService.ProfilePicCloudNameToUrl(csuipu.ProfilePicUrl)
+
+		chatSnippetUI.PartnerUser = csuipu
 	case "group":
-		chatSnippetUI.Group, err = cache.GetGroup[UITypes.ChatGroup](ctx, chatSnippetUI.Group.(string))
+		csuig, err := cache.GetGroup[UITypes.ChatGroup](ctx, chatSnippetUI.Group.(string))
 		if err != nil {
 			return nilVal, err
 		}
-	default:
-		return nilVal, fmt.Errorf("unknown chatSnippetUI.Type:%s debug", chatSnippetUI.Type)
+
+		csuig.PictureUrl = cloudStorageService.GroupPicCloudNameToUrl(csuig.PictureUrl)
+
+		chatSnippetUI.Group = csuig
 	}
 
 	chatSnippetUI.UnreadMC, err = cache.GetChatUnreadMsgsCount(ctx, clientUsername, chatIdent)
@@ -106,16 +121,20 @@ func buildCHEUIFromCache(ctx context.Context, CHEId, chatType string) (CHEUI UIT
 		if err != nil {
 			return nilVal, err
 		}
-	default:
-		return nilVal, fmt.Errorf("unknown chatType:%s debug", chatType)
 	}
 
 	switch CHEUI.CHEType {
 	case "message":
-		CHEUI.Sender, err = cache.GetUser[UITypes.MsgSender](ctx, CHEUI.Sender.(string))
+		cheuis, err := cache.GetUser[UITypes.MsgSender](ctx, CHEUI.Sender.(string))
 		if err != nil {
 			return nilVal, err
 		}
+
+		cheuis.ProfilePicUrl = cloudStorageService.ProfilePicCloudNameToUrl(cheuis.ProfilePicUrl)
+
+		CHEUI.Sender = cheuis
+
+		cloudStorageService.MessageMediaCloudNameToUrl(CHEUI.Content)
 
 		userEmojiMap, err := cache.GetMsgReactions(ctx, CHEId)
 		if err != nil {
@@ -133,6 +152,8 @@ func buildCHEUIFromCache(ctx context.Context, CHEId, chatType string) (CHEUI UIT
 			if err != nil {
 				return nilVal, err
 			}
+
+			msgr.Reactor.ProfilePicUrl = cloudStorageService.ProfilePicCloudNameToUrl(msgr.Reactor.ProfilePicUrl)
 
 			msgReactions = append(msgReactions, msgr)
 			reactionsCount[emoji]++

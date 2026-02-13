@@ -3,7 +3,6 @@ package userControllers
 import (
 	"i9chat/src/appTypes"
 	"i9chat/src/appTypes/UITypes"
-	"i9chat/src/helpers"
 	"i9chat/src/services/cloudStorageService"
 	"i9chat/src/services/userService"
 
@@ -40,10 +39,9 @@ func GetSessionUser(c *fiber.Ctx) error {
 		return fiber.ErrInternalServerError
 	}
 
-	userMap := helpers.StructToMap(user)
-	cloudStorageService.ProfilePicCloudNameToUrl(userMap)
+	user.ProfilePicUrl = cloudStorageService.ProfilePicCloudNameToUrl(user.ProfilePicUrl)
 
-	return c.JSON(helpers.ToStruct[UITypes.ClientUser](userMap))
+	return c.JSON(UITypes.ClientUser{Username: user.Username, ProfilePicUrl: user.ProfilePicUrl, Presence: user.Presence})
 }
 
 func ChangeProfilePicture(c *fiber.Ctx) error {

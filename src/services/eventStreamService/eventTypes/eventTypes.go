@@ -22,6 +22,7 @@ type NewGroupEvent struct {
 	CreatorUser     string                `redis:"creatorUser" json:"creatorUser"`
 	GroupId         string                `redis:"groupId" json:"groupId"`
 	GroupData       string                `redis:"groupData" json:"groupData"`
+	ChatCursor      int64                 `redis:"chatCursor" json:"chatCursor"`
 	InitMembers     appTypes.BinableSlice `redis:"initMembers" json:"initMembers"`
 	CreatorUserCHEs appTypes.BinableSlice `redis:"creatorUserCHEs" json:"creatorUserCHEs"`
 	InitMembersCHEs appTypes.BinableMap   `redis:"initMembersCHEs" json:"initMembersCHEs"`
@@ -92,47 +93,53 @@ type NewDirectMessageEvent struct {
 	ToUser        string `redis:"toUser" json:"toUser"`
 	CHEId         string `redis:"CHEId" json:"CHEId"`
 	MsgData       string `redis:"msgData" json:"msgData"`
+	CHECursor     int64  `redis:"cheCursor" json:"cheCursor"`
 }
 
 type NewGroupMessageEvent struct {
-	FromUser string `redis:"fromUser" json:"fromUser"`
-	ToGroup  string `redis:"toGroup" json:"toGroup"`
-	CHEId    string `redis:"CHEId" json:"CHEId"`
-	MsgData  string `redis:"msgData" json:"msgData"`
+	FromUser  string `redis:"fromUser" json:"fromUser"`
+	ToGroup   string `redis:"toGroup" json:"toGroup"`
+	CHEId     string `redis:"CHEId" json:"CHEId"`
+	MsgData   string `redis:"msgData" json:"msgData"`
+	CHECursor int64  `redis:"cheCursor" json:"cheCursor"`
 }
 
 type NewDirectMsgReactionEvent struct {
-	FromUser string `redis:"fromUser" json:"fromUser"`
-	ToUser   string `redis:"toUser" json:"toUser"`
-	CHEId    string `redis:"CHEId" json:"CHEId"`
-	RxnData  string `redis:"rxnData" json:"rxnData"`
-	ToMsgId  string `redis:"toMsgId" json:"toMsgId"`
-	Emoji    string `redis:"emoji" json:"emoji"`
+	FromUser  string `redis:"fromUser" json:"fromUser"`
+	ToUser    string `redis:"toUser" json:"toUser"`
+	CHEId     string `redis:"CHEId" json:"CHEId"`
+	RxnData   string `redis:"rxnData" json:"rxnData"`
+	ToMsgId   string `redis:"toMsgId" json:"toMsgId"`
+	Emoji     string `redis:"emoji" json:"emoji"`
+	CHECursor int64  `redis:"cheCursor" json:"cheCursor"`
 }
 
 type NewGroupMsgReactionEvent struct {
-	FromUser string `redis:"fromUser" json:"fromUser"`
-	ToGroup  string `redis:"toGroup" json:"toGroup"`
-	CHEId    string `redis:"CHEId" json:"CHEId"`
-	RxnData  string `redis:"rxnData" json:"rxnData"`
-	ToMsgId  string `redis:"toMsgId" json:"toMsgId"`
-	Emoji    string `redis:"emoji" json:"emoji"`
+	FromUser  string `redis:"fromUser" json:"fromUser"`
+	ToGroup   string `redis:"toGroup" json:"toGroup"`
+	CHEId     string `redis:"CHEId" json:"CHEId"`
+	RxnData   string `redis:"rxnData" json:"rxnData"`
+	ToMsgId   string `redis:"toMsgId" json:"toMsgId"`
+	Emoji     string `redis:"emoji" json:"emoji"`
+	CHECursor int64  `redis:"cheCursor" json:"cheCursor"`
 }
 
 type DirectMsgAckEvent struct {
-	FromUser string `redis:"fromUser" json:"fromUser"`
-	ToUser   string `redis:"toUser" json:"toUser"`
-	CHEId    string `redis:"CHEId" json:"CHEId"`
-	Ack      string `redis:"ack" json:"ack"`
-	At       int64  `redis:"at" json:"at"`
+	FromUser   string `redis:"fromUser" json:"fromUser"`
+	ToUser     string `redis:"toUser" json:"toUser"`
+	CHEId      string `redis:"CHEId" json:"CHEId"`
+	Ack        string `redis:"ack" json:"ack"`
+	At         int64  `redis:"at" json:"at"`
+	ChatCursor int64  `redis:"chatCursor" json:"chatCursor"`
 }
 
 type GroupMsgAckEvent struct {
-	FromUser string `redis:"fromUser" json:"fromUser"`
-	ToGroup  string `redis:"toGroup" json:"toGroup"`
-	CHEId    string `redis:"CHEId" json:"CHEId"`
-	Ack      string `redis:"ack" json:"ack"`
-	At       int64  `redis:"at" json:"at"`
+	FromUser   string `redis:"fromUser" json:"fromUser"`
+	ToGroup    string `redis:"toGroup" json:"toGroup"`
+	CHEId      string `redis:"CHEId" json:"CHEId"`
+	Ack        string `redis:"ack" json:"ack"`
+	At         int64  `redis:"at" json:"at"`
+	ChatCursor int64  `redis:"chatCursor" json:"chatCursor"`
 }
 
 type DirectMsgReactionRemovedEvent struct {

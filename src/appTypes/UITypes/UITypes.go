@@ -56,12 +56,8 @@ type ChatSnippet struct {
 	PartnerUser any `json:"partner_user,omitempty"` /* stored as partnerUsername, then retrieved ChatPartnerUser */
 	Group       any `json:"group,omitempty"`        /* stored as groupId, then retrieved ChatGroup */
 
-	UnreadMC int64   `json:"unread_messages_count"`
-	Cursor   float64 `json:"cursor"`
-}
-
-type msgReactorKind interface {
-	MsgReactor | any
+	UnreadMC int64 `json:"unread_messages_count"`
+	Cursor   int64 `json:"cursor"`
 }
 
 type MsgReactor struct {
@@ -75,8 +71,8 @@ type MsgSender struct {
 }
 
 type MsgReaction struct {
-	Emoji   string         `json:"emoji"`
-	Reactor msgReactorKind `json:"reactor"`
+	Emoji   string     `json:"emoji"`
+	Reactor MsgReactor `json:"reactor"`
 }
 
 type ChatHistoryEntry struct {
@@ -106,5 +102,5 @@ type ChatHistoryEntry struct {
 	Info string `json:"info,omitempty"`
 
 	// cursor for pagination
-	Cursor float64 `json:"cursor"`
+	Cursor int64 `json:"cursor"`
 }

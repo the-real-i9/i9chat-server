@@ -111,12 +111,12 @@ func StoreUserChatUnreadMsgs(ctx context.Context, ownerUser, chatIdent string, u
 	return nil
 }
 
-func StoreUserChatIdents(ctx context.Context, ownerUser string, chatIdent_stmsgId_Pairs map[string]string) error {
+func StoreUserChatIdents(ctx context.Context, ownerUser string, chatIdent_score_Pairs map[string]float64) error {
 	members := []redis.Z{}
-	for partnerUser, stmsgId := range chatIdent_stmsgId_Pairs {
+	for partnerUser, score := range chatIdent_score_Pairs {
 
 		members = append(members, redis.Z{
-			Score:  stmsgIdToScore(stmsgId),
+			Score:  score,
 			Member: partnerUser,
 		})
 	}
@@ -150,13 +150,13 @@ func StoreGroupChatHistoryEntries(ctx context.Context, newCHEs []string) error {
 	return nil
 }
 
-func StoreDirectChatHistory(ctx context.Context, ownerUser, partnerUser string, CHEId_stmsgId_Pairs [][2]string) error {
+func StoreDirectChatHistory(ctx context.Context, ownerUser, partnerUser string, CHEId_score_Pairs [][2]any) error {
 	members := []redis.Z{}
-	for _, pair := range CHEId_stmsgId_Pairs {
+	for _, pair := range CHEId_score_Pairs {
 		CHEId := pair[0]
 
 		members = append(members, redis.Z{
-			Score:  stmsgIdToScore(pair[1]),
+			Score:  pair[1].(float64),
 			Member: CHEId,
 		})
 	}
@@ -176,13 +176,13 @@ func StoreDirectChatHistory(ctx context.Context, ownerUser, partnerUser string, 
 	return nil
 }
 
-func StoreGroupChatHistory(ctx context.Context, ownerUser, groupId string, CHEId_stmsgId_Pairs [][2]string) error {
+func StoreGroupChatHistory(ctx context.Context, ownerUser, groupId string, CHEId_score_Pairs [][2]any) error {
 	members := []redis.Z{}
-	for _, pair := range CHEId_stmsgId_Pairs {
+	for _, pair := range CHEId_score_Pairs {
 		CHEId := pair[0]
 
 		members = append(members, redis.Z{
-			Score:  stmsgIdToScore(pair[1]),
+			Score:  pair[1].(float64),
 			Member: CHEId,
 		})
 	}

@@ -3,7 +3,6 @@ package cache
 import (
 	"context"
 	"i9chat/src/helpers"
-	"i9chat/src/services/cloudStorageService"
 
 	"github.com/redis/go-redis/v9"
 )
@@ -15,11 +14,5 @@ func GetUser[T any](ctx context.Context, username string) (user T, err error) {
 		return user, err
 	}
 
-	userMap := helpers.FromJson[map[string]any](userJson)
-
-	if err := cloudStorageService.ProfilePicCloudNameToUrl(userMap); err != nil {
-		return user, err
-	}
-
-	return helpers.ToStruct[T](userMap), nil
+	return helpers.FromJson[T](userJson), nil
 }

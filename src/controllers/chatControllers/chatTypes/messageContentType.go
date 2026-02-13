@@ -16,12 +16,6 @@ type msgProps struct {
 	Duration       *int64  `json:"duration,omitempty"`
 	Caption        *string `json:"caption,omitempty"`
 	Name           *string `json:"name,omitempty"`
-
-	// fields to set when sending to client
-	// Url            *string `json:"url,omitempty"`
-	// MimeType       *string `json:"mime_type,omitempty"`
-	// Size           *int64  `json:"size,omitempty"`
-	// Extension      *string `json:"extension,omitempty"`
 }
 
 type MsgContent struct {

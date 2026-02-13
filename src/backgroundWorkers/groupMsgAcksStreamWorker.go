@@ -57,6 +57,7 @@ func groupMsgAcksStreamBgWorker(rdb *redis.Client) {
 				msg.CHEId = stmsg.Values["CHEId"].(string)
 				msg.Ack = stmsg.Values["ack"].(string)
 				msg.At = helpers.FromJson[int64](stmsg.Values["at"].(string))
+				msg.ChatCursor = helpers.FromJson[int64](stmsg.Values["chatCursor"].(string))
 
 				msgs = append(msgs, msg)
 
@@ -68,16 +69,16 @@ func groupMsgAcksStreamBgWorker(rdb *redis.Client) {
 			userChatUnreadMsgs := make(map[string]map[string][]any)
 			userChatReadMsgs := make(map[string]map[string][]any)
 
-			updatedUserChats := make(map[string]map[string]string)
+			updatedUserChats := make(map[string]map[string]float64)
 
 			// batch data for batch processing
-			for i, msg := range msgs {
+			for _, msg := range msgs {
 				if msg.Ack == "delivered" {
 					if updatedUserChats[msg.FromUser] == nil {
-						updatedUserChats[msg.FromUser] = make(map[string]string)
+						updatedUserChats[msg.FromUser] = make(map[string]float64)
 					}
 
-					updatedUserChats[msg.FromUser][msg.ToGroup] = stmsgIds[i]
+					updatedUserChats[msg.FromUser][msg.ToGroup] = float64(msg.ChatCursor)
 
 					if userChatUnreadMsgs[msg.FromUser] == nil {
 						userChatUnreadMsgs[msg.FromUser] = make(map[string][]any)
@@ -110,11 +111,11 @@ func groupMsgAcksStreamBgWorker(rdb *redis.Client) {
 			// batch processing
 			eg, sharedCtx := errgroup.WithContext(ctx)
 
-			for ownerUser, groupId_stmsgId_Pairs := range updatedUserChats {
+			for ownerUser, groupId_score_Pairs := range updatedUserChats {
 				eg.Go(func() error {
-					ownerUser, groupId_stmsgId_Pairs := ownerUser, groupId_stmsgId_Pairs
+					ownerUser, groupId_score_Pairs := ownerUser, groupId_score_Pairs
 
-					return cache.StoreUserChatIdents(sharedCtx, ownerUser, groupId_stmsgId_Pairs)
+					return cache.StoreUserChatIdents(sharedCtx, ownerUser, groupId_score_Pairs)
 				})
 			}
 
