@@ -238,6 +238,7 @@ func AddUsersToGroup(ctx context.Context, groupId, clientUsername string, newUse
 		AdminCHE:      newActivity.ClientUserCHE,
 		NewMembersCHE: newActivity.NewUsersCHE,
 		MemInfo:       newActivity.MemInfo,
+		ChatCursor:    newActivity.ChatCursor,
 	})
 
 	go func(newActivity groupChat.AddUsersActivity) {
@@ -329,6 +330,7 @@ func JoinGroup(ctx context.Context, groupId, clientUsername string) (any, error)
 		NewMember:    clientUsername,
 		NewMemberCHE: newActivity.ClientUserCHE,
 		MemInfo:      newActivity.MemInfo,
+		ChatCursor:   newActivity.ChatCursor,
 	})
 
 	go broadcastActivityToAll(groupId, UITypes.ChatHistoryEntry{

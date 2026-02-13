@@ -56,6 +56,7 @@ func groupUsersJoinedStreamBgWorker(rdb *redis.Client) {
 				msg.NewMember = stmsg.Values["newMember"].(string)
 				msg.NewMemberCHE = helpers.FromJson[appTypes.BinableMap](stmsg.Values["newMemberCHE"].(string))
 				msg.MemInfo = stmsg.Values["memInfo"].(string)
+				msg.ChatCursor = helpers.FromJson[int64](stmsg.Values["chatCursor"].(string))
 
 				msgs = append(msgs, msg)
 
@@ -67,11 +68,11 @@ func groupUsersJoinedStreamBgWorker(rdb *redis.Client) {
 
 			newUserChats := make(map[string][]string)
 
-			userChats := make(map[string]map[string]string)
+			userChats := make(map[string]map[string]float64)
 
 			newGroupActivityEntries := []string{}
 
-			chatGroupActivities := make(map[string][][2]string)
+			chatGroupActivities := make(map[string][][2]any)
 
 			// batch data for batch processing
 			for i, msg := range msgs {
@@ -79,37 +80,39 @@ func groupUsersJoinedStreamBgWorker(rdb *redis.Client) {
 
 				newMem := msg.NewMember
 
-				newUserChats[newMem] = append(newUserChats[newMem], msg.GroupId, helpers.ToJson(map[string]any{"type": "group", "group": msg.GroupId}))
+				newUserChats[newMem] = append(newUserChats[newMem], msg.GroupId, helpers.ToJson(map[string]any{"type": "group", "group": msg.GroupId, "cursor": msg.ChatCursor}))
 
 				if userChats[newMem] == nil {
-					userChats[newMem] = make(map[string]string)
+					userChats[newMem] = make(map[string]float64)
 				}
 
-				userChats[newMem][msg.GroupId] = stmsgIds[i]
+				userChats[newMem][msg.GroupId] = float64(msg.ChatCursor)
 
-				gactData := msg.NewMemberCHE
+				gactche := msg.NewMemberCHE
 
-				CHEId := gactData["che_id"].(string)
+				CHEId := gactche["che_id"].(string)
+				CHECursor := gactche["cursor"].(int64)
 
-				newGroupActivityEntries = append(newGroupActivityEntries, CHEId, helpers.ToJson(gactData))
+				newGroupActivityEntries = append(newGroupActivityEntries, CHEId, helpers.ToJson(gactche))
 
-				chatGroupActivities[newMem+" "+msg.GroupId] = append(chatGroupActivities[newMem+" "+msg.GroupId], [2]string{CHEId, stmsgIds[i]})
+				chatGroupActivities[newMem+" "+msg.GroupId] = append(chatGroupActivities[newMem+" "+msg.GroupId], [2]any{CHEId, float64(CHECursor)})
 
-				postActivity, err := groupChat.PostGroupActivityBgDBOper(ctx, msg.GroupId, msg.MemInfo, stmsgIds[i], []any{msg.NewMember})
+				postActivity, err := groupChat.PostGroupActivityBgDBOper(ctx, msg.GroupId, msg.MemInfo, stmsgIds[i], CHECursor, []any{msg.NewMember})
 				if err != nil {
 					return
 				}
 
-				for memui, memUser := range postActivity.MemberUsernames {
+				for _, memUser := range postActivity.MemberUsernames {
 					memUser := memUser.(string)
 
-					gactData := postActivity.MemberUsersCHE[memUser].(map[string]any)
+					gactche := postActivity.MemberUsersCHE[memUser].(map[string]any)
 
-					CHEId := gactData["che_id"].(string)
+					CHEId := gactche["che_id"].(string)
+					CHECursor := gactche["cursor"].(int64)
 
-					newGroupActivityEntries = append(newGroupActivityEntries, CHEId, helpers.ToJson(gactData))
+					newGroupActivityEntries = append(newGroupActivityEntries, CHEId, helpers.ToJson(gactche))
 
-					chatGroupActivities[memUser+" "+msg.GroupId] = append(chatGroupActivities[memUser+" "+msg.GroupId], [2]string{CHEId, fmt.Sprintf("%s-%d", stmsgIds[i], memui)})
+					chatGroupActivities[memUser+" "+msg.GroupId] = append(chatGroupActivities[memUser+" "+msg.GroupId], [2]any{CHEId, float64(CHECursor)})
 				}
 			}
 
@@ -136,23 +139,23 @@ func groupUsersJoinedStreamBgWorker(rdb *redis.Client) {
 				})
 			}
 
-			for ownerUser, groupId_stmsgId_Pairs := range userChats {
+			for ownerUser, groupId_score_Pairs := range userChats {
 				eg.Go(func() error {
-					ownerUser, groupId_stmsgId_Pairs := ownerUser, groupId_stmsgId_Pairs
+					ownerUser, groupId_score_Pairs := ownerUser, groupId_score_Pairs
 
-					return cache.StoreUserChatIdents(sharedCtx, ownerUser, groupId_stmsgId_Pairs)
+					return cache.StoreUserChatIdents(sharedCtx, ownerUser, groupId_score_Pairs)
 				})
 			}
 
-			for ownerUserGroupId, CHEId_stmsgId_Pairs := range chatGroupActivities {
+			for ownerUserGroupId, CHEId_score_Pairs := range chatGroupActivities {
 				eg.Go(func() error {
-					ownerUserGroupId, CHEId_stmsgId_Pairs := ownerUserGroupId, CHEId_stmsgId_Pairs
+					ownerUserGroupId, CHEId_score_Pairs := ownerUserGroupId, CHEId_score_Pairs
 
 					var ownerUser, groupId string
 
 					fmt.Sscanf(ownerUserGroupId, "%s %s", &ownerUser, &groupId)
 
-					return cache.StoreGroupChatHistory(sharedCtx, ownerUser, groupId, CHEId_stmsgId_Pairs)
+					return cache.StoreGroupChatHistory(sharedCtx, ownerUser, groupId, CHEId_score_Pairs)
 				})
 			}
 

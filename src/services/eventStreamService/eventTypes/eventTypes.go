@@ -43,6 +43,7 @@ type GroupUsersAddedEvent struct {
 	AdminCHE      appTypes.BinableMap   `redis:"adminCHE" json:"adminCHE"`
 	NewMembersCHE appTypes.BinableMap   `redis:"newMembersCHE" json:"newMembersCHE"`
 	MemInfo       string                `redis:"memInfo" json:"memInfo"`
+	ChatCursor    int64                 `redis:"chatCursor" json:"chatCursor"`
 }
 
 type GroupUserRemovedEvent struct {
@@ -59,6 +60,7 @@ type GroupUserJoinedEvent struct {
 	NewMember    string              `redis:"newMember" json:"newMember"`
 	NewMemberCHE appTypes.BinableMap `redis:"newMemberCHE" json:"newMemberCHE"`
 	MemInfo      string              `redis:"memInfo" json:"memInfo"`
+	ChatCursor   int64               `redis:"chatCursor" json:"chatCursor"`
 }
 
 type GroupUserLeftEvent struct {

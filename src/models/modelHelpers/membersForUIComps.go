@@ -72,14 +72,11 @@ func ChatIdentMembersForUIChatSnippets(ctx context.Context, chatIdentMembers []r
 
 			for pIndx := start; pIndx < end; pIndx++ {
 				chatIdent := chatIdentMembers[pIndx].Member.(string)
-				cursor := chatIdentMembers[pIndx].Score
 
 				chatSnippet, err := buildChatSnippetUIFromCache(sharedCtx, clientUsername, chatIdent)
 				if err != nil {
 					return err
 				}
-
-				chatSnippet.Cursor = cursor
 
 				chatSnippetsAcc[pIndx] = chatSnippet
 			}
@@ -111,14 +108,11 @@ func CHEMembersForUICHEs(ctx context.Context, CHEMembers []redis.Z, chatType str
 
 			for pIndx := start; pIndx < end; pIndx++ {
 				CHEId := CHEMembers[pIndx].Member.(string)
-				cursor := CHEMembers[pIndx].Score
 
 				CHE, err := buildCHEUIFromCache(sharedCtx, CHEId, chatType)
 				if err != nil {
 					return err
 				}
-
-				CHE.Cursor = cursor
 
 				CHEsAcc[pIndx] = CHE
 			}
