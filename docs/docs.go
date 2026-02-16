@@ -22,10 +22,10 @@ const docTemplate = `{
             "post": {
                 "description": "Provide the 6-digit token sent to email",
                 "consumes": [
-                    "application/json"
+                    "application/vnd.msgpack"
                 ],
                 "produces": [
-                    "application/json"
+                    "application/vnd.msgpack"
                 ],
                 "tags": [
                     "auth"
@@ -93,10 +93,10 @@ const docTemplate = `{
             "post": {
                 "description": "Submit your email to request a password reset",
                 "consumes": [
-                    "application/json"
+                    "application/vnd.msgpack"
                 ],
                 "produces": [
-                    "application/json"
+                    "application/vnd.msgpack"
                 ],
                 "tags": [
                     "auth"
@@ -145,10 +145,10 @@ const docTemplate = `{
             "post": {
                 "description": "Set new password",
                 "consumes": [
-                    "application/json"
+                    "application/vnd.msgpack"
                 ],
                 "produces": [
-                    "application/json"
+                    "application/vnd.msgpack"
                 ],
                 "tags": [
                     "auth"
@@ -219,10 +219,10 @@ const docTemplate = `{
             "post": {
                 "description": "Signin with email/username and password",
                 "consumes": [
-                    "application/json"
+                    "application/vnd.msgpack"
                 ],
                 "produces": [
-                    "application/json"
+                    "application/vnd.msgpack"
                 ],
                 "tags": [
                     "auth"
@@ -231,7 +231,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "description": "Email or Username",
-                        "name": "EmailOrUsername",
+                        "name": "emailOrUsername",
                         "in": "body",
                         "required": true,
                         "schema": {
@@ -240,7 +240,7 @@ const docTemplate = `{
                     },
                     {
                         "description": "User Password",
-                        "name": "Password",
+                        "name": "password",
                         "in": "body",
                         "required": true,
                         "schema": {
@@ -257,7 +257,7 @@ const docTemplate = `{
                         "headers": {
                             "Set-Cookie": {
                                 "type": "string",
-                                "description": "User session response cookie containing auth JWT"
+                                "description": "Authenticated user session response cookie containing auth JWT"
                             }
                         }
                     },
@@ -286,10 +286,10 @@ const docTemplate = `{
             "post": {
                 "description": "Provide remaining user credentials",
                 "consumes": [
-                    "application/json"
+                    "application/vnd.msgpack"
                 ],
                 "produces": [
-                    "application/json"
+                    "application/vnd.msgpack"
                 ],
                 "tags": [
                     "auth"
@@ -339,7 +339,7 @@ const docTemplate = `{
                         "headers": {
                             "Set-cookie": {
                                 "type": "string",
-                                "description": "User session response cookie containing auth JWT"
+                                "description": "Authenticated user session response cookie containing auth JWT"
                             }
                         }
                     },
@@ -374,10 +374,10 @@ const docTemplate = `{
             "post": {
                 "description": "Provide the 6-digit code sent to email",
                 "consumes": [
-                    "application/json"
+                    "application/vnd.msgpack"
                 ],
                 "produces": [
-                    "application/json"
+                    "application/vnd.msgpack"
                 ],
                 "tags": [
                     "auth"
@@ -449,7 +449,7 @@ const docTemplate = `{
                 "presence": {
                     "type": "string"
                 },
-                "profile_pic_url": {
+                "profilePicUrl": {
                     "type": "string"
                 },
                 "username": {

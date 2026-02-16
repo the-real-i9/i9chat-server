@@ -10,7 +10,7 @@ import (
 	"i9chat/src/models/db"
 	"i9chat/src/models/modelHelpers"
 
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"github.com/redis/go-redis/v9"
 )
 
@@ -41,11 +41,11 @@ func Exists(ctx context.Context, emailOrUsername string) (bool, error) {
 }
 
 type NewUserT struct {
-	Email         string `json:"email" db:"email"`
-	Username      string `json:"username" db:"username"`
-	ProfilePicUrl string `json:"profile_pic_url" db:"profile_pic_url"`
-	Bio           string `json:"bio" db:"bio"`
-	Presence      string `json:"presence" db:"presence"`
+	Email         string `msgpack:"email" db:"email"`
+	Username      string `msgpack:"username" db:"username"`
+	ProfilePicUrl string `msgpack:"profile_pic_url" db:"profile_pic_url"`
+	Bio           string `msgpack:"bio" db:"bio"`
+	Presence      string `msgpack:"presence" db:"presence"`
 }
 
 func New(ctx context.Context, email, username, password, bio string) (newUser NewUserT, err error) {
@@ -73,10 +73,10 @@ func New(ctx context.Context, email, username, password, bio string) (newUser Ne
 }
 
 type SignedInUserT struct {
-	Username      string `json:"username" db:"username"`
-	ProfilePicUrl string `json:"profile_pic_url" db:"profile_pic_url"`
-	Presence      string `json:"presence" db:"presence"`
-	Password      string `json:"-" db:"password"`
+	Username      string `msgpack:"username" db:"username"`
+	ProfilePicUrl string `msgpack:"profile_pic_url" db:"profile_pic_url"`
+	Presence      string `msgpack:"presence" db:"presence"`
+	Password      string `msgpack:"-" db:"password"`
 }
 
 func SigninFind(ctx context.Context, uniqueIdent string) (user SignedInUserT, err error) {
@@ -293,11 +293,11 @@ func GetMyProfile(ctx context.Context, clientUsername string) (UITypes.UserProfi
 	return profile, nil
 }
 
-func GetMyChats(ctx context.Context, clientUsername string, limit int, cursor float64) ([]UITypes.ChatSnippet, error) {
+func GetMyChats(ctx context.Context, clientUsername string, limit int64, cursor float64) ([]UITypes.ChatSnippet, error) {
 	chatIdentMembers, err := redisDB().ZRevRangeByScoreWithScores(ctx, fmt.Sprintf("user:%s:chats_sorted", clientUsername), &redis.ZRangeBy{
 		Max:   helpers.MaxCursor(cursor),
 		Min:   "-inf",
-		Count: int64(limit),
+		Count: limit,
 	}).Result()
 	if err != nil {
 		helpers.LogError(err)

@@ -10,7 +10,7 @@ import (
 )
 
 func PublishUserPresenceChange(ctx context.Context, targetUsername string, data map[string]any) {
-	if err := rdb().Publish(ctx, fmt.Sprintf("user_%s_presence_change", targetUsername), helpers.ToJson(appTypes.ServerEventMsg{
+	if err := rdb().Publish(ctx, fmt.Sprintf("user_%s_presence_change", targetUsername), helpers.ToMsgPack(appTypes.ServerEventMsg{
 		Event: "user presence changed",
 		Data:  data,
 	})).Err(); err != nil {

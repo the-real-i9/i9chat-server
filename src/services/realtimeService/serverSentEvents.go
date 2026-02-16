@@ -15,7 +15,7 @@ func SendEventMsg(toUser string, msg appTypes.ServerEventMsg) {
 
 	storeUndelvMsg := func() {
 		// save for later in case of error
-		_, err := rdb().RPush(ctx, fmt.Sprintf("user_event_msgs_queue:%s", toUser), helpers.ToJson(msg)).Result()
+		_, err := rdb().RPush(ctx, fmt.Sprintf("user_event_msgs_queue:%s", toUser), helpers.ToMsgPack(msg)).Result()
 		if err != nil {
 			helpers.LogError(err)
 			return

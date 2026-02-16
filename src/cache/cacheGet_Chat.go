@@ -15,7 +15,7 @@ func GetGroup[T any](ctx context.Context, groupId string) (group T, err error) {
 		return group, err
 	}
 
-	return helpers.FromJson[T](groupJson), nil
+	return helpers.FromMsgPack[T](groupJson), nil
 }
 
 func GetGroupMembersList(ctx context.Context, groupId string) ([]string, error) {
@@ -55,7 +55,7 @@ func GetChat[T any](ctx context.Context, ownerUser, chatIdent string) (chat T, e
 		return chat, err
 	}
 
-	return helpers.FromJson[T](chatJson), nil
+	return helpers.FromMsgPack[T](chatJson), nil
 }
 
 func GetChatUnreadMsgsCount(ctx context.Context, ownerUser, chatIdent string) (int64, error) {
@@ -75,7 +75,7 @@ func GetDirectChatHistoryEntry[T any](ctx context.Context, CHEId string) (CHE T,
 		return CHE, err
 	}
 
-	return helpers.FromJson[T](CHEJson), nil
+	return helpers.FromMsgPack[T](CHEJson), nil
 }
 
 func GetGroupChatHistoryEntry[T any](ctx context.Context, CHEId string) (CHE T, err error) {
@@ -85,7 +85,7 @@ func GetGroupChatHistoryEntry[T any](ctx context.Context, CHEId string) (CHE T, 
 		return CHE, err
 	}
 
-	return helpers.FromJson[T](CHEJson), nil
+	return helpers.FromMsgPack[T](CHEJson), nil
 }
 
 func GetMsgReactions(ctx context.Context, msgId string) (map[string]string, error) {

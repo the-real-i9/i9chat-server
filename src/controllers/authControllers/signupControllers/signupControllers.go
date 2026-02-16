@@ -5,8 +5,8 @@ import (
 	"i9chat/src/services/auth/signupService"
 	"time"
 
-	"github.com/goccy/go-json"
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
+	"github.com/vmihailenco/msgpack/v5"
 )
 
 // Signup - Request New Account
@@ -14,8 +14,8 @@ import (
 //	@Summary		Signup user - Step 1
 //	@Description	Submit email to request a new account
 //	@Tags			auth
-//	@Accept			json
-//	@Produce		json
+//	@Accept			application/vnd.msgpack
+//	@Produce		application/vnd.msgpack
 //
 //	@Param			email	body		string						true	"Provide your email address"
 //
@@ -28,12 +28,12 @@ import (
 //
 //	@Router			/auth/signup/request_new_account [post]
 
-func RequestNewAccount(c *fiber.Ctx) error {
+func RequestNewAccount(c fiber.Ctx) error {
 	ctx := c.Context()
 
 	var body requestNewAccountBody
 
-	err := c.BodyParser(&body)
+	err := c.Bind().MsgPack(&body)
 	if err != nil {
 		return err
 	}
@@ -53,7 +53,7 @@ func RequestNewAccount(c *fiber.Ctx) error {
 
 	c.Cookie(helpers.Session(reqSession, "/api/auth/signup/verify_email", int(time.Hour/time.Second)))
 
-	return c.JSON(respData)
+	return c.MsgPack(respData)
 }
 
 // Signup - Verify Email
@@ -61,8 +61,8 @@ func RequestNewAccount(c *fiber.Ctx) error {
 //	@Summary		Signup user - Step 2
 //	@Description	Provide the 6-digit code sent to email
 //	@Tags			auth
-//	@Accept			json
-//	@Produce		json
+//	@Accept			application/vnd.msgpack
+//	@Produce		application/vnd.msgpack
 //
 //	@Param			code	body		string						true	"6-digit code"
 //	@Param			Cookie	header		string						true	"Signup session request cookie"
@@ -77,14 +77,14 @@ func RequestNewAccount(c *fiber.Ctx) error {
 //	@Header			500		{string}	Set-cookie	"Signup session response cookie"
 //
 //	@Router			/auth/signup/verify_email [post]
-func VerifyEmail(c *fiber.Ctx) error {
+func VerifyEmail(c fiber.Ctx) error {
 	ctx := c.Context()
 
-	sessionData := c.Locals("signup_sess_data").(json.RawMessage)
+	sessionData := c.Locals("signup_sess_data").(msgpack.RawMessage)
 
 	var body verifyEmailBody
 
-	err := c.BodyParser(&body)
+	err := c.Bind().MsgPack(&body)
 	if err != nil {
 		return err
 	}
@@ -104,7 +104,7 @@ func VerifyEmail(c *fiber.Ctx) error {
 
 	c.Cookie(helpers.Session(reqSession, "/api/auth/signup/register_user", int(time.Hour/time.Second)))
 
-	return c.JSON(respData)
+	return c.MsgPack(respData)
 }
 
 // Signup - Register user
@@ -112,8 +112,8 @@ func VerifyEmail(c *fiber.Ctx) error {
 //	@Summary		Signup user - Step 3
 //	@Description	Provide remaining user credentials
 //	@Tags			auth
-//	@Accept			json
-//	@Produce		json
+//	@Accept			application/vnd.msgpack
+//	@Produce		application/vnd.msgpack
 //
 //	@Param			username	body		string						true	"Choose a username"
 //	@Param			password	body		string						true	"Choose a password"
@@ -131,14 +131,14 @@ func VerifyEmail(c *fiber.Ctx) error {
 //	@Header			500			{string}	Set-cookie	"Signup session response cookie"
 //
 //	@Router			/auth/signup/register_user [post]
-func RegisterUser(c *fiber.Ctx) error {
+func RegisterUser(c fiber.Ctx) error {
 	ctx := c.Context()
 
-	sessionData := c.Locals("signup_sess_data").(json.RawMessage)
+	sessionData := c.Locals("signup_sess_data").(msgpack.RawMessage)
 
 	var body registerUserBody
 
-	err := c.BodyParser(&body)
+	err := c.Bind().MsgPack(&body)
 	if err != nil {
 		return err
 	}

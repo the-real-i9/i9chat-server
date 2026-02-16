@@ -78,7 +78,7 @@ func TestGroupChat(t *testing.T) {
 				reqBody, err := makeReqBody(map[string]any{"email": user.Email})
 				require.NoError(err)
 
-				res, err := http.Post(signupPath+"/request_new_account", "application/json", reqBody)
+				res, err := http.Post(signupPath+"/request_new_account", "application/vnd.msgpack", reqBody)
 				require.NoError(err)
 
 				if !assert.Equal(t, http.StatusOK, res.StatusCode) {
@@ -105,7 +105,7 @@ func TestGroupChat(t *testing.T) {
 				req, err := http.NewRequest("POST", signupPath+"/verify_email", reqBody)
 				require.NoError(err)
 				req.Header.Set("Cookie", user.SessionCookie)
-				req.Header.Add("Content-Type", "application/json")
+				req.Header.Add("Content-Type", "application/vnd.msgpack")
 
 				res, err := http.DefaultClient.Do(req)
 				require.NoError(err)
@@ -136,7 +136,7 @@ func TestGroupChat(t *testing.T) {
 
 				req, err := http.NewRequest("POST", signupPath+"/register_user", reqBody)
 				require.NoError(err)
-				req.Header.Add("Content-Type", "application/json")
+				req.Header.Add("Content-Type", "application/vnd.msgpack")
 				req.Header.Set("Cookie", user.SessionCookie)
 
 				res, err := http.DefaultClient.Do(req)
@@ -230,7 +230,7 @@ func TestGroupChat(t *testing.T) {
 		req, err := http.NewRequest("POST", groupChatPath+"/group_pic_upload/authorize", reqBody)
 		require.NoError(err)
 		req.Header.Set("Cookie", user1.SessionCookie)
-		req.Header.Add("Content-Type", "application/json")
+		req.Header.Add("Content-Type", "application/vnd.msgpack")
 
 		res, err := http.DefaultClient.Do(req)
 		require.NoError(err)
@@ -308,7 +308,7 @@ func TestGroupChat(t *testing.T) {
 
 		req, err := http.NewRequest("POST", groupChatPath+"/new", reqBody)
 		require.NoError(err)
-		req.Header.Add("Content-Type", "application/json")
+		req.Header.Add("Content-Type", "application/vnd.msgpack")
 		req.Header.Set("Cookie", user1.SessionCookie)
 
 		res, err := http.DefaultClient.Do(req)
@@ -364,7 +364,7 @@ func TestGroupChat(t *testing.T) {
 
 		req, err := http.NewRequest("POST", groupChatPath+"/"+newGroup.Id+"/execute_action/join", reqBody)
 		require.NoError(err)
-		req.Header.Add("Content-Type", "application/json")
+		req.Header.Add("Content-Type", "application/vnd.msgpack")
 		req.Header.Set("Cookie", user3.SessionCookie)
 
 		res, err := http.DefaultClient.Do(req)
@@ -423,7 +423,7 @@ func TestGroupChat(t *testing.T) {
 
 		req, err := http.NewRequest("POST", groupChatPath+"/"+newGroup.Id+"/execute_action/make user admin", reqBody)
 		require.NoError(err)
-		req.Header.Add("Content-Type", "application/json")
+		req.Header.Add("Content-Type", "application/vnd.msgpack")
 		req.Header.Set("Cookie", user1.SessionCookie)
 
 		res, err := http.DefaultClient.Do(req)
@@ -472,7 +472,7 @@ func TestGroupChat(t *testing.T) {
 
 		req, err := http.NewRequest("POST", groupChatPath+"/"+newGroup.Id+"/execute_action/add users", reqBody)
 		require.NoError(err)
-		req.Header.Add("Content-Type", "application/json")
+		req.Header.Add("Content-Type", "application/vnd.msgpack")
 		req.Header.Set("Cookie", user2.SessionCookie)
 
 		res, err := http.DefaultClient.Do(req)
@@ -559,7 +559,7 @@ func TestGroupChat(t *testing.T) {
 
 		req, err := http.NewRequest("POST", groupChatPath+"/"+newGroup.Id+"/execute_action/change name", reqBody)
 		require.NoError(err)
-		req.Header.Add("Content-Type", "application/json")
+		req.Header.Add("Content-Type", "application/vnd.msgpack")
 		req.Header.Set("Cookie", user1.SessionCookie)
 
 		res, err := http.DefaultClient.Do(req)
@@ -632,7 +632,7 @@ func TestGroupChat(t *testing.T) {
 
 		req, err := http.NewRequest("POST", groupChatPath+"/"+newGroup.Id+"/execute_action/change description", reqBody)
 		require.NoError(err)
-		req.Header.Add("Content-Type", "application/json")
+		req.Header.Add("Content-Type", "application/vnd.msgpack")
 		req.Header.Set("Cookie", user1.SessionCookie)
 
 		res, err := http.DefaultClient.Do(req)
@@ -703,7 +703,7 @@ func TestGroupChat(t *testing.T) {
 
 		req, err := http.NewRequest("POST", groupChatPath+"/"+newGroup.Id+"/execute_action/change picture", reqBody)
 		require.NoError(err)
-		req.Header.Add("Content-Type", "application/json")
+		req.Header.Add("Content-Type", "application/vnd.msgpack")
 		req.Header.Set("Cookie", user2.SessionCookie)
 
 		res, err := http.DefaultClient.Do(req)
@@ -772,7 +772,7 @@ func TestGroupChat(t *testing.T) {
 
 		req, err := http.NewRequest("POST", groupChatPath+"/"+newGroup.Id+"/execute_action/remove user from admins", reqBody)
 		require.NoError(err)
-		req.Header.Add("Content-Type", "application/json")
+		req.Header.Add("Content-Type", "application/vnd.msgpack")
 		req.Header.Set("Cookie", user2.SessionCookie)
 
 		res, err := http.DefaultClient.Do(req)
@@ -841,7 +841,7 @@ func TestGroupChat(t *testing.T) {
 
 		req, err := http.NewRequest("POST", groupChatPath+"/"+newGroup.Id+"/execute_action/remove user", reqBody)
 		require.NoError(err)
-		req.Header.Add("Content-Type", "application/json")
+		req.Header.Add("Content-Type", "application/vnd.msgpack")
 		req.Header.Set("Cookie", user2.SessionCookie)
 
 		res, err := http.DefaultClient.Do(req)
@@ -908,7 +908,7 @@ func TestGroupChat(t *testing.T) {
 
 		req, err := http.NewRequest("POST", groupChatPath+"/"+newGroup.Id+"/execute_action/leave", reqBody)
 		require.NoError(err)
-		req.Header.Add("Content-Type", "application/json")
+		req.Header.Add("Content-Type", "application/vnd.msgpack")
 		req.Header.Set("Cookie", user3.SessionCookie)
 
 		res, err := http.DefaultClient.Do(req)
@@ -1229,7 +1229,7 @@ func TestGroupChat(t *testing.T) {
 
 		req, err := http.NewRequest("GET", groupChatPath+"/"+newGroup.Id+"/history", nil)
 		require.NoError(err)
-		req.Header.Add("Content-Type", "application/json")
+		req.Header.Add("Content-Type", "application/vnd.msgpack")
 		req.Header.Set("Cookie", user5.SessionCookie)
 
 		res, err := http.DefaultClient.Do(req)

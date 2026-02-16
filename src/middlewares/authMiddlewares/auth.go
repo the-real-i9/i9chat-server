@@ -6,11 +6,11 @@ import (
 	"i9chat/src/services/securityServices"
 	"os"
 
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 )
 
-func UserAuth(c *fiber.Ctx) error {
-	usData := helpers.FromJson[map[string]any](c.Cookies("session"))["user"]
+func UserAuth(c fiber.Ctx) error {
+	usData := helpers.FromMsgPack[map[string]any](c.Cookies("session"))["user"]
 
 	if usData == nil {
 		return c.Status(fiber.StatusUnauthorized).SendString("authentication required")

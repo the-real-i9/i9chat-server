@@ -6,13 +6,13 @@ import (
 	"i9chat/src/services/cloudStorageService"
 	"time"
 
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"github.com/google/uuid"
 )
 
 type AuthDataT struct {
-	UploadUrl      string `json:"uploadUrl"`
-	MediaCloudName string `json:"mediaCloudName"`
+	UploadUrl      string `msgpack:"uploadUrl"`
+	MediaCloudName string `msgpack:"mediaCloudName"`
 }
 
 func Authorize(ctx context.Context, msgType, mediaMIME string) (AuthDataT, error) {

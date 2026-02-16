@@ -55,7 +55,7 @@ func TestUserOps(t *testing.T) {
 				reqBody, err := makeReqBody(map[string]any{"email": user.Email})
 				require.NoError(err)
 
-				res, err := http.Post(signupPath+"/request_new_account", "application/json", reqBody)
+				res, err := http.Post(signupPath+"/request_new_account", "application/vnd.msgpack", reqBody)
 				require.NoError(err)
 
 				if !assert.Equal(t, http.StatusOK, res.StatusCode) {
@@ -82,7 +82,7 @@ func TestUserOps(t *testing.T) {
 				req, err := http.NewRequest("POST", signupPath+"/verify_email", reqBody)
 				require.NoError(err)
 				req.Header.Set("Cookie", user.SessionCookie)
-				req.Header.Add("Content-Type", "application/json")
+				req.Header.Add("Content-Type", "application/vnd.msgpack")
 
 				res, err := http.DefaultClient.Do(req)
 				require.NoError(err)
@@ -113,7 +113,7 @@ func TestUserOps(t *testing.T) {
 
 				req, err := http.NewRequest("POST", signupPath+"/register_user", reqBody)
 				require.NoError(err)
-				req.Header.Add("Content-Type", "application/json")
+				req.Header.Add("Content-Type", "application/vnd.msgpack")
 				req.Header.Set("Cookie", user.SessionCookie)
 
 				res, err := http.DefaultClient.Do(req)
@@ -148,7 +148,7 @@ func TestUserOps(t *testing.T) {
 		req, err := http.NewRequest("POST", userPath+"/set_geolocation", reqBody)
 		require.NoError(err)
 		req.Header.Set("Cookie", user1.SessionCookie)
-		req.Header.Add("Content-Type", "application/json")
+		req.Header.Add("Content-Type", "application/vnd.msgpack")
 
 		res, err := http.DefaultClient.Do(req)
 		require.NoError(err)
@@ -174,7 +174,7 @@ func TestUserOps(t *testing.T) {
 		req, err := http.NewRequest("POST", userPath+"/set_geolocation", reqBody)
 		require.NoError(err)
 		req.Header.Set("Cookie", user2.SessionCookie)
-		req.Header.Add("Content-Type", "application/json")
+		req.Header.Add("Content-Type", "application/vnd.msgpack")
 
 		res, err := http.DefaultClient.Do(req)
 		require.NoError(err)
@@ -232,7 +232,7 @@ func TestUserOps(t *testing.T) {
 		req, err := http.NewRequest("POST", userPath+"/change_bio", reqBody)
 		require.NoError(err)
 		req.Header.Set("Cookie", user1.SessionCookie)
-		req.Header.Add("Content-Type", "application/json")
+		req.Header.Add("Content-Type", "application/vnd.msgpack")
 
 		res, err := http.DefaultClient.Do(req)
 		require.NoError(err)
@@ -271,7 +271,7 @@ func TestUserOps(t *testing.T) {
 			req, err := http.NewRequest("POST", userPath+"/profile_pic_upload/authorize", reqBody)
 			require.NoError(err)
 			req.Header.Set("Cookie", user2.SessionCookie)
-			req.Header.Add("Content-Type", "application/json")
+			req.Header.Add("Content-Type", "application/vnd.msgpack")
 
 			res, err := http.DefaultClient.Do(req)
 			require.NoError(err)
@@ -334,7 +334,7 @@ func TestUserOps(t *testing.T) {
 		req, err := http.NewRequest("POST", userPath+"/change_profile_picture", reqBody)
 		require.NoError(err)
 		req.Header.Set("Cookie", user2.SessionCookie)
-		req.Header.Add("Content-Type", "application/json")
+		req.Header.Add("Content-Type", "application/vnd.msgpack")
 
 		res, err := http.DefaultClient.Do(req)
 		require.NoError(err)

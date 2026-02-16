@@ -10,9 +10,9 @@ import (
 )
 
 type authorizeUploadBody struct {
-	MsgType   string `json:"msg_type"`
-	MediaMIME string `json:"media_mime"`
-	MediaSize int64  `json:"media_size"`
+	MsgType   string `msgpack:"msg_type"`
+	MediaMIME string `msgpack:"media_mime"`
+	MediaSize int64  `msgpack:"media_size"`
 }
 
 func (b authorizeUploadBody) Validate() error {
@@ -78,9 +78,9 @@ func (b authorizeUploadBody) Validate() error {
 }
 
 type authorizeVisualUploadBody struct {
-	MsgType   string    `json:"msg_type"`
-	MediaMIME [2]string `json:"media_mime"`
-	MediaSize [2]int64  `json:"media_size"`
+	MsgType   string    `msgpack:"msg_type"`
+	MediaMIME [2]string `msgpack:"media_mime"`
+	MediaSize [2]int64  `msgpack:"media_size"`
 }
 
 func (b authorizeVisualUploadBody) Validate() error {

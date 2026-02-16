@@ -13,11 +13,11 @@ func UpdateUser(ctx context.Context, username string, updateKVMap map[string]any
 		return err
 	}
 
-	userData := helpers.FromJson[map[string]any](userDataJson)
+	userData := helpers.FromMsgPack[map[string]any](userDataJson)
 
 	maps.Copy(userData, updateKVMap)
 
-	err = rdb().HSet(ctx, "users", username, helpers.ToJson(userData)).Err()
+	err = rdb().HSet(ctx, "users", username, helpers.ToMsgPack(userData)).Err()
 	if err != nil {
 		helpers.LogError(err)
 		return err
@@ -33,11 +33,11 @@ func UpdateGroup(ctx context.Context, groupId string, updateKVMap map[string]any
 		return err
 	}
 
-	userData := helpers.FromJson[map[string]any](groupDataJson)
+	userData := helpers.FromMsgPack[map[string]any](groupDataJson)
 
 	maps.Copy(userData, updateKVMap)
 
-	err = rdb().HSet(ctx, "groups", groupId, helpers.ToJson(userData)).Err()
+	err = rdb().HSet(ctx, "groups", groupId, helpers.ToMsgPack(userData)).Err()
 	if err != nil {
 		helpers.LogError(err)
 		return err
@@ -53,7 +53,7 @@ func UpdateDirectMessageDelivery(ctx context.Context, CHEId string, updateKVMap 
 		return err
 	}
 
-	msgData := helpers.FromJson[map[string]any](msgDataJson)
+	msgData := helpers.FromMsgPack[map[string]any](msgDataJson)
 
 	// if a client skips the "delivered" ack, and acks "read"
 	// it means the message is delivered and read at the same time
@@ -63,7 +63,7 @@ func UpdateDirectMessageDelivery(ctx context.Context, CHEId string, updateKVMap 
 
 	maps.Copy(msgData, updateKVMap)
 
-	err = rdb().HSet(ctx, "direct_chat_history_entries", CHEId, helpers.ToJson(msgData)).Err()
+	err = rdb().HSet(ctx, "direct_chat_history_entries", CHEId, helpers.ToMsgPack(msgData)).Err()
 	if err != nil {
 		helpers.LogError(err)
 		return err
@@ -79,7 +79,7 @@ func UpdateGroupMessageDelivery(ctx context.Context, CHEId string, updateKVMap m
 		return err
 	}
 
-	msgData := helpers.FromJson[map[string]any](msgDataJson)
+	msgData := helpers.FromMsgPack[map[string]any](msgDataJson)
 
 	// if a client skips the "delivered" ack, and acks "read"
 	// it means the message is delivered and read at the same time
@@ -89,7 +89,7 @@ func UpdateGroupMessageDelivery(ctx context.Context, CHEId string, updateKVMap m
 
 	maps.Copy(msgData, updateKVMap)
 
-	err = rdb().HSet(ctx, "group_chat_history_entries", CHEId, helpers.ToJson(msgData)).Err()
+	err = rdb().HSet(ctx, "group_chat_history_entries", CHEId, helpers.ToMsgPack(msgData)).Err()
 	if err != nil {
 		helpers.LogError(err)
 		return err

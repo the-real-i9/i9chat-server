@@ -13,7 +13,7 @@ import (
 	"i9chat/src/services/realtimeService"
 	"time"
 
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"github.com/google/uuid"
 )
 
@@ -69,7 +69,7 @@ func NewUser(ctx context.Context, email, username, password, bio string) (user.N
 		go func(newUser user.NewUserT) {
 			eventStreamService.QueueNewUserEvent(eventTypes.NewUserEvent{
 				Username: newUser.Username,
-				UserData: helpers.ToJson(newUser),
+				UserData: helpers.ToMsgPack(newUser),
 			})
 		}(newUser)
 	}
@@ -100,8 +100,8 @@ func ChangeUserPassword(ctx context.Context, email, newPassword string) (bool, e
 }
 
 type AuthPPicDataT struct {
-	UploadUrl     string `json:"uploadUrl"`
-	PPicCloudName string `json:"profilePicCloudName"`
+	UploadUrl     string `msgpack:"uploadUrl"`
+	PPicCloudName string `msgpack:"profilePicCloudName"`
 }
 
 func AuthorizePPicUpload(ctx context.Context, picMIME string) (AuthPPicDataT, error) {
@@ -200,7 +200,7 @@ func FindNearbyUsers(ctx context.Context, clientUsername string, x, y, radius fl
 	return user.FindNearby(ctx, clientUsername, x, y, radius)
 }
 
-func GetMyChats(ctx context.Context, clientUsername string, limit int, cursor float64) ([]UITypes.ChatSnippet, error) {
+func GetMyChats(ctx context.Context, clientUsername string, limit int64, cursor float64) ([]UITypes.ChatSnippet, error) {
 	return user.GetMyChats(ctx, clientUsername, limit, cursor)
 }
 

@@ -53,10 +53,10 @@ func directMsgAcksStreamBgWorker(rdb *redis.Client) {
 
 				msg.FromUser = stmsg.Values["fromUser"].(string)
 				msg.ToUser = stmsg.Values["toUser"].(string)
-				msg.CHEIds = helpers.FromJson[appTypes.BinableSlice](stmsg.Values["CHEIds"].(string))
+				msg.CHEIds = helpers.FromMsgPack[appTypes.BinableSlice](stmsg.Values["CHEIds"].(string))
 				msg.Ack = stmsg.Values["ack"].(string)
-				msg.At = helpers.FromJson[int64](stmsg.Values["at"].(string))
-				msg.ChatCursor = helpers.FromJson[int64](stmsg.Values["chatCursor"].(string))
+				msg.At = helpers.FromMsgPack[int64](stmsg.Values["at"].(string))
+				msg.ChatCursor = helpers.FromMsgPack[int64](stmsg.Values["chatCursor"].(string))
 
 				msgs = append(msgs, msg)
 

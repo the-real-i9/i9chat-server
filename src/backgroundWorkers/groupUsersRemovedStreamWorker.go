@@ -55,8 +55,8 @@ func groupUsersRemovedStreamBgWorker(rdb *redis.Client) {
 				msg.GroupId = stmsg.Values["groupId"].(string)
 				msg.Admin = stmsg.Values["admin"].(string)
 				msg.OldMember = stmsg.Values["oldMember"].(string)
-				msg.AdminCHE = helpers.FromJson[appTypes.BinableMap](stmsg.Values["adminCHE"].(string))
-				msg.OldMemberCHE = helpers.FromJson[appTypes.BinableMap](stmsg.Values["oldMemberCHE"].(string))
+				msg.AdminCHE = helpers.FromMsgPack[appTypes.BinableMap](stmsg.Values["adminCHE"].(string))
+				msg.OldMemberCHE = helpers.FromMsgPack[appTypes.BinableMap](stmsg.Values["oldMemberCHE"].(string))
 				msg.MemInfo = stmsg.Values["memInfo"].(string)
 
 				msgs = append(msgs, msg)
@@ -80,7 +80,7 @@ func groupUsersRemovedStreamBgWorker(rdb *redis.Client) {
 				CHEId := gactche["che_id"].(string)
 				CHECursor := gactche["cursor"].(int64)
 
-				newGroupActivityEntries = append(newGroupActivityEntries, CHEId, helpers.ToJson(gactche))
+				newGroupActivityEntries = append(newGroupActivityEntries, CHEId, helpers.ToMsgPack(gactche))
 
 				chatGroupActivities[msg.Admin+" "+msg.GroupId] = append(chatGroupActivities[msg.Admin+" "+msg.GroupId], [2]any{CHEId, float64(CHECursor)})
 
@@ -90,7 +90,7 @@ func groupUsersRemovedStreamBgWorker(rdb *redis.Client) {
 					CHEId := gactche["che_id"].(string)
 					CHECursor := gactche["cursor"].(int64)
 
-					newGroupActivityEntries = append(newGroupActivityEntries, CHEId, helpers.ToJson(gactche))
+					newGroupActivityEntries = append(newGroupActivityEntries, CHEId, helpers.ToMsgPack(gactche))
 
 					chatGroupActivities[msg.OldMember+" "+msg.GroupId] = append(chatGroupActivities[msg.OldMember+" "+msg.GroupId], [2]any{CHEId, CHECursor})
 				}
@@ -108,7 +108,7 @@ func groupUsersRemovedStreamBgWorker(rdb *redis.Client) {
 					CHEId := gactche["che_id"].(string)
 					CHECursor := gactche["cursor"].(int64)
 
-					newGroupActivityEntries = append(newGroupActivityEntries, CHEId, helpers.ToJson(gactche))
+					newGroupActivityEntries = append(newGroupActivityEntries, CHEId, helpers.ToMsgPack(gactche))
 
 					chatGroupActivities[memUser+" "+msg.GroupId] = append(chatGroupActivities[memUser+" "+msg.GroupId], [2]any{CHEId, float64(CHECursor)})
 				}

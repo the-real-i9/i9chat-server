@@ -3,7 +3,7 @@ package groupChatRoutes
 import (
 	GCC "i9chat/src/controllers/chatControllers/groupChatControllers"
 
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 )
 
 func Route(router fiber.Router) {

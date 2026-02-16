@@ -3,15 +3,15 @@ package chatUploadControllers
 import (
 	"i9chat/src/services/chatServices/chatUploadService"
 
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 )
 
-func AuthorizeUpload(c *fiber.Ctx) error {
+func AuthorizeUpload(c fiber.Ctx) error {
 	ctx := c.Context()
 
 	var body authorizeUploadBody
 
-	err := c.BodyParser(&body)
+	err := c.Bind().MsgPack(&body)
 	if err != nil {
 		return err
 	}
@@ -25,15 +25,15 @@ func AuthorizeUpload(c *fiber.Ctx) error {
 		return err
 	}
 
-	return c.JSON(respData)
+	return c.MsgPack(respData)
 }
 
-func AuthorizeVisualUpload(c *fiber.Ctx) error {
+func AuthorizeVisualUpload(c fiber.Ctx) error {
 	ctx := c.Context()
 
 	var body authorizeVisualUploadBody
 
-	err := c.BodyParser(&body)
+	err := c.Bind().MsgPack(&body)
 	if err != nil {
 		return err
 	}
@@ -47,5 +47,5 @@ func AuthorizeVisualUpload(c *fiber.Ctx) error {
 		return err
 	}
 
-	return c.JSON(respData)
+	return c.MsgPack(respData)
 }

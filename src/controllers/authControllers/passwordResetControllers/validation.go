@@ -8,7 +8,7 @@ import (
 )
 
 type requestPasswordResetBody struct {
-	Email string `json:"email"`
+	Email string `msgpack:"email"`
 }
 
 func (b requestPasswordResetBody) Validate() error {
@@ -23,7 +23,7 @@ func (b requestPasswordResetBody) Validate() error {
 }
 
 type confirmEmailBody struct {
-	Token string `json:"token"`
+	Token string `msgpack:"token"`
 }
 
 func (b confirmEmailBody) Validate() error {
@@ -35,8 +35,8 @@ func (b confirmEmailBody) Validate() error {
 }
 
 type resetPasswordBody struct {
-	NewPassword        string `json:"newPassword"`
-	ConfirmNewPassword string `json:"confirmNewPassword"`
+	NewPassword        string `msgpack:"newPassword"`
+	ConfirmNewPassword string `msgpack:"confirmNewPassword"`
 }
 
 func (b resetPasswordBody) Validate() error {

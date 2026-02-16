@@ -8,16 +8,16 @@ import (
 	"i9chat/src/services/chatServices/groupChatService"
 	"net/url"
 
-	"github.com/goccy/go-json"
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
+	"github.com/vmihailenco/msgpack/v5"
 )
 
-func AuthorizeGroupPicUpload(c *fiber.Ctx) error {
+func AuthorizeGroupPicUpload(c fiber.Ctx) error {
 	ctx := c.Context()
 
 	var body authorizeGroupPicUploadBody
 
-	err := c.BodyParser(&body)
+	err := c.Bind().MsgPack(&body)
 	if err != nil {
 		return err
 	}
@@ -31,17 +31,17 @@ func AuthorizeGroupPicUpload(c *fiber.Ctx) error {
 		return err
 	}
 
-	return c.JSON(respData)
+	return c.MsgPack(respData)
 }
 
-func CreateNewGroup(c *fiber.Ctx) error {
+func CreateNewGroup(c fiber.Ctx) error {
 	ctx := c.Context()
 
 	clientUser := c.Locals("user").(appTypes.ClientUser)
 
 	var body newGroupChatBody
 
-	err := c.BodyParser(&body)
+	err := c.Bind().MsgPack(&body)
 	if err != nil {
 		return err
 	}
@@ -65,38 +65,56 @@ func CreateNewGroup(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusCreated).JSON(respData)
 }
 
-func GetGroupMembers(c *fiber.Ctx) error {
+func GetGroupMembers(c fiber.Ctx) error {
 	ctx := c.Context()
 
 	clientUser := c.Locals("user").(appTypes.ClientUser)
 
-	respData, err := groupChatService.GetGroupMembers(ctx, clientUser.Username, c.Params("group_id"), c.QueryInt("limit", 100), c.QueryFloat("cursor"))
+	var query struct {
+		Limit  int64
+		Cursor float64
+	}
+
+	if err := c.Bind().Query(&query); err != nil {
+		return err
+	}
+
+	respData, err := groupChatService.GetGroupMembers(ctx, clientUser.Username, c.Params("group_id"), helpers.CoalesceInt(query.Limit, 100), query.Cursor)
 	if err != nil {
 		return err
 	}
 
-	return c.JSON(respData)
+	return c.MsgPack(respData)
 }
 
-func GetGroupChatHistory(c *fiber.Ctx) error {
+func GetGroupChatHistory(c fiber.Ctx) error {
 	ctx := c.Context()
 
 	clientUser := c.Locals("user").(appTypes.ClientUser)
 
-	respData, err := groupChatService.GetChatHistory(ctx, clientUser.Username, c.Params("group_id"), c.QueryInt("limit", 50), c.QueryFloat("cursor"))
+	var query struct {
+		Limit  int64
+		Cursor float64
+	}
+
+	if err := c.Bind().Query(&query); err != nil {
+		return err
+	}
+
+	respData, err := groupChatService.GetChatHistory(ctx, clientUser.Username, c.Params("group_id"), helpers.CoalesceInt(query.Limit, 50), query.Cursor)
 	if err != nil {
 		return err
 	}
 
-	return c.JSON(respData)
+	return c.MsgPack(respData)
 }
 
-func ExecuteAction(c *fiber.Ctx) error {
+func ExecuteAction(c fiber.Ctx) error {
 	ctx := c.Context()
 
 	clientUser := c.Locals("user").(appTypes.ClientUser)
 
-	type handler func(ctx context.Context, clientUsername, groupId string, data json.RawMessage) (any, error)
+	type handler func(ctx context.Context, clientUsername, groupId string, data msgpack.RawMessage) (any, error)
 
 	actionToHandlerMap := map[string]handler{
 		"join":                    joinGroup,
@@ -110,9 +128,9 @@ func ExecuteAction(c *fiber.Ctx) error {
 		"leave":                   leaveGroup,
 	}
 
-	var actionData json.RawMessage
+	var actionData msgpack.RawMessage
 
-	err := c.BodyParser(&actionData)
+	err := c.Bind().MsgPack(&actionData)
 	if err != nil {
 		return err
 	}
@@ -132,12 +150,12 @@ func ExecuteAction(c *fiber.Ctx) error {
 		return err
 	}
 
-	return c.JSON(respData)
+	return c.MsgPack(respData)
 }
 
-func SendMessage(ctx context.Context, clientUsername string, actionData json.RawMessage) (map[string]any, error) {
+func SendMessage(ctx context.Context, clientUsername string, actionData msgpack.RawMessage) (map[string]any, error) {
 
-	acd := helpers.FromBtJson[sendGroupChatMsg](actionData)
+	acd := helpers.FromBtMsgPack[sendGroupChatMsg](actionData)
 
 	if err := acd.Validate(ctx); err != nil {
 		return nil, err
@@ -146,9 +164,9 @@ func SendMessage(ctx context.Context, clientUsername string, actionData json.Raw
 	return groupChatService.SendMessage(ctx, clientUsername, acd.GroupId, acd.ReplyTargetMsgId, acd.IsReply, helpers.ToJson(acd.Msg), acd.At)
 }
 
-func AckMessageDelivered(ctx context.Context, clientUsername string, actionData json.RawMessage) (any, error) {
+func AckMessageDelivered(ctx context.Context, clientUsername string, actionData msgpack.RawMessage) (any, error) {
 
-	acd := helpers.FromBtJson[groupChatMsgAck](actionData)
+	acd := helpers.FromBtMsgPack[groupChatMsgAck](actionData)
 
 	if err := acd.Validate(); err != nil {
 		return nil, err
@@ -157,9 +175,9 @@ func AckMessageDelivered(ctx context.Context, clientUsername string, actionData 
 	return groupChatService.AckMessageDelivered(ctx, clientUsername, acd.GroupId, acd.MsgIds, acd.At)
 }
 
-func AckMessageRead(ctx context.Context, clientUsername string, actionData json.RawMessage) (any, error) {
+func AckMessageRead(ctx context.Context, clientUsername string, actionData msgpack.RawMessage) (any, error) {
 
-	acd := helpers.FromBtJson[groupChatMsgAck](actionData)
+	acd := helpers.FromBtMsgPack[groupChatMsgAck](actionData)
 
 	if err := acd.Validate(); err != nil {
 		return nil, err
@@ -168,9 +186,9 @@ func AckMessageRead(ctx context.Context, clientUsername string, actionData json.
 	return groupChatService.AckMessageRead(ctx, clientUsername, acd.GroupId, acd.MsgIds, acd.At)
 }
 
-func GetGroupInfo(ctx context.Context, actionData json.RawMessage) (any, error) {
+func GetGroupInfo(ctx context.Context, actionData msgpack.RawMessage) (any, error) {
 
-	acd := helpers.FromBtJson[groupInfo](actionData)
+	acd := helpers.FromBtMsgPack[groupInfo](actionData)
 
 	if err := acd.Validate(); err != nil {
 		return nil, err

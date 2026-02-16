@@ -11,12 +11,12 @@ import (
 	"os"
 	"time"
 
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 )
 
 type signinRespT struct {
-	Msg  string             `json:"msg"`
-	User UITypes.ClientUser `json:"user"`
+	Msg  string             `msgpack:"msg"`
+	User UITypes.ClientUser `msgpack:"user"`
 }
 
 func Signin(ctx context.Context, emailOrUsername, password string) (signinRespT, string, error) {

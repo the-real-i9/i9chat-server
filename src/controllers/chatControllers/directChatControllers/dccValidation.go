@@ -11,11 +11,11 @@ import (
 )
 
 type sendDirectChatMsg struct {
-	PartnerUsername  string               `json:"partnerUsername"`
-	IsReply          bool                 `json:"isReply"`
-	ReplyTargetMsgId string               `json:"replyTargetMsgId"`
-	Msg              chatTypes.MsgContent `json:"msg"`
-	At               int64                `json:"at"`
+	PartnerUsername  string               `msgpack:"partnerUsername"`
+	IsReply          bool                 `msgpack:"isReply"`
+	ReplyTargetMsgId string               `msgpack:"replyTargetMsgId"`
+	Msg              chatTypes.MsgContent `msgpack:"msg"`
+	At               int64                `msgpack:"at"`
 }
 
 func (vb sendDirectChatMsg) Validate(ctx context.Context) error {
@@ -30,9 +30,9 @@ func (vb sendDirectChatMsg) Validate(ctx context.Context) error {
 }
 
 type directChatMsgsAck struct {
-	MsgIds          []any  `json:"msgIds"`
-	PartnerUsername string `json:"partnerUsername"`
-	At              int64  `json:"at"`
+	MsgIds          []any  `msgpack:"msgIds"`
+	PartnerUsername string `msgpack:"partnerUsername"`
+	At              int64  `msgpack:"at"`
 }
 
 func (d directChatMsgsAck) Validate() error {

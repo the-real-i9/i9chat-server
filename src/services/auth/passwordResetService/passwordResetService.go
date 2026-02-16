@@ -10,12 +10,12 @@ import (
 	"i9chat/src/services/userService"
 	"time"
 
-	"github.com/goccy/go-json"
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
+	"github.com/vmihailenco/msgpack/v5"
 )
 
 type passReset1RespT struct {
-	Msg string `json:"msg"`
+	Msg string `msgpack:"msg"`
 }
 
 func RequestPasswordReset(ctx context.Context, email string) (passReset1RespT, map[string]any, error) {
@@ -46,13 +46,13 @@ func RequestPasswordReset(ctx context.Context, email string) (passReset1RespT, m
 }
 
 type passReset2RespT struct {
-	Msg string `json:"msg"`
+	Msg string `msgpack:"msg"`
 }
 
-func ConfirmEmail(ctx context.Context, sessionData json.RawMessage, inputResetToken string) (passReset2RespT, map[string]any, error) {
+func ConfirmEmail(ctx context.Context, sessionData msgpack.RawMessage, inputResetToken string) (passReset2RespT, map[string]any, error) {
 	var resp passReset2RespT
 
-	sd := helpers.FromBtJson[struct {
+	sd := helpers.FromBtMsgPack[struct {
 		Email            string
 		PwdrToken        string
 		PwdrTokenExpires time.Time
@@ -74,13 +74,13 @@ func ConfirmEmail(ctx context.Context, sessionData json.RawMessage, inputResetTo
 }
 
 type passReset3RespT struct {
-	Msg string `json:"msg"`
+	Msg string `msgpack:"msg"`
 }
 
-func ResetPassword(ctx context.Context, sessionData json.RawMessage, newPassword string) (passReset3RespT, error) {
+func ResetPassword(ctx context.Context, sessionData msgpack.RawMessage, newPassword string) (passReset3RespT, error) {
 	var resp passReset3RespT
 
-	email := helpers.FromBtJson[struct {
+	email := helpers.FromBtMsgPack[struct {
 		Email string
 	}](sessionData).Email
 

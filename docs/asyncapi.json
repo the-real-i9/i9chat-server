@@ -10,7 +10,7 @@
       "email": "oluwarinolasam@gmail.com"
     }
   },
-  "defaultContentType": "application/json",
+  "defaultContentType": "application/vnd.msgpack",
   "channels": {
     "wsPath": {
       "address": "/api/app/ws",
@@ -80,7 +80,7 @@
           ],
           "additionalProperties": false
         },
-        "contentType": "application/json"
+        "contentType": "application/vnd.msgpack"
       }
     }
   }

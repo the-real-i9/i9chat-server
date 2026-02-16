@@ -11,16 +11,16 @@ import (
 )
 
 type msgProps struct {
-	TextContent    *string `json:"text_content,omitempty"`
-	MediaCloudName *string `json:"media_cloud_name,omitempty"`
-	Duration       *int64  `json:"duration,omitempty"`
-	Caption        *string `json:"caption,omitempty"`
-	Name           *string `json:"name,omitempty"`
+	TextContent    *string `msgpack:"text_content,omitempty" json:"text_content,omitempty"`
+	MediaCloudName *string `msgpack:"media_cloud_name,omitempty" json:"media_cloud_name,omitempty"`
+	Duration       *int64  `msgpack:"duration,omitempty" json:"duration,omitempty"`
+	Caption        *string `msgpack:"caption,omitempty" json:"caption,omitempty"`
+	Name           *string `msgpack:"name,omitempty" json:"name,omitempty"`
 }
 
 type MsgContent struct {
-	Type     string `json:"type"`
-	msgProps `json:"props"`
+	Type     string `msgpack:"type" json:"type"`
+	msgProps `msgpack:"props" json:"props"`
 }
 
 func (m MsgContent) Validate() error {

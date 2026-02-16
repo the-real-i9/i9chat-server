@@ -12,7 +12,7 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"golang.org/x/crypto/bcrypt"
 
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 )
 
 func HashPassword(password string) (string, error) {
@@ -55,7 +55,7 @@ func GenerateTokenCodeExp() (string, time.Time) {
 func JwtSign(data any, secret string, expires time.Time) (string, error) {
 	// create token -> (header.payload)
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"data": helpers.ToJson(data),
+		"data": helpers.ToMsgPack(data),
 		"exp":  expires.Unix(),
 	})
 
@@ -97,7 +97,7 @@ func JwtVerify[T any](tokenString, secret string) (T, error) {
 		return data, fiber.ErrInternalServerError
 	}
 
-	data = helpers.FromJson[T](token.Claims.(jwt.MapClaims)["data"].(string))
+	data = helpers.FromMsgPack[T](token.Claims.(jwt.MapClaims)["data"].(string))
 
 	return data, nil
 }

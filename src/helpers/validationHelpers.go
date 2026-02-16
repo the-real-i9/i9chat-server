@@ -5,7 +5,7 @@ import (
 	"log"
 
 	validation "github.com/go-ozzo/ozzo-validation/v4"
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 )
 
 func ValidationError(err error, filename, structname string) error {

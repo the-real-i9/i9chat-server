@@ -27,18 +27,19 @@ var WSStream = websocket.New(func(c *websocket.Conn) {
 	var w_err error
 
 	for {
-		var body rtActionBody
 
 		if w_err != nil {
 			log.Println(w_err)
 			break
 		}
 
-		r_err := c.ReadJSON(&body)
+		_, msgPackBt, r_err := c.ReadMessage()
 		if r_err != nil {
 			log.Println(r_err)
 			break
 		}
+
+		body := helpers.FromBtMsgPack[rtActionBody](msgPackBt)
 
 		if err := body.Validate(); err != nil {
 			w_err = c.WriteJSON(helpers.WSErrReply(err, body.Action))
@@ -50,7 +51,7 @@ var WSStream = websocket.New(func(c *websocket.Conn) {
 		switch body.Action {
 		case "subscribe to user presence change":
 
-			data := helpers.FromBtJson[subToUserPresenceAcd](body.Data)
+			data := helpers.FromBtMsgPack[subToUserPresenceAcd](body.Data)
 
 			if err := data.Validate(); err != nil {
 				w_err = c.WriteJSON(helpers.WSErrReply(err, body.Action))
@@ -66,7 +67,7 @@ var WSStream = websocket.New(func(c *websocket.Conn) {
 			}
 		case "unsubscribe from user presence change":
 
-			data := helpers.FromBtJson[unsubFromUserPresenceAcd](body.Data)
+			data := helpers.FromBtMsgPack[unsubFromUserPresenceAcd](body.Data)
 
 			if err := data.Validate(); err != nil {
 				w_err = c.WriteJSON(helpers.WSErrReply(err, body.Action))

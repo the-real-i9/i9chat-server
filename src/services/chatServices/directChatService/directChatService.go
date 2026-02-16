@@ -73,7 +73,7 @@ func SendMessage(ctx context.Context, clientUsername, partnerUsername, replyTarg
 			FromUser:      clientUsername,
 			ToUser:        partnerUsername,
 			CHEId:         newMessage.Id,
-			MsgData:       helpers.ToJson(newMessage),
+			MsgData:       helpers.ToMsgPack(newMessage),
 			CHECursor:     newMessage.Cursor,
 		})
 	}(newMessage, clientUsername, partnerUsername)
@@ -182,7 +182,7 @@ func ReactToMessage(ctx context.Context, clientUsername, partnerUsername, msgId,
 			FromUser:  clientUsername,
 			ToUser:    partnerUsername,
 			CHEId:     rxnData.CHEId,
-			RxnData:   helpers.ToJson(rxnData),
+			RxnData:   helpers.ToMsgPack(rxnData),
 			ToMsgId:   rxnData.ToMsgId,
 			Emoji:     rxnData.Emoji,
 			CHECursor: rxnData.Cursor,
@@ -221,6 +221,6 @@ func RemoveReactionToMessage(ctx context.Context, clientUsername, partnerUsernam
 	return done, nil
 }
 
-func GetChatHistory(ctx context.Context, clientUsername, partnerUsername string, limit int, cursor float64) (any, error) {
+func GetChatHistory(ctx context.Context, clientUsername, partnerUsername string, limit int64, cursor float64) (any, error) {
 	return directChat.ChatHistory(ctx, clientUsername, partnerUsername, limit, cursor)
 }

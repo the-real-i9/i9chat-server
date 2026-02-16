@@ -3,18 +3,19 @@ package userControllers
 import (
 	"i9chat/src/appTypes"
 	"i9chat/src/appTypes/UITypes"
+	"i9chat/src/helpers"
 	"i9chat/src/services/cloudStorageService"
 	"i9chat/src/services/userService"
 
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 )
 
-func AuthorizePPicUpload(c *fiber.Ctx) error {
+func AuthorizePPicUpload(c fiber.Ctx) error {
 	ctx := c.Context()
 
 	var body authorizePPicUploadBody
 
-	err := c.BodyParser(&body)
+	err := c.Bind().MsgPack(&body)
 	if err != nil {
 		return err
 	}
@@ -28,10 +29,10 @@ func AuthorizePPicUpload(c *fiber.Ctx) error {
 		return err
 	}
 
-	return c.JSON(respData)
+	return c.MsgPack(respData)
 }
 
-func GetSessionUser(c *fiber.Ctx) error {
+func GetSessionUser(c fiber.Ctx) error {
 	clientUser := c.Locals("user").(appTypes.ClientUser)
 
 	user, err := userService.SigninUserFind(c.Context(), clientUser.Username)
@@ -41,17 +42,17 @@ func GetSessionUser(c *fiber.Ctx) error {
 
 	user.ProfilePicUrl = cloudStorageService.ProfilePicCloudNameToUrl(user.ProfilePicUrl)
 
-	return c.JSON(UITypes.ClientUser{Username: user.Username, ProfilePicUrl: user.ProfilePicUrl, Presence: user.Presence})
+	return c.MsgPack(UITypes.ClientUser{Username: user.Username, ProfilePicUrl: user.ProfilePicUrl, Presence: user.Presence})
 }
 
-func ChangeProfilePicture(c *fiber.Ctx) error {
+func ChangeProfilePicture(c fiber.Ctx) error {
 	ctx := c.Context()
 
 	clientUser := c.Locals("user").(appTypes.ClientUser)
 
 	var body changeProfilePictureBody
 
-	err := c.BodyParser(&body)
+	err := c.Bind().MsgPack(&body)
 	if err != nil {
 		return err
 	}
@@ -65,17 +66,17 @@ func ChangeProfilePicture(c *fiber.Ctx) error {
 		return err
 	}
 
-	return c.JSON(respData)
+	return c.MsgPack(respData)
 }
 
-func ChangeBio(c *fiber.Ctx) error {
+func ChangeBio(c fiber.Ctx) error {
 	ctx := c.Context()
 
 	clientUser := c.Locals("user").(appTypes.ClientUser)
 
 	var body changeBioBody
 
-	err := c.BodyParser(&body)
+	err := c.Bind().MsgPack(&body)
 	if err != nil {
 		return err
 	}
@@ -89,17 +90,17 @@ func ChangeBio(c *fiber.Ctx) error {
 		return err
 	}
 
-	return c.JSON(respData)
+	return c.MsgPack(respData)
 }
 
-func SetMyLocation(c *fiber.Ctx) error {
+func SetMyLocation(c fiber.Ctx) error {
 	ctx := c.Context()
 
 	clientUser := c.Locals("user").(appTypes.ClientUser)
 
 	var body updateMyGeolocationBody
 
-	err := c.BodyParser(&body)
+	err := c.Bind().MsgPack(&body)
 	if err != nil {
 		return err
 	}
@@ -114,10 +115,10 @@ func SetMyLocation(c *fiber.Ctx) error {
 		return err
 	}
 
-	return c.JSON(respData)
+	return c.MsgPack(respData)
 }
 
-func FindUser(c *fiber.Ctx) error {
+func FindUser(c fiber.Ctx) error {
 	ctx := c.Context()
 
 	respData, err := userService.FindUser(ctx, c.Query("username"))
@@ -126,36 +127,55 @@ func FindUser(c *fiber.Ctx) error {
 		return err
 	}
 
-	return c.JSON(respData)
+	return c.MsgPack(respData)
 }
 
-func FindNearbyUsers(c *fiber.Ctx) error {
+func FindNearbyUsers(c fiber.Ctx) error {
 	ctx := c.Context()
 
 	clientUser := c.Locals("user").(appTypes.ClientUser)
 
-	respData, err := userService.FindNearbyUsers(ctx, clientUser.Username, c.QueryFloat("x"), c.QueryFloat("y"), c.QueryFloat("radius"))
+	var query struct {
+		X      float64
+		Y      float64
+		Radius float64
+	}
+
+	if err := c.Bind().Query(&query); err != nil {
+		return err
+	}
+
+	respData, err := userService.FindNearbyUsers(ctx, clientUser.Username, query.X, query.Y, query.Radius)
 	if err != nil {
 		return err
 	}
 
-	return c.JSON(respData)
+	return c.MsgPack(respData)
 }
 
-func GetMyChats(c *fiber.Ctx) error {
+func GetMyChats(c fiber.Ctx) error {
 	ctx := c.Context()
 
 	clientUser := c.Locals("user").(appTypes.ClientUser)
 
-	respData, err := userService.GetMyChats(ctx, clientUser.Username, c.QueryInt("limit", 20), c.QueryFloat("cursor"))
+	var query struct {
+		Limit  int64
+		Cursor float64
+	}
+
+	if err := c.Bind().Query(&query); err != nil {
+		return err
+	}
+
+	respData, err := userService.GetMyChats(ctx, clientUser.Username, helpers.CoalesceInt(query.Limit, 20), query.Cursor)
 	if err != nil {
 		return err
 	}
 
-	return c.JSON(respData)
+	return c.MsgPack(respData)
 }
 
-func GetMyProfile(c *fiber.Ctx) error {
+func GetMyProfile(c fiber.Ctx) error {
 	ctx := c.Context()
 
 	clientUser := c.Locals("user").(appTypes.ClientUser)
@@ -165,11 +185,11 @@ func GetMyProfile(c *fiber.Ctx) error {
 		return err
 	}
 
-	return c.JSON(respData)
+	return c.MsgPack(respData)
 }
 
-func SignOut(c *fiber.Ctx) error {
+func SignOut(c fiber.Ctx) error {
 	c.ClearCookie()
 
-	return c.JSON("You've been logged out!")
+	return c.MsgPack("You've been logged out!")
 }

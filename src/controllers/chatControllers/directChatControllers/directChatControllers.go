@@ -6,26 +6,35 @@ import (
 	"i9chat/src/helpers"
 	"i9chat/src/services/chatServices/directChatService"
 
-	"github.com/goccy/go-json"
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
+	"github.com/vmihailenco/msgpack/v5"
 )
 
-func GetDirectChatHistory(c *fiber.Ctx) error {
+func GetDirectChatHistory(c fiber.Ctx) error {
 	ctx := c.Context()
 
 	clientUser := c.Locals("user").(appTypes.ClientUser)
 
-	respData, err := directChatService.GetChatHistory(ctx, clientUser.Username, c.Params("partner_username"), c.QueryInt("limit", 50), c.QueryFloat("cursor"))
+	var query struct {
+		Limit  int64
+		Cursor float64
+	}
+
+	if err := c.Bind().Query(&query); err != nil {
+		return err
+	}
+
+	respData, err := directChatService.GetChatHistory(ctx, clientUser.Username, c.Params("partner_username"), helpers.CoalesceInt(query.Limit, 50), query.Cursor)
 	if err != nil {
 		return err
 	}
 
-	return c.JSON(respData)
+	return c.MsgPack(respData)
 }
 
-func SendMessage(ctx context.Context, clientUsername string, actionData json.RawMessage) (map[string]any, error) {
+func SendMessage(ctx context.Context, clientUsername string, actionData msgpack.RawMessage) (map[string]any, error) {
 
-	acd := helpers.FromBtJson[sendDirectChatMsg](actionData)
+	acd := helpers.FromBtMsgPack[sendDirectChatMsg](actionData)
 
 	if err := acd.Validate(ctx); err != nil {
 		return nil, err
@@ -34,9 +43,9 @@ func SendMessage(ctx context.Context, clientUsername string, actionData json.Raw
 	return directChatService.SendMessage(ctx, clientUsername, acd.PartnerUsername, acd.ReplyTargetMsgId, acd.IsReply, helpers.ToJson(acd.Msg), acd.At)
 }
 
-func AckMessagesDelivered(ctx context.Context, clientUsername string, actionData json.RawMessage) (any, error) {
+func AckMessagesDelivered(ctx context.Context, clientUsername string, actionData msgpack.RawMessage) (any, error) {
 
-	acd := helpers.FromBtJson[directChatMsgsAck](actionData)
+	acd := helpers.FromBtMsgPack[directChatMsgsAck](actionData)
 
 	if err := acd.Validate(); err != nil {
 		return nil, err
@@ -45,9 +54,9 @@ func AckMessagesDelivered(ctx context.Context, clientUsername string, actionData
 	return directChatService.AckMessagesDelivered(ctx, clientUsername, acd.PartnerUsername, acd.MsgIds, acd.At)
 }
 
-func AckMessagesRead(ctx context.Context, clientUsername string, actionData json.RawMessage) (any, error) {
+func AckMessagesRead(ctx context.Context, clientUsername string, actionData msgpack.RawMessage) (any, error) {
 
-	acd := helpers.FromBtJson[directChatMsgsAck](actionData)
+	acd := helpers.FromBtMsgPack[directChatMsgsAck](actionData)
 
 	if err := acd.Validate(); err != nil {
 		return nil, err

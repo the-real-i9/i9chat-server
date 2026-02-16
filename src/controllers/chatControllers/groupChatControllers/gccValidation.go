@@ -15,11 +15,11 @@ import (
 )
 
 type newGroupChatBody struct {
-	Name             string   `json:"name"`
-	Description      string   `json:"description"`
-	PictureCloudName string   `json:"pictureCloudName"`
-	InitUsers        []string `json:"initUsers"`
-	CreatedAt        int64    `json:"createdAt"`
+	Name             string   `msgpack:"name"`
+	Description      string   `msgpack:"description"`
+	PictureCloudName string   `msgpack:"pictureCloudName"`
+	InitUsers        []string `msgpack:"initUsers"`
+	CreatedAt        int64    `msgpack:"createdAt"`
 }
 
 func (b newGroupChatBody) Validate() error {
@@ -73,7 +73,7 @@ func (b newGroupChatBody) Validate() error {
 }
 
 type changeGroupNameAction struct {
-	NewName string `json:"newName"`
+	NewName string `msgpack:"newName"`
 }
 
 func (d changeGroupNameAction) Validate() error {
@@ -86,7 +86,7 @@ func (d changeGroupNameAction) Validate() error {
 }
 
 type changeGroupDescriptionAction struct {
-	NewDescription string `json:"newDescription"`
+	NewDescription string `msgpack:"newDescription"`
 }
 
 func (d changeGroupDescriptionAction) Validate() error {
@@ -99,8 +99,8 @@ func (d changeGroupDescriptionAction) Validate() error {
 }
 
 type authorizeGroupPicUploadBody struct {
-	PicMIME string   `json:"pic_mime"`
-	PicSize [3]int64 `json:"pic_size"` // {small, medium, large}
+	PicMIME string   `msgpack:"pic_mime"`
+	PicSize [3]int64 `msgpack:"pic_size"` // {small, medium, large}
 }
 
 func (b authorizeGroupPicUploadBody) Validate() error {
@@ -143,7 +143,7 @@ func (b authorizeGroupPicUploadBody) Validate() error {
 }
 
 type changeGroupPictureAction struct {
-	PictureCloudName string `json:"picture_cloud_name"`
+	PictureCloudName string `msgpack:"picture_cloud_name"`
 }
 
 func (d changeGroupPictureAction) Validate(ctx context.Context) error {
@@ -191,7 +191,7 @@ func (d changeGroupPictureAction) Validate(ctx context.Context) error {
 }
 
 type addUsersToGroupAction struct {
-	NewUsers []string `json:"newUsers"`
+	NewUsers []string `msgpack:"newUsers"`
 }
 
 func (d addUsersToGroupAction) Validate() error {
@@ -204,7 +204,7 @@ func (d addUsersToGroupAction) Validate() error {
 }
 
 type actOnSingleUserAction struct {
-	User string `json:"user"`
+	User string `msgpack:"user"`
 }
 
 func (d actOnSingleUserAction) Validate() error {
@@ -217,11 +217,11 @@ func (d actOnSingleUserAction) Validate() error {
 }
 
 type sendGroupChatMsg struct {
-	GroupId          string               `json:"groupId"`
-	IsReply          bool                 `json:"isReply"`
-	ReplyTargetMsgId string               `json:"replyTargetMsgId"`
-	Msg              chatTypes.MsgContent `json:"msg"`
-	At               int64                `json:"at"`
+	GroupId          string               `msgpack:"groupId"`
+	IsReply          bool                 `msgpack:"isReply"`
+	ReplyTargetMsgId string               `msgpack:"replyTargetMsgId"`
+	Msg              chatTypes.MsgContent `msgpack:"msg"`
+	At               int64                `msgpack:"at"`
 }
 
 func (vb sendGroupChatMsg) Validate(ctx context.Context) error {
@@ -236,9 +236,9 @@ func (vb sendGroupChatMsg) Validate(ctx context.Context) error {
 }
 
 type groupChatMsgAck struct {
-	GroupId string `json:"groupId"`
-	MsgIds  []any  `json:"msgId"`
-	At      int64  `json:"at"`
+	GroupId string `msgpack:"groupId"`
+	MsgIds  []any  `msgpack:"msgId"`
+	At      int64  `msgpack:"at"`
 }
 
 func (d groupChatMsgAck) Validate() error {
@@ -252,7 +252,7 @@ func (d groupChatMsgAck) Validate() error {
 }
 
 type groupInfo struct {
-	GroupId string `json:"groupId"`
+	GroupId string `msgpack:"groupId"`
 }
 
 func (d groupInfo) Validate() error {

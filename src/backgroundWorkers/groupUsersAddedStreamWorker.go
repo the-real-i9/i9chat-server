@@ -54,11 +54,11 @@ func groupUsersAddedStreamBgWorker(rdb *redis.Client) {
 
 				msg.GroupId = stmsg.Values["groupId"].(string)
 				msg.Admin = stmsg.Values["admin"].(string)
-				msg.NewMembers = helpers.FromJson[appTypes.BinableSlice](stmsg.Values["newMembers"].(string))
-				msg.AdminCHE = helpers.FromJson[appTypes.BinableMap](stmsg.Values["adminCHE"].(string))
-				msg.NewMembersCHE = helpers.FromJson[appTypes.BinableMap](stmsg.Values["newMembersCHE"].(string))
+				msg.NewMembers = helpers.FromMsgPack[appTypes.BinableSlice](stmsg.Values["newMembers"].(string))
+				msg.AdminCHE = helpers.FromMsgPack[appTypes.BinableMap](stmsg.Values["adminCHE"].(string))
+				msg.NewMembersCHE = helpers.FromMsgPack[appTypes.BinableMap](stmsg.Values["newMembersCHE"].(string))
 				msg.MemInfo = stmsg.Values["memInfo"].(string)
-				msg.ChatCursor = helpers.FromJson[int64](stmsg.Values["chatCursor"].(string))
+				msg.ChatCursor = helpers.FromMsgPack[int64](stmsg.Values["chatCursor"].(string))
 
 				msgs = append(msgs, msg)
 
@@ -85,14 +85,14 @@ func groupUsersAddedStreamBgWorker(rdb *redis.Client) {
 				CHEId := gactche["che_id"].(string)
 				CHECursor := gactche["cursor"].(int64)
 
-				newGroupActivityEntries = append(newGroupActivityEntries, CHEId, helpers.ToJson(gactche))
+				newGroupActivityEntries = append(newGroupActivityEntries, CHEId, helpers.ToMsgPack(gactche))
 
 				chatGroupActivities[msg.Admin+" "+msg.GroupId] = append(chatGroupActivities[msg.Admin+" "+msg.GroupId], [2]any{CHEId, float64(CHECursor)})
 
 				for _, newMem := range msg.NewMembers {
 					newMem := newMem.(string)
 
-					newUserChats[newMem] = append(newUserChats[newMem], msg.GroupId, helpers.ToJson(map[string]any{"type": "group", "group": msg.GroupId, "cursor": msg.ChatCursor}))
+					newUserChats[newMem] = append(newUserChats[newMem], msg.GroupId, helpers.ToMsgPack(map[string]any{"type": "group", "group": msg.GroupId, "cursor": msg.ChatCursor}))
 
 					if userChats[newMem] == nil {
 						userChats[newMem] = make(map[string]float64)
@@ -105,7 +105,7 @@ func groupUsersAddedStreamBgWorker(rdb *redis.Client) {
 					CHEId := gactche["che_id"].(string)
 					CHECursor := gactche["cursor"].(int64)
 
-					newGroupActivityEntries = append(newGroupActivityEntries, CHEId, helpers.ToJson(gactche))
+					newGroupActivityEntries = append(newGroupActivityEntries, CHEId, helpers.ToMsgPack(gactche))
 
 					chatGroupActivities[newMem+" "+msg.GroupId] = append(chatGroupActivities[newMem+" "+msg.GroupId], [2]any{CHEId, float64(CHECursor)})
 				}
@@ -123,7 +123,7 @@ func groupUsersAddedStreamBgWorker(rdb *redis.Client) {
 					CHEId := gactche["che_id"].(string)
 					CHECursor := gactche["cursor"].(int64)
 
-					newGroupActivityEntries = append(newGroupActivityEntries, CHEId, helpers.ToJson(gactche))
+					newGroupActivityEntries = append(newGroupActivityEntries, CHEId, helpers.ToMsgPack(gactche))
 
 					chatGroupActivities[memUser+" "+msg.GroupId] = append(chatGroupActivities[memUser+" "+msg.GroupId], [2]any{CHEId, float64(CHECursor)})
 				}

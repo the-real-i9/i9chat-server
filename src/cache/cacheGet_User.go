@@ -14,5 +14,5 @@ func GetUser[T any](ctx context.Context, username string) (user T, err error) {
 		return user, err
 	}
 
-	return helpers.FromJson[T](userJson), nil
+	return helpers.FromMsgPack[T](userJson), nil
 }

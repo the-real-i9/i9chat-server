@@ -9,7 +9,7 @@ import (
 	"i9chat/src/models/db"
 	"i9chat/src/models/modelHelpers"
 
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"github.com/redis/go-redis/v9"
 )
 
@@ -18,16 +18,16 @@ func redisDB() *redis.Client {
 }
 
 type NewMessage struct {
-	Id             string         `json:"id" db:"id"`
-	CHEType        string         `json:"che_type" db:"che_type"`
-	Content        map[string]any `json:"content" db:"content"`
-	DeliveryStatus string         `json:"delivery_status" db:"delivery_status"`
-	CreatedAt      int64          `json:"created_at" db:"created_at"`
-	Sender         any            `json:"sender" db:"sender"`
-	ReplyTargetMsg map[string]any `json:"reply_target_msg,omitempty" db:"reply_target_msg"`
-	Cursor         int64          `json:"cursor" db:"cursor"`
-	FirstFromUser  bool           `json:"-" db:"ffu"`
-	FirstToUser    bool           `json:"-" db:"ftu"`
+	Id             string         `msgpack:"id" db:"id"`
+	CHEType        string         `msgpack:"che_type" db:"che_type"`
+	Content        map[string]any `msgpack:"content" db:"content"`
+	DeliveryStatus string         `msgpack:"delivery_status" db:"delivery_status"`
+	CreatedAt      int64          `msgpack:"created_at" db:"created_at"`
+	Sender         any            `msgpack:"sender" db:"sender"`
+	ReplyTargetMsg map[string]any `msgpack:"reply_target_msg,omitempty" db:"reply_target_msg"`
+	Cursor         int64          `msgpack:"cursor" db:"cursor"`
+	FirstFromUser  bool           `msgpack:"-" db:"ffu"`
+	FirstToUser    bool           `msgpack:"-" db:"ftu"`
 }
 
 func SendMessage(ctx context.Context, clientUsername, partnerUsername, msgContent string, at int64) (NewMessage, error) {
@@ -199,12 +199,12 @@ func ReplyToMessage(ctx context.Context, clientUsername, partnerUsername, target
 }
 
 type RxnToMessage struct {
-	CHEId   string `json:"-" db:"che_id"`
-	CHEType string `json:"che_type" db:"che_type"`
-	Emoji   string `json:"emoji" db:"emoji"`
-	Reactor any    `json:"reactor" db:"reactor"`
-	Cursor  int64  `json:"cursor" db:"cursor"`
-	ToMsgId string `json:"to_msg_id" db:"to_msg_id"`
+	CHEId   string `msgpack:"-" db:"che_id"`
+	CHEType string `msgpack:"che_type" db:"che_type"`
+	Emoji   string `msgpack:"emoji" db:"emoji"`
+	Reactor any    `msgpack:"reactor" db:"reactor"`
+	Cursor  int64  `msgpack:"cursor" db:"cursor"`
+	ToMsgId string `msgpack:"to_msg_id" db:"to_msg_id"`
 }
 
 func ReactToMessage(ctx context.Context, clientUsername, partnerUsername, msgId, emoji string, at int64) (RxnToMessage, error) {
@@ -291,11 +291,11 @@ func RemoveReactionToMessage(ctx context.Context, clientUsername, partnerUsernam
 	return CHEId, nil
 }
 
-func ChatHistory(ctx context.Context, clientUsername, partnerUsername string, limit int, cursor float64) ([]UITypes.ChatHistoryEntry, error) {
+func ChatHistory(ctx context.Context, clientUsername, partnerUsername string, limit int64, cursor float64) ([]UITypes.ChatHistoryEntry, error) {
 	cheMembers, err := redisDB().ZRevRangeByScoreWithScores(ctx, fmt.Sprintf("direct_chat:owner:%s:partner:%s:history", clientUsername, partnerUsername), &redis.ZRangeBy{
 		Max:   helpers.MaxCursor(cursor),
 		Min:   "-inf",
-		Count: int64(limit),
+		Count: limit,
 	}).Result()
 	if err != nil {
 		helpers.LogError(err)

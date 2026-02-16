@@ -12,13 +12,13 @@ import (
 	"i9chat/src/services/eventStreamService/eventTypes"
 	"time"
 
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"github.com/google/uuid"
 )
 
 type AuthGroupPicDataT struct {
-	UploadUrl         string `json:"uploadUrl"`
-	GroupPicCloudName string `json:"groupPicCloudName"`
+	UploadUrl         string `msgpack:"uploadUrl"`
+	GroupPicCloudName string `msgpack:"groupPicCloudName"`
 }
 
 func AuthorizeGroupPicUpload(ctx context.Context, picMIME string) (AuthGroupPicDataT, error) {
@@ -96,7 +96,7 @@ func NewGroup(ctx context.Context, clientUsername, name, description, pictureClo
 		eventStreamService.QueueNewGroupEvent(eventTypes.NewGroupEvent{
 			CreatorUser:     clientUsername,
 			GroupId:         newGroup.Id,
-			GroupData:       helpers.ToJson(newGroup),
+			GroupData:       helpers.ToMsgPack(newGroup),
 			InitMembers:     newGroup.InitUsers,
 			CreatorUserCHEs: newGroup.ClientUserCHEs,
 			InitMembersCHEs: newGroup.InitUsersCHEs,
@@ -503,7 +503,7 @@ func SendMessage(ctx context.Context, clientUsername, groupId, replyTargetMsgId 
 			FromUser:  clientUsername,
 			ToGroup:   groupId,
 			CHEId:     newMessage.Id,
-			MsgData:   helpers.ToJson(newMessage),
+			MsgData:   helpers.ToMsgPack(newMessage),
 			CHECursor: newMessage.Cursor,
 		})
 	}(newMessage, clientUsername, groupId)
@@ -586,7 +586,7 @@ func ReactToMessage(ctx context.Context, clientUsername, groupId, msgId, emoji s
 			FromUser:  clientUsername,
 			ToGroup:   groupId,
 			CHEId:     rxnData.CHEId,
-			RxnData:   helpers.ToJson(rxnData),
+			RxnData:   helpers.ToMsgPack(rxnData),
 			ToMsgId:   rxnData.ToMsgId,
 			Emoji:     rxnData.Emoji,
 			CHECursor: rxnData.Cursor,
@@ -623,7 +623,7 @@ func RemoveReactionToMessage(ctx context.Context, clientUsername, groupId, msgId
 	return done, nil
 }
 
-func GetChatHistory(ctx context.Context, clientUsername, groupId string, limit int, cursor float64) ([]UITypes.ChatHistoryEntry, error) {
+func GetChatHistory(ctx context.Context, clientUsername, groupId string, limit int64, cursor float64) ([]UITypes.ChatHistoryEntry, error) {
 	return groupChat.ChatHistory(ctx, clientUsername, groupId, limit, cursor)
 }
 
@@ -631,6 +631,6 @@ func GetGroupInfo(ctx context.Context, groupId string) (UITypes.GroupInfo, error
 	return groupChat.GroupInfo(ctx, groupId)
 }
 
-func GetGroupMembers(ctx context.Context, clientUsername, groupId string, limit int, cursor float64) ([]UITypes.GroupMemberSnippet, error) {
+func GetGroupMembers(ctx context.Context, clientUsername, groupId string, limit int64, cursor float64) ([]UITypes.GroupMemberSnippet, error) {
 	return groupChat.GroupMembers(ctx, clientUsername, groupId, limit, cursor)
 }

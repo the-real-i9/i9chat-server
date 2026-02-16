@@ -13,8 +13,8 @@ import (
 )
 
 type authorizePPicUploadBody struct {
-	PicMIME string   `json:"pic_mime"`
-	PicSize [3]int64 `json:"pic_size"` // {small, medium, large}
+	PicMIME string   `msgpack:"pic_mime"`
+	PicSize [3]int64 `msgpack:"pic_size"` // {small, medium, large}
 }
 
 func (b authorizePPicUploadBody) Validate() error {
@@ -57,7 +57,7 @@ func (b authorizePPicUploadBody) Validate() error {
 }
 
 type changeProfilePictureBody struct {
-	ProfilePicCloudName string `json:"profile_pic_cloud_name"`
+	ProfilePicCloudName string `msgpack:"profile_pic_cloud_name"`
 }
 
 func (b changeProfilePictureBody) Validate(ctx context.Context) error {
@@ -105,7 +105,7 @@ func (b changeProfilePictureBody) Validate(ctx context.Context) error {
 }
 
 type changeBioBody struct {
-	NewBio string `json:"newBio"`
+	NewBio string `msgpack:"newBio"`
 }
 
 func (b changeBioBody) Validate() error {
@@ -120,7 +120,7 @@ func (b changeBioBody) Validate() error {
 }
 
 type updateMyGeolocationBody struct {
-	NewGeolocation appTypes.UserGeolocation `json:"newGeolocation"`
+	NewGeolocation appTypes.UserGeolocation `msgpack:"newGeolocation"`
 }
 
 func (b updateMyGeolocationBody) Validate() error {

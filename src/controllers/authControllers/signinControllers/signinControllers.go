@@ -5,7 +5,7 @@ import (
 	"i9chat/src/services/auth/signinService"
 	"time"
 
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 )
 
 // Signin
@@ -13,8 +13,8 @@ import (
 //	@Summary		Signin user
 //	@Description	Signin with email/username and password
 //	@Tags			auth
-//	@Accept			json
-//	@Produce		json
+//	@Accept			application/vnd.msgpack
+//	@Produce		application/vnd.msgpack
 //
 //	@Param			emailOrUsername	body		string						true	"Email or Username"
 //	@Param			password		body		string						true	"User Password"
@@ -29,12 +29,12 @@ import (
 //	@Failure		500				{object}	appErrors.HTTPError
 //
 //	@Router			/auth/signin [post]
-func Signin(c *fiber.Ctx) error {
+func Signin(c fiber.Ctx) error {
 	ctx := c.Context()
 
 	var body signInBody
 
-	err := c.BodyParser(&body)
+	err := c.Bind().MsgPack(&body)
 	if err != nil {
 		return err
 	}
@@ -54,5 +54,5 @@ func Signin(c *fiber.Ctx) error {
 
 	c.Cookie(helpers.Session(reqSession, "/api/app", int(10*24*time.Hour/time.Second)))
 
-	return c.JSON(respData)
+	return c.MsgPack(respData)
 }

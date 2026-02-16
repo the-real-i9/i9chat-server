@@ -9,7 +9,7 @@ import (
 	"i9chat/src/models/db"
 	"i9chat/src/models/modelHelpers"
 
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"github.com/redis/go-redis/v9"
 )
 
@@ -18,15 +18,15 @@ func redisDB() *redis.Client {
 }
 
 type NewGroup struct {
-	Id             string         `json:"id" db:"id"`
-	Name           string         `json:"name" db:"name"`
-	Description    string         `json:"description" db:"description"`
-	PictureUrl     string         `json:"picture_url" db:"picture_url"`
-	CreatedAt      int64          `json:"created_at" db:"created_at"`
-	ChatCursor     int64          `json:"-" db:"chat_cursor"`
-	InitUsers      []any          `json:"-" db:"init_users"`
-	ClientUserCHEs []any          `json:"-" db:"client_user_ches"`
-	InitUsersCHEs  map[string]any `json:"-" db:"init_users_ches"`
+	Id             string         `msgpack:"id" db:"id"`
+	Name           string         `msgpack:"name" db:"name"`
+	Description    string         `msgpack:"description" db:"description"`
+	PictureUrl     string         `msgpack:"picture_url" db:"picture_url"`
+	CreatedAt      int64          `msgpack:"created_at" db:"created_at"`
+	ChatCursor     int64          `msgpack:"-" db:"chat_cursor"`
+	InitUsers      []any          `msgpack:"-" db:"init_users"`
+	ClientUserCHEs []any          `msgpack:"-" db:"client_user_ches"`
+	InitUsersCHEs  map[string]any `msgpack:"-" db:"init_users_ches"`
 }
 
 func New(ctx context.Context, clientUsername, name, description, pictureCloudName string, initUsers []string, createdAt int64) (NewGroup, error) {
@@ -90,9 +90,9 @@ func New(ctx context.Context, clientUsername, name, description, pictureCloudNam
 }
 
 type EditActivity struct {
-	ClientUserCHE map[string]any `json:"-" db:"client_user_che"`
-	MemInfo       string         `json:"-" db:"mem_info"`
-	MemberUserCHE map[string]any `json:"-" db:"member_user_che"`
+	ClientUserCHE map[string]any `msgpack:"-" db:"client_user_che"`
+	MemInfo       string         `msgpack:"-" db:"mem_info"`
+	MemberUserCHE map[string]any `msgpack:"-" db:"member_user_che"`
 }
 
 func ChangeName(ctx context.Context, groupId, clientUsername, newName string) (EditActivity, error) {
@@ -229,13 +229,13 @@ func ChangePicture(ctx context.Context, groupId, clientUsername, pictureCloudNam
 }
 
 type AddUsersActivity struct {
-	GroupInfo     map[string]any `json:"-" db:"group_info"`
-	ClientUserCHE map[string]any `json:"-" db:"client_user_che"`
-	ChatCursor    int64          `json:"-" db:"chat_cursor"`
-	NewUsersCHE   map[string]any `json:"-" db:"new_users_che"`
-	NewUsernames  []any          `json:"-" db:"new_usernames"`
-	MemInfo       string         `json:"-" db:"mem_info"`
-	MemberUserCHE map[string]any `json:"-" db:"member_user_che"`
+	GroupInfo     map[string]any `msgpack:"-" db:"group_info"`
+	ClientUserCHE map[string]any `msgpack:"-" db:"client_user_che"`
+	ChatCursor    int64          `msgpack:"-" db:"chat_cursor"`
+	NewUsersCHE   map[string]any `msgpack:"-" db:"new_users_che"`
+	NewUsernames  []any          `msgpack:"-" db:"new_usernames"`
+	MemInfo       string         `msgpack:"-" db:"mem_info"`
+	MemberUserCHE map[string]any `msgpack:"-" db:"member_user_che"`
 }
 
 func AddUsers(ctx context.Context, groupId, clientUsername string, newUsers []string) (AddUsersActivity, error) {
@@ -309,10 +309,10 @@ func AddUsers(ctx context.Context, groupId, clientUsername string, newUsers []st
 }
 
 type RemoveUserActivity struct {
-	ClientUserCHE map[string]any `json:"-" db:"client_user_che"`
-	TargetUserCHE map[string]any `json:"-" db:"target_user_che"`
-	MemInfo       string         `json:"-" db:"mem_info"`
-	MemberUserCHE map[string]any `json:"-" db:"member_user_che"`
+	ClientUserCHE map[string]any `msgpack:"-" db:"client_user_che"`
+	TargetUserCHE map[string]any `msgpack:"-" db:"target_user_che"`
+	MemInfo       string         `msgpack:"-" db:"mem_info"`
+	MemberUserCHE map[string]any `msgpack:"-" db:"member_user_che"`
 }
 
 func RemoveUser(ctx context.Context, groupId, clientUsername, targetUser string) (RemoveUserActivity, error) {
@@ -366,11 +366,11 @@ func RemoveUser(ctx context.Context, groupId, clientUsername, targetUser string)
 }
 
 type UserJoinedActivity struct {
-	GroupInfo     map[string]any `json:"-" db:"group_info"`
-	ChatCursor    int64          `json:"-" db:"chat_cursor"`
-	ClientUserCHE map[string]any `json:"-" db:"client_user_che"`
-	MemInfo       string         `json:"-" db:"mem_info"`
-	MemberUserCHE map[string]any `json:"-" db:"member_user_che"`
+	GroupInfo     map[string]any `msgpack:"-" db:"group_info"`
+	ChatCursor    int64          `msgpack:"-" db:"chat_cursor"`
+	ClientUserCHE map[string]any `msgpack:"-" db:"client_user_che"`
+	MemInfo       string         `msgpack:"-" db:"mem_info"`
+	MemberUserCHE map[string]any `msgpack:"-" db:"member_user_che"`
 }
 
 func Join(ctx context.Context, groupId, clientUsername string) (UserJoinedActivity, error) {
@@ -430,9 +430,9 @@ func Join(ctx context.Context, groupId, clientUsername string) (UserJoinedActivi
 }
 
 type UserLeftActivity struct {
-	ClientUserCHE map[string]any `json:"-" db:"client_user_che"`
-	MemInfo       string         `json:"-" db:"mem_info"`
-	MemberUserCHE map[string]any `json:"-" db:"member_user_che"`
+	ClientUserCHE map[string]any `msgpack:"-" db:"client_user_che"`
+	MemInfo       string         `msgpack:"-" db:"mem_info"`
+	MemberUserCHE map[string]any `msgpack:"-" db:"member_user_che"`
 }
 
 func Leave(ctx context.Context, groupId, clientUsername string) (UserLeftActivity, error) {
@@ -480,10 +480,10 @@ func Leave(ctx context.Context, groupId, clientUsername string) (UserLeftActivit
 }
 
 type MakeUserAdminActivity struct {
-	ClientUserCHE map[string]any `json:"-" db:"client_user_che"`
-	TargetUserCHE map[string]any `json:"-" db:"target_user_che"`
-	MemInfo       string         `json:"-" db:"mem_info"`
-	MemberUserCHE map[string]any `json:"-" db:"member_user_che"`
+	ClientUserCHE map[string]any `msgpack:"-" db:"client_user_che"`
+	TargetUserCHE map[string]any `msgpack:"-" db:"target_user_che"`
+	MemInfo       string         `msgpack:"-" db:"mem_info"`
+	MemberUserCHE map[string]any `msgpack:"-" db:"member_user_che"`
 }
 
 func MakeUserAdmin(ctx context.Context, groupId, clientUsername, targetUser string) (MakeUserAdminActivity, error) {
@@ -536,10 +536,10 @@ func MakeUserAdmin(ctx context.Context, groupId, clientUsername, targetUser stri
 }
 
 type RemoveUserFromAdminsActivity struct {
-	ClientUserCHE map[string]any `json:"-" db:"client_user_che"`
-	TargetUserCHE map[string]any `json:"-" db:"target_user_che"`
-	MemInfo       string         `json:"-" db:"mem_info"`
-	MemberUserCHE map[string]any `json:"-" db:"member_user_che"`
+	ClientUserCHE map[string]any `msgpack:"-" db:"client_user_che"`
+	TargetUserCHE map[string]any `msgpack:"-" db:"target_user_che"`
+	MemInfo       string         `msgpack:"-" db:"mem_info"`
+	MemberUserCHE map[string]any `msgpack:"-" db:"member_user_che"`
 }
 
 func RemoveUserFromAdmins(ctx context.Context, groupId, clientUsername, targetUser string) (RemoveUserFromAdminsActivity, error) {
@@ -592,8 +592,8 @@ func RemoveUserFromAdmins(ctx context.Context, groupId, clientUsername, targetUs
 }
 
 type PostGroupActivity struct {
-	MemberUsersCHE  map[string]any `json:"-" db:"member_users_che"`
-	MemberUsernames []any          `json:"-" db:"member_usernames"`
+	MemberUsersCHE  map[string]any `msgpack:"-" db:"member_users_che"`
+	MemberUsernames []any          `msgpack:"-" db:"member_usernames"`
 }
 
 func PostGroupActivityBgDBOper(ctx context.Context, groupId, memInfo, gactCHEId string, gactCHECursor int64, exemptUsers []any) (PostGroupActivity, error) {
@@ -633,14 +633,14 @@ func PostGroupActivityBgDBOper(ctx context.Context, groupId, memInfo, gactCHEId 
 }
 
 type NewMessage struct {
-	Id             string         `json:"id" db:"id"`
-	CHEType        string         `json:"che_type" db:"che_type"`
-	Content        map[string]any `json:"content" db:"content"`
-	DeliveryStatus string         `json:"delivery_status" db:"delivery_status"`
-	CreatedAt      int64          `json:"created_at" db:"created_at"`
-	Sender         any            `json:"sender" db:"sender"`
-	Cursor         int64          `json:"cursor" db:"cursor"`
-	ReplyTargetMsg map[string]any `json:"reply_target_msg,omitempty" db:"reply_target_msg"`
+	Id             string         `msgpack:"id" db:"id"`
+	CHEType        string         `msgpack:"che_type" db:"che_type"`
+	Content        map[string]any `msgpack:"content" db:"content"`
+	DeliveryStatus string         `msgpack:"delivery_status" db:"delivery_status"`
+	CreatedAt      int64          `msgpack:"created_at" db:"created_at"`
+	Sender         any            `msgpack:"sender" db:"sender"`
+	Cursor         int64          `msgpack:"cursor" db:"cursor"`
+	ReplyTargetMsg map[string]any `msgpack:"reply_target_msg,omitempty" db:"reply_target_msg"`
 }
 
 func SendMessage(ctx context.Context, clientUsername, groupId, msgContent string, at int64) (NewMessage, error) {
@@ -684,7 +684,7 @@ func SendMessage(ctx context.Context, clientUsername, groupId, msgContent string
 }
 
 type PostNewMessage struct {
-	MemberUsernames []any `json:"-" db:"member_usernames"`
+	MemberUsernames []any `msgpack:"-" db:"member_usernames"`
 }
 
 func PostSendMessage(ctx context.Context, clientUsername, groupId, msgId string) (PostNewMessage, error) {
@@ -839,12 +839,12 @@ func ReplyToMessage(ctx context.Context, clientUsername, groupId, targetMsgId, m
 }
 
 type RxnToMessage struct {
-	CHEId   string `json:"-" db:"che_id"`
-	CHEType string `json:"che_type" db:"che_type"`
-	Emoji   string `json:"emoji" db:"emoji"`
-	Reactor any    `json:"reactor" db:"reactor"`
-	Cursor  int64  `json:"cursor" db:"cursor"`
-	ToMsgId string `json:"to_msg_id" db:"to_msg_id"`
+	CHEId   string `msgpack:"-" db:"che_id"`
+	CHEType string `msgpack:"che_type" db:"che_type"`
+	Emoji   string `msgpack:"emoji" db:"emoji"`
+	Reactor any    `msgpack:"reactor" db:"reactor"`
+	Cursor  int64  `msgpack:"cursor" db:"cursor"`
+	ToMsgId string `msgpack:"to_msg_id" db:"to_msg_id"`
 }
 
 func ReactToMessage(ctx context.Context, clientUsername, groupId, msgId, emoji string, at int64) (RxnToMessage, error) {
@@ -962,11 +962,11 @@ func RemoveReactionToMessage(ctx context.Context, clientUsername, groupId, msgId
 	return CHEId, nil
 }
 
-func ChatHistory(ctx context.Context, clientUsername, groupId string, limit int, cursor float64) ([]UITypes.ChatHistoryEntry, error) {
+func ChatHistory(ctx context.Context, clientUsername, groupId string, limit int64, cursor float64) ([]UITypes.ChatHistoryEntry, error) {
 	cheMembers, err := redisDB().ZRevRangeByScoreWithScores(ctx, fmt.Sprintf("group_chat:owner:%s:group_id:%s:history", clientUsername, groupId), &redis.ZRangeBy{
 		Max:   helpers.MaxCursor(cursor),
 		Min:   "-inf",
-		Count: int64(limit),
+		Count: limit,
 	}).Result()
 	if err != nil {
 		helpers.LogError(err)
@@ -992,11 +992,11 @@ func GroupInfo(ctx context.Context, groupId string) (UITypes.GroupInfo, error) {
 	return ginfo, nil
 }
 
-func GroupMembers(ctx context.Context, clientUsername, groupId string, limit int, cursor float64) ([]UITypes.GroupMemberSnippet, error) {
+func GroupMembers(ctx context.Context, clientUsername, groupId string, limit int64, cursor float64) ([]UITypes.GroupMemberSnippet, error) {
 	groupMembers, err := redisDB().ZRevRangeByScoreWithScores(ctx, fmt.Sprintf("group:%s:members", groupId), &redis.ZRangeBy{
 		Max:   helpers.MaxCursor(cursor),
 		Min:   "-inf",
-		Count: int64(limit),
+		Count: limit,
 	}).Result()
 	if err != nil {
 		helpers.LogError(err)

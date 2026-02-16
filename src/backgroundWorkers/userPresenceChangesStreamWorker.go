@@ -50,7 +50,7 @@ func userPresenceChangesStreamBgWorker(rdb *redis.Client) {
 				var msg eventTypes.UserPresenceChangeEvent
 				msg.Username = stmsg.Values["username"].(string)
 				msg.Presence = stmsg.Values["presence"].(string)
-				msg.LastSeen = helpers.FromJson[int64](stmsg.Values["lastSeen"].(string))
+				msg.LastSeen = helpers.FromMsgPack[int64](stmsg.Values["lastSeen"].(string))
 
 				msgs = append(msgs, msg)
 			}

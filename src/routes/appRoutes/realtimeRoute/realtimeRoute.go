@@ -3,13 +3,12 @@ package realtimeRoute
 import (
 	RC "i9chat/src/controllers/realtimeController"
 
-	"github.com/gofiber/contrib/websocket"
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 )
 
 func Route(router fiber.Router) {
-	router.Use(func(c *fiber.Ctx) error {
-		if websocket.IsWebSocketUpgrade(c) {
+	router.Use(func(c fiber.Ctx) error {
+		if c.IsWebSocket() {
 			return c.Next()
 		}
 

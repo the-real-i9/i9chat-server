@@ -14,12 +14,12 @@ import (
 	"os"
 	"time"
 
-	"github.com/goccy/go-json"
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
+	"github.com/vmihailenco/msgpack/v5"
 )
 
 type signup1RespT struct {
-	Msg string `json:"msg"`
+	Msg string `msgpack:"msg"`
 }
 
 func RequestNewAccount(ctx context.Context, email string) (signup1RespT, map[string]any, error) {
@@ -50,13 +50,13 @@ func RequestNewAccount(ctx context.Context, email string) (signup1RespT, map[str
 }
 
 type signup2RespT struct {
-	Msg string `json:"msg"`
+	Msg string `msgpack:"msg"`
 }
 
-func VerifyEmail(ctx context.Context, sessionData json.RawMessage, inputVerfCode string) (signup2RespT, map[string]any, error) {
+func VerifyEmail(ctx context.Context, sessionData msgpack.RawMessage, inputVerfCode string) (signup2RespT, map[string]any, error) {
 	var resp signup2RespT
 
-	sd := helpers.FromBtJson[struct {
+	sd := helpers.FromBtMsgPack[struct {
 		Email        string
 		VCode        string
 		VCodeExpires time.Time
@@ -80,14 +80,14 @@ func VerifyEmail(ctx context.Context, sessionData json.RawMessage, inputVerfCode
 }
 
 type signup3RespT struct {
-	Msg  string             `json:"msg"`
-	User UITypes.ClientUser `json:"user"`
+	Msg  string             `msgpack:"msg"`
+	User UITypes.ClientUser `msgpack:"user"`
 }
 
-func RegisterUser(ctx context.Context, sessionData json.RawMessage, username, password, bio string) (signup3RespT, string, error) {
+func RegisterUser(ctx context.Context, sessionData msgpack.RawMessage, username, password, bio string) (signup3RespT, string, error) {
 	var resp signup3RespT
 
-	email := helpers.FromBtJson[struct {
+	email := helpers.FromBtMsgPack[struct {
 		Email string
 	}](sessionData).Email
 

@@ -54,8 +54,8 @@ func groupEditsStreamBgWorker(rdb *redis.Client) {
 
 				msg.GroupId = stmsg.Values["groupId"].(string)
 				msg.EditorUser = stmsg.Values["editorUser"].(string)
-				msg.UpdateKVMap = helpers.FromJson[appTypes.BinableMap](stmsg.Values["updateKVMap"].(string))
-				msg.EditorUserCHE = helpers.FromJson[appTypes.BinableMap](stmsg.Values["editorUserCHE"].(string))
+				msg.UpdateKVMap = helpers.FromMsgPack[appTypes.BinableMap](stmsg.Values["updateKVMap"].(string))
+				msg.EditorUserCHE = helpers.FromMsgPack[appTypes.BinableMap](stmsg.Values["editorUserCHE"].(string))
 				msg.MemInfo = stmsg.Values["memInfo"].(string)
 
 				msgs = append(msgs, msg)
@@ -77,7 +77,7 @@ func groupEditsStreamBgWorker(rdb *redis.Client) {
 				CHEId := gactche["che_id"].(string)
 				CHECursor := gactche["cursor"].(int64)
 
-				newGroupActivityEntries = append(newGroupActivityEntries, CHEId, helpers.ToJson(gactche))
+				newGroupActivityEntries = append(newGroupActivityEntries, CHEId, helpers.ToMsgPack(gactche))
 
 				chatGroupActivities[msg.EditorUser+" "+msg.GroupId] = append(chatGroupActivities[msg.EditorUser+" "+msg.GroupId], [2]any{CHEId, float64(CHECursor)})
 
@@ -94,7 +94,7 @@ func groupEditsStreamBgWorker(rdb *redis.Client) {
 					CHEId := gactche["che_id"].(string)
 					CHECursor := gactche["cursor"].(int64)
 
-					newGroupActivityEntries = append(newGroupActivityEntries, CHEId, helpers.ToJson(gactche))
+					newGroupActivityEntries = append(newGroupActivityEntries, CHEId, helpers.ToMsgPack(gactche))
 
 					chatGroupActivities[memUser+" "+msg.GroupId] = append(chatGroupActivities[memUser+" "+msg.GroupId], [2]any{CHEId, float64(CHECursor)})
 				}

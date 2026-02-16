@@ -53,10 +53,10 @@ func newGroupsStreamBgWorker(rdb *redis.Client) {
 				msg.CreatorUser = stmsg.Values["creatorUser"].(string)
 				msg.GroupId = stmsg.Values["groupId"].(string)
 				msg.GroupData = stmsg.Values["groupData"].(string)
-				msg.ChatCursor = helpers.FromJson[int64](stmsg.Values["chatCursor"].(string))
-				msg.InitMembers = helpers.FromJson[appTypes.BinableSlice](stmsg.Values["initMembers"].(string))
-				msg.CreatorUserCHEs = helpers.FromJson[appTypes.BinableSlice](stmsg.Values["creatorUserCHEs"].(string))
-				msg.InitMembersCHEs = helpers.FromJson[appTypes.BinableMap](stmsg.Values["initMembersCHEs"].(string))
+				msg.ChatCursor = helpers.FromMsgPack[int64](stmsg.Values["chatCursor"].(string))
+				msg.InitMembers = helpers.FromMsgPack[appTypes.BinableSlice](stmsg.Values["initMembers"].(string))
+				msg.CreatorUserCHEs = helpers.FromMsgPack[appTypes.BinableSlice](stmsg.Values["creatorUserCHEs"].(string))
+				msg.InitMembersCHEs = helpers.FromMsgPack[appTypes.BinableMap](stmsg.Values["initMembersCHEs"].(string))
 
 				msgs = append(msgs, msg)
 			}
@@ -85,7 +85,7 @@ func newGroupsStreamBgWorker(rdb *redis.Client) {
 
 				groupCreators[msg.GroupId] = msg.CreatorUser
 
-				newUserChats[msg.CreatorUser] = append(newUserChats[msg.CreatorUser], msg.GroupId, helpers.ToJson(map[string]any{"type": "group", "group": msg.GroupId, "cursor": msg.ChatCursor}))
+				newUserChats[msg.CreatorUser] = append(newUserChats[msg.CreatorUser], msg.GroupId, helpers.ToMsgPack(map[string]any{"type": "group", "group": msg.GroupId, "cursor": msg.ChatCursor}))
 
 				if userChats[msg.CreatorUser] == nil {
 					userChats[msg.CreatorUser] = make(map[string]float64)
@@ -99,14 +99,14 @@ func newGroupsStreamBgWorker(rdb *redis.Client) {
 					CHEId := gactche["che_id"].(string)
 					CHECursor := gactche["cursor"].(int64)
 
-					newGroupActivityEntries = append(newGroupActivityEntries, CHEId, helpers.ToJson(gactche))
+					newGroupActivityEntries = append(newGroupActivityEntries, CHEId, helpers.ToMsgPack(gactche))
 
 					chatGroupActivities[msg.CreatorUser+" "+msg.GroupId] = append(chatGroupActivities[msg.CreatorUser+" "+msg.GroupId], [2]any{CHEId, float64(CHECursor)})
 				}
 
 				for _, initMem := range msg.InitMembers {
 					initMem := initMem.(string)
-					newUserChats[initMem] = append(newUserChats[initMem], msg.GroupId, helpers.ToJson(map[string]any{"type": "group", "group": msg.GroupId, "cursor": msg.ChatCursor}))
+					newUserChats[initMem] = append(newUserChats[initMem], msg.GroupId, helpers.ToMsgPack(map[string]any{"type": "group", "group": msg.GroupId, "cursor": msg.ChatCursor}))
 
 					if userChats[initMem] == nil {
 						userChats[initMem] = make(map[string]float64)
@@ -120,7 +120,7 @@ func newGroupsStreamBgWorker(rdb *redis.Client) {
 						CHEId := gactche["che_id"].(string)
 						CHECursor := gactche["cursor"].(int64)
 
-						newGroupActivityEntries = append(newGroupActivityEntries, CHEId, helpers.ToJson(gactche))
+						newGroupActivityEntries = append(newGroupActivityEntries, CHEId, helpers.ToMsgPack(gactche))
 
 						chatGroupActivities[initMem+" "+msg.GroupId] = append(chatGroupActivities[initMem+" "+msg.GroupId], [2]any{CHEId, CHECursor})
 					}

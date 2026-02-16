@@ -54,9 +54,9 @@ func groupUsersJoinedStreamBgWorker(rdb *redis.Client) {
 
 				msg.GroupId = stmsg.Values["groupId"].(string)
 				msg.NewMember = stmsg.Values["newMember"].(string)
-				msg.NewMemberCHE = helpers.FromJson[appTypes.BinableMap](stmsg.Values["newMemberCHE"].(string))
+				msg.NewMemberCHE = helpers.FromMsgPack[appTypes.BinableMap](stmsg.Values["newMemberCHE"].(string))
 				msg.MemInfo = stmsg.Values["memInfo"].(string)
-				msg.ChatCursor = helpers.FromJson[int64](stmsg.Values["chatCursor"].(string))
+				msg.ChatCursor = helpers.FromMsgPack[int64](stmsg.Values["chatCursor"].(string))
 
 				msgs = append(msgs, msg)
 
@@ -80,7 +80,7 @@ func groupUsersJoinedStreamBgWorker(rdb *redis.Client) {
 
 				newMem := msg.NewMember
 
-				newUserChats[newMem] = append(newUserChats[newMem], msg.GroupId, helpers.ToJson(map[string]any{"type": "group", "group": msg.GroupId, "cursor": msg.ChatCursor}))
+				newUserChats[newMem] = append(newUserChats[newMem], msg.GroupId, helpers.ToMsgPack(map[string]any{"type": "group", "group": msg.GroupId, "cursor": msg.ChatCursor}))
 
 				if userChats[newMem] == nil {
 					userChats[newMem] = make(map[string]float64)
@@ -93,7 +93,7 @@ func groupUsersJoinedStreamBgWorker(rdb *redis.Client) {
 				CHEId := gactche["che_id"].(string)
 				CHECursor := gactche["cursor"].(int64)
 
-				newGroupActivityEntries = append(newGroupActivityEntries, CHEId, helpers.ToJson(gactche))
+				newGroupActivityEntries = append(newGroupActivityEntries, CHEId, helpers.ToMsgPack(gactche))
 
 				chatGroupActivities[newMem+" "+msg.GroupId] = append(chatGroupActivities[newMem+" "+msg.GroupId], [2]any{CHEId, float64(CHECursor)})
 
@@ -110,7 +110,7 @@ func groupUsersJoinedStreamBgWorker(rdb *redis.Client) {
 					CHEId := gactche["che_id"].(string)
 					CHECursor := gactche["cursor"].(int64)
 
-					newGroupActivityEntries = append(newGroupActivityEntries, CHEId, helpers.ToJson(gactche))
+					newGroupActivityEntries = append(newGroupActivityEntries, CHEId, helpers.ToMsgPack(gactche))
 
 					chatGroupActivities[memUser+" "+msg.GroupId] = append(chatGroupActivities[memUser+" "+msg.GroupId], [2]any{CHEId, float64(CHECursor)})
 				}
