@@ -49,6 +49,7 @@ func main() {
 	app.Use(helmet.New(helmet.Config{
 		// CrossOriginResourcePolicy: "cross-origin", /* for production */
 	}))
+
 	app.Use(cors.New(cors.Config{
 		// AllowOrigins:     "http://localhost:5173", /* production client host */
 		// AllowCredentials: true,

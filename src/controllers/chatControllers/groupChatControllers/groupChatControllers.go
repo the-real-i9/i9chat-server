@@ -154,7 +154,7 @@ func AckMessageDelivered(ctx context.Context, clientUsername string, actionData 
 		return nil, err
 	}
 
-	return groupChatService.AckMessageDelivered(ctx, clientUsername, acd.GroupId, acd.MsgId, acd.At)
+	return groupChatService.AckMessageDelivered(ctx, clientUsername, acd.GroupId, acd.MsgIds, acd.At)
 }
 
 func AckMessageRead(ctx context.Context, clientUsername string, actionData json.RawMessage) (any, error) {
@@ -165,7 +165,7 @@ func AckMessageRead(ctx context.Context, clientUsername string, actionData json.
 		return nil, err
 	}
 
-	return groupChatService.AckMessageRead(ctx, clientUsername, acd.GroupId, acd.MsgId, acd.At)
+	return groupChatService.AckMessageRead(ctx, clientUsername, acd.GroupId, acd.MsgIds, acd.At)
 }
 
 func GetGroupInfo(ctx context.Context, actionData json.RawMessage) (any, error) {

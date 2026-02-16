@@ -77,7 +77,7 @@ func SendMessage(ctx context.Context, clientUsername, partnerUsername, msgConten
 	return newMsg, nil
 }
 
-func AckMessageDelivered(ctx context.Context, clientUsername, partnerUsername string, msgIds []any, deliveredAt int64) (*int64, error) {
+func AckMessageDelivered(ctx context.Context, clientUsername, partnerUsername string, msgIds []any, deliveredAt int64) (int64, error) {
 	res, err := db.Query(
 		ctx,
 		`/*cypher*/
@@ -97,16 +97,16 @@ func AckMessageDelivered(ctx context.Context, clientUsername, partnerUsername st
 	)
 	if err != nil {
 		helpers.LogError(err)
-		return nil, fiber.ErrInternalServerError
+		return 0, fiber.ErrInternalServerError
 	}
 
 	if len(res.Records) == 0 {
-		return nil, nil
+		return 0, nil
 	}
 
 	cursor := modelHelpers.RKeyGet[int64](res.Records, "cursor")
 
-	return &cursor, nil
+	return cursor, nil
 }
 
 func AckMessageRead(ctx context.Context, clientUsername, partnerUsername string, msgIds []any, readAt int64) (bool, error) {

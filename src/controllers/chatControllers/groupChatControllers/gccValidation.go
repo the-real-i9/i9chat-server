@@ -237,14 +237,14 @@ func (vb sendGroupChatMsg) Validate(ctx context.Context) error {
 
 type groupChatMsgAck struct {
 	GroupId string `json:"groupId"`
-	MsgId   string `json:"msgId"`
+	MsgIds  []any  `json:"msgId"`
 	At      int64  `json:"at"`
 }
 
 func (d groupChatMsgAck) Validate() error {
 	err := validation.ValidateStruct(&d,
 		validation.Field(&d.GroupId, validation.Required, is.UUID),
-		validation.Field(&d.MsgId, validation.Required, is.UUID),
+		validation.Field(&d.MsgIds, validation.Required, validation.Each(is.UUID)),
 		validation.Field(&d.At, validation.Required, validation.Max(time.Now().UTC().UnixMilli()).Error("invalid future time")),
 	)
 

@@ -35,7 +35,7 @@ func SendMessage(ctx context.Context, clientUsername, partnerUsername, replyTarg
 		return nil, nil
 	}
 
-	go func(msg directChat.NewMessage) {
+	go func(msg directChat.NewMessage, clientUsername, partnerUsername string) {
 		uisender, _ := cache.GetUser[UITypes.ClientUser](context.Background(), clientUsername)
 
 		uisender.ProfilePicUrl = cloudStorageService.ProfilePicCloudNameToUrl(uisender.ProfilePicUrl)
@@ -63,10 +63,10 @@ func SendMessage(ctx context.Context, clientUsername, partnerUsername, replyTarg
 			Event: "direct chat: new che: message",
 			Data:  UImsg,
 		})
-	}(newMessage)
+	}(newMessage, clientUsername, partnerUsername)
 
 	// queue new message event
-	go func(newMessage directChat.NewMessage) {
+	go func(newMessage directChat.NewMessage, clientUsername, partnerUsername string) {
 		eventStreamService.QueueNewDirectMessageEvent(eventTypes.NewDirectMessageEvent{
 			FirstFromUser: newMessage.FirstFromUser,
 			FirstToUser:   newMessage.FirstToUser,
@@ -76,7 +76,7 @@ func SendMessage(ctx context.Context, clientUsername, partnerUsername, replyTarg
 			MsgData:       helpers.ToJson(newMessage),
 			CHECursor:     newMessage.Cursor,
 		})
-	}(newMessage)
+	}(newMessage, clientUsername, partnerUsername)
 
 	return map[string]any{"new_msg_id": newMessage.Id, "che_cursor": newMessage.Cursor}, nil
 }
@@ -87,7 +87,7 @@ func AckMessagesDelivered(ctx context.Context, clientUsername, partnerUsername s
 		return nil, err
 	}
 
-	if lastMsgCursor == nil {
+	if lastMsgCursor == 0 {
 		return nil, nil
 	}
 
@@ -95,23 +95,22 @@ func AckMessagesDelivered(ctx context.Context, clientUsername, partnerUsername s
 		Event: "direct chat: messages delivered",
 		Data: map[string]any{
 			"chat_partner": clientUsername,
+			"delivered_at": deliveredAt,
 			"msg_ids":      msgIds,
 		},
 	})
 
 	// queue msg ack event
-	go func() {
-		eventStreamService.QueueDirectMsgAckEvent(eventTypes.DirectMsgAckEvent{
-			FromUser:   clientUsername,
-			ToUser:     partnerUsername,
-			CHEIds:     msgIds,
-			Ack:        "delivered",
-			At:         deliveredAt,
-			ChatCursor: *lastMsgCursor,
-		})
-	}()
+	go eventStreamService.QueueDirectMsgAckEvent(eventTypes.DirectMsgAckEvent{
+		FromUser:   clientUsername,
+		ToUser:     partnerUsername,
+		CHEIds:     msgIds,
+		Ack:        "delivered",
+		At:         deliveredAt,
+		ChatCursor: lastMsgCursor,
+	})
 
-	return map[string]any{"updated_chat_cursor": *lastMsgCursor}, nil
+	return map[string]any{"updated_chat_cursor": lastMsgCursor}, nil
 }
 
 func AckMessagesRead(ctx context.Context, clientUsername, partnerUsername string, msgIds []any, readAt int64) (bool, error) {
@@ -125,20 +124,19 @@ func AckMessagesRead(ctx context.Context, clientUsername, partnerUsername string
 			Event: "direct chat: messages read",
 			Data: map[string]any{
 				"chat_partner": clientUsername,
+				"read_at":      readAt,
 				"msg_ids":      msgIds,
 			},
 		})
 
 		// queue msg ack event
-		go func() {
-			eventStreamService.QueueDirectMsgAckEvent(eventTypes.DirectMsgAckEvent{
-				FromUser: clientUsername,
-				ToUser:   partnerUsername,
-				CHEIds:   msgIds,
-				Ack:      "read",
-				At:       readAt,
-			})
-		}()
+		go eventStreamService.QueueDirectMsgAckEvent(eventTypes.DirectMsgAckEvent{
+			FromUser: clientUsername,
+			ToUser:   partnerUsername,
+			CHEIds:   msgIds,
+			Ack:      "read",
+			At:       readAt,
+		})
 	}
 
 	return done, nil
@@ -157,7 +155,7 @@ func ReactToMessage(ctx context.Context, clientUsername, partnerUsername, msgId,
 		return nil, nil
 	}
 
-	go func(rxnData directChat.RxnToMessage) {
+	go func(rxnData directChat.RxnToMessage, clientUsername, partnerUsername string) {
 		uireactor, _ := cache.GetUser[UITypes.MsgReactor](context.Background(), clientUsername)
 
 		uireactor.ProfilePicUrl = cloudStorageService.ProfilePicCloudNameToUrl(uireactor.ProfilePicUrl)
@@ -168,28 +166,28 @@ func ReactToMessage(ctx context.Context, clientUsername, partnerUsername, msgId,
 				"chat_partner": clientUsername,
 				"che":          UITypes.ChatHistoryEntry{CHEType: rxnData.CHEType, Reactor: clientUsername, Emoji: rxnData.Emoji, Cursor: rxnData.Cursor},
 				"msg_reaction": map[string]any{
-					"msg_id": msgId,
+					"msg_id": rxnData.ToMsgId,
 					"reaction": UITypes.MsgReaction{
-						Emoji:   emoji,
+						Emoji:   rxnData.Emoji,
 						Reactor: uireactor,
 					},
 				},
 			},
 		})
-	}(rxnToMessage)
+	}(rxnToMessage, clientUsername, partnerUsername)
 
 	// queue msg reaction event
-	go func(rxnData directChat.RxnToMessage) {
+	go func(rxnData directChat.RxnToMessage, clientUsername, partnerUsername string) {
 		eventStreamService.QueueNewDirectMsgReactionEvent(eventTypes.NewDirectMsgReactionEvent{
 			FromUser:  clientUsername,
 			ToUser:    partnerUsername,
 			CHEId:     rxnData.CHEId,
 			RxnData:   helpers.ToJson(rxnData),
-			ToMsgId:   msgId,
-			Emoji:     emoji,
+			ToMsgId:   rxnData.ToMsgId,
+			Emoji:     rxnData.Emoji,
 			CHECursor: rxnData.Cursor,
 		})
-	}(rxnToMessage)
+	}(rxnToMessage, clientUsername, partnerUsername)
 
 	return map[string]any{"che_cursor": rxnToMessage.Cursor}, nil
 }
