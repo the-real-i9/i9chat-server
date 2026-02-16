@@ -33,16 +33,21 @@ var WSStream = websocket.New(func(c *websocket.Conn) {
 			break
 		}
 
-		_, msgPackBt, r_err := c.ReadMessage()
+		MSG_TYPE, msgPackBt, r_err := c.ReadMessage()
 		if r_err != nil {
 			log.Println(r_err)
 			break
 		}
 
+		if MSG_TYPE != websocket.BinaryMessage {
+			w_err = c.WriteMessage(websocket.BinaryMessage, helpers.ToBtMsgPack(fmt.Errorf("unexpected message type")))
+			continue
+		}
+
 		body := helpers.FromBtMsgPack[rtActionBody](msgPackBt)
 
 		if err := body.Validate(); err != nil {
-			w_err = c.WriteJSON(helpers.WSErrReply(err, body.Action))
+			w_err = c.WriteMessage(MSG_TYPE, helpers.ToBtMsgPack(helpers.WSErrReply(err, body.Action)))
 			continue
 		}
 
@@ -54,7 +59,7 @@ var WSStream = websocket.New(func(c *websocket.Conn) {
 			data := helpers.FromBtMsgPack[subToUserPresenceAcd](body.Data)
 
 			if err := data.Validate(); err != nil {
-				w_err = c.WriteJSON(helpers.WSErrReply(err, body.Action))
+				w_err = c.WriteMessage(MSG_TYPE, helpers.ToBtMsgPack(helpers.WSErrReply(err, body.Action)))
 				continue
 			}
 
@@ -70,7 +75,7 @@ var WSStream = websocket.New(func(c *websocket.Conn) {
 			data := helpers.FromBtMsgPack[unsubFromUserPresenceAcd](body.Data)
 
 			if err := data.Validate(); err != nil {
-				w_err = c.WriteJSON(helpers.WSErrReply(err, body.Action))
+				w_err = c.WriteMessage(MSG_TYPE, helpers.ToBtMsgPack(helpers.WSErrReply(err, body.Action)))
 				continue
 			}
 
@@ -84,68 +89,68 @@ var WSStream = websocket.New(func(c *websocket.Conn) {
 		case "direct chat: send message":
 			respData, err := directChatControllers.SendMessage(ctx, clientUser.Username, body.Data)
 			if err != nil {
-				w_err = c.WriteJSON(helpers.WSErrReply(err, body.Action))
+				w_err = c.WriteMessage(MSG_TYPE, helpers.ToBtMsgPack(helpers.WSErrReply(err, body.Action)))
 				continue
 			}
 
-			w_err = c.WriteJSON(helpers.WSReply(respData, body.Action))
+			w_err = c.WriteMessage(MSG_TYPE, helpers.ToBtMsgPack(helpers.WSReply(respData, body.Action)))
 		case "direct chat: ack messages delivered":
 
 			respData, err := directChatControllers.AckMessagesDelivered(ctx, clientUser.Username, body.Data)
 			if err != nil {
-				w_err = c.WriteJSON(helpers.WSErrReply(err, body.Action))
+				w_err = c.WriteMessage(MSG_TYPE, helpers.ToBtMsgPack(helpers.WSErrReply(err, body.Action)))
 				continue
 			}
 
-			w_err = c.WriteJSON(helpers.WSReply(respData, body.Action))
+			w_err = c.WriteMessage(MSG_TYPE, helpers.ToBtMsgPack(helpers.WSReply(respData, body.Action)))
 		case "direct chat: ack messages read":
 
 			respData, err := directChatControllers.AckMessagesRead(ctx, clientUser.Username, body.Data)
 			if err != nil {
-				w_err = c.WriteJSON(helpers.WSErrReply(err, body.Action))
+				w_err = c.WriteMessage(MSG_TYPE, helpers.ToBtMsgPack(helpers.WSErrReply(err, body.Action)))
 				continue
 			}
 
-			w_err = c.WriteJSON(helpers.WSReply(respData, body.Action))
+			w_err = c.WriteMessage(MSG_TYPE, helpers.ToBtMsgPack(helpers.WSReply(respData, body.Action)))
 		case "group chat: send message":
 
 			respData, err := groupChatControllers.SendMessage(ctx, clientUser.Username, body.Data)
 			if err != nil {
-				w_err = c.WriteJSON(helpers.WSErrReply(err, body.Action))
+				w_err = c.WriteMessage(MSG_TYPE, helpers.ToBtMsgPack(helpers.WSErrReply(err, body.Action)))
 				continue
 			}
 
-			w_err = c.WriteJSON(helpers.WSReply(respData, body.Action))
+			w_err = c.WriteMessage(MSG_TYPE, helpers.ToBtMsgPack(helpers.WSReply(respData, body.Action)))
 		case "group chat: ack message delivered":
 
 			respData, err := groupChatControllers.AckMessageDelivered(ctx, clientUser.Username, body.Data)
 			if err != nil {
-				w_err = c.WriteJSON(helpers.WSErrReply(err, body.Action))
+				w_err = c.WriteMessage(MSG_TYPE, helpers.ToBtMsgPack(helpers.WSErrReply(err, body.Action)))
 				continue
 			}
 
-			w_err = c.WriteJSON(helpers.WSReply(respData, body.Action))
+			w_err = c.WriteMessage(MSG_TYPE, helpers.ToBtMsgPack(helpers.WSReply(respData, body.Action)))
 		case "group chat: ack message read":
 
 			respData, err := groupChatControllers.AckMessageRead(ctx, clientUser.Username, body.Data)
 			if err != nil {
-				w_err = c.WriteJSON(helpers.WSErrReply(err, body.Action))
+				w_err = c.WriteMessage(MSG_TYPE, helpers.ToBtMsgPack(helpers.WSErrReply(err, body.Action)))
 				continue
 			}
 
-			w_err = c.WriteJSON(helpers.WSReply(respData, body.Action))
+			w_err = c.WriteMessage(MSG_TYPE, helpers.ToBtMsgPack(helpers.WSReply(respData, body.Action)))
 		case "group: get info":
 
 			respData, err := groupChatControllers.GetGroupInfo(ctx, body.Data)
 			if err != nil {
-				w_err = c.WriteJSON(helpers.WSErrReply(err, body.Action))
+				w_err = c.WriteMessage(MSG_TYPE, helpers.ToBtMsgPack(helpers.WSErrReply(err, body.Action)))
 				continue
 			}
 
-			w_err = c.WriteJSON(helpers.WSReply(respData, body.Action))
+			w_err = c.WriteMessage(MSG_TYPE, helpers.ToBtMsgPack(helpers.WSReply(respData, body.Action)))
 
 		default:
-			w_err = c.WriteJSON(helpers.WSErrReply(fmt.Errorf("invalid event: %s", body.Action), body.Action))
+			w_err = c.WriteMessage(MSG_TYPE, helpers.ToBtMsgPack(helpers.WSErrReply(fmt.Errorf("invalid event: %s", body.Action), body.Action)))
 			continue
 		}
 	}

@@ -9,13 +9,13 @@ import (
 )
 
 func GetGroup[T any](ctx context.Context, groupId string) (group T, err error) {
-	groupJson, err := rdb().HGet(ctx, "groups", groupId).Result()
+	groupMsgPack, err := rdb().HGet(ctx, "groups", groupId).Result()
 	if err != nil && err != redis.Nil {
 		helpers.LogError(err)
 		return group, err
 	}
 
-	return helpers.FromMsgPack[T](groupJson), nil
+	return helpers.FromMsgPack[T](groupMsgPack), nil
 }
 
 func GetGroupMembersList(ctx context.Context, groupId string) ([]string, error) {
@@ -49,13 +49,13 @@ func GetGroupOnlineMembersCount(ctx context.Context, groupId string) (int, error
 }
 
 func GetChat[T any](ctx context.Context, ownerUser, chatIdent string) (chat T, err error) {
-	chatJson, err := rdb().HGet(ctx, fmt.Sprintf("user:%s:chats", ownerUser), chatIdent).Result()
+	chatMsgPack, err := rdb().HGet(ctx, fmt.Sprintf("user:%s:chats", ownerUser), chatIdent).Result()
 	if err != nil && err != redis.Nil {
 		helpers.LogError(err)
 		return chat, err
 	}
 
-	return helpers.FromMsgPack[T](chatJson), nil
+	return helpers.FromMsgPack[T](chatMsgPack), nil
 }
 
 func GetChatUnreadMsgsCount(ctx context.Context, ownerUser, chatIdent string) (int64, error) {
@@ -69,23 +69,23 @@ func GetChatUnreadMsgsCount(ctx context.Context, ownerUser, chatIdent string) (i
 }
 
 func GetDirectChatHistoryEntry[T any](ctx context.Context, CHEId string) (CHE T, err error) {
-	CHEJson, err := rdb().HGet(ctx, "direct_chat_history_entries", CHEId).Result()
+	CHEMsgPack, err := rdb().HGet(ctx, "direct_chat_history_entries", CHEId).Result()
 	if err != nil && err != redis.Nil {
 		helpers.LogError(err)
 		return CHE, err
 	}
 
-	return helpers.FromMsgPack[T](CHEJson), nil
+	return helpers.FromMsgPack[T](CHEMsgPack), nil
 }
 
 func GetGroupChatHistoryEntry[T any](ctx context.Context, CHEId string) (CHE T, err error) {
-	CHEJson, err := rdb().HGet(ctx, "group_chat_history_entries", CHEId).Result()
+	CHEMsgPack, err := rdb().HGet(ctx, "group_chat_history_entries", CHEId).Result()
 	if err != nil && err != redis.Nil {
 		helpers.LogError(err)
 		return CHE, err
 	}
 
-	return helpers.FromMsgPack[T](CHEJson), nil
+	return helpers.FromMsgPack[T](CHEMsgPack), nil
 }
 
 func GetMsgReactions(ctx context.Context, msgId string) (map[string]string, error) {

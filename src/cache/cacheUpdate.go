@@ -7,13 +7,13 @@ import (
 )
 
 func UpdateUser(ctx context.Context, username string, updateKVMap map[string]any) error {
-	userDataJson, err := rdb().HGet(ctx, "users", username).Result()
+	userDataMsgPack, err := rdb().HGet(ctx, "users", username).Result()
 	if err != nil {
 		helpers.LogError(err)
 		return err
 	}
 
-	userData := helpers.FromMsgPack[map[string]any](userDataJson)
+	userData := helpers.FromMsgPack[map[string]any](userDataMsgPack)
 
 	maps.Copy(userData, updateKVMap)
 
@@ -27,13 +27,13 @@ func UpdateUser(ctx context.Context, username string, updateKVMap map[string]any
 }
 
 func UpdateGroup(ctx context.Context, groupId string, updateKVMap map[string]any) error {
-	groupDataJson, err := rdb().HGet(ctx, "groups", groupId).Result()
+	groupDataMsgPack, err := rdb().HGet(ctx, "groups", groupId).Result()
 	if err != nil {
 		helpers.LogError(err)
 		return err
 	}
 
-	userData := helpers.FromMsgPack[map[string]any](groupDataJson)
+	userData := helpers.FromMsgPack[map[string]any](groupDataMsgPack)
 
 	maps.Copy(userData, updateKVMap)
 
@@ -47,13 +47,13 @@ func UpdateGroup(ctx context.Context, groupId string, updateKVMap map[string]any
 }
 
 func UpdateDirectMessageDelivery(ctx context.Context, CHEId string, updateKVMap map[string]any) error {
-	msgDataJson, err := rdb().HGet(ctx, "direct_chat_history_entries", CHEId).Result()
+	msgDataMsgPack, err := rdb().HGet(ctx, "direct_chat_history_entries", CHEId).Result()
 	if err != nil {
 		helpers.LogError(err)
 		return err
 	}
 
-	msgData := helpers.FromMsgPack[map[string]any](msgDataJson)
+	msgData := helpers.FromMsgPack[map[string]any](msgDataMsgPack)
 
 	// if a client skips the "delivered" ack, and acks "read"
 	// it means the message is delivered and read at the same time
@@ -73,13 +73,13 @@ func UpdateDirectMessageDelivery(ctx context.Context, CHEId string, updateKVMap 
 }
 
 func UpdateGroupMessageDelivery(ctx context.Context, CHEId string, updateKVMap map[string]any) error {
-	msgDataJson, err := rdb().HGet(ctx, "group_chat_history_entries", CHEId).Result()
+	msgDataMsgPack, err := rdb().HGet(ctx, "group_chat_history_entries", CHEId).Result()
 	if err != nil {
 		helpers.LogError(err)
 		return err
 	}
 
-	msgData := helpers.FromMsgPack[map[string]any](msgDataJson)
+	msgData := helpers.FromMsgPack[map[string]any](msgDataMsgPack)
 
 	// if a client skips the "delivered" ack, and acks "read"
 	// it means the message is delivered and read at the same time

@@ -62,7 +62,7 @@ func CreateNewGroup(c fiber.Ctx) error {
 		return err
 	}
 
-	return c.Status(fiber.StatusCreated).JSON(respData)
+	return c.Status(fiber.StatusCreated).MsgPack(respData)
 }
 
 func GetGroupMembers(c fiber.Ctx) error {

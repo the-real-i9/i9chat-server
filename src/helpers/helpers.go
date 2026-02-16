@@ -99,6 +99,14 @@ func ToMsgPack(data any) string {
 	return string(d)
 }
 
+func ToBtMsgPack(data any) []byte {
+	d, err := msgpack.Marshal(data)
+	if err != nil {
+		LogError(err)
+	}
+	return d
+}
+
 func ToJson(data any) string {
 	d, err := json.Marshal(data)
 	if err != nil {
@@ -107,8 +115,8 @@ func ToJson(data any) string {
 	return string(d)
 }
 
-func FromMsgPack[T any](jsonStr string) (res T) {
-	err := msgpack.Unmarshal([]byte(jsonStr), &res)
+func FromMsgPack[T any](msgPackStr string) (res T) {
+	err := msgpack.Unmarshal([]byte(msgPackStr), &res)
 	if err != nil {
 		LogError(err)
 	}
@@ -116,8 +124,8 @@ func FromMsgPack[T any](jsonStr string) (res T) {
 	return
 }
 
-func FromBtMsgPack[T any](jsonBt []byte) (res T) {
-	err := msgpack.Unmarshal(jsonBt, &res)
+func FromBtMsgPack[T any](msgPackBt []byte) (res T) {
+	err := msgpack.Unmarshal(msgPackBt, &res)
 	if err != nil {
 		LogError(err)
 	}

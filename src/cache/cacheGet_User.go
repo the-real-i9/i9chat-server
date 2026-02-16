@@ -8,11 +8,11 @@ import (
 )
 
 func GetUser[T any](ctx context.Context, username string) (user T, err error) {
-	userJson, err := rdb().HGet(ctx, "users", username).Result()
+	userMsgPack, err := rdb().HGet(ctx, "users", username).Result()
 	if err != nil && err != redis.Nil {
 		helpers.LogError(err)
 		return user, err
 	}
 
-	return helpers.FromMsgPack[T](userJson), nil
+	return helpers.FromMsgPack[T](userMsgPack), nil
 }

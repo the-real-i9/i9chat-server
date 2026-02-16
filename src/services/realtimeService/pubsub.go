@@ -34,7 +34,7 @@ func SubscribeToUserPresence(ctx context.Context, clientUsername string, targetU
 			if userPipe, ok := AllClientSockets.Load(clientUsername); ok {
 				pipe := userPipe.(*websocket.Conn)
 
-				if err := pipe.WriteMessage(websocket.TextMessage, []byte(msg.Payload)); err != nil {
+				if err := pipe.WriteMessage(websocket.BinaryMessage, []byte(msg.Payload)); err != nil {
 					helpers.LogError(err)
 					ctxCancel()
 				}
