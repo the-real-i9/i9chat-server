@@ -66,10 +66,12 @@ func NewUser(ctx context.Context, email, username, password, bio string) (user.N
 	}
 
 	if newUser.Email != "" {
-		go eventStreamService.QueueNewUserEvent(eventTypes.NewUserEvent{
-			Username: newUser.Username,
-			UserData: helpers.ToJson(newUser),
-		})
+		go func(newUser user.NewUserT) {
+			eventStreamService.QueueNewUserEvent(eventTypes.NewUserEvent{
+				Username: newUser.Username,
+				UserData: helpers.ToJson(newUser),
+			})
+		}(newUser)
 	}
 
 	return newUser, nil

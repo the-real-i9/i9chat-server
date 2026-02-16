@@ -46,7 +46,7 @@ func UpdateGroup(ctx context.Context, groupId string, updateKVMap map[string]any
 	return nil
 }
 
-func UpdateDirectMessage(ctx context.Context, CHEId string, updateKVMap map[string]any) error {
+func UpdateDirectMessageDelivery(ctx context.Context, CHEId string, updateKVMap map[string]any) error {
 	msgDataJson, err := rdb().HGet(ctx, "direct_chat_history_entries", CHEId).Result()
 	if err != nil {
 		helpers.LogError(err)
@@ -54,6 +54,12 @@ func UpdateDirectMessage(ctx context.Context, CHEId string, updateKVMap map[stri
 	}
 
 	msgData := helpers.FromJson[map[string]any](msgDataJson)
+
+	// if a client skips the "delivered" ack, and acks "read"
+	// it means the message is delivered and read at the same time
+	if updateKVMap["read_at"] != nil && msgData["delivered_at"] == nil {
+		msgData["delivered_at"] = updateKVMap["read_at"]
+	}
 
 	maps.Copy(msgData, updateKVMap)
 
@@ -66,7 +72,7 @@ func UpdateDirectMessage(ctx context.Context, CHEId string, updateKVMap map[stri
 	return nil
 }
 
-func UpdateGroupMessage(ctx context.Context, CHEId string, updateKVMap map[string]any) error {
+func UpdateGroupMessageDelivery(ctx context.Context, CHEId string, updateKVMap map[string]any) error {
 	msgDataJson, err := rdb().HGet(ctx, "group_chat_history_entries", CHEId).Result()
 	if err != nil {
 		helpers.LogError(err)
@@ -74,6 +80,12 @@ func UpdateGroupMessage(ctx context.Context, CHEId string, updateKVMap map[strin
 	}
 
 	msgData := helpers.FromJson[map[string]any](msgDataJson)
+
+	// if a client skips the "delivered" ack, and acks "read"
+	// it means the message is delivered and read at the same time
+	if updateKVMap["read_at"] != nil && msgData["delivered_at"] == nil {
+		msgData["delivered_at"] = updateKVMap["read_at"]
+	}
 
 	maps.Copy(msgData, updateKVMap)
 

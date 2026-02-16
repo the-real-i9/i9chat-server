@@ -127,21 +127,21 @@ type NewGroupMsgReactionEvent struct {
 }
 
 type DirectMsgAckEvent struct {
-	FromUser   string `redis:"fromUser" json:"fromUser"`
-	ToUser     string `redis:"toUser" json:"toUser"`
-	CHEId      string `redis:"CHEId" json:"CHEId"`
-	Ack        string `redis:"ack" json:"ack"`
-	At         int64  `redis:"at" json:"at"`
-	ChatCursor int64  `redis:"chatCursor" json:"chatCursor"`
+	FromUser   string                `redis:"fromUser" json:"fromUser"`
+	ToUser     string                `redis:"toUser" json:"toUser"`
+	CHEIds     appTypes.BinableSlice `redis:"CHEIds" json:"CHEIds"`
+	Ack        string                `redis:"ack" json:"ack"`
+	At         int64                 `redis:"at" json:"at"`
+	ChatCursor int64                 `redis:"chatCursor" json:"chatCursor"`
 }
 
 type GroupMsgAckEvent struct {
-	FromUser   string `redis:"fromUser" json:"fromUser"`
-	ToGroup    string `redis:"toGroup" json:"toGroup"`
-	CHEId      string `redis:"CHEId" json:"CHEId"`
-	Ack        string `redis:"ack" json:"ack"`
-	At         int64  `redis:"at" json:"at"`
-	ChatCursor int64  `redis:"chatCursor" json:"chatCursor"`
+	FromUser   string                `redis:"fromUser" json:"fromUser"`
+	ToGroup    string                `redis:"toGroup" json:"toGroup"`
+	CHEIds     appTypes.BinableSlice `redis:"CHEIds" json:"CHEIds"`
+	Ack        string                `redis:"ack" json:"ack"`
+	At         int64                 `redis:"at" json:"at"`
+	ChatCursor int64                 `redis:"chatCursor" json:"chatCursor"`
 }
 
 type DirectMsgReactionRemovedEvent struct {

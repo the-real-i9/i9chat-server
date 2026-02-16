@@ -88,18 +88,18 @@ var WSStream = websocket.New(func(c *websocket.Conn) {
 			}
 
 			w_err = c.WriteJSON(helpers.WSReply(respData, body.Action))
-		case "direct chat: ack message delivered":
+		case "direct chat: ack messages delivered":
 
-			respData, err := directChatControllers.AckMessageDelivered(ctx, clientUser.Username, body.Data)
+			respData, err := directChatControllers.AckMessagesDelivered(ctx, clientUser.Username, body.Data)
 			if err != nil {
 				w_err = c.WriteJSON(helpers.WSErrReply(err, body.Action))
 				continue
 			}
 
 			w_err = c.WriteJSON(helpers.WSReply(respData, body.Action))
-		case "direct chat: ack message read":
+		case "direct chat: ack messages read":
 
-			respData, err := directChatControllers.AckMessageRead(ctx, clientUser.Username, body.Data)
+			respData, err := directChatControllers.AckMessagesRead(ctx, clientUser.Username, body.Data)
 			if err != nil {
 				w_err = c.WriteJSON(helpers.WSErrReply(err, body.Action))
 				continue

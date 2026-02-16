@@ -34,24 +34,24 @@ func SendMessage(ctx context.Context, clientUsername string, actionData json.Raw
 	return directChatService.SendMessage(ctx, clientUsername, acd.PartnerUsername, acd.ReplyTargetMsgId, acd.IsReply, helpers.ToJson(acd.Msg), acd.At)
 }
 
-func AckMessageDelivered(ctx context.Context, clientUsername string, actionData json.RawMessage) (any, error) {
+func AckMessagesDelivered(ctx context.Context, clientUsername string, actionData json.RawMessage) (any, error) {
 
-	acd := helpers.FromBtJson[directChatMsgAck](actionData)
+	acd := helpers.FromBtJson[directChatMsgsAck](actionData)
 
 	if err := acd.Validate(); err != nil {
 		return nil, err
 	}
 
-	return directChatService.AckMessageDelivered(ctx, clientUsername, acd.PartnerUsername, acd.MsgId, acd.At)
+	return directChatService.AckMessagesDelivered(ctx, clientUsername, acd.PartnerUsername, acd.MsgIds, acd.At)
 }
 
-func AckMessageRead(ctx context.Context, clientUsername string, actionData json.RawMessage) (any, error) {
+func AckMessagesRead(ctx context.Context, clientUsername string, actionData json.RawMessage) (any, error) {
 
-	acd := helpers.FromBtJson[directChatMsgAck](actionData)
+	acd := helpers.FromBtJson[directChatMsgsAck](actionData)
 
 	if err := acd.Validate(); err != nil {
 		return nil, err
 	}
 
-	return directChatService.AckMessageRead(ctx, clientUsername, acd.PartnerUsername, acd.MsgId, acd.At)
+	return directChatService.AckMessagesRead(ctx, clientUsername, acd.PartnerUsername, acd.MsgIds, acd.At)
 }

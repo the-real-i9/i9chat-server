@@ -721,23 +721,23 @@ func PostSendMessage(ctx context.Context, clientUsername, groupId, msgId string)
 	return pnm, nil
 }
 
-func AckMessageDelivered(ctx context.Context, clientUsername, groupId, msgId string, deliveredAt int64) (*int64, error) {
+func AckMessagesDelivered(ctx context.Context, clientUsername, groupId string, msgIds []any, deliveredAt int64) (*int64, error) {
 	res, err := db.Query(
 		ctx,
 		`/*cypher*/
 		MATCH (group)<-[:WITH_GROUP]-(clientChat:GroupChat{ owner_username: $client_username, group_id: $group_id })<-[:HAS_CHAT]-(clientUser),
-			(clientChat)<-[:IN_GROUP_CHAT { receipt: "received" }]-(message:GroupMessage{ id: $message_id, delivery_status: "sent" })
+			(clientChat)<-[:IN_GROUP_CHAT { receipt: "received" }]-(message:GroupMessage{ delivery_status: "sent" } WHERE message.id IN $message_ids)
 
 		CREATE (message)-[:DELIVERED_TO { at: $delivered_at }]->(clientUser)
 
 		SET clientChat.cursor = message.cursor
 
-		RETURN clientChat.cursor AS cursor
+		RETURN DISTINCT clientChat.cursor AS cursor
 		`,
 		map[string]any{
 			"client_username": clientUsername,
 			"group_id":        groupId,
-			"message_id":      msgId,
+			"message_ids":     msgIds,
 			"delivered_at":    deliveredAt,
 		},
 	)
@@ -755,21 +755,27 @@ func AckMessageDelivered(ctx context.Context, clientUsername, groupId, msgId str
 	return &cursor, nil
 }
 
-func AckMessageRead(ctx context.Context, clientUsername, groupId, msgId string, readAt int64) (bool, error) {
+func AckMessagesRead(ctx context.Context, clientUsername, groupId string, msgIds []any, readAt int64) (bool, error) {
 	res, err := db.Query(
 		ctx,
 		`/*cypher*/
 		MATCH (group)<-[:WITH_GROUP]-(clientChat:GroupChat{ owner_username: $client_username, group_id: $group_id })<-[:HAS_CHAT]-(clientUser),
-			(clientChat)<-[:IN_GROUP_CHAT { receipt: "received" }]-(message:GroupMessage{ id: $message_id } WHERE message.delivery_status <> "read")
+			(clientChat)<-[:IN_GROUP_CHAT { receipt: "received" }]-(message:GroupMessage WHERE message.delivery_status <> "read" AND message.id IN $message_ids)
 
 		CREATE (message)-[:READ_BY { at: $read_at }]->(clientUser)
 
-		RETURN true AS done
+		// if a client skips the "delivered" ack, and acks "read"
+		// it means the message is delivered and read at the same time
+		// so if a delivered relationship doesn't already exist use the read_at time
+		MERGE (message)-[dt:DELIVERED_TO]->(clientUser)
+		ON CREATE SET dt.at = $read_at
+
+		RETURN DISTINCT true AS done
 		`,
 		map[string]any{
 			"client_username": clientUsername,
 			"group_id":        groupId,
-			"message_id":      msgId,
+			"message_ids":     msgIds,
 			"read_at":         readAt,
 		},
 	)
@@ -789,10 +795,11 @@ func ReplyToMessage(ctx context.Context, clientUsername, groupId, targetMsgId, m
 	res, err := db.Query(
 		ctx,
 		`/*cypher*/
-		MATCH (group)<-[:WITH_GROUP]-(clientChat:GroupChat{ owner_username: $client_username, group_id: $group_id })<-[:HAS_CHAT]-(clientUser)
-		WHERE EXISTS { (clientUser)-[:IS_MEMBER_OF]->(group) }
+		MATCH (group)<-[:WITH_GROUP]-(clientChat:GroupChat{ owner_username: $client_username, group_id: $group_id })<-[:HAS_CHAT]-(clientUser),
+			(clientUser)-[:IS_MEMBER_OF]->(group),
+			(clientChat)<-[:IN_GROUP_CHAT]-(targetMsg:GroupMessage { id: $target_msg_id })
 
-		MATCH (targetMsg:GroupMessage { id: $target_msg_id })
+		MATCH (targetMsg)<-[:SENDS_MESSAGE]-(targetMsgSender)
 
 		MERGE (serialCounter:GroupCHESerialCounter{ name: $group_che_serial_counter })
 		ON CREATE SET serialCounter.value = 0
@@ -806,10 +813,6 @@ func ReplyToMessage(ctx context.Context, clientUsername, groupId, targetMsgId, m
 			(replyMsg)-[:REPLIES_TO]->(targetMsg)
 
 		SET clientChat.cursor = cheNextVal
-		
-		WITH replyMsg, targetMsg
-
-		MATCH (targetMsg)<-[:SENDS_MESSAGE]-(targetMsgSender)
 
 		WITH DISTINCT replyMsg,
 			targetMsg { .id, content: apoc.convert.fromJsonMap(targetMsg.content), sender: targetMsgSender.username } AS reply_target_msg
@@ -849,11 +852,10 @@ func ReactToMessage(ctx context.Context, clientUsername, groupId, msgId, emoji s
 		ctx,
 		`/*cypher*/
 		CYPHER 25
-		
-		MATCH (group)<-[:WITH_GROUP]-(clientChat:GroupChat{ owner_username: $client_username, group_id: $group_id })<-[:HAS_CHAT]-(clientUser)
-		WHERE EXISTS { (clientUser)-[:IS_MEMBER_OF]->(group) }
 
-		MATCH (clientChat)<-[IN_GROUP_CHAT]-(message:GroupMessage{ id: $message_id })
+		MATCH (group)<-[:WITH_GROUP]-(clientChat:GroupChat{ owner_username: $client_username, group_id: $group_id })<-[:HAS_CHAT]-(clientUser),
+			(clientUser)-[:IS_MEMBER_OF]->(group),
+			(clientChat)<-[:IN_GROUP_CHAT]-(message:GroupMessage{ id: $message_id })
 
 		MERGE (serialCounter:DirectCHESerialCounter{ name: $direct_che_serial_counter })
 		ON CREATE SET serialCounter.value = 0
@@ -931,11 +933,11 @@ func RemoveReactionToMessage(ctx context.Context, clientUsername, groupId, msgId
 	res, err := db.Query(
 		ctx,
 		`/*cypher*/
-		MATCH (group)<-[:WITH_GROUP]-(clientChat:GroupChat{ owner_username: $client_username, group_id: $group_id })<-[:HAS_CHAT]-(clientUser)
-		WHERE EXISTS { (clientUser)-[:IS_MEMBER_OF]->(group) }
+		MATCH (group)<-[:WITH_GROUP]-(clientChat:GroupChat{ owner_username: $client_username, group_id: $group_id })<-[:HAS_CHAT]-(clientUser),
+			(clientUser)-[:IS_MEMBER_OF]->(group),
+			(clientChat)<-[IN_GROUP_CHAT]-(message:GroupMessage{ id: $message_id })
 
-		MATCH (clientChat)<-[IN_GROUP_CHAT]-(message:GroupMessage{ id: $message_id }),
-			(msgrxn:GroupMessageReaction:GroupChatEntry{ reactor_username: clientUser.username, message_id: message.id }),
+		MATCH (msgrxn:GroupMessageReaction:GroupChatEntry{ reactor_username: clientUser.username, message_id: message.id }),
 			(clientUser)-[crxn:REACTS_TO_MESSAGE]->(message)
 
 		LET msgrxn_che_id = msgrxn.che_id

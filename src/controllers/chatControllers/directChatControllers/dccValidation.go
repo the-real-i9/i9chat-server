@@ -29,15 +29,15 @@ func (vb sendDirectChatMsg) Validate(ctx context.Context) error {
 	return helpers.ValidationError(err, "dccValidation.go", "sendDirectChatMsg")
 }
 
-type directChatMsgAck struct {
-	MsgId           string `json:"msgId"`
+type directChatMsgsAck struct {
+	MsgIds          []any  `json:"msgIds"`
 	PartnerUsername string `json:"partnerUsername"`
 	At              int64  `json:"at"`
 }
 
-func (d directChatMsgAck) Validate() error {
+func (d directChatMsgsAck) Validate() error {
 	err := validation.ValidateStruct(&d,
-		validation.Field(&d.MsgId, validation.Required, is.UUID),
+		validation.Field(&d.MsgIds, validation.Required, validation.Each(is.UUID)),
 		validation.Field(&d.PartnerUsername, validation.Required),
 		validation.Field(&d.At, validation.Required, validation.Max(time.Now().UTC().UnixMilli()).Error("invalid future time")),
 	)

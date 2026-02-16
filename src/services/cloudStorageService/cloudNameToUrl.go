@@ -3,6 +3,7 @@ package cloudStorageService
 import (
 	"fmt"
 	"i9chat/src/helpers"
+	"maps"
 )
 
 func ProfilePicCloudNameToUrl(ppicCloudName string) string {
@@ -47,7 +48,8 @@ func GroupPicCloudNameToUrl(picCloudName string) string {
 	return fmt.Sprintf("small:%s medium:%s large:%s", smallPicUrl, mediumPicUrl, largePicUrl)
 }
 
-func MessageMediaCloudNameToUrl(msgContent map[string]any) {
+func MessageMediaCloudNameToUrl(msgContent map[string]any) map[string]any {
+	msgContent = maps.Clone(msgContent)
 	contentProps := msgContent["props"].(map[string]any)
 
 	msgContentType := msgContent["type"].(string)
@@ -78,4 +80,6 @@ func MessageMediaCloudNameToUrl(msgContent map[string]any) {
 
 		delete(contentProps, "media_cloud_name")
 	}
+
+	return msgContent
 }

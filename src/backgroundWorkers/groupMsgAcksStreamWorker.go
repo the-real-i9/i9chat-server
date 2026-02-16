@@ -54,7 +54,7 @@ func groupMsgAcksStreamBgWorker(rdb *redis.Client) {
 
 				msg.FromUser = stmsg.Values["fromUser"].(string)
 				msg.ToGroup = stmsg.Values["toGroup"].(string)
-				msg.CHEId = stmsg.Values["CHEId"].(string)
+				msg.CHEIds = helpers.FromJson[appTypes.BinableSlice](stmsg.Values["CHEId"].(string))
 				msg.Ack = stmsg.Values["ack"].(string)
 				msg.At = helpers.FromJson[int64](stmsg.Values["at"].(string))
 				msg.ChatCursor = helpers.FromJson[int64](stmsg.Values["chatCursor"].(string))
@@ -84,13 +84,18 @@ func groupMsgAcksStreamBgWorker(rdb *redis.Client) {
 						userChatUnreadMsgs[msg.FromUser] = make(map[string][]any)
 					}
 
-					userChatUnreadMsgs[msg.FromUser][msg.ToGroup] = append(userChatUnreadMsgs[msg.FromUser][msg.ToGroup], msg.CHEId)
+					for _, CHEId := range msg.CHEIds {
+						userChatUnreadMsgs[msg.FromUser][msg.ToGroup] = append(userChatUnreadMsgs[msg.FromUser][msg.ToGroup], CHEId)
+					}
 
 					if groupMsgDelvToUsers[msg.ToGroup] == nil {
 						groupMsgDelvToUsers[msg.ToGroup] = make(map[string][][2]any)
 					}
 
-					groupMsgDelvToUsers[msg.ToGroup][msg.CHEId] = append(groupMsgDelvToUsers[msg.ToGroup][msg.CHEId], [2]any{msg.FromUser, msg.At})
+					for _, CHEId := range msg.CHEIds {
+						CHEId := CHEId.(string)
+						groupMsgDelvToUsers[msg.ToGroup][CHEId] = append(groupMsgDelvToUsers[msg.ToGroup][CHEId], [2]any{msg.FromUser, msg.At})
+					}
 				}
 
 				if msg.Ack == "read" {
@@ -98,13 +103,18 @@ func groupMsgAcksStreamBgWorker(rdb *redis.Client) {
 						userChatReadMsgs[msg.FromUser] = make(map[string][]any)
 					}
 
-					userChatReadMsgs[msg.FromUser][msg.ToGroup] = append(userChatReadMsgs[msg.FromUser][msg.ToGroup], msg.CHEId)
+					for _, CHEId := range msg.CHEIds {
+						userChatReadMsgs[msg.FromUser][msg.ToGroup] = append(userChatReadMsgs[msg.FromUser][msg.ToGroup], CHEId)
+					}
 
 					if groupMsgReadByUsers[msg.ToGroup] == nil {
 						groupMsgReadByUsers[msg.ToGroup] = make(map[string][][2]any)
 					}
 
-					groupMsgReadByUsers[msg.ToGroup][msg.CHEId] = append(groupMsgReadByUsers[msg.ToGroup][msg.CHEId], [2]any{msg.FromUser, msg.At})
+					for _, CHEId := range msg.CHEIds {
+						CHEId := CHEId.(string)
+						groupMsgReadByUsers[msg.ToGroup][CHEId] = append(groupMsgReadByUsers[msg.ToGroup][CHEId], [2]any{msg.FromUser, msg.At})
+					}
 				}
 			}
 
@@ -184,7 +194,7 @@ func groupMsgAcksStreamBgWorker(rdb *redis.Client) {
 									}
 								}(membersList)
 
-								go cache.UpdateGroupMessage(ctx, msgId, map[string]any{"delivery_status": "delivered"})
+								go cache.UpdateGroupMessageDelivery(ctx, msgId, map[string]any{"delivery_status": "delivered"})
 
 								go func() {
 									_, err := db.Query(
@@ -246,7 +256,7 @@ func groupMsgAcksStreamBgWorker(rdb *redis.Client) {
 									}
 								}(membersList)
 
-								go cache.UpdateGroupMessage(ctx, msgId, map[string]any{"delivery_status": "read"})
+								go cache.UpdateGroupMessageDelivery(ctx, msgId, map[string]any{"delivery_status": "read"})
 
 								go func() {
 									_, err := db.Query(

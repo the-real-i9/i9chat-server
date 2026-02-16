@@ -11,6 +11,7 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/encryptcookie"
 	"github.com/gofiber/fiber/v2/middleware/helmet"
+	"github.com/gofiber/fiber/v2/middleware/limiter"
 )
 
 func init() {
@@ -43,12 +44,14 @@ func main() {
 
 	app := fiber.New()
 
+	app.Use(limiter.New())
+
 	app.Use(helmet.New(helmet.Config{
-		CrossOriginResourcePolicy: "cross-origin",
+		// CrossOriginResourcePolicy: "cross-origin", /* for production */
 	}))
 	app.Use(cors.New(cors.Config{
-		AllowOrigins:     "http://localhost:5173",
-		AllowCredentials: true,
+		// AllowOrigins:     "http://localhost:5173", /* production client host */
+		// AllowCredentials: true,
 	}))
 
 	app.Use(encryptcookie.New(encryptcookie.Config{

@@ -134,7 +134,7 @@ func buildCHEUIFromCache(ctx context.Context, CHEId, chatType string) (CHEUI UIT
 
 		CHEUI.Sender = cheuis
 
-		cloudStorageService.MessageMediaCloudNameToUrl(CHEUI.Content)
+		CHEUI.Content = cloudStorageService.MessageMediaCloudNameToUrl(CHEUI.Content)
 
 		userEmojiMap, err := cache.GetMsgReactions(ctx, CHEId)
 		if err != nil {

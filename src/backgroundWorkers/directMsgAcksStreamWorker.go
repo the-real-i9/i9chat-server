@@ -3,6 +3,7 @@ package backgroundWorkers
 import (
 	"context"
 	"fmt"
+	"i9chat/src/appTypes"
 	"i9chat/src/cache"
 	"i9chat/src/helpers"
 	"i9chat/src/services/eventStreamService/eventTypes"
@@ -52,7 +53,7 @@ func directMsgAcksStreamBgWorker(rdb *redis.Client) {
 
 				msg.FromUser = stmsg.Values["fromUser"].(string)
 				msg.ToUser = stmsg.Values["toUser"].(string)
-				msg.CHEId = stmsg.Values["CHEId"].(string)
+				msg.CHEIds = helpers.FromJson[appTypes.BinableSlice](stmsg.Values["CHEIds"].(string))
 				msg.Ack = stmsg.Values["ack"].(string)
 				msg.At = helpers.FromJson[int64](stmsg.Values["at"].(string))
 				msg.ChatCursor = helpers.FromJson[int64](stmsg.Values["chatCursor"].(string))
@@ -71,7 +72,9 @@ func directMsgAcksStreamBgWorker(rdb *redis.Client) {
 			// batch data for batch processing
 			for _, msg := range msgs {
 
-				ackMessages = append(ackMessages, [3]any{msg.CHEId, msg.Ack, msg.At})
+				for _, CHEId := range msg.CHEIds {
+					ackMessages = append(ackMessages, [3]any{CHEId, msg.Ack, msg.At})
+				}
 
 				if msg.Ack == "delivered" {
 					if updatedFromUserChats[msg.FromUser] == nil {
@@ -84,7 +87,9 @@ func directMsgAcksStreamBgWorker(rdb *redis.Client) {
 						userChatUnreadMsgs[msg.FromUser] = make(map[string][]any)
 					}
 
-					userChatUnreadMsgs[msg.FromUser][msg.ToUser] = append(userChatUnreadMsgs[msg.FromUser][msg.ToUser], msg.CHEId)
+					for _, CHEId := range msg.CHEIds {
+						userChatUnreadMsgs[msg.FromUser][msg.ToUser] = append(userChatUnreadMsgs[msg.FromUser][msg.ToUser], CHEId)
+					}
 				}
 
 				if msg.Ack == "read" {
@@ -92,7 +97,9 @@ func directMsgAcksStreamBgWorker(rdb *redis.Client) {
 						userChatReadMsgs[msg.FromUser] = make(map[string][]any)
 					}
 
-					userChatReadMsgs[msg.FromUser][msg.ToUser] = append(userChatReadMsgs[msg.FromUser][msg.ToUser], msg.CHEId)
+					for _, CHEId := range msg.CHEIds {
+						userChatReadMsgs[msg.FromUser][msg.ToUser] = append(userChatReadMsgs[msg.FromUser][msg.ToUser], CHEId)
+					}
 				}
 			}
 
@@ -104,7 +111,7 @@ func directMsgAcksStreamBgWorker(rdb *redis.Client) {
 				eg.Go(func() error {
 					CHEId, ack, ackAt := CHEId_ack_ackAt[0], CHEId_ack_ackAt[1], CHEId_ack_ackAt[2]
 
-					return cache.UpdateDirectMessage(sharedCtx, CHEId.(string), map[string]any{
+					return cache.UpdateDirectMessageDelivery(sharedCtx, CHEId.(string), map[string]any{
 						"delivery_status":         ack,
 						fmt.Sprintf("%s_at", ack): ackAt.(int64),
 					})

@@ -77,21 +77,21 @@ func SendMessage(ctx context.Context, clientUsername, partnerUsername, msgConten
 	return newMsg, nil
 }
 
-func AckMessageDelivered(ctx context.Context, clientUsername, partnerUsername, msgId string, deliveredAt int64) (*int64, error) {
+func AckMessageDelivered(ctx context.Context, clientUsername, partnerUsername string, msgIds []any, deliveredAt int64) (*int64, error) {
 	res, err := db.Query(
 		ctx,
 		`/*cypher*/
 		MATCH (clientChat:DirectChat{ owner_username: $client_username, partner_username: $partner_username }),
-      (clientChat)<-[:IN_DIRECT_CHAT { receipt: "received" }]-(message:DirectMessage{ id: $message_id, delivery_status: "sent" })
+      (clientChat)<-[:IN_DIRECT_CHAT { receipt: "received" }]-(message:DirectMessage{ delivery_status: "sent" } WHERE message.id IN $message_ids)
 
     SET message.delivery_status = "delivered", message.delivered_at = $delivered_at, clientChat.cursor = message.cursor
 
-		RETURN clientChat.cursor AS cursor
+		RETURN DISTINCT clientChat.cursor AS cursor
 		`,
 		map[string]any{
 			"client_username":  clientUsername,
 			"partner_username": partnerUsername,
-			"message_id":       msgId,
+			"message_ids":      msgIds,
 			"delivered_at":     deliveredAt,
 		},
 	)
@@ -109,21 +109,26 @@ func AckMessageDelivered(ctx context.Context, clientUsername, partnerUsername, m
 	return &cursor, nil
 }
 
-func AckMessageRead(ctx context.Context, clientUsername, partnerUsername, msgId string, readAt int64) (bool, error) {
+func AckMessageRead(ctx context.Context, clientUsername, partnerUsername string, msgIds []any, readAt int64) (bool, error) {
 	res, err := db.Query(
 		ctx,
 		`/*cypher*/
 		MATCH (clientChat:DirectChat{ owner_username: $client_username, partner_username: $partner_username }),
-      (clientChat)<-[:IN_DIRECT_CHAT { receipt: "received" }]-(message:DirectMessage{ id: $message_id } WHERE message.delivery_status IN ["sent", "delivered"])
+      (clientChat)<-[:IN_DIRECT_CHAT { receipt: "received" }]-(message:DirectMessage WHERE message.delivery_status <> "read" AND message.id IN $message_ids)
 
-    SET message.delivery_status = "read", message.read_at = $read_at
+    SET message.delivery_status = "read", 
+			message.read_at = $read_at,
+			// if a client skips the "delivered" ack, and acks "read"
+			// it means the message is delivered and read at the same time
+			// so if delivered_at is NULL, then use read_at
+			message.delivered_at = coalesce(message.delivered_at, message.read_at)
 
 		RETURN true AS done
 		`,
 		map[string]any{
 			"client_username":  clientUsername,
 			"partner_username": partnerUsername,
-			"message_id":       msgId,
+			"message_ids":      msgIds,
 			"read_at":          readAt,
 		},
 	)
@@ -143,10 +148,12 @@ func ReplyToMessage(ctx context.Context, clientUsername, partnerUsername, target
 	res, err := db.Query(
 		ctx,
 		`/*cypher*/
-		MATCH (clientUser:User{ username: $client_username }), (partnerUser:User{ username: $partner_username })
-		MATCH (targetMsg:DirectMessage { id: $target_msg_id })<-[:SENDS_MESSAGE]-(targetMsgSender)
+		MATCH (clientUser)-[:HAS_CHAT]->(clientChat:Chat{ owner_username: $client_username, partner_username: $partner_username })-[:WITH_USER]->(partnerUser),
+			(clientChat)<-[:IN_DIRECT_CHAT]-(targetMsg:DirectMessage { id: $target_msg_id })
+			
+		MATCH (targetMsg)<-[:SENDS_MESSAGE]-(targetMsgSender)
 
-		WITH clientUser, partnerUser,
+		WITH clientUser, partnerUser, clientChat, targetMsgSender,
 			NOT EXISTS { (clientUser)-[:HAS_CHAT]->(:DirectChat)-[:WITH_USER]->(partnerUser) } AS ffu,
 			NOT EXISTS { (partnerUser)-[:HAS_CHAT]->(:DirectChat)-[:WITH_USER]->(clientUser) } AS ftu
 
@@ -157,7 +164,6 @@ func ReplyToMessage(ctx context.Context, clientUsername, partnerUsername, target
 
 		CALL apoc.atomic.add(serialCounter, 'value', 1) YIELD cheNextVal
 
-		MERGE (clientUser)-[:HAS_CHAT]->(clientChat:DirectChat{ owner_username: $client_username, partner_username: $partner_username })-[:WITH_USER]->(partnerUser)
 		MERGE (partnerUser)-[:HAS_CHAT]->(partnerChat:DirectChat{ owner_username: $partner_username, partner_username: $client_username })-[:WITH_USER]->(clientUser)
 
 		WITH clientUser, clientChat, partnerUser, partnerChat, targetMsg, targetMsgSender, cheNextVal, ffu, ftu
@@ -216,7 +222,7 @@ func ReactToMessage(ctx context.Context, clientUsername, partnerUsername, msgId,
 		
 		CALL apoc.atomic.add(serialCounter, 'value', 1) YIELD cheNextVal
 
-		WITH clientUser, message, partnerUser, partnerChat, cheNextVal
+		WITH clientUser, message, partnerUser, cheNextVal
 		MERGE (msgrxn:DirectMessageReaction:DirectChatEntry{ reactor_username: clientUser.username, message_id: $message_id })
 		ON CREATE
 			SET msgrxn.che_id = randomUUID(),
@@ -257,8 +263,8 @@ func RemoveReactionToMessage(ctx context.Context, clientUsername, partnerUsernam
 		ctx,
 		`/*cypher*/
 		MATCH (clientUser)-[:HAS_CHAT]->(clientChat:DirectChat{ owner_username: $client_username, partner_username: $partner_username })-[:WITH_USER]->(partnerUser),
-			(partnerUser)-[:HAS_CHAT]->(partnerChat)-[:WITH_USER]->(clientUser),
 			(clientChat)<-[:IN_DIRECT_CHAT]-(message:DirectMessage{ id: $message_id }),
+			(partnerUser)-[:HAS_CHAT]->(partnerChat)-[:WITH_USER]->(clientUser),
 
 			(msgrxn:DirectMessageReaction:DirectChatEntry{ reactor_username: $client_username, message_id: $message_id }),
 			(clientUser)-[crxn:REACTS_TO_MESSAGE]->(message)
