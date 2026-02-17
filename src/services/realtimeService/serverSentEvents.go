@@ -5,7 +5,7 @@ import (
 	"i9chat/src/appTypes"
 	"i9chat/src/helpers"
 
-	"github.com/gofiber/contrib/websocket"
+	"github.com/gofiber/contrib/v3/websocket"
 )
 
 func SendEventMsg(toUser string, msg appTypes.ServerEventMsg) {

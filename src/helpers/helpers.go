@@ -1,6 +1,7 @@
 package helpers
 
 import (
+	"encoding/base64"
 	"fmt"
 	"log"
 	"os"
@@ -67,7 +68,7 @@ func Session(kvPairs map[string]any, path string, maxAge int) *fiber.Cookie {
 	}
 
 	c.Name = "session"
-	c.Value = ToMsgPack(kvPairs)
+	c.Value = base64.RawURLEncoding.EncodeToString(ToBtMsgPack(kvPairs))
 	c.Path = path
 	c.MaxAge = maxAge
 
@@ -117,6 +118,15 @@ func ToJson(data any) string {
 
 func FromMsgPack[T any](msgPackStr string) (res T) {
 	err := msgpack.Unmarshal([]byte(msgPackStr), &res)
+	if err != nil {
+		LogError(err)
+	}
+
+	return
+}
+
+func FromJson[T any](jsonStr string) (res T) {
+	err := json.Unmarshal([]byte(jsonStr), &res)
 	if err != nil {
 		LogError(err)
 	}

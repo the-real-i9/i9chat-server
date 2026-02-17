@@ -12,6 +12,7 @@ import (
 	"github.com/gofiber/fiber/v3/middleware/encryptcookie"
 	"github.com/gofiber/fiber/v3/middleware/helmet"
 	"github.com/gofiber/fiber/v3/middleware/limiter"
+	"github.com/vmihailenco/msgpack/v5"
 )
 
 func init() {
@@ -42,7 +43,10 @@ func init() {
 func main() {
 	defer initializers.CleanUp()
 
-	app := fiber.New()
+	app := fiber.New(fiber.Config{
+		MsgPackEncoder: msgpack.Marshal,
+		MsgPackDecoder: msgpack.Unmarshal,
+	})
 
 	app.Use(limiter.New())
 

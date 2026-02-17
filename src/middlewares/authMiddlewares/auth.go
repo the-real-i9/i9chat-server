@@ -1,6 +1,7 @@
 package authMiddlewares
 
 import (
+	"encoding/base64"
 	"i9chat/src/appTypes"
 	"i9chat/src/helpers"
 	"i9chat/src/services/securityServices"
@@ -10,7 +11,17 @@ import (
 )
 
 func UserAuth(c fiber.Ctx) error {
-	usData := helpers.FromMsgPack[map[string]any](c.Cookies("session"))["user"]
+	sess := c.Cookies("session")
+	if sess == "" {
+		return c.Status(fiber.StatusUnauthorized).SendString("authentication required")
+	}
+
+	val, err := base64.RawURLEncoding.DecodeString(sess)
+	if err != nil {
+		return err
+	}
+
+	usData := helpers.FromBtMsgPack[map[string]any](val)["user"]
 
 	if usData == nil {
 		return c.Status(fiber.StatusUnauthorized).SendString("authentication required")

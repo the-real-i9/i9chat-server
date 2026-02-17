@@ -53,9 +53,9 @@ func ConfirmEmail(ctx context.Context, sessionData msgpack.RawMessage, inputRese
 	var resp passReset2RespT
 
 	sd := helpers.FromBtMsgPack[struct {
-		Email            string
-		PwdrToken        string
-		PwdrTokenExpires time.Time
+		Email            string    `msgpack:"email"`
+		PwdrToken        string    `msgpack:"pwdrToken"`
+		PwdrTokenExpires time.Time `msgpack:"pwdrTokenExpires"`
 	}](sessionData)
 
 	if sd.PwdrToken != inputResetToken {
@@ -81,7 +81,7 @@ func ResetPassword(ctx context.Context, sessionData msgpack.RawMessage, newPassw
 	var resp passReset3RespT
 
 	email := helpers.FromBtMsgPack[struct {
-		Email string
+		Email string `msgpack:"email"`
 	}](sessionData).Email
 
 	hashedPassword, err := securityServices.HashPassword(newPassword)

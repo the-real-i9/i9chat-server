@@ -6,7 +6,7 @@ import (
 	"i9chat/src/appTypes"
 	"i9chat/src/helpers"
 
-	"github.com/gofiber/contrib/websocket"
+	"github.com/gofiber/contrib/v3/websocket"
 )
 
 func PublishUserPresenceChange(ctx context.Context, targetUsername string, data map[string]any) {

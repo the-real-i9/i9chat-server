@@ -55,7 +55,7 @@ func GenerateTokenCodeExp() (string, time.Time) {
 func JwtSign(data any, secret string, expires time.Time) (string, error) {
 	// create token -> (header.payload)
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"data": helpers.ToMsgPack(data),
+		"data": helpers.ToJson(data),
 		"exp":  expires.Unix(),
 	})
 
@@ -97,7 +97,7 @@ func JwtVerify[T any](tokenString, secret string) (T, error) {
 		return data, fiber.ErrInternalServerError
 	}
 
-	data = helpers.FromMsgPack[T](token.Claims.(jwt.MapClaims)["data"].(string))
+	data = helpers.FromJson[T](token.Claims.(jwt.MapClaims)["data"].(string))
 
 	return data, nil
 }

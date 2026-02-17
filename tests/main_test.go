@@ -42,8 +42,8 @@ const groupChatPath = HOST_URL + "/api/app/group_chat"
 const chatUploadPath = HOST_URL + "/api/app/chat_upload"
 
 type UserGeolocation struct {
-	X float64
-	Y float64
+	X float64 `msgpack:"x"`
+	Y float64 `msgpack:"y"`
 }
 
 type UserT struct {
@@ -51,10 +51,10 @@ type UserT struct {
 	Username       string
 	Password       string
 	Bio            string
-	Geolocation    UserGeolocation
-	SessionCookie  string
-	WSConn         *websocket.Conn
-	ServerEventMsg chan map[string]any
+	Geolocation    UserGeolocation     `msgpack:"geolocation"`
+	SessionCookie  string              `msgpack:"-"`
+	WSConn         *websocket.Conn     `msgpack:"-"`
+	ServerEventMsg chan map[string]any `msgpack:"-"`
 }
 
 func TestMain(m *testing.M) {
@@ -64,7 +64,10 @@ func TestMain(m *testing.M) {
 
 	defer initializers.CleanUp()
 
-	app := fiber.New()
+	app := fiber.New(fiber.Config{
+		MsgPackEncoder: msgpack.Marshal,
+		MsgPackDecoder: msgpack.Unmarshal,
+	})
 
 	app.Use(helmet.New())
 	app.Use(cors.New())

@@ -57,9 +57,9 @@ func VerifyEmail(ctx context.Context, sessionData msgpack.RawMessage, inputVerfC
 	var resp signup2RespT
 
 	sd := helpers.FromBtMsgPack[struct {
-		Email        string
-		VCode        string
-		VCodeExpires time.Time
+		Email        string    `msgpack:"email"`
+		VCode        string    `msgpack:"vCode"`
+		VCodeExpires time.Time `msgpack:"vCodeExpires"`
 	}](sessionData)
 
 	if sd.VCode != inputVerfCode {
@@ -88,7 +88,7 @@ func RegisterUser(ctx context.Context, sessionData msgpack.RawMessage, username,
 	var resp signup3RespT
 
 	email := helpers.FromBtMsgPack[struct {
-		Email string
+		Email string `msgpack:"email"`
 	}](sessionData).Email
 
 	userExists, err := userService.UserExists(ctx, username)

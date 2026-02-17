@@ -1,6 +1,7 @@
 package sessionMiddlewares
 
 import (
+	"encoding/base64"
 	"i9chat/src/helpers"
 
 	"github.com/gofiber/fiber/v3"
@@ -8,7 +9,17 @@ import (
 )
 
 func PasswordResetSession(c fiber.Ctx) error {
-	prsData := helpers.FromMsgPack[map[string]msgpack.RawMessage](c.Cookies("session"))["passwordReset"]
+	sess := c.Cookies("session")
+	if sess == "" {
+		return c.Status(fiber.StatusUnauthorized).SendString("no ongoing password reset session")
+	}
+
+	val, err := base64.RawURLEncoding.DecodeString(sess)
+	if err != nil {
+		return err
+	}
+
+	prsData := helpers.FromBtMsgPack[map[string]msgpack.RawMessage](val)["passwordReset"]
 
 	if prsData == nil {
 		return c.Status(fiber.StatusUnauthorized).SendString("no ongoing password reset session or this session endpoint was accessed out of order")
