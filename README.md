@@ -25,22 +25,27 @@ i9chat is a full-fledged chat and messaging API server built in Go It supports a
 
 ### Technologies
 - **Go** - Programming Language
-- **Fiber** - REST API Framework
+- **Fiber v3** - HTTP (REST) API Framework
 - **Neo4j** - Graph DBMS
-- **CypherQL** - Query Language for a Graph database
-- **WebSockets** - Full-duplex, Bi-directional communication protocol
-- **Redis Key/Value Store** (Cache)
-- **Redis Streams**
-- **Redis Pub/Sub**
-- **Redis Queue** (via LPOP, RPUSH, RPOP, LPUSH)
-- **Google Cloud Storage**
+- **CypherQL** - Query Language for Neo4j
+- **WebSocket** - Full-duplex, Bi-directional communications protocol. Realtime communication.
+- **Redis Key/Value Store** - Cache. Fast data structures. Pagination. Aggregation.
+- **Redis Streams** - Event-based messaging system. Background tasks queue.
+- **Redis Pub/Sub** - PubSub pattern messaging system
+- **Google Cloud Storage** - Cloud object storage
+---
+- **JWT** - User authentication. Token signing and verification.
+- **MessagePack** - Object serializer and deserializer (major use)
+- **JSON** - Object serializer and deserializer (minor use)
 
 ### Tools
-- Docker
-- Ubuntu Linux
+- **Swagger** - HTTP API Documentation
+- **AsyncAPI** - Websockets API Documention
+- **Docker** - Container running Postgres and Redis instances
+- **Git & GitHub** - Repository & Version Control
+- **GitHub Actions** - Continuous Integration. Unit & Integration Testing
 - VSCode
-- Git & GitHub Version Control
-- GitHub Actions CI
+- Ubuntu Linux
 
 ## Table of Contents
 
@@ -48,12 +53,11 @@ i9chat is a full-fledged chat and messaging API server built in Go It supports a
 - [Technologies](#technologies)
 - [Table of Contents](#table-of-contents)
 - [Features](#features)
-- [API Graph Model Overview](#api-graph-model-overview)
 - [API Documentation](#api-documentation)
-- [API Diagrams](#api-diagrams)
-- [Technical Highlights](#technical-notes)
-  - [Why I switched from a relational database to a graph database.](#why-i-switched-from-a-relational-database-to-a-graph-database)
-  - [Why I used the "chat entry" entity to generalize "message", "reaction", and "group activity" entities.](#why-i-used-the-chat-entry-entity-to-generalize-message-reaction-and-group-activity-entities)
+- [API Diagrams](#api-diagrams-)
+  - [Architecture Diagram](#architecture-diagram)
+  - [Sequence Diagrams](#sequence-diagrams)
+- [Articles](#articles-)
 
 ## Features
 
@@ -123,7 +127,7 @@ API (C4) Component Level Diagram: [Here](./arch.pu). (Open in [PlantUML Editor](
 <details>
   <summary>Show Diagram</summary>
 
-  ![i9chat_api_arch](https://www.plantuml.com/plantuml/png/lLbjR-Eu4VwUNp7rXzO1v0JeBGeSMXItvsptjhqKkJXf-cr1KHEP6vdKaPGJzzSVXgGaKYzssitsKo9oI3upypp35_zWBDEssLKWlkTRPZ-pMdnccc_FVYSahve2uI_hTvVhTv_NQbShYTB-zUpC2biXT2rm9LYfsGuUbGxpmFkRJx11lKTzTlO7M2jfcP2ebwmM6In6HeiC5X_LulpiR7Cm5dUVFxpO9UwOgFnt1eiFz0N-qvkhiaBOND_TBCx3i2MlL5DihDAin6xacXeXj8vdIBe9GeVsAbyMpBAS6SnWSHN-fQ4tojXIu-QNdnVdYVtJtbYboVmVU5ZzYrKDkgaHuk6tM0WJZ_obmGQNk4TfDrOZSmxJryf_mZKQmqeXomY_cmMymSHiTPER9h_U4Dmclzmq-P5PWeLtF-GrZIRglU0u3gTlT_5SR-2Z0bu98aKbSitqWJhMIXfXh877Hd8hb3IEAcIVD_m9BUoOP2NkKDeCk99xr9PGglmBSWiE1qYsGmDMGQ6UPQLO0VUtFvFVjrXDGvramxr1Ct2JyQrpZFvs8ScWL2lj4ZNjWYKAU-10D04XeKsiW-IdxHbnYwmmbmzQs242WxpHmXu2SfF1OXEQsW0RprX2LJ5PhhuysmnohW-rJV2rKmrY_VU7Ep2Yb4AMbtlKub5mHhqPb2XHCnVkFwqAKGeBLZsXlEIgG7WMTWluKWljp04jlt1KQw4xZNRSk7OQZIZX09FDnVwF6JYuwj9MQKnP1zPXDIWBWkFqJmdtZ4gMZQJIh-uK4mGnHk6J2Sj_lo-AyoEq_9NKuzQdwGm8QHKCjKO9JbnFYrKW6LbD8Ks5xkJQhvPIGoEhhDX5-hiDBKCFpK7oYsjMnxxUD7abp3Q3JPCRhaMEvnayOsuKoUv841olAGYCMx57Q0ngyADC1YRCHWO-EKwOTPDVcYO7lcLIOkLdQXs0fYwO9MxN7XGDthc2v6NTZiew0XYtD_Z8zAQLU4AG-BoYFIHp_uK-_r4h4vgbiXtH7NCJCb5oHj6DYkQQLLKVmii-Wcc2A39KURMgAjJ69rz3r4HX_fl8KSF-kopKOBnX_2c9lyPV6pGMjamMDCe5puMzrkfHL9WKoKVXGwJi5hsPoO390agqJijk94N89BgXvfvA3cb2esErhjPgBmfqI8N68f0Yr2UAhLyq3WP1yXYZPl1d2vTYKSgcpa9jylOTO_eXi8oYWGObHyUNqcKZTUzQ5LYrphaFSkgVgDvzoM1zgBUeYHxgtPTLgLQ55djgU4snHybPRPgAQEp0h3JIHm7jCG4URZ_TVO1AbO87NsoZ9MWqJUNoudOAeY6hgYvFRGmlO6xfl15LaQvv_mbuwxY1HwrsSFlX_TMAPjLOuPv92suJWgKhN-U0qchHLQOHSrDoEFv7fbrF7EHPevcpmy0yJ1ETiWQRvC2mtwfdbXsNordJoIsajOutPqVHLE8Rr_P68hTRXEzMnc8TsE0dhxNYQ0mi9Ju3urmrqhOJXFq6qgsS2FSe9AlyF1fBOQpVkCzTPvZPe35K4lk2aeZ8M_Kn2Sx-xtKYBX41GbGD_kpHueimDWWR-PF9W3maCiTEWZkLE5z2eNCD_Gab6phf1DSUSgY_PiOyArsGdEayuXgvHjRNpH3j35XZrOhKB7r7VcXFKS3ScSeTbGAx9eWo32NHAx5EH3LDse7Xn5dnY7LwF9jXjv1ZTWlvrUpkTp2_o8XaGgOa4_88oQ93Oi8oKi-GQKGqQlUBH6IRvLf7YXspt1rDN4_M9xbDV1JdGTo6BWtJ4lKTptPaU2JRKJ1RzBTeqAQvl6aTSttVg69rqTDkaQvo3Te7nOih-IZqRbIykb5XXtTTWwbEbB0a87sW1y5ucuesG9PKDk_eW6vzPOiZ45WMbpRVWY-Y7jMkD0glgt4qTLpUXe4E39mdqqnKO_fEcypJVTh-H8sR7dIorD5f-BwcbuDK8cjAiUzu8ts4-mZii10C6ZyrQ-nMQV4VPbLQ2djS4Vm8qzlGrBsu1IWHHzl7YkdOJ4ABCZ7HV_pW5xbT28tSagDfEgvSExW8_DVf-EdkxgRB2H7-0VEDyczC8Ib9fZm87nmottKlPAeEQaelK3tgthaOyTiaAvunJTOKalOm7e_wTXSVlwwxVR_1_ITEm6klGLC8llesD4F7gNp72fZe7oVcn83ZbvQ90KUlBZDZJb_8HhYdRbiZe_cxMyJLKgkc7alz8pN_dvJk87YU_JwIkNipSLtzKM9E-vqNVVmY3zv6-T64SyBlOBJqYiPyEzcxLTzAzL4oNYlwYVM_MlFJj9n8Swo0SVSe8SVDJwftFEHuXHZRdnRx4FEKreSshv9w2xKFQVnctRVEgZphbKmsFpaH6shqxyzU-VTrgLc15t3jP6lQdvsuaXBzDT7u7mAMVjZv1JZGNSte7fGTSUXAStAAp17OW6MwH0iFct6f4RBTqlhAmWTgzaVnPnSyq5XN1yWPVsflhG66N_C2FbbWbL5XQV-OsbKC_y8-g2E3n-qu4tE7hZZjK-Dc2lYfOVC7_odhUPP7_A984HfPF2Zzv67ysBL1Q1p-x1ELEQYKB5UwaUuPPr1hk9AcsM6R-8uZom87lmlvQoc-86yiGeyAB3DFyHCtAKl8idSlL826LHrz2goeB1_Y1tDygL4QiQVx46qNfBxLZabHKqKcTYRRr8-2mZeHdVJ7fYllH_jp4t4_P6HYw43mNk_pvbCrPCBiI9f_G5aqk-et "i9chat_api_arch")
+  ![i9chat_api_arch](https://www.plantuml.com/plantuml/png/lLbjR-Is4VxkNp7T3yaQqDf0SoXGj2XoML-kryI5u_NL-NQWgB6MjrfI8Qcrjx--69AIIBsitPmld-mbX-GpCyypVD7tnZ9jctq5ugzyo-mdLejFJFFjsP-4v5LJ8Fnz_UPo_URJMkrh9L7QVvoTMM4hXAu5hWGhDTl3Wz9X7dXxym4sg0-epyw-XRMIbWc9UibgaS5YPBJ8OF5UBSxFpZP7Ot7_wTsJNUAUYSh_pc3nZdw1_-dDLLaXRAxlRXRdOTYILwefDbPfLc8tSasD45h7CoJT1A53UvKl2sPPpWnciBWA_zBG6sLigN7poy-ByyH-Tp1MQJB_2O-h_x2gGJSrGZpy5WjXuf6_DDZW4WyexSPgPCvX-hNoF-4QZM6ba6M4tyq2tc1Yjhh9JPDVRmXkarzkclp4BC72kn_ocaOJzK5m78VJjxjuhZVmNW6l196Y4hbc-aWTQoMDCDR0GoEv5KeQHnMopnk-Gmjx9bc9UvGs0wxa0RKbb2h_ZDo2mm6IxT60LL2eHrafLi37sv_9xrkifg5Eik6ZGJDma_6jSup-TY79e5GhxH8rxO8b2dlWG3G18Q5Dh8Faf-qPSOkiC9VtMjWX0eEyqS8U0tAJmM8Jcje06yzOGbKnMQu-FzeCSgwFjKtmjLCDOlsl-pimefH2bfS7rE91S4Qz6PGeKJCNxh-i2b4A2rRjK5voLI0y2hi5VAg5TkQ0bbyughNGdKOxRbmxZKQKS839vkBmvmmSN7LfgpIch0Fhi1gK1S5n-gU4UqOboqPIwLTtYWc26AFmoOJbhs-Bulm4BNyZzRZrQJe3Gbe5GwrHWXFNqs8LI4PMKqXJeJkvzgkbrD38AYlsaVvkGylGGtEK_EAQrR6lDqrU2RFDODFaXckHuta6ZvWRHR8x4GJ7Qme2urOS41g36lmeau49iv61JuuJPjtabwR9WM-Pb5ZvcLe7eAaBPedRjGT5W_Uk87bPjwEoZW36xGq-Chrf9NO84XzNj8Taxh_Gvt_KoeHcgMn7TCVSX4oKd55qewAvPbNLX_2oZs2Q88eCLLwjgWgrySdN43LHc7yKEMeuV9U56emtZE-I-6lyhK5ZOSjaGQDSy5pOQwqUH8L9aNmGFaJARj6RcGoOBA14wxJiHbA4JA8RQkwfv90cD3fLwsgj3g90XrHeB08fGdsYsFf5us0G98ynQWP_jd0f5gLiwYpK9c_VCQOV0iie6cXGSdHyALqsKlUkLO5LwvpxGKxz6zMRpnciZ_KMDT53lVcyAjMgqE903IyfzYWvgqrJ4OqTc9L6-b50Uqo0-ziFT--WKgNWmHVRQ0aQJLEvlBYTWcZ8gghBKnl32vXREcz4LQHhVlm0l7NSm8DMUxXzz_PgHRDghF30f0Mt2S7IbQzpG6crw2hJYBafEHp_8zEk9mxohD7CsM5W7gQ9Jbc3JN9Ws6_LCykEo-MiwUGMqbh7cxEZQ2hnZMjx9P7RBS9tAsEn3cpmazTQSJG6bX8VWN6k6cdR2S9-0-bMJeHx499LVXwDfJ3MRzpdhZFCRD0OAebzGKb4vAtwc0HdVt-TY4j4W11LWxzvjFWaZ0t2Hhup6P27HEROIN2d4kTBA7IkeJ-XP4CddU3QGmxrryoOHwKBaZETHrmZryZwkXcYdG5hh5gHcgNlo8_jAGgOErEver9WrmHHXg4aUYNMYQYcIJimd3Whdh1EZsSpx1Pop6uXlvZT_Gxc5ncHJCYKP4AU85bqI4nOHkePCes8Hkr-aOXiirphIB5dbhkZYUl9-YItYO_YF8ZRqALXMgA-qzcE34zaEmfcY_uM3TeqbpUjOwxlArMiBdhQBT9Lha7xe7Xn9H-4te-ALpSgxF2kQp3LCoKi2KWVw44mNgUY3P0bbSqxEg1RNzdY20IMnQNDj-2Jg4UrAut2oseSJHsNjs6W0mFdoJGJrPY-qoRpT9-sVwR6JGzwjjJHQVXZJIy7gKJMb6BVyKhw2FSHs6CX63H-QjROhTBYlyogj1Jsk2Bu4QRNeQbxSGjG8ewsZnNJiPc45cLYel_qmIzokn0QkIL7qtHSkNPm4VY_q_7FkxkRBYT4-7lCDyg_COMa99do87nmo7pVlP2fEgWflK3rg7ldOiIlawnunZHPKqZQmtWywkjTVFowxlRz2lUVE04llGPD8VZYsz0C7QVo7IjWed-Sc6S6dBwqJ0muUNMP6VFyXMo4U-gsDJAQlxj5N2srQkgnrDzJyn-aT0V1y-oRIERkpSHrzKU9EUrtNlJnYpnu7UL74yu9luFHqYiQy_LaxrPzBTL7oNYfw2VM_sBDJzDo8isn0iRTeuISDdzMlUCXfol4sFvviGynJsbzQFCYgRTG-v36RzPzwwpAirx9PFEMSwpf_YVT2GgbfQS0BC93xhU6pCFJD4b68W_l0FJPnRYxIlWarVUwYb0hOqHUONXdNbcr2eRfY_C5E6-xOjEzH3l6JSwVGO7qC47NrkvncewjQC1zO07BT8dHiL78TYly9bP7_6ggT7XATOFQ1t9_FYRLFRfiWCQwEhOtu16oYy7BTvockHDPp8cfSJFL_RbXyxU2AUjv2KJaondV4HfPt2kzyp1-wDeWD0w_2KKr42ebovLkf7lZ6HGYhgHfzWZ6Vs7gUB0iSF3HoDzPyGbvOn5wL62PsSNltoGx8SlUlL0U6bPrsrY15TNiO_oQZayrIYCET5cYlOIakTepAMegryJmP0_xGL1O9wAJVecwydwqtwA8to4Z4qC7rS0NWtdpgG8pONOYpT-ZB9fzzJy0 "i9chat_api_arch")
 
 </details>
 

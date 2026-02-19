@@ -86,7 +86,7 @@ Rel(groupChatService, cloudStorageService, "Calls")
 Rel(groupChatModel, cache, "Calls")
 Rel(groupChatModel, database, "Reads/Writes")
 
-Component(realtimeController, "Realtime Controller", "Fiber v3, MessagePack, WebSocket", "Handles Websocket HTTP Upgrade. Manages client connection stream (socket). Reads request messages from the client connection stream (socket), calls target WS message handlers in direct and group chat controllers, and writes reply back to the client socket. It also calls other services for required services")
+Component(realtimeController, "Realtime Controller", "Fiber v3, MessagePack, WebSocket", "Accepts an authenticated client's Web socket connection, stores the client connection for possible server-to-client event messages. Reads request messages from the client connection, decodes a message, passes it to target handlers in direct & group chat controllers or other handling services, and writes reply to the client connection.")
 Rel(realtimeController, directChatControllers, "Calls")
 Rel(realtimeController, groupChatControllers, "Calls")
 Rel(realtimeController, userService, "Calls")
