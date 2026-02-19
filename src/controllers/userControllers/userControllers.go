@@ -39,6 +39,10 @@ func GetSessionUser(c fiber.Ctx) error {
 		return fiber.ErrInternalServerError
 	}
 
+	if user.Username == "" {
+		return fiber.ErrNotFound
+	}
+
 	return c.MsgPack(UITypes.ClientUser{Username: user.Username, ProfilePicUrl: user.ProfilePicUrl, Presence: user.Presence})
 }
 

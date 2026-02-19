@@ -83,11 +83,9 @@ func SigninUserFind(ctx context.Context, uniqueIdent string) (user.SignedInUserT
 		return fUser, err
 	}
 
-	if fUser.Username == "" {
-		return fUser, fiber.ErrNotFound
+	if fUser.Username != "" {
+		fUser.ProfilePicUrl = cloudStorageService.ProfilePicCloudNameToUrl(fUser.ProfilePicUrl)
 	}
-
-	fUser.ProfilePicUrl = cloudStorageService.ProfilePicCloudNameToUrl(fUser.ProfilePicUrl)
 
 	return fUser, nil
 }
