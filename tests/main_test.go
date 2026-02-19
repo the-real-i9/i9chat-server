@@ -47,10 +47,10 @@ type UserGeolocation struct {
 }
 
 type UserT struct {
-	Email          string
-	Username       string
-	Password       string
-	Bio            string
+	Email          string              `msgpack:"email"`
+	Username       string              `msgpack:"username"`
+	Password       string              `msgpack:"password"`
+	Bio            string              `msgpack:"bio"`
 	Geolocation    UserGeolocation     `msgpack:"geolocation"`
 	SessionCookie  string              `msgpack:"-"`
 	WSConn         *websocket.Conn     `msgpack:"-"`

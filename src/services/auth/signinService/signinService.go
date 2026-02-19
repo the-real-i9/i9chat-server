@@ -5,7 +5,6 @@ import (
 	"i9chat/src/appErrors/userErrors"
 	"i9chat/src/appTypes"
 	"i9chat/src/appTypes/UITypes"
-	"i9chat/src/services/cloudStorageService"
 	"i9chat/src/services/securityServices"
 	"i9chat/src/services/userService"
 	"os"
@@ -49,8 +48,6 @@ func Signin(ctx context.Context, emailOrUsername, password string) (signinRespT,
 	if err != nil {
 		return resp, "", err
 	}
-
-	theUser.ProfilePicUrl = cloudStorageService.ProfilePicCloudNameToUrl(theUser.ProfilePicUrl)
 
 	resp.Msg = "Signin success!"
 	resp.User = UITypes.ClientUser{Username: theUser.Username, ProfilePicUrl: theUser.ProfilePicUrl, Presence: theUser.Presence}

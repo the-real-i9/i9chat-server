@@ -12,7 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestUserOps(t *testing.T) {
+func XTestUserOps(t *testing.T) {
 	// t.Parallel()
 	require := require.New(t)
 

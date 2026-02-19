@@ -7,7 +7,6 @@ import (
 	"i9chat/src/appTypes"
 	"i9chat/src/appTypes/UITypes"
 	"i9chat/src/helpers"
-	"i9chat/src/services/cloudStorageService"
 	"i9chat/src/services/mailService"
 	"i9chat/src/services/securityServices"
 	"i9chat/src/services/userService"
@@ -120,8 +119,6 @@ func RegisterUser(ctx context.Context, sessionData msgpack.RawMessage, username,
 	if err != nil {
 		return resp, "", err
 	}
-
-	newUser.ProfilePicUrl = cloudStorageService.ProfilePicCloudNameToUrl(newUser.ProfilePicUrl)
 
 	resp.Msg = "Signup success!"
 	resp.User = UITypes.ClientUser{Username: newUser.Username, ProfilePicUrl: newUser.ProfilePicUrl, Presence: newUser.Presence}

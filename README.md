@@ -106,22 +106,35 @@ Start by finding a user by their username.
 - Clients receive user "presence" and "last seen" updates (upon subscription)
 - Real-time read receipts
 
-## API Graph Model Overview
 
-Read [Here](./docs/graph-model-overview.md)
+## API Documentation &#x1f4d6;
 
-## API Documentation
+HTTP API (REST): [Here](./docs/swagger.json). Open in [Swagger Editor](editor.swagger.io)
 
-HTTP (REST) API: [Open Swagger JSON](./docs/swagger.json)
+WebSockets API: [Here](./docs/asyncapi.json) Open in [AsyncAPI Editor](studio.asyncapi.com).
 
-WebSockets API: [Open AsyncAPI JSON](./docs/asyncapi.json)
+API Graph Model Overview [Here](./docs/graph-model-overview.md)
 
+## API Diagrams &#x1f3a8;
 
-## API Diagrams
+### Architecture Diagram
+API (C4) Component Level Diagram: [Here](./arch.pu). (Open in [PlantUML Editor](editor.platuml.com))
 
-Architecture Diagrams: [See here](./diagrams/arch-diags.md)
+<details>
+  <summary>Show Diagram</summary>
 
-## Technical Highlights Notes
+  ![i9chat_api_arch](https://www.plantuml.com/plantuml/png/lLbjR-Eu4VwUNp7rXzO1v0JeBGeSMXItvsptjhqKkJXf-cr1KHEP6vdKaPGJzzSVXgGaKYzssitsKo9oI3upypp35_zWBDEssLKWlkTRPZ-pMdnccc_FVYSahve2uI_hTvVhTv_NQbShYTB-zUpC2biXT2rm9LYfsGuUbGxpmFkRJx11lKTzTlO7M2jfcP2ebwmM6In6HeiC5X_LulpiR7Cm5dUVFxpO9UwOgFnt1eiFz0N-qvkhiaBOND_TBCx3i2MlL5DihDAin6xacXeXj8vdIBe9GeVsAbyMpBAS6SnWSHN-fQ4tojXIu-QNdnVdYVtJtbYboVmVU5ZzYrKDkgaHuk6tM0WJZ_obmGQNk4TfDrOZSmxJryf_mZKQmqeXomY_cmMymSHiTPER9h_U4Dmclzmq-P5PWeLtF-GrZIRglU0u3gTlT_5SR-2Z0bu98aKbSitqWJhMIXfXh877Hd8hb3IEAcIVD_m9BUoOP2NkKDeCk99xr9PGglmBSWiE1qYsGmDMGQ6UPQLO0VUtFvFVjrXDGvramxr1Ct2JyQrpZFvs8ScWL2lj4ZNjWYKAU-10D04XeKsiW-IdxHbnYwmmbmzQs242WxpHmXu2SfF1OXEQsW0RprX2LJ5PhhuysmnohW-rJV2rKmrY_VU7Ep2Yb4AMbtlKub5mHhqPb2XHCnVkFwqAKGeBLZsXlEIgG7WMTWluKWljp04jlt1KQw4xZNRSk7OQZIZX09FDnVwF6JYuwj9MQKnP1zPXDIWBWkFqJmdtZ4gMZQJIh-uK4mGnHk6J2Sj_lo-AyoEq_9NKuzQdwGm8QHKCjKO9JbnFYrKW6LbD8Ks5xkJQhvPIGoEhhDX5-hiDBKCFpK7oYsjMnxxUD7abp3Q3JPCRhaMEvnayOsuKoUv841olAGYCMx57Q0ngyADC1YRCHWO-EKwOTPDVcYO7lcLIOkLdQXs0fYwO9MxN7XGDthc2v6NTZiew0XYtD_Z8zAQLU4AG-BoYFIHp_uK-_r4h4vgbiXtH7NCJCb5oHj6DYkQQLLKVmii-Wcc2A39KURMgAjJ69rz3r4HX_fl8KSF-kopKOBnX_2c9lyPV6pGMjamMDCe5puMzrkfHL9WKoKVXGwJi5hsPoO390agqJijk94N89BgXvfvA3cb2esErhjPgBmfqI8N68f0Yr2UAhLyq3WP1yXYZPl1d2vTYKSgcpa9jylOTO_eXi8oYWGObHyUNqcKZTUzQ5LYrphaFSkgVgDvzoM1zgBUeYHxgtPTLgLQ55djgU4snHybPRPgAQEp0h3JIHm7jCG4URZ_TVO1AbO87NsoZ9MWqJUNoudOAeY6hgYvFRGmlO6xfl15LaQvv_mbuwxY1HwrsSFlX_TMAPjLOuPv92suJWgKhN-U0qchHLQOHSrDoEFv7fbrF7EHPevcpmy0yJ1ETiWQRvC2mtwfdbXsNordJoIsajOutPqVHLE8Rr_P68hTRXEzMnc8TsE0dhxNYQ0mi9Ju3urmrqhOJXFq6qgsS2FSe9AlyF1fBOQpVkCzTPvZPe35K4lk2aeZ8M_Kn2Sx-xtKYBX41GbGD_kpHueimDWWR-PF9W3maCiTEWZkLE5z2eNCD_Gab6phf1DSUSgY_PiOyArsGdEayuXgvHjRNpH3j35XZrOhKB7r7VcXFKS3ScSeTbGAx9eWo32NHAx5EH3LDse7Xn5dnY7LwF9jXjv1ZTWlvrUpkTp2_o8XaGgOa4_88oQ93Oi8oKi-GQKGqQlUBH6IRvLf7YXspt1rDN4_M9xbDV1JdGTo6BWtJ4lKTptPaU2JRKJ1RzBTeqAQvl6aTSttVg69rqTDkaQvo3Te7nOih-IZqRbIykb5XXtTTWwbEbB0a87sW1y5ucuesG9PKDk_eW6vzPOiZ45WMbpRVWY-Y7jMkD0glgt4qTLpUXe4E39mdqqnKO_fEcypJVTh-H8sR7dIorD5f-BwcbuDK8cjAiUzu8ts4-mZii10C6ZyrQ-nMQV4VPbLQ2djS4Vm8qzlGrBsu1IWHHzl7YkdOJ4ABCZ7HV_pW5xbT28tSagDfEgvSExW8_DVf-EdkxgRB2H7-0VEDyczC8Ib9fZm87nmottKlPAeEQaelK3tgthaOyTiaAvunJTOKalOm7e_wTXSVlwwxVR_1_ITEm6klGLC8llesD4F7gNp72fZe7oVcn83ZbvQ90KUlBZDZJb_8HhYdRbiZe_cxMyJLKgkc7alz8pN_dvJk87YU_JwIkNipSLtzKM9E-vqNVVmY3zv6-T64SyBlOBJqYiPyEzcxLTzAzL4oNYlwYVM_MlFJj9n8Swo0SVSe8SVDJwftFEHuXHZRdnRx4FEKreSshv9w2xKFQVnctRVEgZphbKmsFpaH6shqxyzU-VTrgLc15t3jP6lQdvsuaXBzDT7u7mAMVjZv1JZGNSte7fGTSUXAStAAp17OW6MwH0iFct6f4RBTqlhAmWTgzaVnPnSyq5XN1yWPVsflhG66N_C2FbbWbL5XQV-OsbKC_y8-g2E3n-qu4tE7hZZjK-Dc2lYfOVC7_odhUPP7_A984HfPF2Zzv67ysBL1Q1p-x1ELEQYKB5UwaUuPPr1hk9AcsM6R-8uZom87lmlvQoc-86yiGeyAB3DFyHCtAKl8idSlL826LHrz2goeB1_Y1tDygL4QiQVx46qNfBxLZabHKqKcTYRRr8-2mZeHdVJ7fYllH_jp4t4_P6HYw43mNk_pvbCrPCBiI9f_G5aqk-et "i9chat_api_arch")
+
+</details>
+
+### Sequence Diagrams
+
+API sequence diagrams: [Here](./diagrams/sequence-diagrams.md)
+
+## Articles &#x1f4f0;
+*Coming Soon...*
+
+<!-- ## Technical Highlights Notes
 
 ### Why I switched from a relational database to a graph database
 
@@ -142,7 +155,7 @@ While each of these entities are treated separately for other purposes, the **"d
 ### Why I enforce value limits where possible.
 
 ...
-
+ -->
 <!-- - I switched from a relational database to a graph database because, most of my SQL database logic, especially those of group management, involved a combination of several READ and WRITE queries. Even after employing stored functions, each statement still performs a full index scan. A Neo4j query, on the other hand, is procedural, has the ability to retain pointer to nodes through intermediate clauses, and performs its scan within relevant branches of the graph. These proved Neo4j a more efficient alternative.
 
 - Chat history is served from a Redis Sorted Set, while I use Redis Stream’s stream message ID for ordering (ZSET score), so that received messages appear in the order they were delivered rather than in the order they were created—the way WhatsApp works.

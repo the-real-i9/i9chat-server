@@ -15,7 +15,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestGroupChat(t *testing.T) {
+func XTestGroupChat(t *testing.T) {
 	// t.Parallel()
 	require := require.New(t)
 

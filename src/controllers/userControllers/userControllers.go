@@ -4,7 +4,6 @@ import (
 	"i9chat/src/appTypes"
 	"i9chat/src/appTypes/UITypes"
 	"i9chat/src/helpers"
-	"i9chat/src/services/cloudStorageService"
 	"i9chat/src/services/userService"
 
 	"github.com/gofiber/fiber/v3"
@@ -39,8 +38,6 @@ func GetSessionUser(c fiber.Ctx) error {
 	if err != nil {
 		return fiber.ErrInternalServerError
 	}
-
-	user.ProfilePicUrl = cloudStorageService.ProfilePicCloudNameToUrl(user.ProfilePicUrl)
 
 	return c.MsgPack(UITypes.ClientUser{Username: user.Username, ProfilePicUrl: user.ProfilePicUrl, Presence: user.Presence})
 }

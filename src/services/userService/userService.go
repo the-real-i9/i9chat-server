@@ -62,23 +62,34 @@ func UserExists(ctx context.Context, emailOrUsername string) (bool, error) {
 func NewUser(ctx context.Context, email, username, password, bio string) (user.NewUserT, error) {
 	newUser, err := user.New(ctx, email, username, password, bio)
 	if err != nil {
-		return user.NewUserT{}, nil
+		return newUser, err
 	}
 
-	if newUser.Email != "" {
-		go func(newUser user.NewUserT) {
-			eventStreamService.QueueNewUserEvent(eventTypes.NewUserEvent{
-				Username: newUser.Username,
-				UserData: helpers.ToMsgPack(newUser),
-			})
-		}(newUser)
-	}
+	go func(newUser user.NewUserT) {
+		eventStreamService.QueueNewUserEvent(eventTypes.NewUserEvent{
+			Username: newUser.Username,
+			UserData: helpers.ToMsgPack(newUser),
+		})
+	}(newUser)
+
+	newUser.ProfilePicUrl = cloudStorageService.ProfilePicCloudNameToUrl(newUser.ProfilePicUrl)
 
 	return newUser, nil
 }
 
 func SigninUserFind(ctx context.Context, uniqueIdent string) (user.SignedInUserT, error) {
-	return user.SigninFind(ctx, uniqueIdent)
+	fUser, err := user.SigninFind(ctx, uniqueIdent)
+	if err != nil {
+		return fUser, err
+	}
+
+	if fUser.Username == "" {
+		return fUser, fiber.ErrNotFound
+	}
+
+	fUser.ProfilePicUrl = cloudStorageService.ProfilePicCloudNameToUrl(fUser.ProfilePicUrl)
+
+	return fUser, nil
 }
 
 func ChangeUserPassword(ctx context.Context, email, newPassword string) (bool, error) {
