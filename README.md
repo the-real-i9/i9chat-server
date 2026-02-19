@@ -41,7 +41,7 @@ i9chat is a full-fledged chat and messaging API server built in Go It supports a
 ### Tools
 - **Swagger** - HTTP API Documentation
 - **AsyncAPI** - Websockets API Documention
-- **Docker** - Container running Postgres and Redis instances
+- **Docker** - Container running Neo4j and Redis instances
 - **Git & GitHub** - Repository & Version Control
 - **GitHub Actions** - Continuous Integration. Unit & Integration Testing
 - VSCode
@@ -53,7 +53,7 @@ i9chat is a full-fledged chat and messaging API server built in Go It supports a
 - [Technologies](#technologies)
 - [Table of Contents](#table-of-contents)
 - [Features](#features)
-- [API Documentation](#api-documentation)
+- [API Documentation](#api-documentation-)
 - [API Diagrams](#api-diagrams-)
   - [Architecture Diagram](#architecture-diagram)
   - [Sequence Diagrams](#sequence-diagrams)
