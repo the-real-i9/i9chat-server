@@ -6,7 +6,6 @@ import (
 	"i9chat/src/appTypes"
 	"i9chat/src/helpers"
 	"i9chat/src/services/chatServices/groupChatService"
-	"net/url"
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/vmihailenco/msgpack/v5"
@@ -118,13 +117,13 @@ func ExecuteAction(c fiber.Ctx) error {
 
 	actionToHandlerMap := map[string]handler{
 		"join":                    joinGroup,
-		"make user admin":         makeUserGroupAdmin,
-		"add users":               addUsersToGroup,
-		"change name":             changeGroupName,
-		"change description":      changeGroupDescription,
-		"change picture":          changeGroupPicture,
-		"remove user from admins": removeUserFromGroupAdmins,
-		"remove user":             removeUserFromGroup,
+		"make-user-admin":         makeUserGroupAdmin,
+		"add-users":               addUsersToGroup,
+		"change-name":             changeGroupName,
+		"change-description":      changeGroupDescription,
+		"change-picture":          changeGroupPicture,
+		"remove-user-from-admins": removeUserFromGroupAdmins,
+		"remove-user":             removeUserFromGroup,
 		"leave":                   leaveGroup,
 	}
 
@@ -135,12 +134,7 @@ func ExecuteAction(c fiber.Ctx) error {
 		return err
 	}
 
-	action, err := url.PathUnescape(c.Params("action"))
-	if err != nil {
-		return fiber.NewError(fiber.StatusBadRequest, fmt.Sprintf("invalid action parameter: %v", err))
-	}
-
-	actionHandler, ok := actionToHandlerMap[action]
+	actionHandler, ok := actionToHandlerMap[c.Params("action")]
 	if !ok {
 		return fiber.NewError(fiber.StatusBadRequest, fmt.Sprintf("invalid group action: %s", c.Params("action")))
 	}
@@ -164,7 +158,7 @@ func SendMessage(ctx context.Context, clientUsername string, actionData msgpack.
 	return groupChatService.SendMessage(ctx, clientUsername, acd.GroupId, acd.ReplyTargetMsgId, acd.IsReply, helpers.ToJson(acd.Msg), acd.At)
 }
 
-func AckMessageDelivered(ctx context.Context, clientUsername string, actionData msgpack.RawMessage) (any, error) {
+func AckMessagesDelivered(ctx context.Context, clientUsername string, actionData msgpack.RawMessage) (any, error) {
 
 	acd := helpers.FromBtMsgPack[groupChatMsgAck](actionData)
 
@@ -172,10 +166,10 @@ func AckMessageDelivered(ctx context.Context, clientUsername string, actionData 
 		return nil, err
 	}
 
-	return groupChatService.AckMessageDelivered(ctx, clientUsername, acd.GroupId, acd.MsgIds, acd.At)
+	return groupChatService.AckMessagesDelivered(ctx, clientUsername, acd.GroupId, acd.MsgIds, acd.At)
 }
 
-func AckMessageRead(ctx context.Context, clientUsername string, actionData msgpack.RawMessage) (any, error) {
+func AckMessagesRead(ctx context.Context, clientUsername string, actionData msgpack.RawMessage) (any, error) {
 
 	acd := helpers.FromBtMsgPack[groupChatMsgAck](actionData)
 
@@ -183,7 +177,7 @@ func AckMessageRead(ctx context.Context, clientUsername string, actionData msgpa
 		return nil, err
 	}
 
-	return groupChatService.AckMessageRead(ctx, clientUsername, acd.GroupId, acd.MsgIds, acd.At)
+	return groupChatService.AckMessagesRead(ctx, clientUsername, acd.GroupId, acd.MsgIds, acd.At)
 }
 
 func GetGroupInfo(ctx context.Context, actionData msgpack.RawMessage) (any, error) {

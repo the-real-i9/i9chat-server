@@ -2,7 +2,6 @@ package modelHelpers
 
 import (
 	"context"
-	"fmt"
 	"i9chat/src/appTypes/UITypes"
 	"i9chat/src/cache"
 	"i9chat/src/services/cloudStorageService"
@@ -161,11 +160,6 @@ func buildCHEUIFromCache(ctx context.Context, CHEId, chatType string) (CHEUI UIT
 
 		CHEUI.Reactions = msgReactions
 		CHEUI.ReactionsCount = reactionsCount
-
-	case "group activity", "reaction":
-
-	default:
-		return nilVal, fmt.Errorf("unknown CHEType:%s: debug", CHEUI.CHEType)
 	}
 
 	return CHEUI, nil

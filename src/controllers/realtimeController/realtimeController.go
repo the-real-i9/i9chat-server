@@ -12,6 +12,7 @@ import (
 	"log"
 
 	"github.com/gofiber/contrib/v3/websocket"
+	"github.com/gofiber/fiber/v3"
 )
 
 var WSStream = websocket.New(func(c *websocket.Conn) {
@@ -121,18 +122,18 @@ var WSStream = websocket.New(func(c *websocket.Conn) {
 			}
 
 			w_err = c.WriteMessage(MSG_TYPE, helpers.ToBtMsgPack(helpers.WSReply(respData, body.Action)))
-		case "group chat: ack message delivered":
+		case "group chat: ack messages delivered":
 
-			respData, err := groupChatControllers.AckMessageDelivered(ctx, clientUser.Username, body.Data)
+			respData, err := groupChatControllers.AckMessagesDelivered(ctx, clientUser.Username, body.Data)
 			if err != nil {
 				w_err = c.WriteMessage(MSG_TYPE, helpers.ToBtMsgPack(helpers.WSErrReply(err, body.Action)))
 				continue
 			}
 
 			w_err = c.WriteMessage(MSG_TYPE, helpers.ToBtMsgPack(helpers.WSReply(respData, body.Action)))
-		case "group chat: ack message read":
+		case "group chat: ack messages read":
 
-			respData, err := groupChatControllers.AckMessageRead(ctx, clientUser.Username, body.Data)
+			respData, err := groupChatControllers.AckMessagesRead(ctx, clientUser.Username, body.Data)
 			if err != nil {
 				w_err = c.WriteMessage(MSG_TYPE, helpers.ToBtMsgPack(helpers.WSErrReply(err, body.Action)))
 				continue
@@ -150,7 +151,7 @@ var WSStream = websocket.New(func(c *websocket.Conn) {
 			w_err = c.WriteMessage(MSG_TYPE, helpers.ToBtMsgPack(helpers.WSReply(respData, body.Action)))
 
 		default:
-			w_err = c.WriteMessage(MSG_TYPE, helpers.ToBtMsgPack(helpers.WSErrReply(fmt.Errorf("invalid event: %s", body.Action), body.Action)))
+			w_err = c.WriteMessage(MSG_TYPE, helpers.ToBtMsgPack(helpers.WSErrReply(fiber.NewErrorf(fiber.StatusInternalServerError, "invalid event: %s", body.Action), body.Action)))
 			continue
 		}
 	}

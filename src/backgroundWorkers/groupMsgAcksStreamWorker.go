@@ -54,10 +54,10 @@ func groupMsgAcksStreamBgWorker(rdb *redis.Client) {
 
 				msg.FromUser = stmsg.Values["fromUser"].(string)
 				msg.ToGroup = stmsg.Values["toGroup"].(string)
-				msg.CHEIds = helpers.FromMsgPack[appTypes.BinableSlice](stmsg.Values["CHEId"].(string))
+				msg.CHEIds = helpers.FromJson[appTypes.BinableSlice](stmsg.Values["CHEIds"].(string))
 				msg.Ack = stmsg.Values["ack"].(string)
-				msg.At = helpers.FromMsgPack[int64](stmsg.Values["at"].(string))
-				msg.ChatCursor = helpers.FromMsgPack[int64](stmsg.Values["chatCursor"].(string))
+				msg.At = helpers.ParseInt(stmsg.Values["at"].(string))
+				msg.ChatCursor = helpers.ParseInt(stmsg.Values["chatCursor"].(string))
 
 				msgs = append(msgs, msg)
 

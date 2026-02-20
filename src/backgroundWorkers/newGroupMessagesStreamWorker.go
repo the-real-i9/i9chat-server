@@ -55,7 +55,7 @@ func newGroupMessagesStreamBgWorker(rdb *redis.Client) {
 				msg.ToGroup = stmsg.Values["toGroup"].(string)
 				msg.CHEId = stmsg.Values["CHEId"].(string)
 				msg.MsgData = stmsg.Values["msgData"].(string)
-				msg.CHECursor = helpers.FromMsgPack[int64](stmsg.Values["cheCursor"].(string))
+				msg.CHECursor = helpers.ParseInt(stmsg.Values["cheCursor"].(string))
 
 				msgs = append(msgs, msg)
 			}

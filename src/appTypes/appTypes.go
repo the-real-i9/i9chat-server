@@ -1,6 +1,8 @@
 package appTypes
 
-import "github.com/vmihailenco/msgpack/v5"
+import (
+	"github.com/goccy/go-json"
+)
 
 type ClientUser struct {
 	Username string `msgpack:"username"`
@@ -9,13 +11,13 @@ type ClientUser struct {
 type BinableMap map[string]any
 
 func (c BinableMap) MarshalBinary() ([]byte, error) {
-	return msgpack.Marshal(c)
+	return json.Marshal(c)
 }
 
 type BinableSlice []any
 
 func (c BinableSlice) MarshalBinary() ([]byte, error) {
-	return msgpack.Marshal(c)
+	return json.Marshal(c)
 }
 
 type ServerEventMsg struct {

@@ -237,7 +237,7 @@ func (vb sendGroupChatMsg) Validate(ctx context.Context) error {
 
 type groupChatMsgAck struct {
 	GroupId string `msgpack:"groupId"`
-	MsgIds  []any  `msgpack:"msgId"`
+	MsgIds  []any  `msgpack:"msgIds"`
 	At      int64  `msgpack:"at"`
 }
 

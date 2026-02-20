@@ -44,7 +44,7 @@ func New(ctx context.Context, clientUsername, name, description, pictureCloudNam
 
 		LET dummy = 0
 
-		CALL apoc.atomic.add(serialCounter, 'value', 2) YIELD cheNextVal
+		CALL apoc.atomic.add(serialCounter, 'value', 2) YIELD newValue AS cheNextVal
 
 		CREATE (group:Group{ id: randomUUID(), name: $name, description: $description, picture_url: $picture_url, created_at: $created_at })
 
@@ -109,7 +109,7 @@ func ChangeName(ctx context.Context, groupId, clientUsername, newName string) (E
 
 		LET dummy = 0
 
-		CALL apoc.atomic.add(serialCounter, 'value', 1) YIELD cheNextVal
+		CALL apoc.atomic.add(serialCounter, 'value', 1) YIELD newValue AS cheNextVal
 
 		LET old_name = group.name
 
@@ -154,7 +154,7 @@ func ChangeDescription(ctx context.Context, groupId, clientUsername, newDescript
 
 		LET dummy = 0
 
-		CALL apoc.atomic.add(serialCounter, 'value', 1) YIELD cheNextVal
+		CALL apoc.atomic.add(serialCounter, 'value', 1) YIELD newValue AS cheNextVal
 
 		CREATE (cligact:GroupChatEntry{ che_id: randomUUID(), che_type: "group activity", info: "You changed group description from " + group.description + " to " + $new_description, cursor: cheNextVal })-[:IN_GROUP_CHAT]->(clientChat)
 
@@ -199,7 +199,7 @@ func ChangePicture(ctx context.Context, groupId, clientUsername, pictureCloudNam
 
 		LET dummy = 0
 
-		CALL apoc.atomic.add(serialCounter, 'value', 1) YIELD cheNextVal
+		CALL apoc.atomic.add(serialCounter, 'value', 1) YIELD newValue AS cheNextVal
 
 		CREATE (cligact:GroupChatEntry{ che_id: randomUUID(), che_type: "group activity", info: "You changed group picture", cursor: cheNextVal })-[:IN_GROUP_CHAT]->(clientChat)
 
@@ -259,7 +259,7 @@ func AddUsers(ctx context.Context, groupId, clientUsername string, newUsers []st
 
 		LET dummy = 0
 
-		CALL apoc.atomic.add(serialCounter, 'value', 1) YIELD cheNextVal
+		CALL apoc.atomic.add(serialCounter, 'value', 1) YIELD newValue AS cheNextVal
 
 		CREATE (cligact:GroupChatEntry{ che_id: randomUUID(), che_type: "group activity", info: "You added " + $new_users_str, cursor: cheNextVal })-[:IN_GROUP_CHAT]->(clientChat)
 
@@ -330,7 +330,7 @@ func RemoveUser(ctx context.Context, groupId, clientUsername, targetUser string)
 
 		LET dummy = 0
 
-		CALL apoc.atomic.add(serialCounter, 'value', 1) YIELD cheNextVal
+		CALL apoc.atomic.add(serialCounter, 'value', 1) YIELD newValue AS cheNextVal
 
 		DELETE mem
 
@@ -388,7 +388,7 @@ func Join(ctx context.Context, groupId, clientUsername string) (UserJoinedActivi
 
 		LET dummy = 0
 
-		CALL apoc.atomic.add(serialCounter, 'value', 1) YIELD cheNextVal
+		CALL apoc.atomic.add(serialCounter, 'value', 1) YIELD newValue AS cheNextVal
 
 		CREATE (cligact:GroupChatEntry{ che_id: randomUUID(), che_type: "group activity", info: "You joined" })-[:IN_GROUP_CHAT]->(clientChat)
 
@@ -449,7 +449,7 @@ func Leave(ctx context.Context, groupId, clientUsername string) (UserLeftActivit
 
 		LET dummy = 0
 
-		CALL apoc.atomic.add(serialCounter, 'value', 1) YIELD cheNextVal
+		CALL apoc.atomic.add(serialCounter, 'value', 1) YIELD newValue AS cheNextVal
 
 		DELETE mem
 
@@ -503,7 +503,7 @@ func MakeUserAdmin(ctx context.Context, groupId, clientUsername, targetUser stri
 
 		LET dummy = 0
 
-		CALL apoc.atomic.add(serialCounter, 'value', 1) YIELD cheNextVal
+		CALL apoc.atomic.add(serialCounter, 'value', 1) YIELD newValue AS cheNextVal
 
 		CREATE (cligact:GroupChatEntry{ che_id: randomUUID(), che_type: "group activity", info: "You made " + $target_user + " group admin", cursor: cheNextVal })-[:IN_GROUP_CHAT]->(clientChat)
 
@@ -559,7 +559,7 @@ func RemoveUserFromAdmins(ctx context.Context, groupId, clientUsername, targetUs
 
 		LET dummy = 0
 
-		CALL apoc.atomic.add(serialCounter, 'value', 1) YIELD cheNextVal
+		CALL apoc.atomic.add(serialCounter, 'value', 1) YIELD newValue AS cheNextVal
 			
 		CREATE (cligact:GroupChatEntry{ che_id: randomUUID(), che_type: "group activity", info: "You removed " + $target_user + " from group admins", cursor: cheNextVal })-[:IN_GROUP_CHAT]->(clientChat)
 
@@ -596,7 +596,7 @@ type PostGroupActivity struct {
 	MemberUsernames []any          `msgpack:"-" db:"member_usernames"`
 }
 
-func PostGroupActivityBgDBOper(ctx context.Context, groupId, memInfo, gactCHEId string, gactCHECursor int64, exemptUsers []any) (PostGroupActivity, error) {
+func PostGroupActivityBgDBOper(ctx context.Context, groupId, memInfo, gactCHEId string, gactCHECursor float64, exemptUsers []any) (PostGroupActivity, error) {
 	res, err := db.Query(
 		ctx,
 		`/*cypher*/
@@ -647,6 +647,8 @@ func SendMessage(ctx context.Context, clientUsername, groupId, msgContent string
 	res, err := db.Query(
 		ctx,
 		`/*cypher*/
+		CYPHER 25
+
 		MATCH (group)<-[:WITH_GROUP]-(clientChat:GroupChat{ owner_username: $client_username, group_id: $group_id })<-[:HAS_CHAT]-(clientUser)
 		WHERE EXISTS { (clientUser)-[:IS_MEMBER_OF]->(group) }
 
@@ -655,7 +657,7 @@ func SendMessage(ctx context.Context, clientUsername, groupId, msgContent string
 
 		LET dummy = 0
 
-		CALL apoc.atomic.add(serialCounter, 'value', 1) YIELD cheNextVal
+		CALL apoc.atomic.add(serialCounter, 'value', 1) YIELD newValue AS cheNextVal
 
 		CREATE (message:GroupMessage:GroupChatEntry{ id: randomUUID(), che_type: "message", content: $message_content, delivery_status: "sent", created_at: $at, cursor: cheNextVal }),
 			(clientUser)-[:SENDS_MESSAGE]->(message)-[:IN_GROUP_CHAT]->(clientChat)
@@ -795,6 +797,8 @@ func ReplyToMessage(ctx context.Context, clientUsername, groupId, targetMsgId, m
 	res, err := db.Query(
 		ctx,
 		`/*cypher*/
+		CYPHER 25
+
 		MATCH (group)<-[:WITH_GROUP]-(clientChat:GroupChat{ owner_username: $client_username, group_id: $group_id })<-[:HAS_CHAT]-(clientUser),
 			(clientUser)-[:IS_MEMBER_OF]->(group),
 			(clientChat)<-[:IN_GROUP_CHAT]-(targetMsg:GroupMessage { id: $target_msg_id })
@@ -806,7 +810,7 @@ func ReplyToMessage(ctx context.Context, clientUsername, groupId, targetMsgId, m
 
 		LET dummy = 0
 
-		CALL apoc.atomic.add(serialCounter, 'value', 1) YIELD cheNextVal
+		CALL apoc.atomic.add(serialCounter, 'value', 1) YIELD newValue AS cheNextVal
 
 		CREATE (replyMsg:GroupMessage:GroupChatEntry{ id: randomUUID(), che_type: "message", content: $message_content, delivery_status: "sent", created_at: $at, cursor: cheNextVal }),
 			(clientUser)-[:SENDS_MESSAGE]->(replyMsg)-[:IN_GROUP_CHAT]->(clientChat),
@@ -862,7 +866,7 @@ func ReactToMessage(ctx context.Context, clientUsername, groupId, msgId, emoji s
 
 		LET dummy = 0
 		
-		CALL apoc.atomic.add(serialCounter, 'value', 1) YIELD cheNextVal
+		CALL apoc.atomic.add(serialCounter, 'value', 1) YIELD newValue AS cheNextVal
 
 		WITH clientUser, message, clientChat, cheNextVal
 		MERGE (msgrxn:GroupMessageReaction:GroupChatEntry{ reactor_username: clientUser.username, message_id: $message_id })
@@ -933,6 +937,8 @@ func RemoveReactionToMessage(ctx context.Context, clientUsername, groupId, msgId
 	res, err := db.Query(
 		ctx,
 		`/*cypher*/
+		CYPHER 25
+		
 		MATCH (group)<-[:WITH_GROUP]-(clientChat:GroupChat{ owner_username: $client_username, group_id: $group_id })<-[:HAS_CHAT]-(clientUser),
 			(clientUser)-[:IS_MEMBER_OF]->(group),
 			(clientChat)<-[IN_GROUP_CHAT]-(message:GroupMessage{ id: $message_id })

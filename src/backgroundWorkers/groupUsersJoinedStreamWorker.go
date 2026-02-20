@@ -54,9 +54,9 @@ func groupUsersJoinedStreamBgWorker(rdb *redis.Client) {
 
 				msg.GroupId = stmsg.Values["groupId"].(string)
 				msg.NewMember = stmsg.Values["newMember"].(string)
-				msg.NewMemberCHE = helpers.FromMsgPack[appTypes.BinableMap](stmsg.Values["newMemberCHE"].(string))
+				msg.NewMemberCHE = helpers.FromJson[appTypes.BinableMap](stmsg.Values["newMemberCHE"].(string))
 				msg.MemInfo = stmsg.Values["memInfo"].(string)
-				msg.ChatCursor = helpers.FromMsgPack[int64](stmsg.Values["chatCursor"].(string))
+				msg.ChatCursor = helpers.ParseInt(stmsg.Values["chatCursor"].(string))
 
 				msgs = append(msgs, msg)
 
@@ -91,11 +91,11 @@ func groupUsersJoinedStreamBgWorker(rdb *redis.Client) {
 				gactche := msg.NewMemberCHE
 
 				CHEId := gactche["che_id"].(string)
-				CHECursor := gactche["cursor"].(int64)
+				CHECursor := gactche["cursor"].(float64)
 
 				newGroupActivityEntries = append(newGroupActivityEntries, CHEId, helpers.ToMsgPack(gactche))
 
-				chatGroupActivities[newMem+" "+msg.GroupId] = append(chatGroupActivities[newMem+" "+msg.GroupId], [2]any{CHEId, float64(CHECursor)})
+				chatGroupActivities[newMem+" "+msg.GroupId] = append(chatGroupActivities[newMem+" "+msg.GroupId], [2]any{CHEId, CHECursor})
 
 				postActivity, err := groupChat.PostGroupActivityBgDBOper(ctx, msg.GroupId, msg.MemInfo, stmsgIds[i], CHECursor, []any{msg.NewMember})
 				if err != nil {
@@ -108,11 +108,11 @@ func groupUsersJoinedStreamBgWorker(rdb *redis.Client) {
 					gactche := postActivity.MemberUsersCHE[memUser].(map[string]any)
 
 					CHEId := gactche["che_id"].(string)
-					CHECursor := gactche["cursor"].(int64)
+					CHECursor := gactche["cursor"].(float64)
 
 					newGroupActivityEntries = append(newGroupActivityEntries, CHEId, helpers.ToMsgPack(gactche))
 
-					chatGroupActivities[memUser+" "+msg.GroupId] = append(chatGroupActivities[memUser+" "+msg.GroupId], [2]any{CHEId, float64(CHECursor)})
+					chatGroupActivities[memUser+" "+msg.GroupId] = append(chatGroupActivities[memUser+" "+msg.GroupId], [2]any{CHEId, CHECursor})
 				}
 			}
 

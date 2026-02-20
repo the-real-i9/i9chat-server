@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"runtime"
+	"strconv"
 	"strings"
 
 	"github.com/goccy/go-json"
@@ -141,6 +142,24 @@ func FromBtMsgPack[T any](msgPackBt []byte) (res T) {
 	}
 
 	return
+}
+
+func ParseInt(intStr string) int64 {
+	i, err := strconv.ParseInt(intStr, 10, 64)
+	if err != nil {
+		LogError(err)
+	}
+
+	return i
+}
+
+func ParseFloat(intStr string) float64 {
+	i, err := strconv.ParseFloat(intStr, 64)
+	if err != nil {
+		LogError(err)
+	}
+
+	return i
 }
 
 func MaxCursor(cursor float64) string {

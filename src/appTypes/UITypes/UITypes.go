@@ -56,8 +56,8 @@ type ChatSnippet struct {
 	PartnerUser any `msgpack:"partner_user,omitempty"` /* stored as partnerUsername, then retrieved ChatPartnerUser */
 	Group       any `msgpack:"group,omitempty"`        /* stored as groupId, then retrieved ChatGroup */
 
-	UnreadMC int64 `msgpack:"unread_messages_count"`
-	Cursor   int64 `msgpack:"cursor"`
+	UnreadMC int64   `msgpack:"unread_messages_count"`
+	Cursor   float64 `msgpack:"cursor"`
 }
 
 type MsgReactor struct {
@@ -102,5 +102,5 @@ type ChatHistoryEntry struct {
 	Info string `msgpack:"info,omitempty"`
 
 	// cursor for pagination
-	Cursor int64 `msgpack:"cursor"`
+	Cursor float64 `msgpack:"cursor"`
 }

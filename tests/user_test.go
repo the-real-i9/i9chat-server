@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"i9chat/src/appGlobals"
 	"net/http"
+	"net/http/httptest"
 	"os"
 	"testing"
 
@@ -12,7 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func XTestUserOps(t *testing.T) {
+func TestUserOps(t *testing.T) {
 	// t.Parallel()
 	require := require.New(t)
 
@@ -55,7 +56,10 @@ func XTestUserOps(t *testing.T) {
 				reqBody, err := makeReqBody(map[string]any{"email": user.Email})
 				require.NoError(err)
 
-				res, err := http.Post(signupPath+"/request_new_account", "application/vnd.msgpack", reqBody)
+				req := httptest.NewRequest("POST", signupPath+"/request_new_account", reqBody)
+				req.Header.Add("Content-Type", "application/vnd.msgpack")
+
+				res, err := app.Test(req)
 				require.NoError(err)
 
 				if !assert.Equal(t, http.StatusOK, res.StatusCode) {
@@ -79,12 +83,11 @@ func XTestUserOps(t *testing.T) {
 				reqBody, err := makeReqBody(map[string]any{"code": os.Getenv("DUMMY_TOKEN")})
 				require.NoError(err)
 
-				req, err := http.NewRequest("POST", signupPath+"/verify_email", reqBody)
-				require.NoError(err)
+				req := httptest.NewRequest("POST", signupPath+"/verify_email", reqBody)
 				req.Header.Set("Cookie", user.SessionCookie)
 				req.Header.Add("Content-Type", "application/vnd.msgpack")
 
-				res, err := http.DefaultClient.Do(req)
+				res, err := app.Test(req)
 				require.NoError(err)
 
 				if !assert.Equal(t, http.StatusOK, res.StatusCode) {
@@ -111,12 +114,11 @@ func XTestUserOps(t *testing.T) {
 				})
 				require.NoError(err)
 
-				req, err := http.NewRequest("POST", signupPath+"/register_user", reqBody)
-				require.NoError(err)
+				req := httptest.NewRequest("POST", signupPath+"/register_user", reqBody)
 				req.Header.Add("Content-Type", "application/vnd.msgpack")
 				req.Header.Set("Cookie", user.SessionCookie)
 
-				res, err := http.DefaultClient.Do(req)
+				res, err := app.Test(req)
 				require.NoError(err)
 
 				if !assert.Equal(t, http.StatusCreated, res.StatusCode) {
@@ -145,12 +147,11 @@ func XTestUserOps(t *testing.T) {
 		reqBody, err := makeReqBody(map[string]any{"newGeolocation": map[string]any{"x": user1.Geolocation.X, "y": user1.Geolocation.Y}})
 		require.NoError(err)
 
-		req, err := http.NewRequest("POST", userPath+"/set_geolocation", reqBody)
-		require.NoError(err)
+		req := httptest.NewRequest("POST", userPath+"/set_geolocation", reqBody)
 		req.Header.Set("Cookie", user1.SessionCookie)
 		req.Header.Add("Content-Type", "application/vnd.msgpack")
 
-		res, err := http.DefaultClient.Do(req)
+		res, err := app.Test(req)
 		require.NoError(err)
 
 		if !assert.Equal(t, http.StatusOK, res.StatusCode) {
@@ -171,12 +172,11 @@ func XTestUserOps(t *testing.T) {
 		reqBody, err := makeReqBody(map[string]any{"newGeolocation": map[string]any{"x": user2.Geolocation.X, "y": user2.Geolocation.Y}})
 		require.NoError(err)
 
-		req, err := http.NewRequest("POST", userPath+"/set_geolocation", reqBody)
-		require.NoError(err)
+		req := httptest.NewRequest("POST", userPath+"/set_geolocation", reqBody)
 		req.Header.Set("Cookie", user2.SessionCookie)
 		req.Header.Add("Content-Type", "application/vnd.msgpack")
 
-		res, err := http.DefaultClient.Do(req)
+		res, err := app.Test(req)
 		require.NoError(err)
 
 		if !assert.Equal(t, http.StatusOK, res.StatusCode) {
@@ -196,11 +196,10 @@ func XTestUserOps(t *testing.T) {
 
 		x, y, radius := user1.Geolocation.X, user1.Geolocation.Y, 350000.0
 
-		req, err := http.NewRequest("GET", fmt.Sprintf("%s%s?x=%f&y=%f&radius=%f", userPath, "/find_nearby_users", x, y, radius), nil)
-		require.NoError(err)
+		req := httptest.NewRequest("GET", fmt.Sprintf("%s%s?x=%f&y=%f&radius=%f", userPath, "/find_nearby_users", x, y, radius), nil)
 		req.Header.Set("Cookie", user1.SessionCookie)
 
-		res, err := http.DefaultClient.Do(req)
+		res, err := app.Test(req)
 		require.NoError(err)
 
 		if !assert.Equal(t, http.StatusOK, res.StatusCode) {
@@ -229,12 +228,11 @@ func XTestUserOps(t *testing.T) {
 		reqBody, err := makeReqBody(map[string]any{"newBio": "This is my new bio!"})
 		require.NoError(err)
 
-		req, err := http.NewRequest("POST", userPath+"/change_bio", reqBody)
-		require.NoError(err)
+		req := httptest.NewRequest("POST", userPath+"/change_bio", reqBody)
 		req.Header.Set("Cookie", user1.SessionCookie)
 		req.Header.Add("Content-Type", "application/vnd.msgpack")
 
-		res, err := http.DefaultClient.Do(req)
+		res, err := app.Test(req)
 		require.NoError(err)
 
 		if !assert.Equal(t, http.StatusOK, res.StatusCode) {
@@ -268,12 +266,11 @@ func XTestUserOps(t *testing.T) {
 			reqBody, err := makeReqBody(map[string]any{"pic_mime": contentType, "pic_size": [3]int64{fileInfo.Size(), fileInfo.Size(), fileInfo.Size()}})
 			require.NoError(err)
 
-			req, err := http.NewRequest("POST", userPath+"/profile_pic_upload/authorize", reqBody)
-			require.NoError(err)
+			req := httptest.NewRequest("POST", userPath+"/profile_pic_upload/authorize", reqBody)
 			req.Header.Set("Cookie", user2.SessionCookie)
 			req.Header.Add("Content-Type", "application/vnd.msgpack")
 
-			res, err := http.DefaultClient.Do(req)
+			res, err := app.Test(req)
 			require.NoError(err)
 
 			if !assert.Equal(t, http.StatusOK, res.StatusCode) {
@@ -331,12 +328,11 @@ func XTestUserOps(t *testing.T) {
 		reqBody, err := makeReqBody(map[string]any{"profile_pic_cloud_name": profilePicCloudName})
 		require.NoError(err)
 
-		req, err := http.NewRequest("POST", userPath+"/change_profile_picture", reqBody)
-		require.NoError(err)
+		req := httptest.NewRequest("POST", userPath+"/change_profile_picture", reqBody)
 		req.Header.Set("Cookie", user2.SessionCookie)
 		req.Header.Add("Content-Type", "application/vnd.msgpack")
 
-		res, err := http.DefaultClient.Do(req)
+		res, err := app.Test(req)
 		require.NoError(err)
 
 		if !assert.Equal(t, http.StatusOK, res.StatusCode) {

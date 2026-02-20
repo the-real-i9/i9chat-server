@@ -54,8 +54,8 @@ func groupEditsStreamBgWorker(rdb *redis.Client) {
 
 				msg.GroupId = stmsg.Values["groupId"].(string)
 				msg.EditorUser = stmsg.Values["editorUser"].(string)
-				msg.UpdateKVMap = helpers.FromMsgPack[appTypes.BinableMap](stmsg.Values["updateKVMap"].(string))
-				msg.EditorUserCHE = helpers.FromMsgPack[appTypes.BinableMap](stmsg.Values["editorUserCHE"].(string))
+				msg.UpdateKVMap = helpers.FromJson[appTypes.BinableMap](stmsg.Values["updateKVMap"].(string))
+				msg.EditorUserCHE = helpers.FromJson[appTypes.BinableMap](stmsg.Values["editorUserCHE"].(string))
 				msg.MemInfo = stmsg.Values["memInfo"].(string)
 
 				msgs = append(msgs, msg)
@@ -75,11 +75,11 @@ func groupEditsStreamBgWorker(rdb *redis.Client) {
 				gactche := msg.EditorUserCHE
 
 				CHEId := gactche["che_id"].(string)
-				CHECursor := gactche["cursor"].(int64)
+				CHECursor := gactche["cursor"].(float64)
 
 				newGroupActivityEntries = append(newGroupActivityEntries, CHEId, helpers.ToMsgPack(gactche))
 
-				chatGroupActivities[msg.EditorUser+" "+msg.GroupId] = append(chatGroupActivities[msg.EditorUser+" "+msg.GroupId], [2]any{CHEId, float64(CHECursor)})
+				chatGroupActivities[msg.EditorUser+" "+msg.GroupId] = append(chatGroupActivities[msg.EditorUser+" "+msg.GroupId], [2]any{CHEId, CHECursor})
 
 				postActivity, err := groupChat.PostGroupActivityBgDBOper(ctx, msg.GroupId, msg.MemInfo, stmsgIds[i] /* for uniquness, for idempotency */, CHECursor, []any{msg.EditorUser})
 				if err != nil {
@@ -92,11 +92,11 @@ func groupEditsStreamBgWorker(rdb *redis.Client) {
 					gactche := postActivity.MemberUsersCHE[memUser].(map[string]any)
 
 					CHEId := gactche["che_id"].(string)
-					CHECursor := gactche["cursor"].(int64)
+					CHECursor := gactche["cursor"].(float64)
 
 					newGroupActivityEntries = append(newGroupActivityEntries, CHEId, helpers.ToMsgPack(gactche))
 
-					chatGroupActivities[memUser+" "+msg.GroupId] = append(chatGroupActivities[memUser+" "+msg.GroupId], [2]any{CHEId, float64(CHECursor)})
+					chatGroupActivities[memUser+" "+msg.GroupId] = append(chatGroupActivities[memUser+" "+msg.GroupId], [2]any{CHEId, CHECursor})
 				}
 			}
 

@@ -51,7 +51,7 @@ func userEditsStreamBgWorker(rdb *redis.Client) {
 				var msg eventTypes.EditUserEvent
 
 				msg.Username = stmsg.Values["username"].(string)
-				msg.UpdateKVMap = helpers.FromMsgPack[appTypes.BinableMap](stmsg.Values["updateKVMap"].(string))
+				msg.UpdateKVMap = helpers.FromJson[appTypes.BinableMap](stmsg.Values["updateKVMap"].(string))
 
 				msgs = append(msgs, msg)
 

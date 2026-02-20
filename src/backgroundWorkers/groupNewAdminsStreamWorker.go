@@ -55,8 +55,8 @@ func groupNewAdminsStreamBgWorker(rdb *redis.Client) {
 				msg.GroupId = stmsg.Values["groupId"].(string)
 				msg.Admin = stmsg.Values["admin"].(string)
 				msg.NewAdmin = stmsg.Values["newAdmin"].(string)
-				msg.AdminCHE = helpers.FromMsgPack[appTypes.BinableMap](stmsg.Values["adminCHE"].(string))
-				msg.NewAdminCHE = helpers.FromMsgPack[appTypes.BinableMap](stmsg.Values["newAdminCHE"].(string))
+				msg.AdminCHE = helpers.FromJson[appTypes.BinableMap](stmsg.Values["adminCHE"].(string))
+				msg.NewAdminCHE = helpers.FromJson[appTypes.BinableMap](stmsg.Values["newAdminCHE"].(string))
 				msg.MemInfo = stmsg.Values["memInfo"].(string)
 
 				msgs = append(msgs, msg)
@@ -78,21 +78,21 @@ func groupNewAdminsStreamBgWorker(rdb *redis.Client) {
 				gactche := msg.AdminCHE
 
 				CHEId := gactche["che_id"].(string)
-				CHECursor := gactche["cursor"].(int64)
+				CHECursor := gactche["cursor"].(float64)
 
 				newGroupActivityEntries = append(newGroupActivityEntries, CHEId, helpers.ToMsgPack(gactche))
 
-				chatGroupActivities[msg.Admin+" "+msg.GroupId] = append(chatGroupActivities[msg.Admin+" "+msg.GroupId], [2]any{CHEId, float64(CHECursor)})
+				chatGroupActivities[msg.Admin+" "+msg.GroupId] = append(chatGroupActivities[msg.Admin+" "+msg.GroupId], [2]any{CHEId, CHECursor})
 
 				{
 					gactche := msg.NewAdminCHE
 
 					CHEId := gactche["che_id"].(string)
-					CHECursor := gactche["cursor"].(int64)
+					CHECursor := gactche["cursor"].(float64)
 
 					newGroupActivityEntries = append(newGroupActivityEntries, CHEId, helpers.ToMsgPack(gactche))
 
-					chatGroupActivities[msg.NewAdmin+" "+msg.GroupId] = append(chatGroupActivities[msg.NewAdmin+" "+msg.GroupId], [2]any{CHEId, float64(CHECursor)})
+					chatGroupActivities[msg.NewAdmin+" "+msg.GroupId] = append(chatGroupActivities[msg.NewAdmin+" "+msg.GroupId], [2]any{CHEId, CHECursor})
 				}
 
 				postActivity, err := groupChat.PostGroupActivityBgDBOper(ctx, msg.GroupId, msg.MemInfo, stmsgIds[i], CHECursor, []any{msg.Admin, msg.NewAdmin})
@@ -106,11 +106,11 @@ func groupNewAdminsStreamBgWorker(rdb *redis.Client) {
 					gactche := postActivity.MemberUsersCHE[memUser].(map[string]any)
 
 					CHEId := gactche["che_id"].(string)
-					CHECursor := gactche["cursor"].(int64)
+					CHECursor := gactche["cursor"].(float64)
 
 					newGroupActivityEntries = append(newGroupActivityEntries, CHEId, helpers.ToMsgPack(gactche))
 
-					chatGroupActivities[memUser+" "+msg.GroupId] = append(chatGroupActivities[memUser+" "+msg.GroupId], [2]any{CHEId, float64(CHECursor)})
+					chatGroupActivities[memUser+" "+msg.GroupId] = append(chatGroupActivities[memUser+" "+msg.GroupId], [2]any{CHEId, CHECursor})
 				}
 			}
 

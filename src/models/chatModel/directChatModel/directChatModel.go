@@ -34,6 +34,8 @@ func SendMessage(ctx context.Context, clientUsername, partnerUsername, msgConten
 	res, err := db.Query(
 		ctx,
 		`/*cypher*/
+		CYPHER 25
+
 		MATCH (clientUser:User{ username: $client_username }), (partnerUser:User{ username: $partner_username })
 
 		WITH clientUser, partnerUser,
@@ -45,7 +47,7 @@ func SendMessage(ctx context.Context, clientUsername, partnerUsername, msgConten
 
 		LET dummy = 0
 
-		CALL apoc.atomic.add(serialCounter, 'value', 1) YIELD cheNextVal
+		CALL apoc.atomic.add(serialCounter, 'value', 1) YIELD newValue AS cheNextVal
 
 		MERGE (clientUser)-[:HAS_CHAT]->(clientChat:DirectChat{ owner_username: $client_username, partner_username: $partner_username })-[:WITH_USER]->(partnerUser)
 		MERGE (partnerUser)-[:HAS_CHAT]->(partnerChat:DirectChat{ owner_username: $partner_username, partner_username: $client_username })-[:WITH_USER]->(clientUser)
@@ -148,12 +150,14 @@ func ReplyToMessage(ctx context.Context, clientUsername, partnerUsername, target
 	res, err := db.Query(
 		ctx,
 		`/*cypher*/
+		CYPHER 25
+
 		MATCH (clientUser)-[:HAS_CHAT]->(clientChat:Chat{ owner_username: $client_username, partner_username: $partner_username })-[:WITH_USER]->(partnerUser),
 			(clientChat)<-[:IN_DIRECT_CHAT]-(targetMsg:DirectMessage { id: $target_msg_id })
 			
 		MATCH (targetMsg)<-[:SENDS_MESSAGE]-(targetMsgSender)
 
-		WITH clientUser, partnerUser, clientChat, targetMsgSender,
+		WITH clientUser, partnerUser, clientChat, targetMsg, targetMsgSender,
 			NOT EXISTS { (clientUser)-[:HAS_CHAT]->(:DirectChat)-[:WITH_USER]->(partnerUser) } AS ffu,
 			NOT EXISTS { (partnerUser)-[:HAS_CHAT]->(:DirectChat)-[:WITH_USER]->(clientUser) } AS ftu
 
@@ -162,7 +166,7 @@ func ReplyToMessage(ctx context.Context, clientUsername, partnerUsername, target
 
 		LET dummy = 0
 
-		CALL apoc.atomic.add(serialCounter, 'value', 1) YIELD cheNextVal
+		CALL apoc.atomic.add(serialCounter, 'value', 1) YIELD newValue AS cheNextVal
 
 		MERGE (partnerUser)-[:HAS_CHAT]->(partnerChat:DirectChat{ owner_username: $partner_username, partner_username: $client_username })-[:WITH_USER]->(clientUser)
 
@@ -211,6 +215,8 @@ func ReactToMessage(ctx context.Context, clientUsername, partnerUsername, msgId,
 	res, err := db.Query(
 		ctx,
 		`/*cypher*/
+		CYPHER 25
+
 		MATCH (clientUser)-[:HAS_CHAT]->(clientChat:Chat{ owner_username: $client_username, partner_username: $partner_username })-[:WITH_USER]->(partnerUser),
 			(clientChat)<-[:IN_DIRECT_CHAT]-(message:DirectMessage{ id: $message_id }),
 			(partnerUser)-[:HAS_CHAT]->(partnerChat)-[:WITH_USER]->(clientUser)
@@ -219,10 +225,9 @@ func ReactToMessage(ctx context.Context, clientUsername, partnerUsername, msgId,
 		ON CREATE SET serialCounter.value = 0
 
 		LET dummy = 0
-		
-		CALL apoc.atomic.add(serialCounter, 'value', 1) YIELD cheNextVal
 
-		WITH clientUser, message, partnerUser, cheNextVal
+		CALL apoc.atomic.add(serialCounter, 'value', 1) YIELD newValue AS cheNextVal
+
 		MERGE (msgrxn:DirectMessageReaction:DirectChatEntry{ reactor_username: clientUser.username, message_id: $message_id })
 		ON CREATE
 			SET msgrxn.che_id = randomUUID(),
@@ -262,6 +267,8 @@ func RemoveReactionToMessage(ctx context.Context, clientUsername, partnerUsernam
 	res, err := db.Query(
 		ctx,
 		`/*cypher*/
+		CYPHER 25
+		
 		MATCH (clientUser)-[:HAS_CHAT]->(clientChat:DirectChat{ owner_username: $client_username, partner_username: $partner_username })-[:WITH_USER]->(partnerUser),
 			(clientChat)<-[:IN_DIRECT_CHAT]-(message:DirectMessage{ id: $message_id }),
 			(partnerUser)-[:HAS_CHAT]->(partnerChat)-[:WITH_USER]->(clientUser),

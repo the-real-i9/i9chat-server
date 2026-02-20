@@ -30,16 +30,16 @@ const HOST_URL string = "http://localhost:8000"
 const WSHOST_URL string = "ws://localhost:8000"
 const wsPath = WSHOST_URL + "/api/app/ws"
 
-const signupPath = HOST_URL + "/api/auth/signup"
-const signinPath = HOST_URL + "/api/auth/signin"
+const signupPath = "/api/auth/signup"
+const signinPath = "/api/auth/signin"
 
-const userPath = HOST_URL + "/api/app/user"
+const userPath = "/api/app/user"
 const signoutPath = userPath + "/signout"
 
-const directChatPath = HOST_URL + "/api/app/dm_chat"
-const groupChatPath = HOST_URL + "/api/app/group_chat"
+const directChatPath = "/api/app/dm_chat"
+const groupChatPath = "/api/app/group_chat"
 
-const chatUploadPath = HOST_URL + "/api/app/chat_upload"
+const chatUploadPath = "/api/app/chat_upload"
 
 type UserGeolocation struct {
 	X float64 `msgpack:"x"`
@@ -57,6 +57,8 @@ type UserT struct {
 	ServerEventMsg chan map[string]any `msgpack:"-"`
 }
 
+var app *fiber.App
+
 func TestMain(m *testing.M) {
 	if err := initializers.InitApp(); err != nil {
 		log.Fatal(err)
@@ -64,7 +66,7 @@ func TestMain(m *testing.M) {
 
 	defer initializers.CleanUp()
 
-	app := fiber.New(fiber.Config{
+	app = fiber.New(fiber.Config{
 		MsgPackEncoder: msgpack.Marshal,
 		MsgPackDecoder: msgpack.Unmarshal,
 	})
@@ -95,9 +97,6 @@ func TestMain(m *testing.M) {
 	<-waitReady.C
 
 	c := m.Run()
-
-	waitFinish := time.NewTimer(2 * time.Second)
-	<-waitFinish.C
 
 	app.Shutdown()
 
@@ -136,6 +135,15 @@ func errResBody(body io.ReadCloser) (string, error) {
 	}
 
 	return string(bt), nil
+}
+
+func wsWriteMsgPack(wsConn *websocket.Conn, data any) error {
+	bt, err := msgpack.Marshal(data)
+	if err != nil {
+		return err
+	}
+
+	return wsConn.WriteMessage(websocket.BinaryMessage, bt)
 }
 
 func startResumableUpload(uploadUrl string, contentType string, t *testing.T) string {

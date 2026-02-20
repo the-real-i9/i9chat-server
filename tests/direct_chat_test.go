@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"i9chat/src/appGlobals"
 	"net/http"
+	"net/http/httptest"
 	"os"
 	"testing"
 	"time"
@@ -12,9 +13,10 @@ import (
 	"github.com/maxatome/go-testdeep/td"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/vmihailenco/msgpack/v5"
 )
 
-func XTestDirectChat(t *testing.T) {
+func TestDirectChat(t *testing.T) {
 	// t.Parallel()
 	require := require.New(t)
 
@@ -47,7 +49,10 @@ func XTestDirectChat(t *testing.T) {
 				reqBody, err := makeReqBody(map[string]any{"email": user.Email})
 				require.NoError(err)
 
-				res, err := http.Post(signupPath+"/request_new_account", "application/vnd.msgpack", reqBody)
+				req := httptest.NewRequest("POST", signupPath+"/request_new_account", reqBody)
+				req.Header.Add("Content-Type", "application/vnd.msgpack")
+
+				res, err := app.Test(req)
 				require.NoError(err)
 
 				if !assert.Equal(t, http.StatusOK, res.StatusCode) {
@@ -71,12 +76,11 @@ func XTestDirectChat(t *testing.T) {
 				reqBody, err := makeReqBody(map[string]any{"code": os.Getenv("DUMMY_TOKEN")})
 				require.NoError(err)
 
-				req, err := http.NewRequest("POST", signupPath+"/verify_email", reqBody)
-				require.NoError(err)
+				req := httptest.NewRequest("POST", signupPath+"/verify_email", reqBody)
 				req.Header.Set("Cookie", user.SessionCookie)
 				req.Header.Add("Content-Type", "application/vnd.msgpack")
 
-				res, err := http.DefaultClient.Do(req)
+				res, err := app.Test(req)
 				require.NoError(err)
 
 				if !assert.Equal(t, http.StatusOK, res.StatusCode) {
@@ -103,12 +107,11 @@ func XTestDirectChat(t *testing.T) {
 				})
 				require.NoError(err)
 
-				req, err := http.NewRequest("POST", signupPath+"/register_user", reqBody)
-				require.NoError(err)
+				req := httptest.NewRequest("POST", signupPath+"/register_user", reqBody)
 				req.Header.Add("Content-Type", "application/vnd.msgpack")
 				req.Header.Set("Cookie", user.SessionCookie)
 
-				res, err := http.DefaultClient.Do(req)
+				res, err := app.Test(req)
 				require.NoError(err)
 
 				if !assert.Equal(t, http.StatusCreated, res.StatusCode) {
@@ -163,9 +166,14 @@ func XTestDirectChat(t *testing.T) {
 
 					var wsMsg map[string]any
 
-					if err := userWSConn.ReadJSON(&wsMsg); err != nil {
+					msgT, wsMsgBt, err := userWSConn.ReadMessage()
+					if err != nil {
 						break
 					}
+					require.Equal(websocket.BinaryMessage, msgT)
+
+					err = msgpack.Unmarshal(wsMsgBt, &wsMsg)
+					require.NoError(err)
 
 					if wsMsg == nil {
 						continue
@@ -184,7 +192,7 @@ func XTestDirectChat(t *testing.T) {
 	{
 		t.Log("Action: user1 sends message to user2")
 
-		err := user1.WSConn.WriteJSON(map[string]any{
+		err := wsWriteMsgPack(user1.WSConn, map[string]any{
 			"action": "direct chat: send message",
 			"data": map[string]any{
 				"partnerUsername": user2.Username,
@@ -207,6 +215,7 @@ func XTestDirectChat(t *testing.T) {
 			"toAction": "direct chat: send message",
 			"data": td.Map(map[string]any{
 				"new_msg_id": td.Ignore(),
+				"che_cursor": td.Ignore(),
 			}, nil),
 		}, nil))
 
@@ -218,28 +227,36 @@ func XTestDirectChat(t *testing.T) {
 
 		user2NewMsgReceived := <-user2.ServerEventMsg
 
-		td.Cmp(td.Require(t), user2NewMsgReceived, td.Map(map[string]any{
-			"event": "direct chat: new message",
+		td.Cmp(td.Require(t), user2NewMsgReceived, td.SuperMapOf(map[string]any{
+			"event": "new direct chat",
 			"data": td.SuperMapOf(map[string]any{
-				"id": user1NewMsgId,
-				"content": td.SuperMapOf(map[string]any{
-					"type": "text",
-					"props": td.SuperMapOf(map[string]any{
-						"text_content": "Hi. How're you doing?",
+				"chat": td.SuperMapOf(map[string]any{
+					"type": "direct",
+					"partner_user": td.SuperMapOf(map[string]any{
+						"username": user1.Username,
 					}, nil),
 				}, nil),
-				"delivery_status": "sent",
-				"sender": td.SuperMapOf(map[string]any{
-					"username": user1.Username,
-				}, nil),
+				"history": td.Contains(td.SuperMapOf(map[string]any{
+					"id": user1NewMsgId,
+					"content": td.SuperMapOf(map[string]any{
+						"type": "text",
+						"props": td.SuperMapOf(map[string]any{
+							"text_content": "Hi. How're you doing?",
+						}, nil),
+					}, nil),
+					"delivery_status": "sent",
+					"sender": td.SuperMapOf(map[string]any{
+						"username": user1.Username,
+					}, nil),
+				}, nil)),
 			}, nil),
 		}, nil))
 
-		err := user2.WSConn.WriteJSON(map[string]any{
-			"action": "direct chat: ack message delivered",
+		err := wsWriteMsgPack(user2.WSConn, map[string]any{
+			"action": "direct chat: ack messages delivered",
 			"data": map[string]any{
 				"partnerUsername": user1.Username,
-				"msgId":           user1NewMsgId,
+				"msgIds":          []string{user1NewMsgId},
 				"at":              time.Now().UTC().UnixMilli(),
 			},
 		})
@@ -249,8 +266,10 @@ func XTestDirectChat(t *testing.T) {
 
 		td.Cmp(td.Require(t), user2ServerReply, td.Map(map[string]any{
 			"event":    "server reply",
-			"toAction": "direct chat: ack message delivered",
-			"data":     true,
+			"toAction": "direct chat: ack messages delivered",
+			"data": td.Map(map[string]any{
+				"updated_chat_cursor": td.Ignore(),
+			}, nil),
 		}, nil))
 	}
 
@@ -260,10 +279,10 @@ func XTestDirectChat(t *testing.T) {
 		user1DelvAckReceipt := <-user1.ServerEventMsg
 
 		td.Cmp(td.Require(t), user1DelvAckReceipt, td.Map(map[string]any{
-			"event": "direct chat: message delivered",
-			"data": td.Map(map[string]any{
-				"partner_username": user2.Username,
-				"msg_id":           user1NewMsgId,
+			"event": "direct chat: messages delivered",
+			"data": td.SuperMapOf(map[string]any{
+				"chat_partner": user2.Username,
+				"msg_ids":      td.Contains(user1NewMsgId),
 			}, nil),
 		}, nil))
 	}
@@ -271,11 +290,11 @@ func XTestDirectChat(t *testing.T) {
 	{
 		t.Log("Action: user2 then acknowledges 'read'")
 
-		err := user2.WSConn.WriteJSON(map[string]any{
-			"action": "direct chat: ack message read",
+		err := wsWriteMsgPack(user2.WSConn, map[string]any{
+			"action": "direct chat: ack messages read",
 			"data": map[string]any{
 				"partnerUsername": user1.Username,
-				"msgId":           user1NewMsgId,
+				"msgIds":          []string{user1NewMsgId},
 				"at":              time.Now().UTC().UnixMilli(),
 			},
 		})
@@ -283,9 +302,11 @@ func XTestDirectChat(t *testing.T) {
 
 		user2ServerReply := <-user2.ServerEventMsg
 
+		// t.Log(user2ServerReply)
+
 		td.Cmp(td.Require(t), user2ServerReply, td.Map(map[string]any{
 			"event":    "server reply",
-			"toAction": "direct chat: ack message read",
+			"toAction": "direct chat: ack messages read",
 			"data":     true,
 		}, nil))
 	}
@@ -296,10 +317,10 @@ func XTestDirectChat(t *testing.T) {
 		user1ReadAckReceipt := <-user1.ServerEventMsg
 
 		td.Cmp(td.Require(t), user1ReadAckReceipt, td.Map(map[string]any{
-			"event": "direct chat: message read",
-			"data": td.Map(map[string]any{
-				"partner_username": user2.Username,
-				"msg_id":           user1NewMsgId,
+			"event": "direct chat: messages read",
+			"data": td.SuperMapOf(map[string]any{
+				"chat_partner": user2.Username,
+				"msg_ids":      td.Contains(user1NewMsgId),
 			}, nil),
 		}, nil))
 	}
@@ -333,12 +354,11 @@ func XTestDirectChat(t *testing.T) {
 			})
 			require.NoError(err)
 
-			req, err := http.NewRequest("POST", chatUploadPath+"/authorize/visual", reqBody)
-			require.NoError(err)
+			req := httptest.NewRequest("POST", chatUploadPath+"/authorize/visual", reqBody)
 			req.Header.Set("Cookie", user1.SessionCookie)
 			req.Header.Add("Content-Type", "application/vnd.msgpack")
 
-			res, err := http.DefaultClient.Do(req)
+			res, err := app.Test(req)
 			require.NoError(err)
 
 			if !assert.Equal(t, http.StatusOK, res.StatusCode) {
@@ -394,7 +414,7 @@ func XTestDirectChat(t *testing.T) {
 			t.Log("Upload complete")
 		}
 
-		err = user2.WSConn.WriteJSON(map[string]any{
+		err = wsWriteMsgPack(user2.WSConn, map[string]any{
 			"action": "direct chat: send message",
 			"data": map[string]any{
 				"partnerUsername": user1.Username,
@@ -418,6 +438,7 @@ func XTestDirectChat(t *testing.T) {
 			"toAction": "direct chat: send message",
 			"data": td.Map(map[string]any{
 				"new_msg_id": td.Ignore(),
+				"che_cursor": td.Ignore(),
 			}, nil),
 		}, nil))
 
@@ -430,7 +451,7 @@ func XTestDirectChat(t *testing.T) {
 		user1NewMsgReceived := <-user1.ServerEventMsg
 
 		td.Cmp(td.Require(t), user1NewMsgReceived, td.Map(map[string]any{
-			"event": "direct chat: new message",
+			"event": "direct chat: new che: message",
 			"data": td.SuperMapOf(map[string]any{
 				"id": user2NewMsgId,
 				"content": td.SuperMapOf(map[string]any{
@@ -446,11 +467,11 @@ func XTestDirectChat(t *testing.T) {
 			}, nil),
 		}, nil))
 
-		err := user1.WSConn.WriteJSON(map[string]any{
-			"action": "direct chat: ack message delivered",
+		err := wsWriteMsgPack(user1.WSConn, map[string]any{
+			"action": "direct chat: ack messages delivered",
 			"data": map[string]any{
 				"partnerUsername": user2.Username,
-				"msgId":           user2NewMsgId,
+				"msgIds":          []string{user2NewMsgId},
 				"at":              time.Now().UTC().UnixMilli(),
 			},
 		})
@@ -460,8 +481,10 @@ func XTestDirectChat(t *testing.T) {
 
 		td.Cmp(td.Require(t), user1ServerReply, td.Map(map[string]any{
 			"event":    "server reply",
-			"toAction": "direct chat: ack message delivered",
-			"data":     true,
+			"toAction": "direct chat: ack messages delivered",
+			"data": td.Map(map[string]any{
+				"updated_chat_cursor": td.Ignore(),
+			}, nil),
 		}, nil))
 	}
 
@@ -471,10 +494,10 @@ func XTestDirectChat(t *testing.T) {
 		user2DelvAckReceipt := <-user2.ServerEventMsg
 
 		td.Cmp(td.Require(t), user2DelvAckReceipt, td.Map(map[string]any{
-			"event": "direct chat: message delivered",
-			"data": td.Map(map[string]any{
-				"partner_username": user1.Username,
-				"msg_id":           user2NewMsgId,
+			"event": "direct chat: messages delivered",
+			"data": td.SuperMapOf(map[string]any{
+				"chat_partner": user1.Username,
+				"msg_ids":      td.Contains(user2NewMsgId),
 			}, nil),
 		}, nil))
 	}
@@ -482,11 +505,11 @@ func XTestDirectChat(t *testing.T) {
 	{
 		t.Log("Action: user1 then acknowledges 'read'")
 
-		err := user1.WSConn.WriteJSON(map[string]any{
-			"action": "direct chat: ack message read",
+		err := wsWriteMsgPack(user1.WSConn, map[string]any{
+			"action": "direct chat: ack messages read",
 			"data": map[string]any{
 				"partnerUsername": user2.Username,
-				"msgId":           user2NewMsgId,
+				"msgIds":          []string{user2NewMsgId},
 				"at":              time.Now().UTC().UnixMilli(),
 			},
 		})
@@ -496,7 +519,7 @@ func XTestDirectChat(t *testing.T) {
 
 		td.Cmp(td.Require(t), user1ServerReply, td.Map(map[string]any{
 			"event":    "server reply",
-			"toAction": "direct chat: ack message read",
+			"toAction": "direct chat: ack messages read",
 			"data":     true,
 		}, nil))
 	}
@@ -507,10 +530,10 @@ func XTestDirectChat(t *testing.T) {
 		user2ReadAckReceipt := <-user2.ServerEventMsg
 
 		td.Cmp(td.Require(t), user2ReadAckReceipt, td.Map(map[string]any{
-			"event": "direct chat: message read",
-			"data": td.Map(map[string]any{
-				"partner_username": user1.Username,
-				"msg_id":           user2NewMsgId,
+			"event": "direct chat: messages read",
+			"data": td.SuperMapOf(map[string]any{
+				"chat_partner": user1.Username,
+				"msg_ids":      td.Contains(user2NewMsgId),
 			}, nil),
 		}, nil))
 	}
@@ -520,12 +543,11 @@ func XTestDirectChat(t *testing.T) {
 
 		t.Log("Action: user1 opens his chat history with user2")
 
-		req, err := http.NewRequest("GET", directChatPath+"/"+user2.Username+"/history", nil)
-		require.NoError(err)
+		req := httptest.NewRequest("GET", directChatPath+"/"+user2.Username+"/history", nil)
 		req.Header.Add("Content-Type", "application/vnd.msgpack")
 		req.Header.Set("Cookie", user1.SessionCookie)
 
-		res, err := http.DefaultClient.Do(req)
+		res, err := app.Test(req)
 		require.NoError(err)
 
 		if !assert.Equal(t, http.StatusOK, res.StatusCode) {

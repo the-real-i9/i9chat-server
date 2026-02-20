@@ -4,6 +4,7 @@ package tests
 import (
 	"fmt"
 	"net/http"
+	"net/http/httptest"
 	"os"
 	"testing"
 
@@ -12,7 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func XTestUserAuth(t *testing.T) {
+func TestUserAuth(t *testing.T) {
 	// t.Parallel()
 	require := require.New(t)
 
@@ -32,7 +33,10 @@ func XTestUserAuth(t *testing.T) {
 		reqBody, err := makeReqBody(map[string]any{"email": user1.Email})
 		require.NoError(err)
 
-		res, err := http.Post(signupPath+"/request_new_account", "application/vnd.msgpack", reqBody)
+		req := httptest.NewRequest("POST", signupPath+"/request_new_account", reqBody)
+		req.Header.Add("Content-Type", "application/vnd.msgpack")
+
+		res, err := app.Test(req)
 		require.NoError(err)
 
 		if !assert.Equal(t, http.StatusOK, res.StatusCode) {
@@ -58,12 +62,11 @@ func XTestUserAuth(t *testing.T) {
 		reqBody, err := makeReqBody(map[string]any{"code": "000111"})
 		require.NoError(err)
 
-		req, err := http.NewRequest("POST", signupPath+"/verify_email", reqBody)
-		require.NoError(err)
+		req := httptest.NewRequest("POST", signupPath+"/verify_email", reqBody)
 		req.Header.Set("Cookie", user1.SessionCookie)
 		req.Header.Add("Content-Type", "application/vnd.msgpack")
 
-		res, err := http.DefaultClient.Do(req)
+		res, err := app.Test(req)
 		require.NoError(err)
 
 		if !assert.Equal(t, http.StatusBadRequest, res.StatusCode) {
@@ -85,12 +88,11 @@ func XTestUserAuth(t *testing.T) {
 		reqBody, err := makeReqBody(map[string]any{"code": os.Getenv("DUMMY_TOKEN")})
 		require.NoError(err)
 
-		req, err := http.NewRequest("POST", signupPath+"/verify_email", reqBody)
-		require.NoError(err)
+		req := httptest.NewRequest("POST", signupPath+"/verify_email", reqBody)
 		req.Header.Set("Cookie", user1.SessionCookie)
 		req.Header.Add("Content-Type", "application/vnd.msgpack")
 
-		res, err := http.DefaultClient.Do(req)
+		res, err := app.Test(req)
 		require.NoError(err)
 
 		if !assert.Equal(t, http.StatusOK, res.StatusCode) {
@@ -119,12 +121,11 @@ func XTestUserAuth(t *testing.T) {
 		})
 		require.NoError(err)
 
-		req, err := http.NewRequest("POST", signupPath+"/register_user", reqBody)
-		require.NoError(err)
+		req := httptest.NewRequest("POST", signupPath+"/register_user", reqBody)
 		req.Header.Add("Content-Type", "application/vnd.msgpack")
 		req.Header.Set("Cookie", user1.SessionCookie)
 
-		res, err := http.DefaultClient.Do(req)
+		res, err := app.Test(req)
 		require.NoError(err)
 
 		if !assert.Equal(t, http.StatusCreated, res.StatusCode) {
@@ -148,11 +149,10 @@ func XTestUserAuth(t *testing.T) {
 	{
 		t.Log("Action: user1 signs out")
 
-		req, err := http.NewRequest("GET", signoutPath, nil)
-		require.NoError(err)
+		req := httptest.NewRequest("GET", signoutPath, nil)
 		req.Header.Set("Cookie", user1.SessionCookie)
 
-		res, err := http.DefaultClient.Do(req)
+		res, err := app.Test(req)
 		require.NoError(err)
 
 		if !assert.Equal(t, http.StatusOK, res.StatusCode) {
@@ -177,7 +177,10 @@ func XTestUserAuth(t *testing.T) {
 		})
 		require.NoError(err)
 
-		res, err := http.Post(signinPath, "application/vnd.msgpack", reqBody)
+		req := httptest.NewRequest("POST", signinPath, reqBody)
+		req.Header.Add("Content-Type", "application/vnd.msgpack")
+
+		res, err := app.Test(req)
 		require.NoError(err)
 
 		if !assert.Equal(t, http.StatusNotFound, res.StatusCode) {
@@ -202,7 +205,10 @@ func XTestUserAuth(t *testing.T) {
 		})
 		require.NoError(err)
 
-		res, err := http.Post(signinPath, "application/vnd.msgpack", reqBody)
+		req := httptest.NewRequest("POST", signinPath, reqBody)
+		req.Header.Add("Content-Type", "application/vnd.msgpack")
+
+		res, err := app.Test(req)
 		require.NoError(err)
 
 		if !assert.Equal(t, http.StatusOK, res.StatusCode) {
@@ -227,7 +233,10 @@ func XTestUserAuth(t *testing.T) {
 		reqBody, err := makeReqBody(map[string]any{"email": user1.Email})
 		require.NoError(err)
 
-		res, err := http.Post(signupPath+"/request_new_account", "application/vnd.msgpack", reqBody)
+		req := httptest.NewRequest("POST", signupPath+"/request_new_account", reqBody)
+		req.Header.Add("Content-Type", "application/vnd.msgpack")
+
+		res, err := app.Test(req)
 		require.NoError(err)
 
 		if !assert.Equal(t, http.StatusConflict, res.StatusCode) {

@@ -5,6 +5,7 @@ import (
 	"i9chat/src/appGlobals"
 	"i9chat/src/helpers"
 	"net/http"
+	"net/http/httptest"
 	"os"
 	"testing"
 	"time"
@@ -13,9 +14,10 @@ import (
 	"github.com/maxatome/go-testdeep/td"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/vmihailenco/msgpack/v5"
 )
 
-func XTestGroupChat(t *testing.T) {
+func TestGroupChat(t *testing.T) {
 	// t.Parallel()
 	require := require.New(t)
 
@@ -78,7 +80,10 @@ func XTestGroupChat(t *testing.T) {
 				reqBody, err := makeReqBody(map[string]any{"email": user.Email})
 				require.NoError(err)
 
-				res, err := http.Post(signupPath+"/request_new_account", "application/vnd.msgpack", reqBody)
+				req := httptest.NewRequest("POST", signupPath+"/request_new_account", reqBody)
+				req.Header.Add("Content-Type", "application/vnd.msgpack")
+
+				res, err := app.Test(req)
 				require.NoError(err)
 
 				if !assert.Equal(t, http.StatusOK, res.StatusCode) {
@@ -102,12 +107,11 @@ func XTestGroupChat(t *testing.T) {
 				reqBody, err := makeReqBody(map[string]any{"code": os.Getenv("DUMMY_TOKEN")})
 				require.NoError(err)
 
-				req, err := http.NewRequest("POST", signupPath+"/verify_email", reqBody)
-				require.NoError(err)
+				req := httptest.NewRequest("POST", signupPath+"/verify_email", reqBody)
 				req.Header.Set("Cookie", user.SessionCookie)
 				req.Header.Add("Content-Type", "application/vnd.msgpack")
 
-				res, err := http.DefaultClient.Do(req)
+				res, err := app.Test(req)
 				require.NoError(err)
 
 				if !assert.Equal(t, http.StatusOK, res.StatusCode) {
@@ -134,12 +138,11 @@ func XTestGroupChat(t *testing.T) {
 				})
 				require.NoError(err)
 
-				req, err := http.NewRequest("POST", signupPath+"/register_user", reqBody)
-				require.NoError(err)
+				req := httptest.NewRequest("POST", signupPath+"/register_user", reqBody)
 				req.Header.Add("Content-Type", "application/vnd.msgpack")
 				req.Header.Set("Cookie", user.SessionCookie)
 
-				res, err := http.DefaultClient.Do(req)
+				res, err := app.Test(req)
 				require.NoError(err)
 
 				if !assert.Equal(t, http.StatusCreated, res.StatusCode) {
@@ -195,9 +198,14 @@ func XTestGroupChat(t *testing.T) {
 
 					var wsMsg map[string]any
 
-					if err := userWSConn.ReadJSON(&wsMsg); err != nil {
+					msgT, wsMsgBt, err := userWSConn.ReadMessage()
+					if err != nil {
 						break
 					}
+					require.Equal(websocket.BinaryMessage, msgT)
+
+					err = msgpack.Unmarshal(wsMsgBt, &wsMsg)
+					require.NoError(err)
 
 					if wsMsg == nil {
 						continue
@@ -227,12 +235,11 @@ func XTestGroupChat(t *testing.T) {
 		reqBody, err := makeReqBody(map[string]any{"pic_mime": contentType, "pic_size": [3]int64{fileInfo.Size(), fileInfo.Size(), fileInfo.Size()}})
 		require.NoError(err)
 
-		req, err := http.NewRequest("POST", groupChatPath+"/group_pic_upload/authorize", reqBody)
-		require.NoError(err)
+		req := httptest.NewRequest("POST", groupChatPath+"/group_pic_upload/authorize", reqBody)
 		req.Header.Set("Cookie", user1.SessionCookie)
 		req.Header.Add("Content-Type", "application/vnd.msgpack")
 
-		res, err := http.DefaultClient.Do(req)
+		res, err := app.Test(req)
 		require.NoError(err)
 
 		if !assert.Equal(t, http.StatusOK, res.StatusCode) {
@@ -306,12 +313,11 @@ func XTestGroupChat(t *testing.T) {
 		})
 		require.NoError(err)
 
-		req, err := http.NewRequest("POST", groupChatPath+"/new", reqBody)
-		require.NoError(err)
+		req := httptest.NewRequest("POST", groupChatPath+"/new", reqBody)
 		req.Header.Add("Content-Type", "application/vnd.msgpack")
 		req.Header.Set("Cookie", user1.SessionCookie)
 
-		res, err := http.DefaultClient.Do(req)
+		res, err := app.Test(req)
 		require.NoError(err)
 
 		if !assert.Equal(t, http.StatusCreated, res.StatusCode) {
@@ -325,10 +331,14 @@ func XTestGroupChat(t *testing.T) {
 		require.NoError(err)
 
 		td.Cmp(td.Require(t), rb, td.SuperMapOf(map[string]any{
-			"group": td.SuperMapOf(map[string]any{
-				"id":          td.Ignore(),
-				"name":        newGroup.Name,
-				"description": newGroup.Description,
+			"chat": td.SuperMapOf(map[string]any{
+				"type": "group",
+				"group": td.SuperMapOf(map[string]any{
+					"id":          td.Ignore(),
+					"name":        newGroup.Name,
+					"description": newGroup.Description,
+				}, nil),
+				"cursor": td.Ignore(),
 			}, nil),
 			"history": td.Contains(td.SuperMapOf(map[string]any{
 				"che_type": "group activity",
@@ -336,17 +346,21 @@ func XTestGroupChat(t *testing.T) {
 			}, nil)),
 		}, nil))
 
-		newGroup.Id = rb["group"].(map[string]any)["id"].(string)
+		newGroup.Id = rb["chat"].(map[string]any)["group"].(map[string]any)["id"].(string)
 
 		user2RecvNewGroup := <-user2.ServerEventMsg
 
 		td.Cmp(td.Require(t), user2RecvNewGroup, td.Map(map[string]any{
 			"event": "new group chat",
 			"data": td.SuperMapOf(map[string]any{
-				"group": td.SuperMapOf(map[string]any{
-					"id":          newGroup.Id,
-					"name":        newGroup.Name,
-					"description": newGroup.Description,
+				"chat": td.SuperMapOf(map[string]any{
+					"type": "group",
+					"group": td.SuperMapOf(map[string]any{
+						"id":          newGroup.Id,
+						"name":        newGroup.Name,
+						"description": newGroup.Description,
+					}, nil),
+					"cursor": td.Ignore(),
 				}, nil),
 				"history": td.Contains(td.SuperMapOf(map[string]any{
 					"che_type": "group activity",
@@ -362,12 +376,11 @@ func XTestGroupChat(t *testing.T) {
 		reqBody, err := makeReqBody(map[string]any{})
 		require.NoError(err)
 
-		req, err := http.NewRequest("POST", groupChatPath+"/"+newGroup.Id+"/execute_action/join", reqBody)
-		require.NoError(err)
+		req := httptest.NewRequest("POST", groupChatPath+"/"+newGroup.Id+"/execute_action/join", reqBody)
 		req.Header.Add("Content-Type", "application/vnd.msgpack")
 		req.Header.Set("Cookie", user3.SessionCookie)
 
-		res, err := http.DefaultClient.Do(req)
+		res, err := app.Test(req)
 		require.NoError(err)
 
 		if !assert.Equal(t, http.StatusOK, res.StatusCode) {
@@ -381,10 +394,14 @@ func XTestGroupChat(t *testing.T) {
 		require.NoError(err)
 
 		td.Cmp(td.Require(t), rb, td.SuperMapOf(map[string]any{
-			"group": td.SuperMapOf(map[string]any{
-				"id":          newGroup.Id,
-				"name":        newGroup.Name,
-				"description": newGroup.Description,
+			"chat": td.SuperMapOf(map[string]any{
+				"type": "group",
+				"group": td.SuperMapOf(map[string]any{
+					"id":          newGroup.Id,
+					"name":        newGroup.Name,
+					"description": newGroup.Description,
+				}, nil),
+				"cursor": td.Ignore(),
 			}, nil),
 			"history": td.Contains(td.SuperMapOf(map[string]any{
 				"che_type": "group activity",
@@ -395,20 +412,26 @@ func XTestGroupChat(t *testing.T) {
 		user1GCJoinNotif := <-user1.ServerEventMsg
 
 		td.Cmp(td.Require(t), user1GCJoinNotif, td.Map(map[string]any{
-			"event": "group chat: new activity",
+			"event": "group chat: new che: group activity",
 			"data": td.Map(map[string]any{
-				"info":     user3.Username + " joined",
 				"group_id": newGroup.Id,
+				"che": td.SuperMapOf(map[string]any{
+					"che_type": "group activity",
+					"info":     user3.Username + " joined",
+				}, nil),
 			}, nil),
 		}, nil))
 
 		user2GCJoinNotif := <-user2.ServerEventMsg
 
 		td.Cmp(td.Require(t), user2GCJoinNotif, td.Map(map[string]any{
-			"event": "group chat: new activity",
+			"event": "group chat: new che: group activity",
 			"data": td.Map(map[string]any{
-				"info":     user3.Username + " joined",
 				"group_id": newGroup.Id,
+				"che": td.SuperMapOf(map[string]any{
+					"che_type": "group activity",
+					"info":     user3.Username + " joined",
+				}, nil),
 			}, nil),
 		}, nil))
 	}
@@ -421,12 +444,11 @@ func XTestGroupChat(t *testing.T) {
 		})
 		require.NoError(err)
 
-		req, err := http.NewRequest("POST", groupChatPath+"/"+newGroup.Id+"/execute_action/make user admin", reqBody)
-		require.NoError(err)
+		req := httptest.NewRequest("POST", groupChatPath+"/"+newGroup.Id+"/execute_action/make-user-admin", reqBody)
 		req.Header.Add("Content-Type", "application/vnd.msgpack")
 		req.Header.Set("Cookie", user1.SessionCookie)
 
-		res, err := http.DefaultClient.Do(req)
+		res, err := app.Test(req)
 		require.NoError(err)
 
 		if !assert.Equal(t, http.StatusOK, res.StatusCode) {
@@ -436,28 +458,37 @@ func XTestGroupChat(t *testing.T) {
 			return
 		}
 
-		rb, err := succResBody[string](res.Body)
+		rb, err := succResBody[map[string]any](res.Body)
 		require.NoError(err)
 
-		require.Equal(fmt.Sprintf("You made %s group admin", user2.Username), rb)
+		td.Cmp(td.Require(t), rb, td.SuperMapOf(map[string]any{
+			"che_type": "group activity",
+			"info":     fmt.Sprintf("You made %s group admin", user2.Username),
+		}, nil))
 
 		user2GCNewAdminNotif := <-user2.ServerEventMsg
 
 		td.Cmp(td.Require(t), user2GCNewAdminNotif, td.Map(map[string]any{
-			"event": "group chat: new activity",
+			"event": "group chat: new che: group activity",
 			"data": td.Map(map[string]any{
-				"info":     fmt.Sprintf("%s made you group admin", user1.Username),
 				"group_id": newGroup.Id,
+				"che": td.SuperMapOf(map[string]any{
+					"che_type": "group activity",
+					"info":     fmt.Sprintf("%s made you group admin", user1.Username),
+				}, nil),
 			}, nil),
 		}, nil))
 
 		user3GCNewAdminNotif := <-user3.ServerEventMsg
 
 		td.Cmp(td.Require(t), user3GCNewAdminNotif, td.Map(map[string]any{
-			"event": "group chat: new activity",
+			"event": "group chat: new che: group activity",
 			"data": td.Map(map[string]any{
-				"info":     fmt.Sprintf("%s made %s group admin", user1.Username, user2.Username),
 				"group_id": newGroup.Id,
+				"che": td.SuperMapOf(map[string]any{
+					"che_type": "group activity",
+					"info":     fmt.Sprintf("%s made %s group admin", user1.Username, user2.Username),
+				}, nil),
 			}, nil),
 		}, nil))
 	}
@@ -470,12 +501,11 @@ func XTestGroupChat(t *testing.T) {
 		})
 		require.NoError(err)
 
-		req, err := http.NewRequest("POST", groupChatPath+"/"+newGroup.Id+"/execute_action/add users", reqBody)
-		require.NoError(err)
+		req := httptest.NewRequest("POST", groupChatPath+"/"+newGroup.Id+"/execute_action/add-users", reqBody)
 		req.Header.Add("Content-Type", "application/vnd.msgpack")
 		req.Header.Set("Cookie", user2.SessionCookie)
 
-		res, err := http.DefaultClient.Do(req)
+		res, err := app.Test(req)
 		require.NoError(err)
 
 		if !assert.Equal(t, http.StatusOK, res.StatusCode) {
@@ -485,20 +515,27 @@ func XTestGroupChat(t *testing.T) {
 			return
 		}
 
-		rb, err := succResBody[string](res.Body)
+		rb, err := succResBody[map[string]any](res.Body)
 		require.NoError(err)
 
-		require.Equal(fmt.Sprintf("You added %s", helpers.JoinWithCommaAnd(user4.Username, user5.Username)), rb)
+		td.Cmp(td.Require(t), rb, td.SuperMapOf(map[string]any{
+			"che_type": "group activity",
+			"info":     fmt.Sprintf("You added %s", helpers.JoinWithCommaAnd(user4.Username, user5.Username)),
+		}, nil))
 
 		user4GCUserAddedNotif := <-user4.ServerEventMsg
 
 		td.Cmp(td.Require(t), user4GCUserAddedNotif, td.Map(map[string]any{
 			"event": "new group chat",
 			"data": td.SuperMapOf(map[string]any{
-				"group": td.SuperMapOf(map[string]any{
-					"id":          newGroup.Id,
-					"name":        newGroup.Name,
-					"description": newGroup.Description,
+				"chat": td.SuperMapOf(map[string]any{
+					"type": "group",
+					"group": td.SuperMapOf(map[string]any{
+						"id":          newGroup.Id,
+						"name":        newGroup.Name,
+						"description": newGroup.Description,
+					}, nil),
+					"cursor": td.Ignore(),
 				}, nil),
 				"history": td.Contains(td.SuperMapOf(map[string]any{
 					"che_type": "group activity",
@@ -512,10 +549,14 @@ func XTestGroupChat(t *testing.T) {
 		td.Cmp(td.Require(t), user5GCUserAddedNotif, td.Map(map[string]any{
 			"event": "new group chat",
 			"data": td.SuperMapOf(map[string]any{
-				"group": td.SuperMapOf(map[string]any{
-					"id":          newGroup.Id,
-					"name":        newGroup.Name,
-					"description": newGroup.Description,
+				"chat": td.SuperMapOf(map[string]any{
+					"type": "group",
+					"group": td.SuperMapOf(map[string]any{
+						"id":          newGroup.Id,
+						"name":        newGroup.Name,
+						"description": newGroup.Description,
+					}, nil),
+					"cursor": td.Ignore(),
 				}, nil),
 				"history": td.Contains(td.SuperMapOf(map[string]any{
 					"che_type": "group activity",
@@ -527,20 +568,26 @@ func XTestGroupChat(t *testing.T) {
 		user1GCNewUsersAddedNotif := <-user1.ServerEventMsg
 
 		td.Cmp(td.Require(t), user1GCNewUsersAddedNotif, td.Map(map[string]any{
-			"event": "group chat: new activity",
+			"event": "group chat: new che: group activity",
 			"data": td.Map(map[string]any{
-				"info":     fmt.Sprintf("%s added %s", user2.Username, helpers.JoinWithCommaAnd(user4.Username, user5.Username)),
 				"group_id": newGroup.Id,
+				"che": td.SuperMapOf(map[string]any{
+					"che_type": "group activity",
+					"info":     fmt.Sprintf("%s added %s", user2.Username, helpers.JoinWithCommaAnd(user4.Username, user5.Username)),
+				}, nil),
 			}, nil),
 		}, nil))
 
 		user3GCNewUsersAddedNotif := <-user3.ServerEventMsg
 
 		td.Cmp(td.Require(t), user3GCNewUsersAddedNotif, td.Map(map[string]any{
-			"event": "group chat: new activity",
+			"event": "group chat: new che: group activity",
 			"data": td.Map(map[string]any{
-				"info":     fmt.Sprintf("%s added %s", user2.Username, helpers.JoinWithCommaAnd(user4.Username, user5.Username)),
 				"group_id": newGroup.Id,
+				"che": td.SuperMapOf(map[string]any{
+					"che_type": "group activity",
+					"info":     fmt.Sprintf("%s added %s", user2.Username, helpers.JoinWithCommaAnd(user4.Username, user5.Username)),
+				}, nil),
 			}, nil),
 		}, nil))
 	}
@@ -557,12 +604,11 @@ func XTestGroupChat(t *testing.T) {
 		})
 		require.NoError(err)
 
-		req, err := http.NewRequest("POST", groupChatPath+"/"+newGroup.Id+"/execute_action/change name", reqBody)
-		require.NoError(err)
+		req := httptest.NewRequest("POST", groupChatPath+"/"+newGroup.Id+"/execute_action/change-name", reqBody)
 		req.Header.Add("Content-Type", "application/vnd.msgpack")
 		req.Header.Set("Cookie", user1.SessionCookie)
 
-		res, err := http.DefaultClient.Do(req)
+		res, err := app.Test(req)
 		require.NoError(err)
 
 		if !assert.Equal(t, http.StatusOK, res.StatusCode) {
@@ -572,48 +618,63 @@ func XTestGroupChat(t *testing.T) {
 			return
 		}
 
-		rb, err := succResBody[string](res.Body)
+		rb, err := succResBody[map[string]any](res.Body)
 		require.NoError(err)
 
-		require.Equal(fmt.Sprintf("You changed group name from %s to %s", oldGroupName, newGroup.Name), rb)
+		td.Cmp(td.Require(t), rb, td.SuperMapOf(map[string]any{
+			"che_type": "group activity",
+			"info":     fmt.Sprintf("You changed group name from %s to %s", oldGroupName, newGroup.Name),
+		}, nil))
 
 		user2GCNameChangeNotif := <-user2.ServerEventMsg
 
 		td.Cmp(td.Require(t), user2GCNameChangeNotif, td.Map(map[string]any{
-			"event": "group chat: new activity",
+			"event": "group chat: new che: group activity",
 			"data": td.Map(map[string]any{
-				"info":     fmt.Sprintf("%s changed group name from %s to %s", user1.Username, oldGroupName, newGroup.Name),
 				"group_id": newGroup.Id,
+				"che": td.SuperMapOf(map[string]any{
+					"che_type": "group activity",
+					"info":     fmt.Sprintf("%s changed group name from %s to %s", user1.Username, oldGroupName, newGroup.Name),
+				}, nil),
 			}, nil),
 		}, nil))
 
 		user3GCNameChangeNotif := <-user3.ServerEventMsg
 
 		td.Cmp(td.Require(t), user3GCNameChangeNotif, td.Map(map[string]any{
-			"event": "group chat: new activity",
+			"event": "group chat: new che: group activity",
 			"data": td.Map(map[string]any{
-				"info":     fmt.Sprintf("%s changed group name from %s to %s", user1.Username, oldGroupName, newGroup.Name),
 				"group_id": newGroup.Id,
+				"che": td.SuperMapOf(map[string]any{
+					"che_type": "group activity",
+					"info":     fmt.Sprintf("%s changed group name from %s to %s", user1.Username, oldGroupName, newGroup.Name),
+				}, nil),
 			}, nil),
 		}, nil))
 
 		user4GCNameChangeNotif := <-user4.ServerEventMsg
 
 		td.Cmp(td.Require(t), user4GCNameChangeNotif, td.Map(map[string]any{
-			"event": "group chat: new activity",
+			"event": "group chat: new che: group activity",
 			"data": td.Map(map[string]any{
-				"info":     fmt.Sprintf("%s changed group name from %s to %s", user1.Username, oldGroupName, newGroup.Name),
 				"group_id": newGroup.Id,
+				"che": td.SuperMapOf(map[string]any{
+					"che_type": "group activity",
+					"info":     fmt.Sprintf("%s changed group name from %s to %s", user1.Username, oldGroupName, newGroup.Name),
+				}, nil),
 			}, nil),
 		}, nil))
 
 		user5GCNameChangeNotif := <-user5.ServerEventMsg
 
 		td.Cmp(td.Require(t), user5GCNameChangeNotif, td.Map(map[string]any{
-			"event": "group chat: new activity",
+			"event": "group chat: new che: group activity",
 			"data": td.Map(map[string]any{
-				"info":     fmt.Sprintf("%s changed group name from %s to %s", user1.Username, oldGroupName, newGroup.Name),
 				"group_id": newGroup.Id,
+				"che": td.SuperMapOf(map[string]any{
+					"che_type": "group activity",
+					"info":     fmt.Sprintf("%s changed group name from %s to %s", user1.Username, oldGroupName, newGroup.Name),
+				}, nil),
 			}, nil),
 		}, nil))
 	}
@@ -630,12 +691,11 @@ func XTestGroupChat(t *testing.T) {
 		})
 		require.NoError(err)
 
-		req, err := http.NewRequest("POST", groupChatPath+"/"+newGroup.Id+"/execute_action/change description", reqBody)
-		require.NoError(err)
+		req := httptest.NewRequest("POST", groupChatPath+"/"+newGroup.Id+"/execute_action/change-description", reqBody)
 		req.Header.Add("Content-Type", "application/vnd.msgpack")
 		req.Header.Set("Cookie", user1.SessionCookie)
 
-		res, err := http.DefaultClient.Do(req)
+		res, err := app.Test(req)
 		require.NoError(err)
 
 		if !assert.Equal(t, http.StatusOK, res.StatusCode) {
@@ -645,48 +705,63 @@ func XTestGroupChat(t *testing.T) {
 			return
 		}
 
-		rb, err := succResBody[string](res.Body)
+		rb, err := succResBody[map[string]any](res.Body)
 		require.NoError(err)
 
-		require.Equal(fmt.Sprintf("You changed group description from %s to %s", oldGroupDescription, newGroup.Description), rb)
+		td.Cmp(td.Require(t), rb, td.SuperMapOf(map[string]any{
+			"che_type": "group activity",
+			"info":     fmt.Sprintf("You changed group description from %s to %s", oldGroupDescription, newGroup.Description),
+		}, nil))
 
 		user2GCDescriptionChangeNotif := <-user2.ServerEventMsg
 
 		td.Cmp(td.Require(t), user2GCDescriptionChangeNotif, td.Map(map[string]any{
-			"event": "group chat: new activity",
+			"event": "group chat: new che: group activity",
 			"data": td.Map(map[string]any{
-				"info":     fmt.Sprintf("%s changed group description from %s to %s", user1.Username, oldGroupDescription, newGroup.Description),
 				"group_id": newGroup.Id,
+				"che": td.SuperMapOf(map[string]any{
+					"che_type": "group activity",
+					"info":     fmt.Sprintf("%s changed group description from %s to %s", user1.Username, oldGroupDescription, newGroup.Description),
+				}, nil),
 			}, nil),
 		}, nil))
 
 		user3GCDescriptionChangeNotif := <-user3.ServerEventMsg
 
 		td.Cmp(td.Require(t), user3GCDescriptionChangeNotif, td.Map(map[string]any{
-			"event": "group chat: new activity",
+			"event": "group chat: new che: group activity",
 			"data": td.Map(map[string]any{
-				"info":     fmt.Sprintf("%s changed group description from %s to %s", user1.Username, oldGroupDescription, newGroup.Description),
 				"group_id": newGroup.Id,
+				"che": td.SuperMapOf(map[string]any{
+					"che_type": "group activity",
+					"info":     fmt.Sprintf("%s changed group description from %s to %s", user1.Username, oldGroupDescription, newGroup.Description),
+				}, nil),
 			}, nil),
 		}, nil))
 
 		user4GCDescriptionChangeNotif := <-user4.ServerEventMsg
 
 		td.Cmp(td.Require(t), user4GCDescriptionChangeNotif, td.Map(map[string]any{
-			"event": "group chat: new activity",
+			"event": "group chat: new che: group activity",
 			"data": td.Map(map[string]any{
-				"info":     fmt.Sprintf("%s changed group description from %s to %s", user1.Username, oldGroupDescription, newGroup.Description),
 				"group_id": newGroup.Id,
+				"che": td.SuperMapOf(map[string]any{
+					"che_type": "group activity",
+					"info":     fmt.Sprintf("%s changed group description from %s to %s", user1.Username, oldGroupDescription, newGroup.Description),
+				}, nil),
 			}, nil),
 		}, nil))
 
 		user5GCDescriptionChangeNotif := <-user5.ServerEventMsg
 
 		td.Cmp(td.Require(t), user5GCDescriptionChangeNotif, td.Map(map[string]any{
-			"event": "group chat: new activity",
+			"event": "group chat: new che: group activity",
 			"data": td.Map(map[string]any{
-				"info":     fmt.Sprintf("%s changed group description from %s to %s", user1.Username, oldGroupDescription, newGroup.Description),
 				"group_id": newGroup.Id,
+				"che": td.SuperMapOf(map[string]any{
+					"che_type": "group activity",
+					"info":     fmt.Sprintf("%s changed group description from %s to %s", user1.Username, oldGroupDescription, newGroup.Description),
+				}, nil),
 			}, nil),
 		}, nil))
 	}
@@ -701,12 +776,11 @@ func XTestGroupChat(t *testing.T) {
 		})
 		require.NoError(err)
 
-		req, err := http.NewRequest("POST", groupChatPath+"/"+newGroup.Id+"/execute_action/change picture", reqBody)
-		require.NoError(err)
+		req := httptest.NewRequest("POST", groupChatPath+"/"+newGroup.Id+"/execute_action/change-picture", reqBody)
 		req.Header.Add("Content-Type", "application/vnd.msgpack")
 		req.Header.Set("Cookie", user2.SessionCookie)
 
-		res, err := http.DefaultClient.Do(req)
+		res, err := app.Test(req)
 		require.NoError(err)
 
 		if !assert.Equal(t, http.StatusOK, res.StatusCode) {
@@ -716,48 +790,63 @@ func XTestGroupChat(t *testing.T) {
 			return
 		}
 
-		rb, err := succResBody[string](res.Body)
+		rb, err := succResBody[map[string]any](res.Body)
 		require.NoError(err)
 
-		require.Equal("You changed group picture", rb)
+		td.Cmp(td.Require(t), rb, td.SuperMapOf(map[string]any{
+			"che_type": "group activity",
+			"info":     "You changed group picture",
+		}, nil))
 
 		user1GCPictureChangeNotif := <-user1.ServerEventMsg
 
 		td.Cmp(td.Require(t), user1GCPictureChangeNotif, td.Map(map[string]any{
-			"event": "group chat: new activity",
+			"event": "group chat: new che: group activity",
 			"data": td.Map(map[string]any{
-				"info":     fmt.Sprintf("%s changed group picture", user2.Username),
 				"group_id": newGroup.Id,
+				"che": td.SuperMapOf(map[string]any{
+					"che_type": "group activity",
+					"info":     fmt.Sprintf("%s changed group picture", user2.Username),
+				}, nil),
 			}, nil),
 		}, nil))
 
 		user3GCPictureChangeNotif := <-user3.ServerEventMsg
 
 		td.Cmp(td.Require(t), user3GCPictureChangeNotif, td.Map(map[string]any{
-			"event": "group chat: new activity",
+			"event": "group chat: new che: group activity",
 			"data": td.Map(map[string]any{
-				"info":     fmt.Sprintf("%s changed group picture", user2.Username),
 				"group_id": newGroup.Id,
+				"che": td.SuperMapOf(map[string]any{
+					"che_type": "group activity",
+					"info":     fmt.Sprintf("%s changed group picture", user2.Username),
+				}, nil),
 			}, nil),
 		}, nil))
 
 		user4GCPictureChangeNotif := <-user4.ServerEventMsg
 
 		td.Cmp(td.Require(t), user4GCPictureChangeNotif, td.Map(map[string]any{
-			"event": "group chat: new activity",
+			"event": "group chat: new che: group activity",
 			"data": td.Map(map[string]any{
-				"info":     fmt.Sprintf("%s changed group picture", user2.Username),
 				"group_id": newGroup.Id,
+				"che": td.SuperMapOf(map[string]any{
+					"che_type": "group activity",
+					"info":     fmt.Sprintf("%s changed group picture", user2.Username),
+				}, nil),
 			}, nil),
 		}, nil))
 
 		user5GCPictureChangeNotif := <-user5.ServerEventMsg
 
 		td.Cmp(td.Require(t), user5GCPictureChangeNotif, td.Map(map[string]any{
-			"event": "group chat: new activity",
+			"event": "group chat: new che: group activity",
 			"data": td.Map(map[string]any{
-				"info":     fmt.Sprintf("%s changed group picture", user2.Username),
 				"group_id": newGroup.Id,
+				"che": td.SuperMapOf(map[string]any{
+					"che_type": "group activity",
+					"info":     fmt.Sprintf("%s changed group picture", user2.Username),
+				}, nil),
 			}, nil),
 		}, nil))
 	}
@@ -770,12 +859,11 @@ func XTestGroupChat(t *testing.T) {
 		})
 		require.NoError(err)
 
-		req, err := http.NewRequest("POST", groupChatPath+"/"+newGroup.Id+"/execute_action/remove user from admins", reqBody)
-		require.NoError(err)
+		req := httptest.NewRequest("POST", groupChatPath+"/"+newGroup.Id+"/execute_action/remove-user-from-admins", reqBody)
 		req.Header.Add("Content-Type", "application/vnd.msgpack")
 		req.Header.Set("Cookie", user2.SessionCookie)
 
-		res, err := http.DefaultClient.Do(req)
+		res, err := app.Test(req)
 		require.NoError(err)
 
 		if !assert.Equal(t, http.StatusOK, res.StatusCode) {
@@ -785,48 +873,63 @@ func XTestGroupChat(t *testing.T) {
 			return
 		}
 
-		rb, err := succResBody[string](res.Body)
+		rb, err := succResBody[map[string]any](res.Body)
 		require.NoError(err)
 
-		require.Equal(fmt.Sprintf("You removed %s from group admins", user1.Username), rb)
+		td.Cmp(td.Require(t), rb, td.SuperMapOf(map[string]any{
+			"che_type": "group activity",
+			"info":     fmt.Sprintf("You removed %s from group admins", user1.Username),
+		}, nil))
 
 		user1GCAdminRemovalNotif := <-user1.ServerEventMsg
 
 		td.Cmp(td.Require(t), user1GCAdminRemovalNotif, td.Map(map[string]any{
-			"event": "group chat: new activity",
+			"event": "group chat: new che: group activity",
 			"data": td.Map(map[string]any{
-				"info":     fmt.Sprintf("%s removed you from group admins", user2.Username),
 				"group_id": newGroup.Id,
+				"che": td.SuperMapOf(map[string]any{
+					"che_type": "group activity",
+					"info":     fmt.Sprintf("%s removed you from group admins", user2.Username),
+				}, nil),
 			}, nil),
 		}, nil))
 
 		user3GCAdminRemovalNotif := <-user3.ServerEventMsg
 
 		td.Cmp(td.Require(t), user3GCAdminRemovalNotif, td.Map(map[string]any{
-			"event": "group chat: new activity",
+			"event": "group chat: new che: group activity",
 			"data": td.Map(map[string]any{
-				"info":     fmt.Sprintf("%s removed %s from group admins", user2.Username, user1.Username),
 				"group_id": newGroup.Id,
+				"che": td.SuperMapOf(map[string]any{
+					"che_type": "group activity",
+					"info":     fmt.Sprintf("%s removed %s from group admins", user2.Username, user1.Username),
+				}, nil),
 			}, nil),
 		}, nil))
 
 		user4GCAdminRemovalNotif := <-user4.ServerEventMsg
 
 		td.Cmp(td.Require(t), user4GCAdminRemovalNotif, td.Map(map[string]any{
-			"event": "group chat: new activity",
+			"event": "group chat: new che: group activity",
 			"data": td.Map(map[string]any{
-				"info":     fmt.Sprintf("%s removed %s from group admins", user2.Username, user1.Username),
 				"group_id": newGroup.Id,
+				"che": td.SuperMapOf(map[string]any{
+					"che_type": "group activity",
+					"info":     fmt.Sprintf("%s removed %s from group admins", user2.Username, user1.Username),
+				}, nil),
 			}, nil),
 		}, nil))
 
 		user5GCAdminRemovalNotif := <-user5.ServerEventMsg
 
 		td.Cmp(td.Require(t), user5GCAdminRemovalNotif, td.Map(map[string]any{
-			"event": "group chat: new activity",
+			"event": "group chat: new che: group activity",
 			"data": td.Map(map[string]any{
-				"info":     fmt.Sprintf("%s removed %s from group admins", user2.Username, user1.Username),
 				"group_id": newGroup.Id,
+				"che": td.SuperMapOf(map[string]any{
+					"che_type": "group activity",
+					"info":     fmt.Sprintf("%s removed %s from group admins", user2.Username, user1.Username),
+				}, nil),
 			}, nil),
 		}, nil))
 	}
@@ -839,12 +942,11 @@ func XTestGroupChat(t *testing.T) {
 		})
 		require.NoError(err)
 
-		req, err := http.NewRequest("POST", groupChatPath+"/"+newGroup.Id+"/execute_action/remove user", reqBody)
-		require.NoError(err)
+		req := httptest.NewRequest("POST", groupChatPath+"/"+newGroup.Id+"/execute_action/remove-user", reqBody)
 		req.Header.Add("Content-Type", "application/vnd.msgpack")
 		req.Header.Set("Cookie", user2.SessionCookie)
 
-		res, err := http.DefaultClient.Do(req)
+		res, err := app.Test(req)
 		require.NoError(err)
 
 		if !assert.Equal(t, http.StatusOK, res.StatusCode) {
@@ -854,48 +956,63 @@ func XTestGroupChat(t *testing.T) {
 			return
 		}
 
-		rb, err := succResBody[string](res.Body)
+		rb, err := succResBody[map[string]any](res.Body)
 		require.NoError(err)
 
-		require.Equal(fmt.Sprintf("You removed %s", user1.Username), rb)
+		td.Cmp(td.Require(t), rb, td.SuperMapOf(map[string]any{
+			"che_type": "group activity",
+			"info":     fmt.Sprintf("You removed %s", user1.Username),
+		}, nil))
 
 		user1GCAdminRemovalNotif := <-user1.ServerEventMsg
 
 		td.Cmp(td.Require(t), user1GCAdminRemovalNotif, td.Map(map[string]any{
-			"event": "group chat: new activity",
+			"event": "group chat: new che: group activity",
 			"data": td.Map(map[string]any{
-				"info":     fmt.Sprintf("%s removed you", user2.Username),
 				"group_id": newGroup.Id,
+				"che": td.SuperMapOf(map[string]any{
+					"che_type": "group activity",
+					"info":     fmt.Sprintf("%s removed you", user2.Username),
+				}, nil),
 			}, nil),
 		}, nil))
 
 		user3GCAdminRemovalNotif := <-user3.ServerEventMsg
 
 		td.Cmp(td.Require(t), user3GCAdminRemovalNotif, td.Map(map[string]any{
-			"event": "group chat: new activity",
+			"event": "group chat: new che: group activity",
 			"data": td.Map(map[string]any{
-				"info":     fmt.Sprintf("%s removed %s", user2.Username, user1.Username),
 				"group_id": newGroup.Id,
+				"che": td.SuperMapOf(map[string]any{
+					"che_type": "group activity",
+					"info":     fmt.Sprintf("%s removed %s", user2.Username, user1.Username),
+				}, nil),
 			}, nil),
 		}, nil))
 
 		user4GCAdminRemovalNotif := <-user4.ServerEventMsg
 
 		td.Cmp(td.Require(t), user4GCAdminRemovalNotif, td.Map(map[string]any{
-			"event": "group chat: new activity",
+			"event": "group chat: new che: group activity",
 			"data": td.Map(map[string]any{
-				"info":     fmt.Sprintf("%s removed %s", user2.Username, user1.Username),
 				"group_id": newGroup.Id,
+				"che": td.SuperMapOf(map[string]any{
+					"che_type": "group activity",
+					"info":     fmt.Sprintf("%s removed %s", user2.Username, user1.Username),
+				}, nil),
 			}, nil),
 		}, nil))
 
 		user5GCAdminRemovalNotif := <-user5.ServerEventMsg
 
 		td.Cmp(td.Require(t), user5GCAdminRemovalNotif, td.Map(map[string]any{
-			"event": "group chat: new activity",
+			"event": "group chat: new che: group activity",
 			"data": td.Map(map[string]any{
-				"info":     fmt.Sprintf("%s removed %s", user2.Username, user1.Username),
 				"group_id": newGroup.Id,
+				"che": td.SuperMapOf(map[string]any{
+					"che_type": "group activity",
+					"info":     fmt.Sprintf("%s removed %s", user2.Username, user1.Username),
+				}, nil),
 			}, nil),
 		}, nil))
 	}
@@ -906,12 +1023,11 @@ func XTestGroupChat(t *testing.T) {
 		reqBody, err := makeReqBody(map[string]any{})
 		require.NoError(err)
 
-		req, err := http.NewRequest("POST", groupChatPath+"/"+newGroup.Id+"/execute_action/leave", reqBody)
-		require.NoError(err)
+		req := httptest.NewRequest("POST", groupChatPath+"/"+newGroup.Id+"/execute_action/leave", reqBody)
 		req.Header.Add("Content-Type", "application/vnd.msgpack")
 		req.Header.Set("Cookie", user3.SessionCookie)
 
-		res, err := http.DefaultClient.Do(req)
+		res, err := app.Test(req)
 		require.NoError(err)
 
 		if !assert.Equal(t, http.StatusOK, res.StatusCode) {
@@ -921,48 +1037,60 @@ func XTestGroupChat(t *testing.T) {
 			return
 		}
 
-		rb, err := succResBody[string](res.Body)
+		rb, err := succResBody[map[string]any](res.Body)
 		require.NoError(err)
 
-		require.Equal("You left", rb)
+		td.Cmp(td.Require(t), rb, td.SuperMapOf(map[string]any{
+			"che_type": "group activity",
+			"info":     "You left",
+		}, nil))
 
 		user2GCLeaveNotif := <-user2.ServerEventMsg
 
 		td.Cmp(td.Require(t), user2GCLeaveNotif, td.Map(map[string]any{
-			"event": "group chat: new activity",
+			"event": "group chat: new che: group activity",
 			"data": td.Map(map[string]any{
-				"info":     user3.Username + " left",
 				"group_id": newGroup.Id,
+				"che": td.SuperMapOf(map[string]any{
+					"che_type": "group activity",
+					"info":     user3.Username + " left",
+				}, nil),
 			}, nil),
 		}, nil))
 
 		user4GCLeaveNotif := <-user4.ServerEventMsg
 
 		td.Cmp(td.Require(t), user4GCLeaveNotif, td.Map(map[string]any{
-			"event": "group chat: new activity",
+			"event": "group chat: new che: group activity",
 			"data": td.Map(map[string]any{
-				"info":     user3.Username + " left",
 				"group_id": newGroup.Id,
+				"che": td.SuperMapOf(map[string]any{
+					"che_type": "group activity",
+					"info":     user3.Username + " left",
+				}, nil),
 			}, nil),
 		}, nil))
 
 		user5GCLeaveNotif := <-user5.ServerEventMsg
 
 		td.Cmp(td.Require(t), user5GCLeaveNotif, td.Map(map[string]any{
-			"event": "group chat: new activity",
+			"event": "group chat: new che: group activity",
 			"data": td.Map(map[string]any{
-				"info":     user3.Username + " left",
 				"group_id": newGroup.Id,
+				"che": td.SuperMapOf(map[string]any{
+					"che_type": "group activity",
+					"info":     user3.Username + " left",
+				}, nil),
 			}, nil),
 		}, nil))
 	}
 
 	{
-		<-(time.NewTimer(300 * time.Millisecond).C)
+		<-(time.NewTimer(500 * time.Millisecond).C)
 
 		t.Log("user2 requests group info")
 
-		err := user2.WSConn.WriteJSON(map[string]any{
+		err := wsWriteMsgPack(user2.WSConn, map[string]any{
 			"action": "group: get info",
 			"data": map[string]any{
 				"groupId": newGroup.Id,
@@ -990,7 +1118,7 @@ func XTestGroupChat(t *testing.T) {
 	{
 		t.Log("Action: user4 sends message to group | other members receives the message")
 
-		err := user4.WSConn.WriteJSON(map[string]any{
+		err := wsWriteMsgPack(user4.WSConn, map[string]any{
 			"action": "group chat: send message",
 			"data": map[string]any{
 				"groupId": newGroup.Id,
@@ -1013,6 +1141,7 @@ func XTestGroupChat(t *testing.T) {
 			"toAction": "group chat: send message",
 			"data": td.Map(map[string]any{
 				"new_msg_id": td.Ignore(),
+				"che_cursor": td.Ignore(),
 			}, nil),
 		}, nil))
 
@@ -1025,10 +1154,12 @@ func XTestGroupChat(t *testing.T) {
 		user2NewMsgReceived := <-user2.ServerEventMsg
 
 		td.Cmp(td.Require(t), user2NewMsgReceived, td.Map(map[string]any{
-			"event": "group chat: new message",
+			"event": "group chat: new che: message",
 			"data": td.Map(map[string]any{
-				"message": td.SuperMapOf(map[string]any{
-					"id": user4NewMsgId,
+				"group_id": newGroup.Id,
+				"che": td.SuperMapOf(map[string]any{
+					"che_type": "message",
+					"id":       user4NewMsgId,
 					"content": td.SuperMapOf(map[string]any{
 						"type": "text",
 						"props": td.SuperMapOf(map[string]any{
@@ -1039,18 +1170,20 @@ func XTestGroupChat(t *testing.T) {
 					"sender": td.SuperMapOf(map[string]any{
 						"username": user4.Username,
 					}, nil),
+					"cursor": td.Ignore(),
 				}, nil),
-				"group_id": newGroup.Id,
 			}, nil),
 		}, nil))
 
 		user5NewMsgReceived := <-user5.ServerEventMsg
 
 		td.Cmp(td.Require(t), user5NewMsgReceived, td.Map(map[string]any{
-			"event": "group chat: new message",
+			"event": "group chat: new che: message",
 			"data": td.Map(map[string]any{
-				"message": td.SuperMapOf(map[string]any{
-					"id": user4NewMsgId,
+				"group_id": newGroup.Id,
+				"che": td.SuperMapOf(map[string]any{
+					"che_type": "message",
+					"id":       user4NewMsgId,
 					"content": td.SuperMapOf(map[string]any{
 						"type": "text",
 						"props": td.SuperMapOf(map[string]any{
@@ -1061,8 +1194,8 @@ func XTestGroupChat(t *testing.T) {
 					"sender": td.SuperMapOf(map[string]any{
 						"username": user4.Username,
 					}, nil),
+					"cursor": td.Ignore(),
 				}, nil),
-				"group_id": newGroup.Id,
 			}, nil),
 		}, nil))
 	}
@@ -1073,11 +1206,11 @@ func XTestGroupChat(t *testing.T) {
 		t.Log("Action: user2 & user5 acknowledges 'delivered'")
 
 		// user2 acknowledges 'delivered'
-		err := user2.WSConn.WriteJSON(map[string]any{
-			"action": "group chat: ack message delivered",
+		err := wsWriteMsgPack(user2.WSConn, map[string]any{
+			"action": "group chat: ack messages delivered",
 			"data": map[string]any{
 				"groupId": newGroup.Id,
-				"msgId":   user4NewMsgId,
+				"msgIds":  []string{user4NewMsgId},
 				"at":      time.Now().UTC().UnixMilli(),
 			},
 		})
@@ -1087,16 +1220,18 @@ func XTestGroupChat(t *testing.T) {
 
 		td.Cmp(td.Require(t), user2ServerReply, td.Map(map[string]any{
 			"event":    "server reply",
-			"toAction": "group chat: ack message delivered",
-			"data":     true,
+			"toAction": "group chat: ack messages delivered",
+			"data": td.Map(map[string]any{
+				"updated_chat_cursor": td.Ignore(),
+			}, nil),
 		}, nil))
 
 		// user5 acknowledges 'delivered'
-		err = user5.WSConn.WriteJSON(map[string]any{
-			"action": "group chat: ack message delivered",
+		err = wsWriteMsgPack(user5.WSConn, map[string]any{
+			"action": "group chat: ack messages delivered",
 			"data": map[string]any{
 				"groupId": newGroup.Id,
-				"msgId":   user4NewMsgId,
+				"msgIds":  []string{user4NewMsgId},
 				"at":      time.Now().UTC().UnixMilli(),
 			},
 		})
@@ -1106,8 +1241,10 @@ func XTestGroupChat(t *testing.T) {
 
 		td.Cmp(td.Require(t), user5ServerReply, td.Map(map[string]any{
 			"event":    "server reply",
-			"toAction": "group chat: ack message delivered",
-			"data":     true,
+			"toAction": "group chat: ack messages delivered",
+			"data": td.Map(map[string]any{
+				"updated_chat_cursor": td.Ignore(),
+			}, nil),
 		}, nil))
 	}
 
@@ -1150,11 +1287,11 @@ func XTestGroupChat(t *testing.T) {
 		t.Log("Action: user2 & user5 then acknowledges 'read'")
 
 		// user5 acknowledges 'read'
-		err := user5.WSConn.WriteJSON(map[string]any{
-			"action": "group chat: ack message read",
+		err := wsWriteMsgPack(user5.WSConn, map[string]any{
+			"action": "group chat: ack messages read",
 			"data": map[string]any{
 				"groupId": newGroup.Id,
-				"msgId":   user4NewMsgId,
+				"msgIds":  []string{user4NewMsgId},
 				"at":      time.Now().UTC().UnixMilli(),
 			},
 		})
@@ -1164,16 +1301,16 @@ func XTestGroupChat(t *testing.T) {
 
 		td.Cmp(td.Require(t), user5ServerReply, td.Map(map[string]any{
 			"event":    "server reply",
-			"toAction": "group chat: ack message read",
+			"toAction": "group chat: ack messages read",
 			"data":     true,
 		}, nil))
 
 		// user2 acknowledges 'read'
-		err = user2.WSConn.WriteJSON(map[string]any{
-			"action": "group chat: ack message read",
+		err = wsWriteMsgPack(user2.WSConn, map[string]any{
+			"action": "group chat: ack messages read",
 			"data": map[string]any{
 				"groupId": newGroup.Id,
-				"msgId":   user4NewMsgId,
+				"msgIds":  []string{user4NewMsgId},
 				"at":      time.Now().UTC().UnixMilli(),
 			},
 		})
@@ -1183,7 +1320,7 @@ func XTestGroupChat(t *testing.T) {
 
 		td.Cmp(td.Require(t), user2ServerReply, td.Map(map[string]any{
 			"event":    "server reply",
-			"toAction": "group chat: ack message read",
+			"toAction": "group chat: ack messages read",
 			"data":     true,
 		}, nil))
 	}
@@ -1227,12 +1364,11 @@ func XTestGroupChat(t *testing.T) {
 
 		t.Log("Action: user5 opens group chat history")
 
-		req, err := http.NewRequest("GET", groupChatPath+"/"+newGroup.Id+"/history", nil)
-		require.NoError(err)
+		req := httptest.NewRequest("GET", groupChatPath+"/"+newGroup.Id+"/history", nil)
 		req.Header.Add("Content-Type", "application/vnd.msgpack")
 		req.Header.Set("Cookie", user5.SessionCookie)
 
-		res, err := http.DefaultClient.Do(req)
+		res, err := app.Test(req)
 		require.NoError(err)
 
 		if !assert.Equal(t, http.StatusOK, res.StatusCode) {

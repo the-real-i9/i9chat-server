@@ -53,10 +53,10 @@ func newGroupsStreamBgWorker(rdb *redis.Client) {
 				msg.CreatorUser = stmsg.Values["creatorUser"].(string)
 				msg.GroupId = stmsg.Values["groupId"].(string)
 				msg.GroupData = stmsg.Values["groupData"].(string)
-				msg.ChatCursor = helpers.FromMsgPack[int64](stmsg.Values["chatCursor"].(string))
-				msg.InitMembers = helpers.FromMsgPack[appTypes.BinableSlice](stmsg.Values["initMembers"].(string))
-				msg.CreatorUserCHEs = helpers.FromMsgPack[appTypes.BinableSlice](stmsg.Values["creatorUserCHEs"].(string))
-				msg.InitMembersCHEs = helpers.FromMsgPack[appTypes.BinableMap](stmsg.Values["initMembersCHEs"].(string))
+				msg.ChatCursor = helpers.ParseInt(stmsg.Values["chatCursor"].(string))
+				msg.InitMembers = helpers.FromJson[appTypes.BinableSlice](stmsg.Values["initMembers"].(string))
+				msg.CreatorUserCHEs = helpers.FromJson[appTypes.BinableSlice](stmsg.Values["creatorUserCHEs"].(string))
+				msg.InitMembersCHEs = helpers.FromJson[appTypes.BinableMap](stmsg.Values["initMembersCHEs"].(string))
 
 				msgs = append(msgs, msg)
 			}
@@ -97,11 +97,11 @@ func newGroupsStreamBgWorker(rdb *redis.Client) {
 					gactche := gactche.(map[string]any)
 
 					CHEId := gactche["che_id"].(string)
-					CHECursor := gactche["cursor"].(int64)
+					CHECursor := gactche["cursor"].(float64)
 
 					newGroupActivityEntries = append(newGroupActivityEntries, CHEId, helpers.ToMsgPack(gactche))
 
-					chatGroupActivities[msg.CreatorUser+" "+msg.GroupId] = append(chatGroupActivities[msg.CreatorUser+" "+msg.GroupId], [2]any{CHEId, float64(CHECursor)})
+					chatGroupActivities[msg.CreatorUser+" "+msg.GroupId] = append(chatGroupActivities[msg.CreatorUser+" "+msg.GroupId], [2]any{CHEId, CHECursor})
 				}
 
 				for _, initMem := range msg.InitMembers {
@@ -118,7 +118,7 @@ func newGroupsStreamBgWorker(rdb *redis.Client) {
 						gactche := gactche.(map[string]any)
 
 						CHEId := gactche["che_id"].(string)
-						CHECursor := gactche["cursor"].(int64)
+						CHECursor := gactche["cursor"].(float64)
 
 						newGroupActivityEntries = append(newGroupActivityEntries, CHEId, helpers.ToMsgPack(gactche))
 

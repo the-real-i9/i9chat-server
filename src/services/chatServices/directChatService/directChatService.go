@@ -44,14 +44,14 @@ func SendMessage(ctx context.Context, clientUsername, partnerUsername, replyTarg
 			CHEType: msg.CHEType, Id: msg.Id,
 			Content:        cloudStorageService.MessageMediaCloudNameToUrl(msg.Content),
 			DeliveryStatus: msg.DeliveryStatus, CreatedAt: msg.CreatedAt, Sender: uisender,
-			ReplyTargetMsg: msg.ReplyTargetMsg, Cursor: msg.Cursor,
+			ReplyTargetMsg: msg.ReplyTargetMsg, Cursor: float64(msg.Cursor),
 		}
 
 		if newMessage.FirstToUser {
 			realtimeService.SendEventMsg(partnerUsername, appTypes.ServerEventMsg{
 				Event: "new direct chat",
 				Data: map[string]any{
-					"chat":    UITypes.ChatSnippet{Type: "direct", PartnerUser: uisender, UnreadMC: 1, Cursor: msg.Cursor},
+					"chat":    UITypes.ChatSnippet{Type: "direct", PartnerUser: uisender, UnreadMC: 1, Cursor: float64(msg.Cursor)},
 					"history": []UITypes.ChatHistoryEntry{UImsg},
 				},
 			})
@@ -164,7 +164,7 @@ func ReactToMessage(ctx context.Context, clientUsername, partnerUsername, msgId,
 			Event: "direct chat: message reaction",
 			Data: map[string]any{
 				"chat_partner": clientUsername,
-				"che":          UITypes.ChatHistoryEntry{CHEType: rxnData.CHEType, Reactor: clientUsername, Emoji: rxnData.Emoji, Cursor: rxnData.Cursor},
+				"che":          UITypes.ChatHistoryEntry{CHEType: rxnData.CHEType, Reactor: clientUsername, Emoji: rxnData.Emoji, Cursor: float64(rxnData.Cursor)},
 				"msg_reaction": map[string]any{
 					"msg_id": rxnData.ToMsgId,
 					"reaction": UITypes.MsgReaction{

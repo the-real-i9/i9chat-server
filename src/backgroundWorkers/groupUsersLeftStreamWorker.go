@@ -54,7 +54,7 @@ func groupUsersLeftStreamBgWorker(rdb *redis.Client) {
 
 				msg.GroupId = stmsg.Values["groupId"].(string)
 				msg.OldMember = stmsg.Values["oldMember"].(string)
-				msg.OldMemberCHE = helpers.FromMsgPack[appTypes.BinableMap](stmsg.Values["oldMemberCHE"].(string))
+				msg.OldMemberCHE = helpers.FromJson[appTypes.BinableMap](stmsg.Values["oldMemberCHE"].(string))
 				msg.MemInfo = stmsg.Values["memInfo"].(string)
 
 				msgs = append(msgs, msg)
@@ -76,11 +76,11 @@ func groupUsersLeftStreamBgWorker(rdb *redis.Client) {
 				gactche := msg.OldMemberCHE
 
 				CHEId := gactche["che_id"].(string)
-				CHECursor := gactche["cursor"].(int64)
+				CHECursor := gactche["cursor"].(float64)
 
 				newGroupActivityEntries = append(newGroupActivityEntries, CHEId, helpers.ToMsgPack(gactche))
 
-				chatGroupActivities[msg.OldMember+" "+msg.GroupId] = append(chatGroupActivities[msg.OldMember+" "+msg.GroupId], [2]any{CHEId, float64(CHECursor)})
+				chatGroupActivities[msg.OldMember+" "+msg.GroupId] = append(chatGroupActivities[msg.OldMember+" "+msg.GroupId], [2]any{CHEId, CHECursor})
 
 				postActivity, err := groupChat.PostGroupActivityBgDBOper(ctx, msg.GroupId, msg.MemInfo, stmsgIds[i], CHECursor, []any{})
 				if err != nil {
@@ -93,11 +93,11 @@ func groupUsersLeftStreamBgWorker(rdb *redis.Client) {
 					gactche := postActivity.MemberUsersCHE[memUser].(map[string]any)
 
 					CHEId := gactche["che_id"].(string)
-					CHECursor := gactche["cursor"].(int64)
+					CHECursor := gactche["cursor"].(float64)
 
 					newGroupActivityEntries = append(newGroupActivityEntries, CHEId, helpers.ToMsgPack(gactche))
 
-					chatGroupActivities[memUser+" "+msg.GroupId] = append(chatGroupActivities[memUser+" "+msg.GroupId], [2]any{CHEId, float64(CHECursor)})
+					chatGroupActivities[memUser+" "+msg.GroupId] = append(chatGroupActivities[memUser+" "+msg.GroupId], [2]any{CHEId, CHECursor})
 				}
 			}
 

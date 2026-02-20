@@ -57,7 +57,7 @@ func groupMsgReactionsStreamBgWorker(rdb *redis.Client) {
 				msg.RxnData = stmsg.Values["rxnData"].(string)
 				msg.ToMsgId = stmsg.Values["toMsgId"].(string)
 				msg.Emoji = stmsg.Values["emoji"].(string)
-				msg.CHECursor = helpers.FromMsgPack[int64](stmsg.Values["cheCursor"].(string))
+				msg.CHECursor = helpers.ParseInt(stmsg.Values["cheCursor"].(string))
 
 				msgs = append(msgs, msg)
 
