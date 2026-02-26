@@ -14,7 +14,7 @@ import (
 
 type authorizePPicUploadBody struct {
 	PicMIME string   `msgpack:"pic_mime"`
-	PicSize [3]int64 `msgpack:"pic_size"` // {small, medium, large}
+	PicSize [3]int64 `msgpack:"pic_size"`
 }
 
 func (b authorizePPicUploadBody) Validate() error {

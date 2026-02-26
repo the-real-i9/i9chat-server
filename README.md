@@ -57,8 +57,7 @@ i9chat is a full-fledged chat and messaging API server built in Go It supports a
 - [API Diagrams](#api-diagrams-)
   - [Architecture Diagram](#architecture-diagram)
   - [Sequence Diagrams](#sequence-diagrams)
-- [Articles](#articles-)
-
+- [API Tests](#api-tests-)
 ## Features
 
 The following are the features supported by this API. *Visit the API documentation for implementation guides.*
@@ -135,38 +134,30 @@ API (C4) Component Level Diagram: [Here](./arch.pu). (Open in [PlantUML Editor](
 
 API sequence diagrams: [Here](./diagrams/sequence-diagrams.md)
 
-## Articles &#x1f4f0;
-*Coming Soon...*
+## API Tests &#x1f9ea;
 
-<!-- ## Technical Highlights Notes
+We employ a testing approach where test cases are in the form of user stories. These stories simulate real-world API usage activity by a client/user, confirming that endpoints work as expected on both the client and server side.
 
-### Why I switched from a relational database to a graph database
+### Feature Tests
 
-I initially wrote the whole API database logic using PostgreSQL.
+Here we just want to test that the API endpoints/features work under normal, sane circumstances.
 
-But, after being introduced to the world of graph databases, I recalled that most of my SQL database logic, especially those of group management, involved a combination of several READ and WRITE queries. Even after employing stored functions, each statement still performs a full index scan.
+#### User Authentication Story
 
-A Neo4j query, on the other hand, is procedural, has the ability to retain pointer to nodes through intermediate clauses, and performs its scan within relevant branches of the graph. These proved Neo4j a more efficient alternative.
+[This test case](./tests/auth_test.go) builds a story around user signup, signout, signin, and password reset features of the API. It is structured by a series of user/client actions or steps that simulate a real-world authentication scenario by a user.
 
-### Why I used the "chat entry" entity to generalize "message", "reaction", and "group activity" entities.
+More feature tests can be found [here](./tests)
 
-A chat history collection is a union of **message**, **reaction**, and a **group activity** (for group chat) entities each with different structure.
+### Upcoming tests
 
-To fetch a chat's history (direct or group), the predictable approach is to UNION these entities, and re-order them using a common `date_created` property, this is a very expensive approach.
+#### Error tests
 
-While each of these entities are treated separately for other purposes, the **"direct/group chat entry"** generalization allows us to treat these entites as the same only for the purpose of fetching chat history, more efficiently.
+Here we'll build user stories around everywhere error should occur in the API, including validation errors, business layer errors, database errors, and more.
 
-### Why I enforce value limits where possible.
+#### Bad API Usage Tests
 
-...
- -->
-<!-- - I switched from a relational database to a graph database because, most of my SQL database logic, especially those of group management, involved a combination of several READ and WRITE queries. Even after employing stored functions, each statement still performs a full index scan. A Neo4j query, on the other hand, is procedural, has the ability to retain pointer to nodes through intermediate clauses, and performs its scan within relevant branches of the graph. These proved Neo4j a more efficient alternative.
+Here we'll build client stories that intend to break the API.
 
-- Chat history is served from a Redis Sorted Set, while I use Redis Stream’s stream message ID for ordering (ZSET score), so that received messages appear in the order they were delivered rather than in the order they were created—the way WhatsApp works.
+#### Attack Simulation Tests
 
-- I use an abstract “chat entry” entity to represent an item in the chat history, which may be a message, a reaction, or a group activity. While each of these are an entity on their own, the “chat entry” generalization allows for a more efficient processing of READ requests for a chat’s history, where we won’t have to UNION multiple entity READs and finally re-order them, a highly inefficient approach.
-
-- All media processing and upload is offloaded to client-side. This eliminates a source of performance bottleneck, as many simultaneous user requests involving media processing will have to compete for server resources, an effect that will be felt even on user requests that don’t involve media processing unless additional infrastructure is added, which will incur unnecessary additional cost. The average modern device today has powerful media processing capabilities. -->
-
-
-
+Here we'll test the API's security guards and potential vulnerabilities

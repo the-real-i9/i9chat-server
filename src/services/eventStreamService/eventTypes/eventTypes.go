@@ -3,162 +3,163 @@ package eventTypes
 import "i9chat/src/appTypes"
 
 type NewUserEvent struct {
-	Username string `redis:"username" msgpack:"username"`
-	UserData string `redis:"userData" msgpack:"userData"`
+	Username string `redis:"username"`
+	UserData string `redis:"userData"`
 }
 
 type EditUserEvent struct {
-	Username    string              `redis:"username" msgpack:"username"`
-	UpdateKVMap appTypes.BinableMap `redis:"updateKVMap" msgpack:"updateKVMap"`
+	Username    string              `redis:"username"`
+	UpdateKVMap appTypes.BinableMap `redis:"updateKVMap"`
 }
 
 type UserPresenceChangeEvent struct {
-	Username string `redis:"username" msgpack:"username"`
-	Presence string `redis:"presence" msgpack:"presence"`
-	LastSeen int64  `redis:"lastSeen" msgpack:"lastSeen"`
+	Username string `redis:"username"`
+	Presence string `redis:"presence"`
+	LastSeen int64  `redis:"lastSeen"`
 }
 
 type NewGroupEvent struct {
-	CreatorUser     string                `redis:"creatorUser" msgpack:"creatorUser"`
-	GroupId         string                `redis:"groupId" msgpack:"groupId"`
-	GroupData       string                `redis:"groupData" msgpack:"groupData"`
-	ChatCursor      int64                 `redis:"chatCursor" msgpack:"chatCursor"`
-	InitMembers     appTypes.BinableSlice `redis:"initMembers" msgpack:"initMembers"`
-	CreatorUserCHEs appTypes.BinableSlice `redis:"creatorUserCHEs" msgpack:"creatorUserCHEs"`
-	InitMembersCHEs appTypes.BinableMap   `redis:"initMembersCHEs" msgpack:"initMembersCHEs"`
+	CreatorUser     string                `redis:"creatorUser"`
+	GroupId         string                `redis:"groupId"`
+	GroupData       string                `redis:"groupData"`
+	ChatCursor      int64                 `redis:"chatCursor"`
+	InitMembers     appTypes.BinableSlice `redis:"initMembers"`
+	CreatorUserCHEs appTypes.BinableSlice `redis:"creatorUserCHEs"`
+	InitMembersCHEs appTypes.BinableMap   `redis:"initMembersCHEs"`
 }
 
 type GroupEditEvent struct {
-	GroupId       string              `redis:"groupId" msgpack:"groupId"`
-	EditorUser    string              `redis:"editorUser" msgpack:"editorUser"`
-	UpdateKVMap   appTypes.BinableMap `redis:"updateKVMap" msgpack:"updateKVMap"`
-	EditorUserCHE appTypes.BinableMap `redis:"editorUserCHE" msgpack:"editorUserCHE"`
-	MemInfo       string              `redis:"memInfo" msgpack:"memInfo"`
+	GroupId       string              `redis:"groupId"`
+	EditorUser    string              `redis:"editorUser"`
+	UpdateKVMap   appTypes.BinableMap `redis:"updateKVMap"`
+	EditorUserCHE appTypes.BinableMap `redis:"editorUserCHE"`
+	MemInfo       string              `redis:"memInfo"`
 }
 
 type GroupUsersAddedEvent struct {
-	GroupId       string                `redis:"groupId" msgpack:"groupId"`
-	Admin         string                `redis:"admin" msgpack:"admin"`
-	NewMembers    appTypes.BinableSlice `redis:"newMembers" msgpack:"newMembers"`
-	AdminCHE      appTypes.BinableMap   `redis:"adminCHE" msgpack:"adminCHE"`
-	NewMembersCHE appTypes.BinableMap   `redis:"newMembersCHE" msgpack:"newMembersCHE"`
-	MemInfo       string                `redis:"memInfo" msgpack:"memInfo"`
-	ChatCursor    int64                 `redis:"chatCursor" msgpack:"chatCursor"`
+	GroupId       string                `redis:"groupId"`
+	Admin         string                `redis:"admin"`
+	NewMembers    appTypes.BinableSlice `redis:"newMembers"`
+	AdminCHE      appTypes.BinableMap   `redis:"adminCHE"`
+	NewMembersCHE appTypes.BinableMap   `redis:"newMembersCHE"`
+	MemInfo       string                `redis:"memInfo"`
+	ChatCursor    int64                 `redis:"chatCursor"`
 }
 
 type GroupUserRemovedEvent struct {
-	GroupId      string              `redis:"groupId" msgpack:"groupId"`
-	Admin        string              `redis:"admin" msgpack:"admin"`
-	OldMember    string              `redis:"oldMember" msgpack:"oldMember"`
-	AdminCHE     appTypes.BinableMap `redis:"adminCHE" msgpack:"adminCHE"`
-	OldMemberCHE appTypes.BinableMap `redis:"oldMemberCHE" msgpack:"oldMemberCHE"`
-	MemInfo      string              `redis:"memInfo" msgpack:"memInfo"`
+	GroupId      string              `redis:"groupId"`
+	Admin        string              `redis:"admin"`
+	OldMember    string              `redis:"oldMember"`
+	AdminCHE     appTypes.BinableMap `redis:"adminCHE"`
+	OldMemberCHE appTypes.BinableMap `redis:"oldMemberCHE"`
+	MemInfo      string              `redis:"memInfo"`
 }
 
 type GroupUserJoinedEvent struct {
-	GroupId      string              `redis:"groupId" msgpack:"groupId"`
-	NewMember    string              `redis:"newMember" msgpack:"newMember"`
-	NewMemberCHE appTypes.BinableMap `redis:"newMemberCHE" msgpack:"newMemberCHE"`
-	MemInfo      string              `redis:"memInfo" msgpack:"memInfo"`
-	ChatCursor   int64               `redis:"chatCursor" msgpack:"chatCursor"`
+	GroupId      string              `redis:"groupId"`
+	NewMember    string              `redis:"newMember"`
+	NewMemberCHE appTypes.BinableMap `redis:"newMemberCHE"`
+	MemInfo      string              `redis:"memInfo"`
+	ChatCursor   int64               `redis:"chatCursor"`
 }
 
 type GroupUserLeftEvent struct {
-	GroupId      string              `redis:"groupId" msgpack:"groupId"`
-	OldMember    string              `redis:"oldMember" msgpack:"oldMember"`
-	OldMemberCHE appTypes.BinableMap `redis:"oldMemberCHE" msgpack:"oldMemberCHE"`
-	MemInfo      string              `redis:"memInfo" msgpack:"memInfo"`
+	GroupId      string              `redis:"groupId"`
+	OldMember    string              `redis:"oldMember"`
+	OldMemberCHE appTypes.BinableMap `redis:"oldMemberCHE"`
+	MemInfo      string              `redis:"memInfo"`
 }
 
 type GroupMakeUserAdminEvent struct {
-	GroupId     string              `redis:"groupId" msgpack:"groupId"`
-	Admin       string              `redis:"admin" msgpack:"admin"`
-	NewAdmin    string              `redis:"newAdmin" msgpack:"newAdmin"`
-	AdminCHE    appTypes.BinableMap `redis:"adminCHE" msgpack:"adminCHE"`
-	NewAdminCHE appTypes.BinableMap `redis:"newAdminCHE" msgpack:"newAdminCHE"`
-	MemInfo     string              `redis:"memInfo" msgpack:"memInfo"`
+	GroupId     string              `redis:"groupId"`
+	Admin       string              `redis:"admin"`
+	NewAdmin    string              `redis:"newAdmin"`
+	AdminCHE    appTypes.BinableMap `redis:"adminCHE"`
+	NewAdminCHE appTypes.BinableMap `redis:"newAdminCHE"`
+	MemInfo     string              `redis:"memInfo"`
 }
 
 type GroupRemoveUserFromAdminsEvent struct {
-	GroupId     string              `redis:"groupId" msgpack:"groupId"`
-	Admin       string              `redis:"admin" msgpack:"admin"`
-	OldAdmin    string              `redis:"oldAdmin" msgpack:"oldAdmin"`
-	AdminCHE    appTypes.BinableMap `redis:"adminCHE" msgpack:"adminCHE"`
-	OldAdminCHE appTypes.BinableMap `redis:"oldAdminCHE" msgpack:"oldAdminCHE"`
-	MemInfo     string              `redis:"memInfo" msgpack:"memInfo"`
+	GroupId     string              `redis:"groupId"`
+	Admin       string              `redis:"admin"`
+	OldAdmin    string              `redis:"oldAdmin"`
+	AdminCHE    appTypes.BinableMap `redis:"adminCHE"`
+	OldAdminCHE appTypes.BinableMap `redis:"oldAdminCHE"`
+	MemInfo     string              `redis:"memInfo"`
 }
 
 type NewDirectMessageEvent struct {
-	FirstFromUser bool   `redis:"ffu" msgpack:"ffu"`
-	FirstToUser   bool   `redis:"ftu" msgpack:"ftu"`
-	FromUser      string `redis:"fromUser" msgpack:"fromUser"`
-	ToUser        string `redis:"toUser" msgpack:"toUser"`
-	CHEId         string `redis:"CHEId" msgpack:"CHEId"`
-	MsgData       string `redis:"msgData" msgpack:"msgData"`
-	CHECursor     int64  `redis:"cheCursor" msgpack:"cheCursor"`
+	FirstFromUser bool   `redis:"ffu"`
+	FirstToUser   bool   `redis:"ftu"`
+	FromUser      string `redis:"fromUser"`
+	ToUser        string `redis:"toUser"`
+	CHEId         string `redis:"CHEId"`
+	MsgData       string `redis:"msgData"`
+	CHECursor     int64  `redis:"cheCursor"`
 }
 
 type NewGroupMessageEvent struct {
-	FromUser  string `redis:"fromUser" msgpack:"fromUser"`
-	ToGroup   string `redis:"toGroup" msgpack:"toGroup"`
-	CHEId     string `redis:"CHEId" msgpack:"CHEId"`
-	MsgData   string `redis:"msgData" msgpack:"msgData"`
-	CHECursor int64  `redis:"cheCursor" msgpack:"cheCursor"`
+	FromUser  string `redis:"fromUser"`
+	ToGroup   string `redis:"toGroup"`
+	CHEId     string `redis:"CHEId"`
+	MsgData   string `redis:"msgData"`
+	CHECursor int64  `redis:"cheCursor"`
 }
 
 type NewDirectMsgReactionEvent struct {
-	FromUser  string `redis:"fromUser" msgpack:"fromUser"`
-	ToUser    string `redis:"toUser" msgpack:"toUser"`
-	CHEId     string `redis:"CHEId" msgpack:"CHEId"`
-	RxnData   string `redis:"rxnData" msgpack:"rxnData"`
-	ToMsgId   string `redis:"toMsgId" msgpack:"toMsgId"`
-	Emoji     string `redis:"emoji" msgpack:"emoji"`
-	CHECursor int64  `redis:"cheCursor" msgpack:"cheCursor"`
+	FromUser  string `redis:"fromUser"`
+	ToUser    string `redis:"toUser"`
+	CHEId     string `redis:"CHEId"`
+	RxnData   string `redis:"rxnData"`
+	ToMsgId   string `redis:"toMsgId"`
+	Emoji     string `redis:"emoji"`
+	CHECursor int64  `redis:"cheCursor"`
 }
 
 type NewGroupMsgReactionEvent struct {
-	FromUser  string `redis:"fromUser" msgpack:"fromUser"`
-	ToGroup   string `redis:"toGroup" msgpack:"toGroup"`
-	CHEId     string `redis:"CHEId" msgpack:"CHEId"`
-	RxnData   string `redis:"rxnData" msgpack:"rxnData"`
-	ToMsgId   string `redis:"toMsgId" msgpack:"toMsgId"`
-	Emoji     string `redis:"emoji" msgpack:"emoji"`
-	CHECursor int64  `redis:"cheCursor" msgpack:"cheCursor"`
+	FromUser  string `redis:"fromUser"`
+	ToGroup   string `redis:"toGroup"`
+	CHEId     string `redis:"CHEId"`
+	RxnData   string `redis:"rxnData"`
+	ToMsgId   string `redis:"toMsgId"`
+	Emoji     string `redis:"emoji"`
+	CHECursor int64  `redis:"cheCursor"`
 }
 
 type DirectMsgAckEvent struct {
-	FromUser   string                `redis:"fromUser" msgpack:"fromUser"`
-	ToUser     string                `redis:"toUser" msgpack:"toUser"`
-	CHEIds     appTypes.BinableSlice `redis:"CHEIds" msgpack:"CHEIds"`
-	Ack        string                `redis:"ack" msgpack:"ack"`
-	At         int64                 `redis:"at" msgpack:"at"`
-	ChatCursor int64                 `redis:"chatCursor" msgpack:"chatCursor"`
+	FromUser   string                `redis:"fromUser"`
+	ToUser     string                `redis:"toUser"`
+	CHEIds     appTypes.BinableSlice `redis:"CHEIds"`
+	Ack        string                `redis:"ack"`
+	At         int64                 `redis:"at"`
+	ChatCursor int64                 `redis:"chatCursor"`
 }
 
 type GroupMsgAckEvent struct {
-	FromUser   string                `redis:"fromUser" msgpack:"fromUser"`
-	ToGroup    string                `redis:"toGroup" msgpack:"toGroup"`
-	CHEIds     appTypes.BinableSlice `redis:"CHEIds" msgpack:"CHEIds"`
-	Ack        string                `redis:"ack" msgpack:"ack"`
-	At         int64                 `redis:"at" msgpack:"at"`
-	ChatCursor int64                 `redis:"chatCursor" msgpack:"chatCursor"`
+	FromUser      string                `redis:"fromUser"`
+	ToGroup       string                `redis:"toGroup"`
+	CHEIds        appTypes.BinableSlice `redis:"CHEIds"`
+	Ack           string                `redis:"ack"`
+	At            int64                 `redis:"at"`
+	ChatCursor    int64                 `redis:"chatCursor"`
+	MsgIdtoSender appTypes.BinableSlice `redis:"msgIdtoSender"`
 }
 
 type DirectMsgReactionRemovedEvent struct {
-	FromUser string `redis:"fromUser" msgpack:"fromUser"`
-	ToUser   string `redis:"toUser" msgpack:"toUser"`
-	ToMsgId  string `redis:"toMsgId" msgpack:"toMsgId"`
-	CHEId    string `redis:"CHEId" msgpack:"CHEId"`
+	FromUser string `redis:"fromUser"`
+	ToUser   string `redis:"toUser"`
+	ToMsgId  string `redis:"toMsgId"`
+	CHEId    string `redis:"CHEId"`
 }
 
 type GroupMsgReactionRemovedEvent struct {
-	FromUser string `redis:"fromUser" msgpack:"fromUser"`
-	ToGroup  string `redis:"toGroup" msgpack:"toGroup"`
-	ToMsgId  string `redis:"toMsgId" msgpack:"toMsgId"`
-	CHEId    string `redis:"CHEId" msgpack:"CHEId"`
+	FromUser string `redis:"fromUser"`
+	ToGroup  string `redis:"toGroup"`
+	ToMsgId  string `redis:"toMsgId"`
+	CHEId    string `redis:"CHEId"`
 }
 
 type MsgDeletionEvent struct {
-	CHEId string `redis:"CHEId" msgpack:"CHEId"`
-	For   string `redis:"for" msgpack:"for"`
+	CHEId string `redis:"CHEId"`
+	For   string `redis:"for"`
 }

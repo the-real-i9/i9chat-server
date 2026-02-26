@@ -8,9 +8,9 @@ import (
 	"i9chat/src/helpers"
 	"i9chat/src/services/eventStreamService/eventTypes"
 	"log"
+	"maps"
 
 	"github.com/redis/go-redis/v9"
-	"golang.org/x/sync/errgroup"
 )
 
 func directMsgAcksStreamBgWorker(rdb *redis.Client) {
@@ -104,58 +104,72 @@ func directMsgAcksStreamBgWorker(rdb *redis.Client) {
 			}
 
 			// batch processing
-			eg, sharedCtx := errgroup.WithContext(ctx)
+			msgId_updateKVMap_StringCmd := make(map[string][2]any)
 
-			for _, CHEId_ack_ackAt := range ackMessages {
+			_, err = rdb.Pipelined(ctx, func(pipe redis.Pipeliner) error {
 
-				eg.Go(func() error {
-					CHEId, ack, ackAt := CHEId_ack_ackAt[0], CHEId_ack_ackAt[1], CHEId_ack_ackAt[2]
+				for _, msgId_ack_ackAt := range ackMessages {
+					msgId, ack, ackAt := msgId_ack_ackAt[0].(string), msgId_ack_ackAt[1], msgId_ack_ackAt[2]
 
-					return cache.UpdateDirectMessageDelivery(sharedCtx, CHEId.(string), map[string]any{
+					msgId_updateKVMap_StringCmd[msgId] = [2]any{map[string]any{
 						"delivery_status":         ack,
-						fmt.Sprintf("%s_at", ack): ackAt.(int64),
-					})
-				})
-			}
+						fmt.Sprintf("%s_at", ack): ackAt,
+					}, pipe.HGet(ctx, "direct_chat_history_entries", msgId)}
+				}
 
-			for ownerUser, partnerUser_score_Pairs := range updatedFromUserChats {
-				eg.Go(func() error {
-					ownerUser, partnerUser_score_Pairs := ownerUser, partnerUser_score_Pairs
+				for ownerUser, partnerUser_score_Pairs := range updatedFromUserChats {
+					cache.StoreUserChatIdents(pipe, ctx, ownerUser, partnerUser_score_Pairs)
+				}
 
-					return cache.StoreUserChatIdents(sharedCtx, ownerUser, partnerUser_score_Pairs)
-				})
-			}
-
-			for ownerUser, partnerUser_unreadMsgs_Map := range userChatUnreadMsgs {
-				eg.Go(func() error {
-					ownerUser, partnerUser_unreadMsgs_Map := ownerUser, partnerUser_unreadMsgs_Map
-
+				for ownerUser, partnerUser_unreadMsgs_Map := range userChatUnreadMsgs {
 					for partnerUser, unreadMsgs := range partnerUser_unreadMsgs_Map {
-						if err := cache.StoreUserChatUnreadMsgs(sharedCtx, ownerUser, partnerUser, unreadMsgs); err != nil {
-							return err
-						}
+						cache.StoreUserChatUnreadMsgs(pipe, ctx, ownerUser, partnerUser, unreadMsgs)
 					}
+				}
 
-					return nil
-				})
-			}
-
-			for ownerUser, partnerUser_readMsgs_Map := range userChatReadMsgs {
-				eg.Go(func() error {
-					ownerUser, partnerUser_readMsgs_Map := ownerUser, partnerUser_readMsgs_Map
-
+				for ownerUser, partnerUser_readMsgs_Map := range userChatReadMsgs {
 					for partnerUser, readMsgs := range partnerUser_readMsgs_Map {
-						if err := cache.RemoveUserChatUnreadMsgs(sharedCtx, ownerUser, partnerUser, readMsgs); err != nil {
-							return err
-						}
+						cache.RemoveUserChatUnreadMsgs(pipe, ctx, ownerUser, partnerUser, readMsgs)
 					}
+				}
 
-					return nil
-				})
+				return nil
+			})
+			if err != nil {
+				helpers.LogError(err)
+				return
 			}
 
-			if eg.Wait() != nil {
-				return
+			msgUpdates := []string{}
+
+			for msgId, updateKVMap_StringCmd := range msgId_updateKVMap_StringCmd {
+				updateKVMap, stringCmd := updateKVMap_StringCmd[0].(map[string]any), updateKVMap_StringCmd[1].(*redis.StringCmd)
+
+				msgDataMsgPack, err := stringCmd.Result()
+				if err != nil {
+					helpers.LogError(err)
+					continue
+				}
+
+				msgData := helpers.FromMsgPack[map[string]any](msgDataMsgPack)
+
+				// if a client skips the "delivered" ack, and acks "read"
+				// it means the message is delivered and read at the same time
+				if updateKVMap["read_at"] != nil && msgData["delivered_at"] == nil {
+					msgData["delivered_at"] = updateKVMap["read_at"]
+				}
+
+				maps.Copy(msgData, updateKVMap)
+
+				msgUpdates = append(msgUpdates, msgId, helpers.ToMsgPack(msgData))
+			}
+
+			if len(msgUpdates) != 0 {
+				err = rdb.HSet(ctx, "direct_chat_history_entries", msgUpdates).Err()
+				if err != nil {
+					helpers.LogError(err)
+					return
+				}
 			}
 
 			// acknowledge messages

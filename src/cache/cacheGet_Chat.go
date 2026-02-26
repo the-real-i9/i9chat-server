@@ -18,16 +18,6 @@ func GetGroup[T any](ctx context.Context, groupId string) (group T, err error) {
 	return helpers.FromMsgPack[T](groupMsgPack), nil
 }
 
-func GetGroupMembersList(ctx context.Context, groupId string) ([]string, error) {
-	list, err := rdb().SMembers(ctx, fmt.Sprintf("group:%s:members", groupId)).Result()
-	if err != nil && err != redis.Nil {
-		helpers.LogError(err)
-		return list, err
-	}
-
-	return list, nil
-}
-
 func GetGroupMembersCount(ctx context.Context, groupId string) (int64, error) {
 	count, err := rdb().SCard(ctx, fmt.Sprintf("group:%s:members", groupId)).Result()
 	if err != nil && err != redis.Nil {
@@ -96,24 +86,4 @@ func GetMsgReactions(ctx context.Context, msgId string) (map[string]string, erro
 	}
 
 	return msgReactions, nil
-}
-
-func GetGroupMsgDeliveredToUsersCount(ctx context.Context, groupId, msgId string) (int64, error) {
-	count, err := rdb().ZCard(ctx, fmt.Sprintf("group:%s:msg:%s:delivered_to_users", groupId, msgId)).Result()
-	if err != nil && err != redis.Nil {
-		helpers.LogError(err)
-		return count, err
-	}
-
-	return count, nil
-}
-
-func GetGroupMsgReadByUsersCount(ctx context.Context, groupId, msgId string) (int64, error) {
-	count, err := rdb().ZCard(ctx, fmt.Sprintf("group:%s:msg:%s:read_by_users", groupId, msgId)).Result()
-	if err != nil && err != redis.Nil {
-		helpers.LogError(err)
-		return count, err
-	}
-
-	return count, nil
 }

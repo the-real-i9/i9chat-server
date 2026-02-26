@@ -512,7 +512,7 @@ func SendMessage(ctx context.Context, clientUsername, groupId, replyTargetMsgId 
 }
 
 func AckMessagesDelivered(ctx context.Context, clientUsername, groupId string, msgIds []any, deliveredAt int64) (map[string]any, error) {
-	lastMsgCursor, err := groupChat.AckMessagesDelivered(ctx, clientUsername, groupId, msgIds, deliveredAt)
+	lastMsgCursor, msgIdtoSender, err := groupChat.AckMessagesDelivered(ctx, clientUsername, groupId, msgIds, deliveredAt)
 	if err != nil {
 		return nil, err
 	}
@@ -523,30 +523,34 @@ func AckMessagesDelivered(ctx context.Context, clientUsername, groupId string, m
 
 	// queue msg ack event
 	go eventStreamService.QueueGroupMsgAckEvent(eventTypes.GroupMsgAckEvent{
-		FromUser:   clientUsername,
-		ToGroup:    groupId,
-		CHEIds:     msgIds,
-		Ack:        "delivered",
-		At:         deliveredAt,
-		ChatCursor: lastMsgCursor,
+		FromUser:      clientUsername,
+		ToGroup:       groupId,
+		CHEIds:        msgIds,
+		Ack:           "delivered",
+		At:            deliveredAt,
+		ChatCursor:    lastMsgCursor,
+		MsgIdtoSender: msgIdtoSender,
 	})
 
 	return map[string]any{"updated_chat_cursor": lastMsgCursor}, nil
 }
 
 func AckMessagesRead(ctx context.Context, clientUsername, groupId string, msgIds []any, readAt int64) (bool, error) {
-	done, err := groupChat.AckMessagesRead(ctx, clientUsername, groupId, msgIds, readAt)
+	msgIdtoSender, err := groupChat.AckMessagesRead(ctx, clientUsername, groupId, msgIds, readAt)
 	if err != nil {
 		return false, err
 	}
 
+	done := msgIdtoSender != nil
+
 	if done {
 		go eventStreamService.QueueGroupMsgAckEvent(eventTypes.GroupMsgAckEvent{
-			FromUser: clientUsername,
-			ToGroup:  groupId,
-			CHEIds:   msgIds,
-			Ack:      "read",
-			At:       readAt,
+			FromUser:      clientUsername,
+			ToGroup:       groupId,
+			CHEIds:        msgIds,
+			Ack:           "read",
+			At:            readAt,
+			MsgIdtoSender: msgIdtoSender,
 		})
 	}
 

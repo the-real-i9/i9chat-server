@@ -3,13 +3,12 @@ package backgroundWorkers
 import (
 	"context"
 	"i9chat/src/appTypes"
-	"i9chat/src/cache"
 	"i9chat/src/helpers"
 	"i9chat/src/services/eventStreamService/eventTypes"
 	"log"
+	"maps"
 
 	"github.com/redis/go-redis/v9"
-	"golang.org/x/sync/errgroup"
 )
 
 func userEditsStreamBgWorker(rdb *redis.Client) {
@@ -57,27 +56,52 @@ func userEditsStreamBgWorker(rdb *redis.Client) {
 
 			}
 
-			userEdits := make(map[string]map[string]any, len(msgs))
+			editUsers := make(map[string]map[string]any, len(msgs))
 
 			// batch data for batch processing
 			for _, msg := range msgs {
-				userEdits[msg.Username] = map[string]any(msg.UpdateKVMap)
+				editUsers[msg.Username] = map[string]any(msg.UpdateKVMap)
 			}
 
 			// batch processing
-			eg, sharedCtx := errgroup.WithContext(ctx)
+			user_updateKVMap_StringCmd := make(map[string][2]any)
 
-			for user, updateKVMap := range userEdits {
+			_, err = rdb.Pipelined(ctx, func(pipe redis.Pipeliner) error {
+				for user, updateKVMap := range editUsers {
+					user_updateKVMap_StringCmd[user] = [2]any{updateKVMap, pipe.HGet(ctx, "users", user)}
+				}
 
-				eg.Go(func() error {
-					user, updateKVMap := user, updateKVMap
-
-					return cache.UpdateUser(sharedCtx, user, updateKVMap)
-				})
+				return nil
+			})
+			if err != nil {
+				helpers.LogError(err)
+				return
 			}
 
-			if eg.Wait() != nil {
-				return
+			userUpdates := []string{}
+
+			for user, updateKVMap_StringCmd := range user_updateKVMap_StringCmd {
+				updateKVMap, stringCmd := updateKVMap_StringCmd[0].(map[string]any), updateKVMap_StringCmd[1].(*redis.StringCmd)
+
+				userDataMsgPack, err := stringCmd.Result()
+				if err != nil {
+					helpers.LogError(err)
+					continue
+				}
+
+				userData := helpers.FromMsgPack[map[string]any](userDataMsgPack)
+
+				maps.Copy(userData, updateKVMap)
+
+				userUpdates = append(userUpdates, user, helpers.ToMsgPack(userData))
+			}
+
+			if len(userUpdates) != 0 {
+				err = rdb.HSet(ctx, "users", userUpdates).Err()
+				if err != nil {
+					helpers.LogError(err)
+					return
+				}
 			}
 
 			// acknowledge messages

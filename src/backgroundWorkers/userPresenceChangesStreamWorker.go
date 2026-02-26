@@ -8,7 +8,6 @@ import (
 	"log"
 
 	"github.com/redis/go-redis/v9"
-	"golang.org/x/sync/errgroup"
 )
 
 func userPresenceChangesStreamBgWorker(rdb *redis.Client) {
@@ -68,21 +67,19 @@ func userPresenceChangesStreamBgWorker(rdb *redis.Client) {
 			}
 
 			// batch processing
-			eg, sharedCtx := errgroup.WithContext(ctx)
+			_, err = rdb.Pipelined(ctx, func(pipe redis.Pipeliner) error {
+				if len(offlineUsers) != 0 {
+					cache.StoreOfflineUsers(pipe, ctx, offlineUsers)
+				}
 
-			if len(offlineUsers) != 0 {
-				eg.Go(func() error {
-					return cache.StoreOfflineUsers(sharedCtx, offlineUsers)
-				})
-			}
+				if len(onlineUsers) != 0 {
+					cache.RemoveOfflineUsers(pipe, ctx, onlineUsers)
+				}
 
-			if len(onlineUsers) != 0 {
-				eg.Go(func() error {
-					return cache.RemoveOfflineUsers(sharedCtx, onlineUsers)
-				})
-			}
-
-			if eg.Wait() != nil {
+				return nil
+			})
+			if err != nil {
+				helpers.LogError(err)
 				return
 			}
 

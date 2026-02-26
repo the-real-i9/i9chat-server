@@ -11,7 +11,6 @@ import (
 	"log"
 
 	"github.com/redis/go-redis/v9"
-	"golang.org/x/sync/errgroup"
 )
 
 func groupUsersLeftStreamBgWorker(rdb *redis.Client) {
@@ -102,33 +101,27 @@ func groupUsersLeftStreamBgWorker(rdb *redis.Client) {
 			}
 
 			// batch processing
-			eg, sharedCtx := errgroup.WithContext(ctx)
-
 			if err := cache.StoreGroupChatHistoryEntries(ctx, newGroupActivityEntries); err != nil {
 				return
 			}
 
-			for groupId, oldMembers := range groupOldMembers {
-				eg.Go(func() error {
-					groupId, oldMembers := groupId, oldMembers
+			_, err = rdb.Pipelined(ctx, func(pipe redis.Pipeliner) error {
+				for groupId, oldMembers := range groupOldMembers {
+					cache.RemoveGroupMembers(pipe, ctx, groupId, oldMembers)
+				}
 
-					return cache.RemoveGroupMembers(sharedCtx, groupId, oldMembers)
-				})
-			}
-
-			for ownerUserGroupId, CHEId_score_Pairs := range chatGroupActivities {
-				eg.Go(func() error {
-					ownerUserGroupId, CHEId_score_Pairs := ownerUserGroupId, CHEId_score_Pairs
-
+				for ownerUserGroupId, CHEId_score_Pairs := range chatGroupActivities {
 					var ownerUser, groupId string
 
 					fmt.Sscanf(ownerUserGroupId, "%s %s", &ownerUser, &groupId)
 
-					return cache.StoreGroupChatHistory(sharedCtx, ownerUser, groupId, CHEId_score_Pairs)
-				})
-			}
+					cache.StoreGroupChatHistory(pipe, ctx, ownerUser, groupId, CHEId_score_Pairs)
+				}
 
-			if eg.Wait() != nil {
+				return nil
+			})
+			if err != nil {
+				helpers.LogError(err)
 				return
 			}
 

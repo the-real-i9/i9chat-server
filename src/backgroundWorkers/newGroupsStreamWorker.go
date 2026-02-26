@@ -10,7 +10,6 @@ import (
 	"log"
 
 	"github.com/redis/go-redis/v9"
-	"golang.org/x/sync/errgroup"
 )
 
 func newGroupsStreamBgWorker(rdb *redis.Client) {
@@ -127,62 +126,43 @@ func newGroupsStreamBgWorker(rdb *redis.Client) {
 				}
 			}
 
-			// batch processing
 			if err := cache.StoreNewGroups(ctx, newGroups); err != nil {
 				return
 			}
 
-			if err := cache.StoreGroupChatHistoryEntries(ctx, newGroupActivityEntries); err != nil {
+			if err := cache.StoreGroupChatHistoryEntries(ctx, newGroups); err != nil {
 				return
 			}
 
-			eg, sharedCtx := errgroup.WithContext(ctx)
+			_, err = rdb.Pipelined(ctx, func(pipe redis.Pipeliner) error {
+				for groupId, initMembers := range groupInitMembers {
+					cache.StoreGroupMembers(pipe, ctx, groupId, initMembers)
+				}
 
-			for groupId, initMembers := range groupInitMembers {
-				eg.Go(func() error {
-					groupId, initMembers := groupId, initMembers
+				for groupId, creatorUser := range groupCreators {
+					cache.StoreGroupAdmins(pipe, ctx, groupId, []any{creatorUser})
+				}
 
-					return cache.StoreGroupMembers(sharedCtx, groupId, initMembers)
-				})
-			}
+				for ownerUser, groupIdWithChatInfoPairs := range newUserChats {
+					cache.StoreNewUserChats(pipe, ctx, ownerUser, groupIdWithChatInfoPairs)
+				}
 
-			for groupId, creatorUser := range groupCreators {
-				eg.Go(func() error {
-					groupId, creatorUser := groupId, creatorUser
+				for ownerUser, groupId_score_Pairs := range userChats {
+					cache.StoreUserChatIdents(pipe, ctx, ownerUser, groupId_score_Pairs)
+				}
 
-					return cache.StoreGroupAdmins(sharedCtx, groupId, []any{creatorUser})
-				})
-			}
-
-			for ownerUser, groupIdWithChatInfoPairs := range newUserChats {
-				eg.Go(func() error {
-					ownerUser, groupIdWithChatInfoPairs := ownerUser, groupIdWithChatInfoPairs
-
-					return cache.StoreNewUserChats(sharedCtx, ownerUser, groupIdWithChatInfoPairs)
-				})
-			}
-
-			for ownerUser, groupId_score_Pairs := range userChats {
-				eg.Go(func() error {
-					ownerUser, groupId_score_Pairs := ownerUser, groupId_score_Pairs
-
-					return cache.StoreUserChatIdents(sharedCtx, ownerUser, groupId_score_Pairs)
-				})
-			}
-
-			for ownerUserGroupId, CHEId_score_Pairs := range chatGroupActivities {
-				eg.Go(func() error {
-					ownerUserGroupId, CHEId_score_Pairs := ownerUserGroupId, CHEId_score_Pairs
-
+				for ownerUserGroupId, CHEId_score_Pairs := range chatGroupActivities {
 					var ownerUser, groupId string
 
 					fmt.Sscanf(ownerUserGroupId, "%s %s", &ownerUser, &groupId)
 
-					return cache.StoreGroupChatHistory(sharedCtx, ownerUser, groupId, CHEId_score_Pairs)
-				})
-			}
+					cache.StoreGroupChatHistory(pipe, ctx, ownerUser, groupId, CHEId_score_Pairs)
+				}
 
-			if eg.Wait() != nil {
+				return nil
+			})
+			if err != nil {
+				helpers.LogError(err)
 				return
 			}
 

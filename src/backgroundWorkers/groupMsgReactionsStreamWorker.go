@@ -69,7 +69,7 @@ func groupMsgReactionsStreamBgWorker(rdb *redis.Client) {
 
 			msgReactions := make(map[string][]string)
 
-			postDBExtrasFuncs := []func() error{}
+			postDBExtrasFuncs := []func(context.Context) error{}
 
 			// batch data for batch processing
 			for _, msg := range msgs {
@@ -79,7 +79,7 @@ func groupMsgReactionsStreamBgWorker(rdb *redis.Client) {
 
 				msgReactions[msg.ToMsgId] = append(msgReactions[msg.ToMsgId], msg.FromUser, msg.Emoji)
 
-				postDBExtrasFuncs = append(postDBExtrasFuncs, func() error {
+				postDBExtrasFuncs = append(postDBExtrasFuncs, func(ctx context.Context) error {
 					return groupChat.PostReactToMessage(ctx, msg.FromUser, msg.ToGroup, msg.ToMsgId)
 				})
 			}
@@ -89,30 +89,34 @@ func groupMsgReactionsStreamBgWorker(rdb *redis.Client) {
 				return
 			}
 
-			eg, sharedCtx := errgroup.WithContext(ctx)
-
-			for ownerUserGroupId, CHEId_score_Pairs := range chatMsgReactions {
-				eg.Go(func() error {
-					ownerUserGroupId, CHEId_score_Pairs := ownerUserGroupId, CHEId_score_Pairs
-
+			_, err = rdb.Pipelined(ctx, func(pipe redis.Pipeliner) error {
+				for ownerUserGroupId, CHEId_score_Pairs := range chatMsgReactions {
 					var ownerUser, groupId string
 
 					fmt.Sscanf(ownerUserGroupId, "%s %s", &ownerUser, &groupId)
 
-					return cache.StoreGroupChatHistory(sharedCtx, ownerUser, groupId, CHEId_score_Pairs)
-				})
+					cache.StoreGroupChatHistory(pipe, ctx, ownerUser, groupId, CHEId_score_Pairs)
+				}
+
+				for msgId, userWithEmojiPairs := range msgReactions {
+					cache.StoreMsgReactions(pipe, ctx, msgId, userWithEmojiPairs)
+				}
+
+				return nil
+			})
+			if err != nil {
+				helpers.LogError(err)
+				return
 			}
 
-			for msgId, userWithEmojiPairs := range msgReactions {
-				eg.Go(func() error {
-					msgId, userWithEmojiPairs := msgId, userWithEmojiPairs
-
-					return cache.StoreMsgReactions(sharedCtx, msgId, userWithEmojiPairs)
-				})
-			}
+			eg, sharedCtx := errgroup.WithContext(ctx)
 
 			for _, fn := range postDBExtrasFuncs {
-				eg.Go(fn)
+				eg.Go(func() error {
+					fn := fn
+
+					return fn(sharedCtx)
+				})
 			}
 
 			if eg.Wait() != nil {

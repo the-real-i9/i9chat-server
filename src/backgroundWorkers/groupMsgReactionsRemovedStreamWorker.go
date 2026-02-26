@@ -9,7 +9,6 @@ import (
 	"log"
 
 	"github.com/redis/go-redis/v9"
-	"golang.org/x/sync/errgroup"
 )
 
 func groupMsgReactionsRemovedStreamBgWorker(rdb *redis.Client) {
@@ -79,29 +78,23 @@ func groupMsgReactionsRemovedStreamBgWorker(rdb *redis.Client) {
 				return
 			}
 
-			eg, sharedCtx := errgroup.WithContext(ctx)
-
-			for ownerUserGroupId, CHEIds := range chatMsgReactionsRemoved {
-				eg.Go(func() error {
-					ownerUserGroupId, CHEIds := ownerUserGroupId, CHEIds
-
+			_, err = rdb.Pipelined(ctx, func(pipe redis.Pipeliner) error {
+				for ownerUserGroupId, CHEIds := range chatMsgReactionsRemoved {
 					var ownerUser, groupId string
 
 					fmt.Sscanf(ownerUserGroupId, "%s %s", &ownerUser, &groupId)
 
-					return cache.RemoveGroupChatHistory(sharedCtx, ownerUser, groupId, CHEIds)
-				})
-			}
+					cache.RemoveGroupChatHistory(pipe, ctx, ownerUser, groupId, CHEIds)
+				}
 
-			for msgId, reactorUsers := range msgReactionsRemoved {
-				eg.Go(func() error {
-					msgId, reactorUsers := msgId, reactorUsers
+				for msgId, reactorUsers := range msgReactionsRemoved {
+					cache.RemoveMsgReactions(pipe, ctx, msgId, reactorUsers)
+				}
 
-					return cache.RemoveMsgReactions(sharedCtx, msgId, reactorUsers)
-				})
-			}
-
-			if eg.Wait() != nil {
+				return nil
+			})
+			if err != nil {
+				helpers.LogError(err)
 				return
 			}
 

@@ -58,7 +58,6 @@ func newUsersStreamBgWorker(rdb *redis.Client) {
 			// batch data for batch processing
 			for _, msg := range msgs {
 				newUsers = append(newUsers, msg.Username, msg.UserData)
-
 			}
 
 			// batch processing

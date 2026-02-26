@@ -9,9 +9,9 @@ import (
 	groupChat "i9chat/src/models/chatModel/groupChatModel"
 	"i9chat/src/services/eventStreamService/eventTypes"
 	"log"
+	"maps"
 
 	"github.com/redis/go-redis/v9"
-	"golang.org/x/sync/errgroup"
 )
 
 func groupEditsStreamBgWorker(rdb *redis.Client) {
@@ -101,35 +101,57 @@ func groupEditsStreamBgWorker(rdb *redis.Client) {
 			}
 
 			// batch processing
-			eg, sharedCtx := errgroup.WithContext(ctx)
 
 			if err := cache.StoreGroupChatHistoryEntries(ctx, newGroupActivityEntries); err != nil {
 				return
 			}
 
-			for groupId, updateKVMap := range groupEdits {
+			groupId_updateKVMap_StringCmd := make(map[string][2]any)
 
-				eg.Go(func() error {
-					groupId, updateKVMap := groupId, updateKVMap
+			_, err = rdb.Pipelined(ctx, func(pipe redis.Pipeliner) error {
+				for groupId, updateKVMap := range groupEdits {
+					groupId_updateKVMap_StringCmd[groupId] = [2]any{updateKVMap, pipe.HGet(ctx, "groups", groupId)}
+				}
 
-					return cache.UpdateGroup(sharedCtx, groupId, updateKVMap)
-				})
-			}
-
-			for ownerUserGroupId, CHEId_score_Pairs := range chatGroupActivities {
-				eg.Go(func() error {
-					ownerUserGroupId, CHEId_score_Pairs := ownerUserGroupId, CHEId_score_Pairs
-
+				for ownerUserGroupId, CHEId_score_Pairs := range chatGroupActivities {
 					var ownerUser, groupId string
 
 					fmt.Sscanf(ownerUserGroupId, "%s %s", &ownerUser, &groupId)
 
-					return cache.StoreGroupChatHistory(sharedCtx, ownerUser, groupId, CHEId_score_Pairs)
-				})
+					cache.StoreGroupChatHistory(pipe, ctx, ownerUser, groupId, CHEId_score_Pairs)
+				}
+
+				return nil
+			})
+			if err != nil {
+				helpers.LogError(err)
+				return
 			}
 
-			if eg.Wait() != nil {
-				return
+			groupUpdates := []string{}
+
+			for groupId, updateKVMap_StringCmd := range groupId_updateKVMap_StringCmd {
+				updateKVMap, stringCmd := updateKVMap_StringCmd[0].(map[string]any), updateKVMap_StringCmd[1].(*redis.StringCmd)
+
+				groupDataMsgPack, err := stringCmd.Result()
+				if err != nil {
+					helpers.LogError(err)
+					continue
+				}
+
+				groupData := helpers.FromMsgPack[map[string]any](groupDataMsgPack)
+
+				maps.Copy(groupData, updateKVMap)
+
+				groupUpdates = append(groupUpdates, groupId, helpers.ToMsgPack(groupData))
+			}
+
+			if len(groupUpdates) != 0 {
+				err = rdb.HSet(ctx, "groups", groupUpdates).Err()
+				if err != nil {
+					helpers.LogError(err)
+					return
+				}
 			}
 
 			// acknowledge messages

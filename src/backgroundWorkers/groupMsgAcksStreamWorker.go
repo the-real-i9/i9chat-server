@@ -2,6 +2,7 @@ package backgroundWorkers
 
 import (
 	"context"
+	"fmt"
 	"i9chat/src/appTypes"
 	"i9chat/src/cache"
 	"i9chat/src/helpers"
@@ -11,7 +12,6 @@ import (
 	"log"
 
 	"github.com/redis/go-redis/v9"
-	"golang.org/x/sync/errgroup"
 )
 
 func groupMsgAcksStreamBgWorker(rdb *redis.Client) {
@@ -58,6 +58,7 @@ func groupMsgAcksStreamBgWorker(rdb *redis.Client) {
 				msg.Ack = stmsg.Values["ack"].(string)
 				msg.At = helpers.ParseInt(stmsg.Values["at"].(string))
 				msg.ChatCursor = helpers.ParseInt(stmsg.Values["chatCursor"].(string))
+				msg.MsgIdtoSender = helpers.FromJson[appTypes.BinableSlice](stmsg.Values["msgIdtoSender"].(string))
 
 				msgs = append(msgs, msg)
 
@@ -70,6 +71,9 @@ func groupMsgAcksStreamBgWorker(rdb *redis.Client) {
 			userChatReadMsgs := make(map[string]map[string][]any)
 
 			updatedUserChats := make(map[string]map[string]float64)
+
+			delv_groupMsgtoSender := [][2]any{}
+			read_groupMsgtoSender := [][2]any{}
 
 			// batch data for batch processing
 			for _, msg := range msgs {
@@ -96,6 +100,8 @@ func groupMsgAcksStreamBgWorker(rdb *redis.Client) {
 						CHEId := CHEId.(string)
 						groupMsgDelvToUsers[msg.ToGroup][CHEId] = append(groupMsgDelvToUsers[msg.ToGroup][CHEId], [2]any{msg.FromUser, msg.At})
 					}
+
+					delv_groupMsgtoSender = append(delv_groupMsgtoSender, [2]any{msg.ToGroup, msg.MsgIdtoSender})
 				}
 
 				if msg.Ack == "read" {
@@ -115,174 +121,159 @@ func groupMsgAcksStreamBgWorker(rdb *redis.Client) {
 						CHEId := CHEId.(string)
 						groupMsgReadByUsers[msg.ToGroup][CHEId] = append(groupMsgReadByUsers[msg.ToGroup][CHEId], [2]any{msg.FromUser, msg.At})
 					}
+
+					read_groupMsgtoSender = append(read_groupMsgtoSender, [2]any{msg.ToGroup, msg.MsgIdtoSender})
 				}
 			}
 
 			// batch processing
-			eg, sharedCtx := errgroup.WithContext(ctx)
+			_, err = rdb.Pipelined(ctx, func(pipe redis.Pipeliner) error {
+				for ownerUser, groupId_score_Pairs := range updatedUserChats {
+					cache.StoreUserChatIdents(pipe, ctx, ownerUser, groupId_score_Pairs)
+				}
 
-			for ownerUser, groupId_score_Pairs := range updatedUserChats {
-				eg.Go(func() error {
-					ownerUser, groupId_score_Pairs := ownerUser, groupId_score_Pairs
-
-					return cache.StoreUserChatIdents(sharedCtx, ownerUser, groupId_score_Pairs)
-				})
-			}
-
-			for ownerUser, groupId_unreadMsgs_Map := range userChatUnreadMsgs {
-				eg.Go(func() error {
-					ownerUser, groupId_unreadMsgs_Map := ownerUser, groupId_unreadMsgs_Map
-
+				for ownerUser, groupId_unreadMsgs_Map := range userChatUnreadMsgs {
 					for groupId, unreadMsgs := range groupId_unreadMsgs_Map {
-						if err := cache.StoreUserChatUnreadMsgs(sharedCtx, ownerUser, groupId, unreadMsgs); err != nil {
-							return err
-						}
+						cache.StoreUserChatUnreadMsgs(pipe, ctx, ownerUser, groupId, unreadMsgs)
 					}
+				}
 
-					return nil
-				})
-			}
-
-			for ownerUser, groupId_readMsgs_Map := range userChatReadMsgs {
-				eg.Go(func() error {
-					ownerUser, groupId_readMsgs_Map := ownerUser, groupId_readMsgs_Map
-
+				for ownerUser, groupId_readMsgs_Map := range userChatReadMsgs {
 					for groupId, readMsgs := range groupId_readMsgs_Map {
-						if err := cache.RemoveUserChatUnreadMsgs(sharedCtx, ownerUser, groupId, readMsgs); err != nil {
-							return err
-						}
+						cache.RemoveUserChatUnreadMsgs(pipe, ctx, ownerUser, groupId, readMsgs)
 					}
+				}
 
-					return nil
-				})
+				for groupId, msgId_userDelvAtPairs_Map := range groupMsgDelvToUsers {
+					for msgId, user_delvAt_Pairs := range msgId_userDelvAtPairs_Map {
+						cache.StoreGroupMsgDeliveredToUsers(pipe, ctx, groupId, msgId, user_delvAt_Pairs)
+					}
+				}
+
+				for groupId, msgId_userReadAtPairs_Map := range groupMsgReadByUsers {
+					for msgId, user_readAt_Pairs := range msgId_userReadAtPairs_Map {
+						cache.StoreGroupMsgReadByUsers(pipe, ctx, groupId, msgId, user_readAt_Pairs)
+					}
+				}
+
+				return nil
+			})
+			if err != nil {
+				helpers.LogError(err)
+				return
 			}
 
-			for groupId, msgId_userDelvAtPairs_Map := range groupMsgDelvToUsers {
-				eg.Go(func() error {
-					groupId, msgId_userDelvAtPairs_Map := groupId, msgId_userDelvAtPairs_Map
+			for _, groupId_msgIdtoSender := range delv_groupMsgtoSender {
+				groupId, msgIdtoSender := groupId_msgIdtoSender[0].(string), groupId_msgIdtoSender[1].(appTypes.BinableSlice)
+				for _, msgId_Sender := range msgIdtoSender {
+					msgId_Sender := msgId_Sender.([]any)
+					msgId, senderUser := msgId_Sender[0].(string), msgId_Sender[1].(string)
 
-					for msgId, user_delvAt_Pairs := range msgId_userDelvAtPairs_Map {
-						if err := cache.StoreGroupMsgDeliveredToUsers(sharedCtx, groupId, msgId, user_delvAt_Pairs); err != nil {
-							return err
+					go func(groupId, msgId, senderUser string) {
+						ctx := context.Background()
+
+						var membersCountIntCmd, delvToUsersCountIntCmd *redis.IntCmd
+
+						_, err := rdb.Pipelined(ctx, func(pipe redis.Pipeliner) error {
+							membersCountIntCmd = pipe.SCard(ctx, fmt.Sprintf("group:%s:members", groupId))
+							delvToUsersCountIntCmd = pipe.ZCard(ctx, fmt.Sprintf("group:%s:msg:%s:delivered_to_users", groupId, msgId))
+
+							return nil
+						})
+						if err != nil {
+							helpers.LogError(err)
+							return
 						}
 
-						go func(groupId, msgId string) {
-							ctx := context.Background()
+						membersCount, delvToUsersCount := membersCountIntCmd.Val(), delvToUsersCountIntCmd.Val()
 
-							membersList, err := cache.GetGroupMembersList(ctx, groupId)
-							if err != nil {
-								return
-							}
+						// delvToUsers cannot include the message sender,
+						// therefore, we exempt them from the membersList count
+						if membersCount-1 == delvToUsersCount {
+							go realtimeService.SendEventMsg(senderUser, appTypes.ServerEventMsg{
+								Event: "group chat: message delivered",
+								Data: map[string]string{
+									"group_id": groupId,
+									"msg_id":   msgId,
+								},
+							})
 
-							delvToUsersCount, err := cache.GetGroupMsgDeliveredToUsersCount(ctx, groupId, msgId)
-							if err != nil {
-								return
-							}
+							go cache.UpdateGroupMessageDelivery(ctx, msgId, map[string]any{"delivery_status": "delivered"})
 
-							// delvToUsers cannot include the message sender,
-							// therefore, we exempt them from the membersList count
-							if len(membersList)-1 == int(delvToUsersCount) {
-								go func(membersList []string) {
-									for _, mu := range membersList {
-										realtimeService.SendEventMsg(mu, appTypes.ServerEventMsg{
-											Event: "group chat: message delivered",
-											Data: map[string]string{
-												"group_id": groupId,
-												"msg_id":   msgId,
-											},
-										})
-									}
-								}(membersList)
-
-								go cache.UpdateGroupMessageDelivery(ctx, msgId, map[string]any{"delivery_status": "delivered"})
-
-								go func() {
-									_, err := db.Query(
-										ctx,
-										`/* cypher */
+							go func() {
+								_, err := db.Query(
+									ctx,
+									`/* cypher */
 											MATCH (gm:GroupMessage{ id: $msg_id })
 											SET gm.delivery_status = "delivered"
 											`,
-										map[string]any{
-											"msg_id": msgId,
-										},
-									)
-									if err != nil {
-										helpers.LogError(err)
-									}
-								}()
-							}
-						}(groupId, msgId)
-					}
-
-					return nil
-				})
+									map[string]any{
+										"msg_id": msgId,
+									},
+								)
+								if err != nil {
+									helpers.LogError(err)
+								}
+							}()
+						}
+					}(groupId, msgId, senderUser)
+				}
 			}
 
-			for groupId, msgId_userReadAtPairs_Map := range groupMsgReadByUsers {
-				eg.Go(func() error {
-					groupId, msgId_userReadAtPairs_Map := groupId, msgId_userReadAtPairs_Map
+			for _, groupId_msgIdtoSender := range read_groupMsgtoSender {
+				groupId, msgIdtoSender := groupId_msgIdtoSender[0].(string), groupId_msgIdtoSender[1].(appTypes.BinableSlice)
+				for _, msgId_Sender := range msgIdtoSender {
+					msgId_Sender := msgId_Sender.([]any)
+					msgId, senderUser := msgId_Sender[0].(string), msgId_Sender[1].(string)
+					go func(groupId, msgId, senderUser string) {
+						ctx := context.Background()
 
-					for msgId, user_readAt_Pairs := range msgId_userReadAtPairs_Map {
-						if err := cache.StoreGroupMsgReadByUsers(sharedCtx, groupId, msgId, user_readAt_Pairs); err != nil {
-							return err
+						var membersCountIntCmd, readByUsersCountIntCmd *redis.IntCmd
+
+						_, err := rdb.Pipelined(ctx, func(pipe redis.Pipeliner) error {
+							membersCountIntCmd = pipe.SCard(ctx, fmt.Sprintf("group:%s:members", groupId))
+							readByUsersCountIntCmd = pipe.ZCard(ctx, fmt.Sprintf("group:%s:msg:%s:read_by_users", groupId, msgId))
+
+							return nil
+						})
+						if err != nil {
+							helpers.LogError(err)
+							return
 						}
 
-						go func(groupId, msgId string) {
-							ctx := context.Background()
+						membersCount, readByUsersCount := membersCountIntCmd.Val(), readByUsersCountIntCmd.Val()
 
-							membersList, err := cache.GetGroupMembersList(ctx, groupId)
-							if err != nil {
-								return
-							}
+						// readByUsers cannot include the message sender,
+						// therefore, we exempt them from the membersList count
+						if membersCount-1 == readByUsersCount {
+							go realtimeService.SendEventMsg(senderUser, appTypes.ServerEventMsg{
+								Event: "group chat: message read",
+								Data: map[string]string{
+									"group_id": groupId,
+									"msg_id":   msgId,
+								},
+							})
 
-							readByUsersCount, err := cache.GetGroupMsgReadByUsersCount(ctx, groupId, msgId)
-							if err != nil {
-								return
-							}
+							go cache.UpdateGroupMessageDelivery(ctx, msgId, map[string]any{"delivery_status": "read"})
 
-							// readByUsers cannot include the message sender,
-							// therefore, we exempt them from the membersList count
-							if len(membersList)-1 == int(readByUsersCount) {
-								go func(membersList []string) {
-									for _, mu := range membersList {
-										realtimeService.SendEventMsg(mu, appTypes.ServerEventMsg{
-											Event: "group chat: message read",
-											Data: map[string]string{
-												"group_id": groupId,
-												"msg_id":   msgId,
-											},
-										})
-									}
-								}(membersList)
-
-								go cache.UpdateGroupMessageDelivery(ctx, msgId, map[string]any{"delivery_status": "read"})
-
-								go func() {
-									_, err := db.Query(
-										ctx,
-										`/* cypher */
+							go func() {
+								_, err := db.Query(
+									ctx,
+									`/* cypher */
 											MATCH (gm:GroupMessage{ id: $msg_id })
 											SET gm.delivery_status = "read"
 											`,
-										map[string]any{
-											"msg_id": msgId,
-										},
-									)
-									if err != nil {
-										helpers.LogError(err)
-									}
-								}()
-							}
-						}(groupId, msgId)
-					}
-
-					return nil
-				})
-			}
-
-			if eg.Wait() != nil {
-				return
+									map[string]any{
+										"msg_id": msgId,
+									},
+								)
+								if err != nil {
+									helpers.LogError(err)
+								}
+							}()
+						}
+					}(groupId, msgId, senderUser)
+				}
 			}
 
 			// acknowledge messages

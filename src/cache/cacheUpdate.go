@@ -6,46 +6,6 @@ import (
 	"maps"
 )
 
-func UpdateUser(ctx context.Context, username string, updateKVMap map[string]any) error {
-	userDataMsgPack, err := rdb().HGet(ctx, "users", username).Result()
-	if err != nil {
-		helpers.LogError(err)
-		return err
-	}
-
-	userData := helpers.FromMsgPack[map[string]any](userDataMsgPack)
-
-	maps.Copy(userData, updateKVMap)
-
-	err = rdb().HSet(ctx, "users", username, helpers.ToMsgPack(userData)).Err()
-	if err != nil {
-		helpers.LogError(err)
-		return err
-	}
-
-	return nil
-}
-
-func UpdateGroup(ctx context.Context, groupId string, updateKVMap map[string]any) error {
-	groupDataMsgPack, err := rdb().HGet(ctx, "groups", groupId).Result()
-	if err != nil {
-		helpers.LogError(err)
-		return err
-	}
-
-	userData := helpers.FromMsgPack[map[string]any](groupDataMsgPack)
-
-	maps.Copy(userData, updateKVMap)
-
-	err = rdb().HSet(ctx, "groups", groupId, helpers.ToMsgPack(userData)).Err()
-	if err != nil {
-		helpers.LogError(err)
-		return err
-	}
-
-	return nil
-}
-
 func UpdateDirectMessageDelivery(ctx context.Context, CHEId string, updateKVMap map[string]any) error {
 	msgDataMsgPack, err := rdb().HGet(ctx, "direct_chat_history_entries", CHEId).Result()
 	if err != nil {

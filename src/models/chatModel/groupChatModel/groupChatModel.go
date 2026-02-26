@@ -723,7 +723,7 @@ func PostSendMessage(ctx context.Context, clientUsername, groupId, msgId string)
 	return pnm, nil
 }
 
-func AckMessagesDelivered(ctx context.Context, clientUsername, groupId string, msgIds []any, deliveredAt int64) (int64, error) {
+func AckMessagesDelivered(ctx context.Context, clientUsername, groupId string, msgIds []any, deliveredAt int64) (int64, []any, error) {
 	res, err := db.Query(
 		ctx,
 		`/*cypher*/
@@ -734,7 +734,11 @@ func AckMessagesDelivered(ctx context.Context, clientUsername, groupId string, m
 
 		SET clientChat.cursor = message.cursor
 
-		RETURN DISTINCT clientChat.cursor AS cursor
+		WITH message, clientChat
+
+		MATCH (message)<-[:SENDS_MESSAGE]-(msgSender)
+
+		RETURN clientChat.cursor AS cursor, collect([message.id, msgSender.username]) AS msgIdtoSender
 		`,
 		map[string]any{
 			"client_username": clientUsername,
@@ -745,19 +749,20 @@ func AckMessagesDelivered(ctx context.Context, clientUsername, groupId string, m
 	)
 	if err != nil {
 		helpers.LogError(err)
-		return 0, fiber.ErrInternalServerError
+		return 0, nil, fiber.ErrInternalServerError
 	}
 
 	if len(res.Records) == 0 {
-		return 0, nil
+		return 0, nil, nil
 	}
 
 	cursor := modelHelpers.RKeyGet[int64](res.Records, "cursor")
+	msgIdtoSender := modelHelpers.RKeyGet[[]any](res.Records, "msgIdtoSender")
 
-	return cursor, nil
+	return cursor, msgIdtoSender, nil
 }
 
-func AckMessagesRead(ctx context.Context, clientUsername, groupId string, msgIds []any, readAt int64) (bool, error) {
+func AckMessagesRead(ctx context.Context, clientUsername, groupId string, msgIds []any, readAt int64) ([]any, error) {
 	res, err := db.Query(
 		ctx,
 		`/*cypher*/
@@ -772,7 +777,11 @@ func AckMessagesRead(ctx context.Context, clientUsername, groupId string, msgIds
 		MERGE (message)-[dt:DELIVERED_TO]->(clientUser)
 		ON CREATE SET dt.at = $read_at
 
-		RETURN DISTINCT true AS done
+		WITH message
+
+		MATCH (message)<-[:SENDS_MESSAGE]-(msgSender)
+
+		RETURN collect([message.id, msgSender.username]) AS msgIdtoSender
 		`,
 		map[string]any{
 			"client_username": clientUsername,
@@ -783,14 +792,16 @@ func AckMessagesRead(ctx context.Context, clientUsername, groupId string, msgIds
 	)
 	if err != nil {
 		helpers.LogError(err)
-		return false, fiber.ErrInternalServerError
+		return nil, fiber.ErrInternalServerError
 	}
 
 	if len(res.Records) == 0 {
-		return false, nil
+		return nil, nil
 	}
 
-	return true, nil
+	msgIdtoSender := modelHelpers.RKeyGet[[]any](res.Records, "msgIdtoSender")
+
+	return msgIdtoSender, nil
 }
 
 func ReplyToMessage(ctx context.Context, clientUsername, groupId, targetMsgId, msgContent string, at int64) (NewMessage, error) {

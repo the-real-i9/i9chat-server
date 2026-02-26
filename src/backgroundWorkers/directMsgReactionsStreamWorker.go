@@ -9,7 +9,6 @@ import (
 	"log"
 
 	"github.com/redis/go-redis/v9"
-	"golang.org/x/sync/errgroup"
 )
 
 func directMsgReactionsStreamBgWorker(rdb *redis.Client) {
@@ -82,29 +81,23 @@ func directMsgReactionsStreamBgWorker(rdb *redis.Client) {
 				return
 			}
 
-			eg, sharedCtx := errgroup.WithContext(ctx)
-
-			for ownerUserPartnerUser, CHEId_score_Pairs := range chatMsgReactions {
-				eg.Go(func() error {
-					ownerUserPartnerUser, CHEId_score_Pairs := ownerUserPartnerUser, CHEId_score_Pairs
-
+			_, err = rdb.Pipelined(ctx, func(pipe redis.Pipeliner) error {
+				for ownerUserPartnerUser, CHEId_score_Pairs := range chatMsgReactions {
 					var ownerUser, partnerUser string
 
 					fmt.Sscanf(ownerUserPartnerUser, "%s %s", &ownerUser, &partnerUser)
 
-					return cache.StoreDirectChatHistory(sharedCtx, ownerUser, partnerUser, CHEId_score_Pairs)
-				})
-			}
+					cache.StoreDirectChatHistory(pipe, ctx, ownerUser, partnerUser, CHEId_score_Pairs)
+				}
 
-			for msgId, userWithEmojiPairs := range msgReactions {
-				eg.Go(func() error {
-					msgId, userWithEmojiPairs := msgId, userWithEmojiPairs
+				for msgId, userWithEmojiPairs := range msgReactions {
+					cache.StoreMsgReactions(pipe, ctx, msgId, userWithEmojiPairs)
+				}
 
-					return cache.StoreMsgReactions(sharedCtx, msgId, userWithEmojiPairs)
-				})
-			}
-
-			if eg.Wait() != nil {
+				return nil
+			})
+			if err != nil {
+				helpers.LogError(err)
 				return
 			}
 
