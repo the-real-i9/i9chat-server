@@ -1249,17 +1249,7 @@ func TestGroupChat(t *testing.T) {
 	}
 
 	{
-		t.Log("Action: message is now 'delivered' to all other members | all receive the 'delivered' acknowledgement; marking message as 'delivered'")
-
-		user2DelvAckReceipt := <-user2.ServerEventMsg
-
-		td.Cmp(td.Require(t), user2DelvAckReceipt, td.Map(map[string]any{
-			"event": "group chat: message delivered",
-			"data": td.Map(map[string]any{
-				"group_id": newGroup.Id,
-				"msg_id":   user4NewMsgId,
-			}, nil),
-		}, nil))
+		t.Log("Action: message is now 'delivered' to all other members | sender receives the 'delivered' acknowledgement; marking message as 'delivered'")
 
 		user4DelvAckReceipt := <-user4.ServerEventMsg
 
@@ -1270,17 +1260,6 @@ func TestGroupChat(t *testing.T) {
 				"msg_id":   user4NewMsgId,
 			}, nil),
 		}, nil))
-
-		user5DelvAckReceipt := <-user5.ServerEventMsg
-
-		td.Cmp(td.Require(t), user5DelvAckReceipt, td.Map(map[string]any{
-			"event": "group chat: message delivered",
-			"data": td.Map(map[string]any{
-				"group_id": newGroup.Id,
-				"msg_id":   user4NewMsgId,
-			}, nil),
-		}, nil))
-
 	}
 
 	{
@@ -1326,31 +1305,11 @@ func TestGroupChat(t *testing.T) {
 	}
 
 	{
-		t.Log("Action: message is now 'read' by all other members | all members receive the 'read' acknowledgement; marking message as 'read'")
-
-		user5ReadAckReceipt := <-user5.ServerEventMsg
-
-		td.Cmp(td.Require(t), user5ReadAckReceipt, td.Map(map[string]any{
-			"event": "group chat: message read",
-			"data": td.Map(map[string]any{
-				"group_id": newGroup.Id,
-				"msg_id":   user4NewMsgId,
-			}, nil),
-		}, nil))
+		t.Log("Action: message is now 'read' by all other members | sender receive the 'read' acknowledgement; marking message as 'read'")
 
 		user4ReadAckReceipt := <-user4.ServerEventMsg
 
 		td.Cmp(td.Require(t), user4ReadAckReceipt, td.Map(map[string]any{
-			"event": "group chat: message read",
-			"data": td.Map(map[string]any{
-				"group_id": newGroup.Id,
-				"msg_id":   user4NewMsgId,
-			}, nil),
-		}, nil))
-
-		user2ReadAckReceipt := <-user2.ServerEventMsg
-
-		td.Cmp(td.Require(t), user2ReadAckReceipt, td.Map(map[string]any{
 			"event": "group chat: message read",
 			"data": td.Map(map[string]any{
 				"group_id": newGroup.Id,
