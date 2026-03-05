@@ -13,20 +13,21 @@ import (
 	"golang.org/x/crypto/bcrypt"
 
 	"github.com/gofiber/fiber/v3"
+	"github.com/gofiber/utils/v2"
 )
 
 func HashPassword(password string) (string, error) {
-	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	hash, err := bcrypt.GenerateFromPassword(utils.UnsafeBytes(password), bcrypt.DefaultCost)
 	if err != nil {
 		helpers.LogError(err)
 		return "", fiber.ErrInternalServerError
 	}
 
-	return string(hash), nil
+	return utils.UnsafeString(hash), nil
 }
 
 func PasswordMatchesHash(hash string, password string) (bool, error) {
-	err := bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
+	err := bcrypt.CompareHashAndPassword(utils.UnsafeBytes(hash), utils.UnsafeBytes(password))
 	if err != nil {
 		if errors.Is(err, bcrypt.ErrMismatchedHashAndPassword) {
 			return false, nil
@@ -60,7 +61,7 @@ func JwtSign(data any, secret string, expires time.Time) (string, error) {
 	})
 
 	// sign token with secret -> (header.payload.signature)
-	jwt, err := token.SignedString([]byte(secret))
+	jwt, err := token.SignedString(utils.UnsafeBytes(secret))
 
 	if err != nil {
 		helpers.LogError(err)
@@ -80,7 +81,7 @@ func JwtVerify[T any](tokenString, secret string) (T, error) {
 			return nil, fmt.Errorf("unexpected signing method: %v", t.Header["alg"])
 		}
 
-		return []byte(secret), nil
+		return utils.UnsafeBytes(secret), nil
 	})
 
 	if err != nil {

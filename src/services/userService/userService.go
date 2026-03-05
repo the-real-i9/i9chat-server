@@ -14,7 +14,7 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v3"
-	"github.com/google/uuid"
+	"github.com/gofiber/utils/v2"
 )
 
 func GoOnline(ctx context.Context, clientUsername string) {
@@ -120,7 +120,7 @@ func AuthorizePPicUpload(ctx context.Context, picMIME string) (AuthPPicDataT, er
 
 		which := [3]string{"small", "medium", "large"}
 
-		pPicCloudName := fmt.Sprintf("uploads/user/profile_pics/%d%d/%s-%s", time.Now().Year(), time.Now().Month(), uuid.NewString(), which[small0_medium1_large2])
+		pPicCloudName := fmt.Sprintf("uploads/user/profile_pics/%d%d/%s-%s", time.Now().Year(), time.Now().Month(), utils.UUIDv4(), which[small0_medium1_large2])
 
 		url, err := cloudStorageService.GetUploadUrl(pPicCloudName, picMIME)
 		if err != nil {

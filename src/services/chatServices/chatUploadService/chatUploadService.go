@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v3"
-	"github.com/google/uuid"
+	"github.com/gofiber/utils/v2"
 )
 
 type AuthDataT struct {
@@ -18,7 +18,7 @@ type AuthDataT struct {
 func Authorize(ctx context.Context, msgType, mediaMIME string) (AuthDataT, error) {
 	var res AuthDataT
 
-	mediaCloudName := fmt.Sprintf("uploads/chat/%s/%d%d/%s", msgType, time.Now().Year(), time.Now().Month(), uuid.NewString())
+	mediaCloudName := fmt.Sprintf("uploads/chat/%s/%d%d/%s", msgType, time.Now().Year(), time.Now().Month(), utils.UUIDv4())
 
 	url, err := cloudStorageService.GetUploadUrl(mediaCloudName, mediaMIME)
 	if err != nil {
@@ -38,7 +38,7 @@ func AuthorizeVisual(ctx context.Context, msgType string, mediaMIME [2]string) (
 
 		which := [2]string{"blur_placeholder", "actual"}
 
-		mediaCloudName := fmt.Sprintf("uploads/chat/%s/%d%d/%s-%s", msgType, time.Now().Year(), time.Now().Month(), uuid.NewString(), which[blurPlch0_actual1])
+		mediaCloudName := fmt.Sprintf("uploads/chat/%s/%d%d/%s-%s", msgType, time.Now().Year(), time.Now().Month(), utils.UUIDv4(), which[blurPlch0_actual1])
 
 		url, err := cloudStorageService.GetUploadUrl(mediaCloudName, mime)
 		if err != nil {

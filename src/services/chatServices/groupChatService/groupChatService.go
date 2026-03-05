@@ -13,7 +13,7 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v3"
-	"github.com/google/uuid"
+	"github.com/gofiber/utils/v2"
 )
 
 type AuthGroupPicDataT struct {
@@ -28,7 +28,7 @@ func AuthorizeGroupPicUpload(ctx context.Context, picMIME string) (AuthGroupPicD
 
 		which := [3]string{"small", "medium", "large"}
 
-		groupPicCloudName := fmt.Sprintf("uploads/group/group_pics/%d%d/%s-%s", time.Now().Year(), time.Now().Month(), uuid.NewString(), which[small0_medium1_large2])
+		groupPicCloudName := fmt.Sprintf("uploads/group/group_pics/%d%d/%s-%s", time.Now().Year(), time.Now().Month(), utils.UUIDv4(), which[small0_medium1_large2])
 
 		url, err := cloudStorageService.GetUploadUrl(groupPicCloudName, picMIME)
 		if err != nil {

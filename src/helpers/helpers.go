@@ -6,11 +6,11 @@ import (
 	"log"
 	"os"
 	"runtime"
-	"strconv"
 	"strings"
 
 	"github.com/goccy/go-json"
 	"github.com/gofiber/fiber/v3"
+	"github.com/gofiber/utils/v2"
 	"github.com/vmihailenco/msgpack/v5"
 )
 
@@ -98,7 +98,7 @@ func ToMsgPack(data any) string {
 	if err != nil {
 		LogError(err)
 	}
-	return string(d)
+	return utils.UnsafeString(d)
 }
 
 func ToBtMsgPack(data any) []byte {
@@ -114,11 +114,15 @@ func ToJson(data any) string {
 	if err != nil {
 		LogError(err)
 	}
-	return string(d)
+	return utils.UnsafeString(d)
 }
 
 func FromMsgPack[T any](msgPackStr string) (res T) {
-	err := msgpack.Unmarshal([]byte(msgPackStr), &res)
+	if msgPackStr == "" {
+		return res
+	}
+
+	err := msgpack.Unmarshal(utils.UnsafeBytes(msgPackStr), &res)
 	if err != nil {
 		LogError(err)
 	}
@@ -127,7 +131,11 @@ func FromMsgPack[T any](msgPackStr string) (res T) {
 }
 
 func FromJson[T any](jsonStr string) (res T) {
-	err := json.Unmarshal([]byte(jsonStr), &res)
+	if jsonStr == "" {
+		return res
+	}
+
+	err := json.Unmarshal(utils.UnsafeBytes(jsonStr), &res)
 	if err != nil {
 		LogError(err)
 	}
@@ -145,16 +153,7 @@ func FromBtMsgPack[T any](msgPackBt []byte) (res T) {
 }
 
 func ParseInt(intStr string) int64 {
-	i, err := strconv.ParseInt(intStr, 10, 64)
-	if err != nil {
-		LogError(err)
-	}
-
-	return i
-}
-
-func ParseFloat(intStr string) float64 {
-	i, err := strconv.ParseFloat(intStr, 64)
+	i, err := utils.ParseInt(intStr)
 	if err != nil {
 		LogError(err)
 	}

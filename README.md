@@ -121,7 +121,7 @@ API Graph Model Overview [Here](./docs/graph-model-overview.md)
 ## API Diagrams &#x1f3a8;
 
 ### Architecture Diagram
-API (C4) Component Level Diagram: [Here](./arch.pu). (Open in [PlantUML Editor](editor.platuml.com))
+API (C4) Component Level Diagram: [Here](./diagrams/arch.pu). (Open in [PlantUML Editor](editor.platuml.com))
 
 <details>
   <summary>Show Diagram</summary>
